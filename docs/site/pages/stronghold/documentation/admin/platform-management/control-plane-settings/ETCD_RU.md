@@ -253,7 +253,7 @@ d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
@@ -263,26 +263,15 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 ## Как получить список узлов кластера etcd (вариант 2)
 
-Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane.
+Используйте команду `etcdctl endpoint status`. В пятом столбце таблицы вывода будет указано значение `true` для лидера.
 
-Значение `true` в пятом столбце вывода указывает на лидера.
-
-Пример скрипта, который автоматически передает все адреса узлов control-plane:
+Пример:
 
 ```shell
-MASTER_NODE_IPS=($(d8 k get nodes -l \
-node-role.kubernetes.io/control-plane="" \
--o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
---no-headers))
-unset ENDPOINTS_STRING
-for master_node_ip in ${MASTER_NODE_IPS[@]}
-do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
-done
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
--l component=etcd,tier=control-plane -o name | head -n1) \
--- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key \
-$(echo -n $ENDPOINTS_STRING) endpoint status -w table
+d8 k -n kube-system exec -ti \
+$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+--key /etc/kubernetes/pki/etcd/ca.key endpoint status --cluster -w table check etcd cluster status
 ```
 
 ## Пересборка кластера etcd

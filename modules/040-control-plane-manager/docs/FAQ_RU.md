@@ -332,7 +332,7 @@ spec:
 
 ```shell
 d8 k -n kube-system exec -ti \
-$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
@@ -342,24 +342,15 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 ### Вариант 2
 
-Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane. В пятом столбце таблицы вывода будет указано значение `true` для лидера.
+Используйте команду `etcdctl endpoint status`. В пятом столбце таблицы вывода будет указано значение `true` для лидера.
 
-Пример скрипта, который автоматически передает все адреса узлов control-plane:
+Пример:
 
 ```shell
-MASTER_NODE_IPS=($(d8 k get nodes -l \
-node-role.kubernetes.io/control-plane="" \
--o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
---no-headers))
-unset ENDPOINTS_STRING
-for master_node_ip in ${MASTER_NODE_IPS[@]}
-do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
-done
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
--l component=etcd,tier=control-plane -o name | head -n1) \
--- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key \
-$(echo -n $ENDPOINTS_STRING) endpoint status -w table
+d8 k -n kube-system exec -ti \
+$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+--key /etc/kubernetes/pki/etcd/ca.key endpoint status --cluster -w table check etcd cluster status
 ```
 
 ## Что делать, если что-то пошло не так?
@@ -423,7 +414,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится "read-only". Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -436,7 +427,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
