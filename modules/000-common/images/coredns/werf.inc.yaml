@@ -10,12 +10,12 @@ shell:
   install:
     - git clone --depth 1 -b v1.12.3 $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
     # - git clone --depth 1 -b v0.1.0 -v "$(cat /run/secrets/SOURCE_REPO)/deckhouse/coredns-kubeforward" /src/coredns-kubeforward
-    # - git clone --depth 1 -b nxdomain-metric -v https://github.com/deckhouse/coredns-kubeforward.git /src/coredns-kubeforward
-    # - cd /src
-    # - touch /src/coredns-kubeforward/go.mod # need for go build
-    # - echo "kubeforward:github.com/deckhouse/coredns-kubeforward" >> plugin.cfg
+    - git clone --depth 1 -b nxdomain-metric -v https://github.com/deckhouse/coredns-kubeforward.git /src/coredns-kubeforward
+    - cd /src
+     touch /src/coredns-kubeforward/go.mod # need for go build
+    - echo "kubeforward:github.com/deckhouse/coredns-kubeforward" >> plugin.cfg
     - rm -rf /src/.git
-    # - rm -rf /src/coredns-kubeforward/.git
+    - rm -rf /src/coredns-kubeforward/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -35,10 +35,9 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    # - go mod edit -replace=github.com/deckhouse/coredns-kubeforward=./coredns-kubeforward # hack
+    - go mod edit -replace=github.com/deckhouse/coredns-kubeforward=./coredns-kubeforward # hack
     # - go mod edit -require=github.com/deckhouse/coredns-kubeforward@v0.1.0 # hack
-    - go get github.com/deckhouse/coredns-kubeforward@nxdomain-metric # remove !!!
-    - echo "kubeforward:github.com/deckhouse/coredns-kubeforward" >> plugin.cfg # remove !!!
+    - go mod edit -require=github.com/deckhouse/coredns-kubeforward@nxdomain-metric # hack
     - go generate
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.3' -o /coredns
     - chown 64535:64535 /coredns
