@@ -1,0 +1,13 @@
+candi:
+  fixes:
+    - summary: Switch node hostname in discover_node_ip.sh to locked hostname
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15799
+    - summary: fixed version of containerd image in bashible step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15795
+dhctl:
+  fixes:
+    - summary: Change default ssh mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15805
+    - summary: Change default ssh mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15773
+
