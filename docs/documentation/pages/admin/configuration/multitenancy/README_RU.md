@@ -1,7 +1,6 @@
 ---
-title: Мультитенантность
-permalink: ru/admin/multitenancy.html
-description: Мультитенантность
+title: Проекты
+permalink: ru/admin/multitenancy/projects.html
 lang: ru
 ---
 

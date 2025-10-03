@@ -1,7 +1,6 @@
 ---
-title: Multitenancy
-permalink: en/admin/multitenancy.html
-description: Multitenancy
+title: Projects
+permalink: en/admin/multitenancy/projects.html
 ---
 
 Multitenancy is the ability to create isolated environments (projects) within a Kubernetes cluster.

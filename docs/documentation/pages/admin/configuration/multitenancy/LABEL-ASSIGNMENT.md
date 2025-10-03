@@ -1,6 +1,6 @@
 ---
 title: Automatic assignment of namespace labels and annotations
-permalink: en/admin/configuration/label-assignment.html
+permalink: en/admin/multitenancy/label-assignment.html
 ---
 
 You can automate the assignment of labels and annotations to namespaces in a Deckhouse cluster

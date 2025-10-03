@@ -848,16 +848,20 @@ entries:
                   url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
-              url: /admin/multitenancy.html
+                ru: Мультитенантность
+              folders:
+                - title:
+                    en: Projects
+                    ru: Проекты
+                  url: /admin/multitenancy/projects.html
+                - title:
+                    en: Assigning namespace labels
+                    ru: Назначение лейблов пространствам имён
+                  url: /admin/multitenancy/label-assignment.html
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
-            - title:
-                en: Assigning namespace labels
-                ru: Назначение лейблов пространствам имён
-              url: /admin/configuration/label-assignment.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
