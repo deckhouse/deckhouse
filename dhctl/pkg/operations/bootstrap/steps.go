@@ -108,14 +108,15 @@ func BootstrapMaster(ctx context.Context, nodeInterface node.Interface, controll
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, commanderMode bool) error {
 	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig)
+		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, commanderMode)
 	})
 }
 
-func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
-	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
+	args := []string{"--local", "--max-retries", "5"}
+	bundleCmd := nodeInterface.UploadScript("bashible.sh", args...)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
@@ -418,7 +419,7 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 	return tlsCert, nil
 }
 
-func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string, commanderMode bool) error {
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -435,7 +436,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, cfg); err != nil {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, commanderMode); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -491,7 +492,6 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -517,7 +517,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		defer cleanUpTunnel()
 	}
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController); err != nil {
+	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController, commanderMode); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -530,7 +530,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
 		BreakIf(func(err error) bool {
 			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 		}).
@@ -545,7 +545,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 			log.DebugLn("Start execute bashible bundle routine")
 
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir, commanderMode)
 		})
 }
 
