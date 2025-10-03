@@ -28,8 +28,8 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
-fromCacheVersion: "2025-10-02"
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/debian-svace-12.11-slim" }}
+fromCacheVersion: "2025-10-03"
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/debian-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
