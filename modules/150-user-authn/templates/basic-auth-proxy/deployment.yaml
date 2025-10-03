@@ -129,6 +129,7 @@ spec:
         - --oidc-scope=email
         - --oidc-scope=groups
         - --oidc-scope=offline_access
+        - --oidc-scope=federated:id
         {{- end }}
         {{- end }}
         ports:

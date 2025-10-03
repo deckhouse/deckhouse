@@ -351,6 +351,7 @@ index 0000000..2905d2a
 +      - "--oidc-extra-scope=groups"
 +      - "--oidc-extra-scope=offline_access"
 +      - "--oidc-extra-scope=audience:server:client_id:kubernetes"
++      - "--oidc-extra-scope=federated:id"
 +      {{- if .IDPCaPem }}
 +      - "--certificate-authority-data={{ .IDPCaEncoded }}"
 +      {{- end }}
