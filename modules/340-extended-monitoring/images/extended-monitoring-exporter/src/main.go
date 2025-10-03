@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	met "extended-monitoring/metrics"
+	w "extended-monitoring/watcher"
 	"os"
 	"os/signal"
 	"syscall"
@@ -61,13 +63,13 @@ func main() {
 
 	registry := prometheus.NewRegistry()
 
-	metrics := RegisterMetrics(registry)
+	metrics := met.RegisterMetrics(registry)
 
-	watcher := NewWatcher(kubeClient, metrics)
+	watcher := w.NewWatcher(kubeClient, metrics)
 
 	go watcher.StartNamespaceWatcher(ctx)
 
-	go StartPrometheusServer(ctx, registry, listenAddr)
+	go met.StartPrometheusServer(ctx, registry, listenAddr)
 
 	<-ctx.Done()
 	log.Info("Main shutdown complete")

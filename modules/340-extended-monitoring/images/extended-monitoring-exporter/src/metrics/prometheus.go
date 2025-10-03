@@ -14,20 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package metrics
 
 import (
 	"context"
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type PrometheusExporterMetrics struct {
+type ExporterMetrics struct {
 	NodeEnabled        	 *prometheus.GaugeVec
 	NodeThreshold      	 *prometheus.GaugeVec
 	NamespacesEnabled  	 *prometheus.GaugeVec
@@ -42,17 +41,10 @@ type PrometheusExporterMetrics struct {
 	IngressEnabled       *prometheus.GaugeVec
 	IngressThreshold     *prometheus.GaugeVec
 	CronJobEnabled    	 *prometheus.GaugeVec
-	lastObserved         time.Time
-	mu                   sync.RWMutex
 }
 
-var(
-	lastObserved time.Time
-	timeOutHealthz = 15 * time.Minute
-)
-
-func RegisterMetrics(reg prometheus.Registerer) *PrometheusExporterMetrics {
-	m := &PrometheusExporterMetrics{
+func RegisterMetrics(reg prometheus.Registerer) *ExporterMetrics {
+	m := &ExporterMetrics{
 		NamespacesEnabled: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "extended_monitoring_enabled",
@@ -178,7 +170,7 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		if time.Since(lastObserved) > timeOutHealthz {
+		if time.Since(GetLastObserved()) > timeOutHealthz {
 			log.Printf("Fail if metrics were last collected more than %v", timeOutHealthz)
 			http.Error(w, "metrics stale", http.StatusInternalServerError)
 			return
