@@ -17,6 +17,7 @@ package tofu
 import (
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"syscall"
 
@@ -124,6 +125,10 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	}
 
 	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
+	if opts.NoOutput {
+		e.cmd.Stdout = io.Discard
+		e.cmd.Stderr = io.Discard
+	}
 
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
@@ -176,4 +181,15 @@ func (e *Executor) Stop() {
 	//    from shell and from us.
 	//    See also pkg/system/ssh/cmd/ssh.go
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
+}
+
+func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+	args := []string{
+		"show",
+		"-json",
+		planPath,
+	}
+
+	cmd := tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
+	return infrastructure.GetActions(ctx, cmd)
 }

@@ -318,7 +318,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)
 
-	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{})
+	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
