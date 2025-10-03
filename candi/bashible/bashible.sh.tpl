@@ -220,6 +220,7 @@ function main() {
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
+  export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
@@ -276,6 +277,10 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
+ if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+    bb-label-node-bashible-first-run-finished
+    touch $BASHIBLE_INITIALIZED_FILE
+ fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
