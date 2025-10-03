@@ -96,8 +96,8 @@ By default, in a cluster with Deckhouse, a basic policy is created for logging e
 A basic policy can be disabled by setting the [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) flag to `false`.
 
 When OIDC authentication is configured, additional user information is included in audit logs under the `user.extra` field:
-- `user-authn.deckhouse.io/name` - user's display name
-- `user-authn.deckhouse.io/preferred_username` - user's preferred username  
-- `user-authn.deckhouse.io/dex-provider` - Dex provider identifier (requires `federated:id` scope)
+- `user-authn.deckhouse.io/name` — user's display name
+- `user-authn.deckhouse.io/preferred_username` — user's preferred username  
+- `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
