@@ -1,6 +1,6 @@
 ---
 title: Security policies
-permalink: en/admin/configuration/security/policies.html
+permalink: ensecurity/policies.html
 description: "Configure security policies in Deckhouse Kubernetes Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 

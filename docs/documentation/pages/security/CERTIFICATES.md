@@ -1,6 +1,6 @@
 ---
 title: Certificate management
-permalink: en/admin/configuration/security/certificates.html
+permalink: ensecurity/certificates.html
 description: "Manage TLS certificates in Deckhouse Kubernetes Platform with Let's Encrypt, HashiCorp Vault, Venafi integration. Automatic renewal, monitoring, and certificate lifecycle management."
 ---
 

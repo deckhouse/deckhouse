@@ -87,7 +87,8 @@ if [ -n "${CSE_DOC_OUTPUT_DIR}" ]; then
   cp -rf $_TMPDIR/app/platform/*.* ${CSE_DOC_OUTPUT_DIR}
   cp -rf $_TMPDIR/app/platform/images ${CSE_DOC_OUTPUT_DIR}/
   cp -rf $_TMPDIR/app/platform/assets ${CSE_DOC_OUTPUT_DIR}/
-  cp -rf $_TMPDIR/app/platform/presentation ${CSE_DOC_OUTPUT_DIR}/
+#  cp -rf $_TMPDIR/app/platform/presentation ${CSE_DOC_OUTPUT_DIR}/
+  cp -rf $_TMPDIR/app/platform/security ${CSE_DOC_OUTPUT_DIR}/
   cp -rf $_TMPDIR/app/platform/modules/ru/modules/* ${CSE_DOC_OUTPUT_DIR}/embedded-modules
   cp -rf $_TMPDIR/app/platform/modules/ru/search-embedded-modules-index.json ${CSE_DOC_OUTPUT_DIR}/embedded-modules/search-embedded-modules-index.json
   echo "Result in the ${CSE_DOC_OUTPUT_DIR} directory."

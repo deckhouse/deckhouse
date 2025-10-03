@@ -5,3 +5,4 @@ description: Параметры настройки модуля data-exporter De
 ---
 
 
+<!-- SCHEMA -->

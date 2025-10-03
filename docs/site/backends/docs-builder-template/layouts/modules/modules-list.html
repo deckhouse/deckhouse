@@ -45,7 +45,8 @@
 {{ $modulesChannelsData := .Site.Data.modules.channels }}
 {{ $channelsInfo := .Site.Data.channels.info }}
 {{ $modulesList := slice }}
-{{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
+{{/* $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries */}}
+{{ $embeddedModulesList := slice }}
 {{ $modulesEditions := .Site.Data.modules_all }}
 {{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{ $ctx := $ }}

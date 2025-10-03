@@ -35,7 +35,8 @@
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
 <script type="text/javascript">
   // Fix second level topnav menu for GS and guides sections.
-  let subUrls = ['/modules/'];
+  // let subUrls = ['/modules/'];
+  let subUrls = ['/TTTTTTTTTTTTTTTTTTTTTTTT/'];
   subUrls.forEach(function (element) {
     if (window.location.pathname.toLowerCase().includes(element)) {
       $('{% if site.mode == "module" %}.header__content.container{% else %}.header.header__product-menu{% endif %} ul.nav li').each(function () {

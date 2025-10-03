@@ -18,6 +18,7 @@
               <li class="header__navigation-item
                 {%- unless item.external_url.size > 0 %}
                 {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item active{% endif %}
+                {%- if item.url == '/' %} header__navigation-item active{% endif %}
                 {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item active{% endif %}
                 {%- if item.url.size>1 and page.url == item.url %} header__navigation-item active{% endif %}
                 {%- if page_url_without_lang == item.url %} header__navigation-item active{% endif %}

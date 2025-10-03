@@ -4,12 +4,12 @@ topnav:
     items:
     - title: Documentation
       url: /
-    - title: Modules
+    - title: Modules from source
       url: /modules/
   ru:
   - title: Topnav
     items:
     - title: Документация
       url: /
-    - title: Модули
+    - title: Подключаемые модули
       url: /modules/

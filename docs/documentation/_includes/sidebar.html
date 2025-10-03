@@ -31,7 +31,8 @@
           <ul class="sidebar" id="mysidebar">
 
             {% if page.sidebar == 'embedded-modules' %}
-              {% sidebar_module folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
+              <!-- sidebar_module folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" -->
+              {% sidebar_custom folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
             {% else %}
               {% sidebar_custom folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
             {% endif %}

@@ -5,9 +5,10 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
   puts "Generating sidebar for embedded modules..."
 
-  site.data['sidebars']['embedded-modules'] = {} if site.data['sidebars']['embedded-modules'].nil?
+#   site.data['sidebars']['embedded-modules'] = {} if site.data['sidebars']['embedded-modules'].nil?
 
-  site.pages.each do |page|
+  [].each do |page|
+#   site.pages.each do |page|
     if page.url.match?(%r{/modules/[^/]+/(.+)?$})
     then
       lang = page['lang'] || 'en'

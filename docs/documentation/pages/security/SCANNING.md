@@ -1,6 +1,6 @@
 ---
 title: Container image vulnerability scanning
-permalink: en/admin/configuration/security/scanning.html
+permalink: ensecurity/scanning.html
 description: "Configure container image vulnerability scanning in Deckhouse Kubernetes Platform using Trivy. Automated security scanning, vulnerability detection, and security policy enforcement."
 ---
 

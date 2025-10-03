@@ -1,6 +1,6 @@
 ---
 title: Аудит событий безопасности
-permalink: ru/admin/configuration/security/events/runtime-audit.html
+permalink: security/events/runtime-audit.html
 description: "Настройка аудита событий безопасности в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
 lang: ru
 ---

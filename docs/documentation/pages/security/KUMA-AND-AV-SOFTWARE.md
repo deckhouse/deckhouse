@@ -1,6 +1,6 @@
 ---
 title: Integration with KUMA and antivirus software
-permalink: en/admin/configuration/security/kuma-and-av-software.html
+permalink: ensecurity/kuma-and-av-software.html
 description: "Configure KUMA and antivirus software integration in Deckhouse Kubernetes Platform. Security event forwarding, audit log analysis, and Kaspersky integration setup."
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Kubernetes API event audit
-permalink: en/admin/configuration/security/events/kubernetes-api-audit.html
+permalink: ensecurity/events/kubernetes-api-audit.html
 description: "Configure Kubernetes API audit logging in Deckhouse Kubernetes Platform. API server event tracking, audit policy configuration, and security event analysis."
 ---
 
