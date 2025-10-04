@@ -23,9 +23,11 @@ moduleWatcher:
       - dev-registry.deckhouse.io/sys/deckhouse-oss/modules
       - registry.flant.com/team/foxtrot/docs-example
     web-production:
+      - registry.deckhouse.io/deckhouse/ee/modules
+    web-stage:
       - registry.deckhouse.io/deckhouse/fe/modules
     web-test:
-      - registry.deckhouse.io/deckhouse/fe/modules
+      - registry.deckhouse.io/deckhouse/ee/modules
     web-test2:
       - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
