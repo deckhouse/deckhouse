@@ -13,12 +13,10 @@ limitations under the License.
 
 package watcher
 
-
 const (
 	labelThresholdPrefix   = "threshold.extended-monitoring.deckhouse.io/"
 	namespacesEnabledLabel = "extended-monitoring.deckhouse.io/enabled"
 )
-
 
 var nodeThresholdMap = map[string]float64{
 	"disk-bytes-warning":             70,

@@ -19,11 +19,7 @@ import (
 	"log"
 	"strconv"
 
-
 	met "extended-monitoring/metrics"
-
-
-
 
 	"k8s.io/client-go/tools/cache"
 )

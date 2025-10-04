@@ -27,20 +27,20 @@ import (
 )
 
 type ExporterMetrics struct {
-	NodeEnabled        	 *prometheus.GaugeVec
-	NodeThreshold      	 *prometheus.GaugeVec
-	NamespacesEnabled  	 *prometheus.GaugeVec
-	PodEnabled         	 *prometheus.GaugeVec
-	PodThreshold       	 *prometheus.GaugeVec
-	DaemonSetEnabled   	 *prometheus.GaugeVec
-	DaemonSetThreshold 	 *prometheus.GaugeVec
-	StatefulSetEnabled 	 *prometheus.GaugeVec
+	NodeEnabled          *prometheus.GaugeVec
+	NodeThreshold        *prometheus.GaugeVec
+	NamespacesEnabled    *prometheus.GaugeVec
+	PodEnabled           *prometheus.GaugeVec
+	PodThreshold         *prometheus.GaugeVec
+	DaemonSetEnabled     *prometheus.GaugeVec
+	DaemonSetThreshold   *prometheus.GaugeVec
+	StatefulSetEnabled   *prometheus.GaugeVec
 	StatefulSetThreshold *prometheus.GaugeVec
 	DeploymentEnabled    *prometheus.GaugeVec
 	DeploymentThreshold  *prometheus.GaugeVec
 	IngressEnabled       *prometheus.GaugeVec
 	IngressThreshold     *prometheus.GaugeVec
-	CronJobEnabled    	 *prometheus.GaugeVec
+	CronJobEnabled       *prometheus.GaugeVec
 }
 
 func RegisterMetrics(reg prometheus.Registerer) *ExporterMetrics {

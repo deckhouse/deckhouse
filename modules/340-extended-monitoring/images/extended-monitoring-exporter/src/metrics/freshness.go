@@ -21,7 +21,7 @@ import (
 var (
 	lastObservedTime time.Time
 	lastObservedMu   sync.RWMutex
-	timeOutHealthz = 15 * time.Minute
+	timeOutHealthz   = 15 * time.Minute
 )
 
 func init() {
