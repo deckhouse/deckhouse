@@ -31,6 +31,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+// run e2e
 // Test calculateUpdateEpoch method with different input cases:
 // - different clusterID or nodeGroup should return different epoch numbers
 // - also test epoch calculation with different timestamps and for edge cases
