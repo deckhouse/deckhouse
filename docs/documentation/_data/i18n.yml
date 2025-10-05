@@ -256,6 +256,24 @@ common:
   role:
     en: role
     ru: роль
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module XXXX parameters
+    ru: Параметры модуля XXXX
+  module_x_crds:
+    en: Module XXXX custom resources
+    ru: Кастомные ресурсы модуля XXXX
+  module_x_documentation:
+    en: Module XXXX documentation
+    ru: Документация модуля XXXX
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
