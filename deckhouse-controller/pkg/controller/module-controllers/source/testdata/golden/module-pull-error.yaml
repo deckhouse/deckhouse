@@ -22,7 +22,7 @@ status:
     name: enabledmodule
     version: v1.2.3
   - error: |-
-      get image info: fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
+      get image info: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
             MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
     name: errormodule
     policy: test-alpha
