@@ -5,6 +5,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+cacheVersion: "2025-10-06"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/operator/out/operator
@@ -60,8 +61,16 @@ final: false
 secrets:
 - id: DECKHOUSE_PRIVATE_REPO
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/sail-operator.git /src/operator
+  - cd /src/operator
+  - git apply --verbose /patches/001-istio-go-mod.patch
   - rm -rf /src/operator/.git
 ---
