@@ -114,8 +114,7 @@ function create_registry() {
       continue
     else
       registry_id=$(jq -r '.id' <<< "$response")
-      echo "Created registry id: $registry_id"
-      return "$registry_id"
+      echo "$registry_id"
     fi
   done
 }
