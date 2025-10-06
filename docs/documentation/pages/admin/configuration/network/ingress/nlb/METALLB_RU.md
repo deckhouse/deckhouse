@@ -5,7 +5,7 @@ description: "Настройка балансировки нагрузки Metal
 lang: ru
 ---
 
-Модуль [`metallb`](../../../../../modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
+Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
 Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->

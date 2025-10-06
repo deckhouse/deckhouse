@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/network/internal/encrypting-pods.html
 lang: ru
 ---
 
-Для шифрования трафика между подами в Deckhouse Kubernetes Platform (DKP) можно использовать mTLS, реализованный средствами Istio (модуль [`istio`](../../../../modules/istio/)).
+Для шифрования трафика между подами в Deckhouse Kubernetes Platform (DKP) можно использовать mTLS, реализованный средствами Istio (модуль [`istio`](/modules/istio/)).
 
 <!-- Перенесено с минорными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#mutual-tls -->
 
