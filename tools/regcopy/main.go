@@ -105,16 +105,11 @@ func main() {
 			log.Fatal(err)
 		}
 
-		resultImage, err := remote.Image(newRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		resultDesc, err := remote.Get(newRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		resultDigest, err := resultImage.Digest()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDigest)
+		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDesc.Digest)
 	}
 }
