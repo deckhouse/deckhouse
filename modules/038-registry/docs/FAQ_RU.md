@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry: FAQ"
-description: ""
+description: "Часто задаваемые вопросы о модуле registry Deckhouse Kubernets Platform, включая процедуры миграции, переключение режимов, конфигурацию containerd и устранение проблем с registry."
 ---
 
 ## Как мигрировать на модуль registry?

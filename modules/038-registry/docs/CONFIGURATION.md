@@ -1,6 +1,5 @@
 ---
 title: "Module registry: configuration"
-description: ""
 ---
 
 {% alert level="warning" %}
