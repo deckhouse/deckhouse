@@ -12,6 +12,7 @@ $(document).ready(function () {
   }
 
   function showItems() {
+    const position = window.scrollY || document.documentElement.scrollTop;
     const end = Math.min(count + itemsPerPage, filteredArticles.length);
 
     for(let i = count; i < end; i++) {
@@ -25,6 +26,8 @@ $(document).ready(function () {
     } else {
       moreButton.style.display = 'flex';
     }
+
+    window.scrollTo(0, position);
   }
 
   function initializeArticlePagination(articlesToPagination) {
