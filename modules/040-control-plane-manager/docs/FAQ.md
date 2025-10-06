@@ -365,7 +365,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. The fifth parameter in the output table will be `true` for the leader.
+To obtain information about etcd cluster nodes in tabular form, use the `etcdctl endpoint status` command. For the leader, the `IS LEADER` column will show `true`.
 
 Example:
 
