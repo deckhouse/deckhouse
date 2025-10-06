@@ -7,6 +7,8 @@ import:
     add: /src/alertmanager
     to: /bin/alertmanager
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/alertmanager"]
