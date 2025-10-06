@@ -1,18 +1,47 @@
+// Filter and pagination logic for modules and guides
+// When adding the pagination logic again, add the filter-pagination file.js instead of filter.js
+// Also add 'show more' buttons
+
 $(document).ready(function () {
   const articles = document.querySelectorAll('.button-tile');
+  const moreButton = document.querySelector('.tile__pagination');
   const filterCheckboxes = document.querySelector('.filter__checkboxes');
   const resetButton = document.querySelector('.reset-check');
+  const itemsPerPage = 12;
+  let filteredArticles = [];
+  let count = 0;
 
   function hideAllItems() {
     articles.forEach(article => article.style.display = 'none');
   }
 
-  function initializeArticleFilter(articlesToFilter) {
+  function showItems() {
+    const end = Math.min(count + itemsPerPage, filteredArticles.length);
+
+    for(let i = count; i < end; i++) {
+        filteredArticles[i].style.display = 'flex';
+    }
+
+    count = end;
+
+    if(count >= filteredArticles.length) {
+      moreButton.style.display = 'none';
+    } else {
+      moreButton.style.display = 'flex';
+    }
+  }
+
+  function initializeArticlePagination(articlesToPagination) {
+    filteredArticles = articlesToPagination;
+    count = 0;
     hideAllItems();
 
-    articlesToFilter.forEach(article => {
-      article.style.display = 'flex';
-    })
+    if(filteredArticles.length <= itemsPerPage) {
+      filteredArticles.forEach(list => list.style.display = 'flex');
+      moreButton.style.display = 'none';
+    } else {
+      showItems();
+    }
   }
 
   function filterArticles() {
@@ -24,7 +53,7 @@ $(document).ready(function () {
       return selectedTags.length === 0 || selectedTags.every(tag => tagElement.includes(tag));
     })
 
-    initializeArticleFilter(filtered);
+    initializeArticlePagination(filtered);
 
     if (checkboxesChecked.length > 0) {
       resetButton.classList.add('active');
@@ -68,7 +97,8 @@ $(document).ready(function () {
   }
 
   createFilters();
-  initializeArticleFilter(Array.from(articles));
+  initializeArticlePagination(Array.from(articles));
+  moreButton.addEventListener('click', showItems);
 
   resetButton.addEventListener('click', () => {
     const checkboxes = filterCheckboxes.querySelectorAll('input[type="checkbox"]');
