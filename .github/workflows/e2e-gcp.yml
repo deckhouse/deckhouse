@@ -66,7 +66,6 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
