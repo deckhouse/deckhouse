@@ -36,6 +36,7 @@ pattern: шаблон
 length: длина
 min_length: минимальная длина
 max_length: максимальная длина
+moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройка

@@ -36,6 +36,7 @@ found: found
 length: length
 min_length: minimal length
 max_length: maximum length
+moduleLinkTitleADVANCED_USAGE: Advanced usage
 moduleLinkTitleREADME: Description
 moduleLinkTitleEXAMPLES: Examples
 moduleLinkTitleCONFIGURATION: Configuration
