@@ -59,11 +59,10 @@
   {{ $moduleDescription := "" }}
   {{ $moduleTags := slice }}
 
-  {{/* Skip the module if there is embedded module with the same name (in the $embeddedModulesList) */}}
+  {{/* Skip the embedded module if there is external module with the same name */}}
   {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
   {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
-    {{ warnf "Found embedded module %s and external modules with the same name. Use only embedded module." $module }}
-    {{ continue }}
+    {{ warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
   {{ end }}
 
   {{ $moduleTags = index (index $modulesEditions $module) "tags" }}
@@ -90,7 +89,16 @@
 {{ warnf "Found %d modules from sources." ($modulesList | len) }}
 {{ if $embeddedModulesList }}
   {{ warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
-  {{ $modulesList = $modulesList | append $embeddedModulesList }}
+  {{ $filteredEmbeddedModules := slice }}
+  {{ range $embeddedModulesList }}
+    {{ $externalModuleWithSameName := (where $modulesList "module" .module) }}
+    {{ if eq ($externalModuleWithSameName | len) 0 }}
+      {{ $filteredEmbeddedModules = $filteredEmbeddedModules | append . }}
+    {{ else }}
+      {{ warnf "Skipping embedded module %s because external module with same name exists." .module }}
+    {{ end }}
+  {{ end }}
+  {{ $modulesList = $modulesList | append $filteredEmbeddedModules }}
 {{ else }}
   {{ warnf "No embedded modules found!" }}
 {{ end }}
