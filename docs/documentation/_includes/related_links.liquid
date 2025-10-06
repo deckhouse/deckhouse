@@ -1,9 +1,21 @@
 {%- if page.related_links and page.related_links.size > 0 %}
-{%- assign page_related_module_reference = page.related_links | where_exp: "item", "item.type == 'module_conf' or item.type == 'module_cr'" | sort: "module" %}
-{%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_ref'"  %}
+{%- assign all_module_links = page.related_links | where_exp: "item", "item.type == 'module_conf' or item.type == 'module_crds' or item.type == 'module_doc'" %}
+{%- assign page_related_module_reference = "" | split: "" %}
+{%- for link in all_module_links %}
+  {%- assign module_doc_exists = all_module_links | where_exp: "item", "item.module == link.module and item.type == 'module_doc'" | size %}
+  {%- if module_doc_exists > 0 %}
+    {%- if link.type == 'module_doc' %}
+      {%- assign page_related_module_reference = page_related_module_reference | push: link %}
+    {%- endif %}
+  {%- else %}
+    {%- assign page_related_module_reference = page_related_module_reference | push: link %}
+  {%- endif %}
+{%- endfor %}
+{%- assign page_related_module_reference = page_related_module_reference | sort: "module" %}
+{%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_conf' or item.type == 'global_crds'" %}
 {% if page_related_module_reference.size > 0 or page_related_global_reference.size > 0 %}
   {%- alert level="info" %}
-{{ site.data.i18n.common['related_reference_links'][page.lang] }}:
+{{ site.data.i18n.common['related_reference_and_documentation_links'][page.lang] }}:
   {% if page_related_global_reference.size > 0 %}
     {%- for link in page_related_global_reference %}
 - [{{ link.title }}]({{ link.url }})

@@ -259,6 +259,9 @@ common:
   related_reference_links:
     en: Related links to API
     ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
   related_links:
     en: Related links
     ru: Связанные ссылки
