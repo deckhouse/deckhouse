@@ -21,9 +21,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 type RegistryData struct {

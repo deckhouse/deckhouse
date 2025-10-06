@@ -20,12 +20,12 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type (

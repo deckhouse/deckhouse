@@ -20,9 +20,10 @@ import (
 	"regexp"
 	"sync/atomic"
 
+	"github.com/flant/docs-builder/internal/metrics"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/flant/docs-builder/internal/metrics"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)

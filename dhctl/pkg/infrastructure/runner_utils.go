@@ -21,16 +21,17 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/stretchr/testify/assert/yaml"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infra "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/stretchr/testify/assert/yaml"
 )
 
 type Plan map[string]any
 
 type DestructiveChangesReport struct {
-	Changes *PlanDestructiveChanges
+	Changes              *PlanDestructiveChanges
 	hasMasterDestruction bool
 }
 
@@ -130,10 +131,10 @@ func getCloudNameToUseOpentofuMap(filename string) (map[string]struct{}, error) 
 }
 
 func NeedToUseOpentofu(metaConfig *config.MetaConfig) bool {
-    useTofuMap, err := getCloudNameToUseOpentofuMap(infra.InfrastructureVersions)
-    if err != nil {
-        panic(fmt.Errorf("Cannot get use tofu map: %v", err))
-    }
+	useTofuMap, err := getCloudNameToUseOpentofuMap(infra.InfrastructureVersions)
+	if err != nil {
+		panic(fmt.Errorf("Cannot get use tofu map: %v", err))
+	}
 
 	provider := strings.ToLower(metaConfig.ProviderName)
 
@@ -143,84 +144,84 @@ func NeedToUseOpentofu(metaConfig *config.MetaConfig) bool {
 }
 
 func IsMasterInstanceDestructiveChanged(_ context.Context, rc ResourceChange, rm map[string]string) bool {
-    for providerKey, vmType := range rm {
-        // ex: providerKey = "yandex-cloud/yandex"
-        // rc.ProviderName = "registry.terraform.io/yandex-cloud/yandex"
-        if !strings.Contains(rc.ProviderName, providerKey) {
-            continue
-        }
+	for providerKey, vmType := range rm {
+		// ex: providerKey = "yandex-cloud/yandex"
+		// rc.ProviderName = "registry.terraform.io/yandex-cloud/yandex"
+		if !strings.Contains(rc.ProviderName, providerKey) {
+			continue
+		}
 
-        if rc.Type != vmType {
-            return false
-        }
-        // DVP
-        if vmType == "kubernetes_manifest" {
-            return isKubernetesManifestVirtualMachine(rc.Change)
-        }
+		if rc.Type != vmType {
+			return false
+		}
+		// DVP
+		if vmType == "kubernetes_manifest" {
+			return isKubernetesManifestVirtualMachine(rc.Change)
+		}
 
-        return true
-    }
-    return false
+		return true
+	}
+	return false
 }
 
 func isKubernetesManifestVirtualMachine(change ChangeOp) bool {
-    return strings.EqualFold(extractManifestKind(change.After), DVPVMKind)
+	return strings.EqualFold(extractManifestKind(change.After), DVPVMKind)
 }
 
 func extractManifestKind(state map[string]interface{}) string {
-    v, ok := state["manifest"]
-    if !ok || v == nil {
-        return ""
-    }
-    mv, ok := v.(map[string]interface{})
-    if !ok {
-        return ""
-    }
-    if kind, ok := mv["kind"].(string); ok {
+	v, ok := state["manifest"]
+	if !ok || v == nil {
+		return ""
+	}
+	mv, ok := v.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	if kind, ok := mv["kind"].(string); ok {
 		log.DebugF("extractManifestKind: %s\n", kind)
-        return kind
-    }
-    return ""
+		return kind
+	}
+	return ""
 }
 
 func LoadProviderVMTypesFromYAML(path string) (map[string]string, error) {
-    data, err := os.ReadFile(path)
-    if err != nil {
-        return nil, err
-    }
-    var raw map[string]any
-    if err := yaml.Unmarshal(data, &raw); err != nil {
-        return nil, err
-    }
-    resTypeMap := make(map[string]string)
-    for _, v := range raw {
-        m, ok := v.(map[string]any)
-        if !ok {
-            continue
-        }
-        ns, _ := m["namespace"].(string)
-        typ, _ := m["type"].(string)
-        vm, _ := m["vmResourceType"].(string)
-        if ns != "" && typ != "" && vm != "" {
-            resTypeMap[ns+"/"+typ] = vm
-        }
-    }
-    return resTypeMap, nil
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]any
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	resTypeMap := make(map[string]string)
+	for _, v := range raw {
+		m, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		ns, _ := m["namespace"].(string)
+		typ, _ := m["type"].(string)
+		vm, _ := m["vmResourceType"].(string)
+		if ns != "" && typ != "" && vm != "" {
+			resTypeMap[ns+"/"+typ] = vm
+		}
+	}
+	return resTypeMap, nil
 }
 
 func (r *Runner) getProviderVMTypes() (map[string]string, error) {
-    if r.vmTypeMap != nil {
-        return r.vmTypeMap, nil
-    }
-    r.vmTypeMu.Lock()
-    defer r.vmTypeMu.Unlock()
-    if r.vmTypeMap != nil {
-        return r.vmTypeMap, nil
-    }
-    m, err := LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
-    if err != nil {
-        return nil, err
-    }
-    r.vmTypeMap = m
-    return r.vmTypeMap, nil
+	if r.vmTypeMap != nil {
+		return r.vmTypeMap, nil
+	}
+	r.vmTypeMu.Lock()
+	defer r.vmTypeMu.Unlock()
+	if r.vmTypeMap != nil {
+		return r.vmTypeMap, nil
+	}
+	m, err := LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
+	if err != nil {
+		return nil, err
+	}
+	r.vmTypeMap = m
+	return r.vmTypeMap, nil
 }

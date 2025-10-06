@@ -25,12 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 
-	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 )
 
 type DrainOptions struct {

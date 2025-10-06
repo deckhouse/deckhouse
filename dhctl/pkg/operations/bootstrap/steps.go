@@ -39,9 +39,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -61,6 +58,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 const (
@@ -312,7 +311,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string,  clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -333,8 +332,8 @@ func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData,
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
-	
-    go proxy.Serve(proxyConfig)
+
+	go proxy.Serve(proxyConfig)
 
 	go func() {
 		<-ctx.Done()
@@ -495,7 +494,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		log.Success("Bashible already run! Skip bashible install\n\n")
 		return nil
 	}
-	
+
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
 	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)

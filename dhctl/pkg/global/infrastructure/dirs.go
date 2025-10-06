@@ -17,9 +17,9 @@ package infrastructure
 import "path/filepath"
 
 var (
-	dhctlPath    = "/"
-	deckhouseDir = "/deckhouse"
-	candiDir     = deckhouseDir + "/candi"
+	dhctlPath              = "/"
+	deckhouseDir           = "/deckhouse"
+	candiDir               = deckhouseDir + "/candi"
 	InfrastructureVersions = candiDir + "/terraform_versions.yml"
 )
 

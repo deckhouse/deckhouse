@@ -20,10 +20,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"registry-modules-watcher/internal/metrics"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-
-	"registry-modules-watcher/internal/metrics"
 )
 
 type Sender interface {

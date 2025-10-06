@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,17 +18,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"flag"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -54,8 +52,8 @@ type ConnectionsCleaner struct {
 }
 
 var (
-	native       = nl.NativeEndian()
-	networkOrder = binary.BigEndian
+	native        = nl.NativeEndian()
+	networkOrder  = binary.BigEndian
 	listenAddress string
 )
 

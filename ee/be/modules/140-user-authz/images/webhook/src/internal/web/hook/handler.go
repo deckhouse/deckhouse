@@ -16,12 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"webhook/internal/cache"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"webhook/internal/cache"
 )
 
 const (

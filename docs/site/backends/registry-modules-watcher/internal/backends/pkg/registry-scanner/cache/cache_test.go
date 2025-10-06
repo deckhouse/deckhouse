@@ -18,11 +18,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func TestCache(t *testing.T) {

@@ -318,7 +318,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	}
 
 	c.state.State[nodeName] = outputs.InfrastructureState
-	
+
 	if c.nodeToHost != nil {
 		c.nodeToHost[nodeName] = outputs.MasterIPForSSH
 	}

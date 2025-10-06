@@ -26,12 +26,12 @@ import (
 	"time"
 
 	"github.com/alessio/shellescape"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"golang.org/x/crypto/ssh"
 )
 
 type SSHUploadScript struct {
