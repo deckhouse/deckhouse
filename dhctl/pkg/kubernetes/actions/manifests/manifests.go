@@ -331,6 +331,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			ReadOnlyRootFilesystem: ptr.To(true),
 			RunAsUser:              ptr.To(int64(0)),
 			RunAsGroup:             ptr.To(int64(0)),
+			RunAsNonRoot:           ptr.To(false),
 			Privileged:             ptr.To(true),
 		},
 	}
