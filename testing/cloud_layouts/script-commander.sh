@@ -234,13 +234,13 @@ function prepare_environment() {
   "vSphere")
     ssh_user="redos"
     bastion_user="ubuntu"
-    bastion_host="31.41.158.74"
+    bastion_host="31.128.54.168"
     bastion_port="53359"
     ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
-      \"prefix\": \"a${PREFIX}\",
+      \"prefix\": \"${PREFIX}\",
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
@@ -251,7 +251,8 @@ function prepare_environment() {
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
       \"sshBastionPort\": \"${bastion_port}\",
-      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
 
     ;;
@@ -1159,13 +1160,20 @@ function run-test() {
   set_common_ssh_parameters
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
-
-  if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-    echo "Ingress and Istio test passed"
-  else
-    echo "Ingress and Istio test failure"
-    return 1
-  fi
+  testRunAttempts=60
+  for ((i=1; i<=testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo /bin/bash -s <<<"${testScript}"; then
+      echo "Ingress and Istio test passed"
+      break
+    fi
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n " Ingress and Istio test. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Ingress and Istio test. Attempt $i/$testRunAttempts failed."
+      return 1
+    fi
+  done
 
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
