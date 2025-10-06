@@ -25,14 +25,14 @@ module Jekyll
 
         # Determine title based on link type
         title = text.strip
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_cr'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
           module_name = extract_module_name(url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
               template = site_data['i18n']['common']['module_x_parameters'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
-            when 'module_cr'
+            when 'module_crds'
               template = site_data['i18n']['common']['module_x_crds'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
             when 'module_doc'
@@ -40,19 +40,24 @@ module Jekyll
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
             end
           end
-        elsif link_type == 'global_ref'
+        elsif link_type == 'global_crds' || link_type == 'global_conf'
           # Extract resource name from global reference URL
           resource_name = extract_global_resource_name(url)
           if resource_name
             title = "Global #{resource_name} custom resource"
           else
-            title = site_data['i18n']['common']['global_crds'][page_lang]
+            # Use translation based on link type
+            if link_type == 'global_crds'
+              title = site_data['i18n']['common']['global_crds'][page_lang]
+            elsif link_type == 'global_conf'
+              title = site_data['i18n']['common']['global_parameters'][page_lang]
+            end
           end
         end
 
-        # For module_cr and module_conf links, remove anchors from URL
+        # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
         final_url = url
-        if link_type == 'module_cr' || link_type == 'module_conf'
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'global_crds' || link_type == 'global_conf'
           final_url = url.split('#')[0]
         end
 
@@ -62,8 +67,8 @@ module Jekyll
           'type' => link_type
         }
 
-        # Add module property for module links
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_cr'
+        # Add module name for module links
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
           module_name = extract_module_name(url)
           link_data['module'] = module_name if module_name
         end
@@ -85,14 +90,14 @@ module Jekyll
         link_type = determine_link_type(url, url)
 
         # Determine title based on link type
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_cr'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
           module_name = extract_module_name(url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
               template = site_data['i18n']['common']['module_x_parameters'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
-            when 'module_cr'
+            when 'module_crds'
               template = site_data['i18n']['common']['module_x_crds'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
             when 'module_doc'
@@ -100,22 +105,26 @@ module Jekyll
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} documentation"
             end
           end
-        elsif link_type == 'global_ref'
+        elsif link_type == 'global_crds' || link_type == 'global_conf'
           # Extract resource name from global reference URL
           resource_name = extract_global_resource_name(url)
           if resource_name
             title = "Global #{resource_name} custom resource"
           else
-            # Use translation
+            # Use translation based on link type
             if site_data && site_data['i18n'] && site_data['i18n']['common']
-              title = site_data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+              if link_type == 'global_crds'
+                title = site_data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+              elsif link_type == 'global_conf'
+                title = site_data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+              end
             end
           end
         end
 
-        # For module_cr and module_conf links, remove anchors from URL
+        # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
         final_url = url
-        if link_type == 'module_cr' || link_type == 'module_conf'
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'global_crds' || link_type == 'global_conf'
           final_url = url.split('#')[0]
         end
 
@@ -126,7 +135,7 @@ module Jekyll
         }
 
         # Add module property for module links
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_cr'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
           module_name = extract_module_name(url)
           link_data['module'] = module_name if module_name
         end
@@ -203,7 +212,7 @@ module Jekyll
 
       # Check for module CR links
       if url_for_matching.match?(%r{/modules/[^/]+/cr\.html.*$})
-        return 'module_cr'
+        return 'module_crds'
       end
 
       # Check for module documentation links
@@ -211,9 +220,14 @@ module Jekyll
         return 'module_doc'
       end
 
-      # Check for global reference links
-      if url_for_matching.match?(%r{/reference/api/})
-        return 'global_ref'
+      # Check for global CR links
+      if url_for_matching.match?(%r{/reference/api/cr\.html.*})
+        return 'global_crds'
+      end
+
+      # Check for global configuration links
+      if url_for_matching.match?(%r{/reference/api/global\.html.*})
+        return 'global_conf'
       end
 
       # Default to internal document
@@ -273,8 +287,6 @@ Jekyll::Hooks.register :site, :pre_render do |site|
             # Create a copy of the link to avoid modifying the original
             processed_link = link.dup
 
-            # Keep original URL format
-
             # Add type if missing
             unless processed_link.key?('type')
               link_type = Jekyll::LinksExtractor.determine_link_type(processed_link['url'], processed_link['url'])
@@ -282,7 +294,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
             end
 
             # Add module property and standardized title for module links if missing
-            if processed_link['type'] == 'module_doc' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_cr'
+            if processed_link['type'] == 'module_doc' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_crds'
               module_name = Jekyll::LinksExtractor.extract_module_name(processed_link['url'])
               if module_name
                 # Add module property if missing
@@ -294,7 +306,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
                   when 'module_conf'
                     template = site.data['i18n']['common']['module_x_parameters'][page_lang]
                     processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
-                  when 'module_cr'
+                  when 'module_crds'
                     template = site.data['i18n']['common']['module_x_crds'][page_lang]
                     processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
                   when 'module_doc'
@@ -303,18 +315,23 @@ Jekyll::Hooks.register :site, :pre_render do |site|
                   end
                 end
               end
-            elsif processed_link['type'] == 'global_ref'
+            elsif processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
               # Update title for global reference links
               resource_name = Jekyll::LinksExtractor.extract_global_resource_name(processed_link['url'])
               if resource_name
                 processed_link['title'] = "Global #{resource_name} custom resource"
               else
-                processed_link['title'] = site.data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+                # Use translation based on link type
+                if processed_link['type'] == 'global_crds'
+                  processed_link['title'] = site.data['i18n']['common']['global_crds'][page_lang] || "Global custom resources"
+                elsif processed_link['type'] == 'global_conf'
+                  processed_link['title'] = site.data['i18n']['common']['global_parameters'][page_lang] || "Global parameters"
+                end
               end
             end
 
-            # For module_cr and module_conf links, remove anchors from URL
-            if processed_link['type'] == 'module_cr' || processed_link['type'] == 'module_conf'
+            # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
+            if processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
               processed_link['url'] = processed_link['url'].split('#')[0]
             end
 
@@ -343,21 +360,21 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     page.data['related_links'] = merged_links
 
     # Debug output for pages with links
-    if extracted_links.any? || valid_existing_links.any?
-      puts "  #{page.url}: Found #{extracted_links.length} extracted links, #{valid_existing_links.length} valid existing links, #{merged_links.length} total merged links"
-      if extracted_links.any?
-        puts "    Extracted links:"
-        extracted_links.each do |link|
-          puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
-        end
-      end
-      if valid_existing_links.any?
-        puts "    Existing links (cleaned URLs):"
-        valid_existing_links.each do |link|
-          puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
-        end
-      end
-    end
+    # if extracted_links.any? || valid_existing_links.any?
+    #   puts "  #{page.url}: Found #{extracted_links.length} extracted links, #{valid_existing_links.length} valid existing links, #{merged_links.length} total merged links"
+    #   if extracted_links.any?
+    #     puts "    Extracted links:"
+    #     extracted_links.each do |link|
+    #       puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
+    #     end
+    #   end
+    #   if valid_existing_links.any?
+    #     puts "    Existing links (cleaned URLs):"
+    #     valid_existing_links.each do |link|
+    #       puts "      - #{link['title']} -> #{link['url']} (#{link['type']})"
+    #     end
+    #   end
+    # end
   end
 
   puts "Finished extracting related links..."
