@@ -760,14 +760,14 @@ func (fl fakeLayer) Size() (int64, error) {
 func newDescriptor(img v1.Image) *remote.Descriptor {
 	digest, _ := img.Digest()
 	manifest, _ := img.RawManifest()
-	
+
 	desc := &remote.Descriptor{
 		Descriptor: v1.Descriptor{
 			Digest: digest,
 		},
 		Manifest: manifest,
 	}
-	
+
 	return desc
 }
 
