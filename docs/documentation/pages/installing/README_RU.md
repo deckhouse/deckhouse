@@ -12,7 +12,7 @@ search: deckhouse installation, kubernetes installation, platform setup, infrast
 {% endalert %}
 
 {% alert %}
-Попробуйте [графический установщик Deckhouse Kubernetes Platform](/products/kubernetes-platform/gs/#попробуйте-графический-установщик-deckhouse-kubernetes-platform)! <span class="beta-badge">Beta</span>
+Попробуйте [графический установщик Deckhouse Kubernetes Platform](/products/kubernetes-platform/gs/#gui-install)! <span class="beta-badge">Beta</span>
 {% endalert %}
 
 Инсталлятор Deckhouse доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
