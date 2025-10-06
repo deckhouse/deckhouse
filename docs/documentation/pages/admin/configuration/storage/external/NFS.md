@@ -22,7 +22,7 @@ The following conditions must be met for the `csi-nfs` module to work:
 
 For optimal module operation, it is recommended to:
 
-- For automatic pod restarts when TLS parameters change, enable the [pod-reloader](/modules/pod-reloader/stable/) module (enabled by default).
+- For automatic pod restarts when TLS parameters change, enable the [pod-reloader](/modules/pod-reloader/) module (enabled by default).
 - Use stable versions of NFS servers with support for required protocols.
 
 {% alert level="warning" %}
@@ -35,14 +35,14 @@ For NFS to work as virtual disk storage in Deckhouse Virtualization Platform, co
 
 The following limitations apply when working with the `csi-nfs` module:
 
-- Manual creation of StorageClass for CSI driver `nfs.csi.k8s.io` is prohibited — use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource.
-- PersistentVolumes are created only through [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources.
+- Manual creation of StorageClass for CSI driver `nfs.csi.k8s.io` is prohibited — use the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource.
+- PersistentVolumes are created only through [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resources.
 - Changing NFS server parameters in already created PVs is impossible.
 
 ### Volume Snapshot Limitations
 
 {% alert level="info" %}
-A connected [snapshot-controller](/modules/snapshot-controller/stable/) module is required for working with snapshots.
+A connected [snapshot-controller](/modules/snapshot-controller/) module is required for working with snapshots.
 {% endalert %}
 
 Creating NFS volume snapshots has significant limitations related to the NFS architecture and the way they are implemented in `csi-nfs`. Avoid using snapshots in module whenever possible.
@@ -83,11 +83,11 @@ All commands must be executed on a machine with administrative rights in the Kub
 The following steps are required to configure NFS storage:
 
 - Module enabling.
-- Creating [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass).
+- Creating [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass).
 
 ### Enabling the Module
 
-To support working with NFS storage, enable the `csi-nfs` module, which allows creating StorageClass in Kubernetes using custom [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources. After enabling the module, the following will happen on cluster nodes:
+To support working with NFS storage, enable the `csi-nfs` module, which allows creating StorageClass in Kubernetes using custom [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resources. After enabling the module, the following will happen on cluster nodes:
 
 - CSI driver registration.
 - Launch of `csi-nfs` service pods and creation of necessary components.
@@ -118,7 +118,7 @@ d8 k -n d8-csi-nfs get pod -owide -w
 
 ### Creating StorageClass
 
-To create a StorageClass, you must use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource. Example of creating a resource:
+To create a StorageClass, you must use the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource. Example of creating a resource:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -225,7 +225,7 @@ To create a snapshot, perform the following steps:
 
 ## Issues with Deleting PVs with RPC-with-TLS Support
 
-If the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource was configured with RPC-with-TLS support, a situation may arise where the PersistentVolume cannot be deleted. This happens due to secret deletion (e.g., after deleting [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass)) that stores mounting parameters. As a result, the controller cannot mount the NFS folder to delete the `<PV name>` folder.
+If the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource was configured with RPC-with-TLS support, a situation may arise where the PersistentVolume cannot be deleted. This happens due to secret deletion (e.g., after deleting [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass)) that stores mounting parameters. As a result, the controller cannot mount the NFS folder to delete the `<PV name>` folder.
 
 ### Adding Multiple CAs to the `tlsParameters.ca` Parameter
 

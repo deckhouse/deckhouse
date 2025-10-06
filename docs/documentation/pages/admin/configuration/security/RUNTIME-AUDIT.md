@@ -72,8 +72,8 @@ All available security audit parameters are listed in the [`runtime-audit-engine
 ### Manually configuring the Kubernetes API audit webhook
 
 {% alert level="info" %}
-Webhook configuration is not required if the `control-plane-manager` module is enabled.
-In this case, when the `runtime-audit-engine` module is enabled,
+Webhook configuration is not required if the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+In this case, when the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module is enabled,
 the settings for collecting Kubernetes API audit events will be applied automatically.
 {% endalert %}
 

@@ -9,7 +9,7 @@ lang: ru
 
 Deckhouse конфигурируется с помощью:
 
-- **[Глобальных настроек](../../reference/api/global.html).** Глобальные настройки хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
+- **[Глобальных настроек](../../reference/api/global.html).** Глобальные настройки хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль [`global`](/modules/deckhouse/), который нельзя отключить.
 - **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в ресурсе `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
 - **Кастомных ресурсов.** Некоторые модули настраиваются с помощью дополнительных кастомных ресурсов.
 
@@ -27,7 +27,7 @@ spec:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
 ---
-# Настройки модуля monitoring-ping.
+# Настройки модуля [`monitoring-ping`](/modules/monitoring-ping/).
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -38,7 +38,7 @@ spec:
     externalTargets:
     - host: 8.8.8.8
 ---
-# Отключить модуль dashboard.
+# Отключить модуль [`dashboard`](/modules/dashboard/).
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -155,7 +155,7 @@ spec:
 
 Для явного включения или отключения модуля необходимо установить `true` или `false` в поле `.spec.enabled` в соответствующем кастомном ресурсе `ModuleConfig`. Если для модуля нет такого кастомного ресурса `ModuleConfig`, его нужно создать.
 
-Пример явного выключения модуля `user-authn` (модуль будет выключен независимо от используемого набора модулей):
+Пример явного выключения модуля [`user-authn`](/modules/user-authn/) (модуль будет выключен независимо от используемого набора модулей):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

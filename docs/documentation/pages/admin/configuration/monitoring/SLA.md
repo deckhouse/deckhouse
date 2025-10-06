@@ -8,7 +8,7 @@ DKP can collect statistics about the availability of cluster components and DKP 
 
 Additionally, using the [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) custom resource, you can export availability metrics via the Prometheus Remote Write protocol.
 
-To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module in the [Deckhouse web interface](/modules/console/stable/) or using the following command:
+To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module in the [Deckhouse web interface](/modules/console/) or using the following command:
 
 ```shell
 d8 platform module enable upmeter

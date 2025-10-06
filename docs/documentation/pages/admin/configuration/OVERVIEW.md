@@ -8,7 +8,7 @@ description: "Learn how to configure Deckhouse Kubernetes Platform using global 
 
 You can configure Deckhouse using:
 
-- **[Global settings](../../reference/api/global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
+- **[Global settings](../../reference/api/global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special [`global`](/modules/deckhouse/) module that cannot be disabled.
 - **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
 - **Custom resources.** Some modules are configured using the additional custom resources.
 
@@ -26,7 +26,7 @@ spec:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
 ---
-# The monitoring-ping module settings.
+# The [`monitoring-ping`](/modules/monitoring-ping/) module settings.
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -37,7 +37,7 @@ spec:
     externalTargets:
     - host: 8.8.8.8
 ---
-# Disable the dashboard module.
+# Disable the [`dashboard`](/modules/dashboard/) module.
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -68,7 +68,7 @@ upmeter         false     2         12h
 
 To change the global Deckhouse configuration or module configuration, create or edit the corresponding `ModuleConfig` custom resource.
 
-For example, this command allows you to configure the `upmeter` module:
+For example, this command allows you to configure the [`upmeter`](/modules/upmeter/) module:
 
 ```shell
 d8 k edit moduleconfig/upmeter
@@ -110,7 +110,7 @@ DKP is managed through global settings, module configurations, and various custo
    d8 k get modules
    ```
 
-1. To view the configuration of the `user-authn` module:
+1. To view the configuration of the [`user-authn`](/modules/user-authn/) module:
 
    ```shell
    d8 k get moduleconfigs user-authn -o yaml
@@ -156,7 +156,7 @@ Some modules can also be configured using custom resources. Use the search bar a
 
 To enable/disable the module, set `spec.enabled` field of the `ModuleConfig` custom resource to `true` or `false`. Note that this may require you to first create a `ModuleConfig` resource for the module.
 
-Here is an example of disabling the `user-authn` module (the module will be turned off even if it is enabled as part of a module bundle):
+Here is an example of disabling the [`user-authn`](/modules/user-authn/) module (the module will be turned off even if it is enabled as part of a module bundle):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -211,11 +211,11 @@ Deckhouse with the `Minimal` module set and no basic modules included will only 
 
 To install Deckhouse with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
 
-* cloud provider module (for example, `cloud-provider-aws` for AWS), in a case of deploying a cloud cluster;
-* cni-cilium or another CNI control module (if necessary);
-* control-plane-manager;
-* kube-dns;
-* node-manager;
+* cloud provider module (for example, [`cloud-provider-aws`](/modules/cloud-provider-aws/) for AWS), in a case of deploying a cloud cluster;
+* [`cni-cilium`](/modules/cni-cilium/) or another CNI control module (if necessary);
+* [`control-plane-manager`](/modules/control-plane-manager/);
+* [`kube-dns`](/modules/kube-dns/);
+* [`node-manager`](/modules/node-manager/);
 * registry-packages-proxy;
 * terraform-manager, in a case of deploying a cloud cluster.
 
