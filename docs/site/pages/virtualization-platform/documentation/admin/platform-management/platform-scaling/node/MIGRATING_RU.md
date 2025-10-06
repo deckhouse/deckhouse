@@ -65,5 +65,5 @@ ls -l /etc/containerd/conf.d
 Обновление узла приводит к прерыванию работы размещенной на нем нагрузки (disruptive-обновление). На процесс обновления узла влияют параметры применения disruptive-обновлений группы узлов ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
 
 {% alert level="info" %}
-В процессе миграции папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
+В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
 {% endalert %}
