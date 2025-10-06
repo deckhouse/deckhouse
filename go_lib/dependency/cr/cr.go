@@ -177,7 +177,7 @@ func (r *client) Get(ctx context.Context, tag string) (*remote.Descriptor, error
 
 	desc, err := remote.Get(ref, remoteOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get descriptor: %w", err)
+		return nil, fmt.Errorf("get image info: %w", err)
 	}
 
 	return desc, nil
@@ -227,7 +227,7 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	desc, err := r.Get(ctx, tag)
 	if err != nil {
-		return "", fmt.Errorf("get descriptor: %w", err)
+		return "", fmt.Errorf("get image info: %w", err)
 	}
 
 	return desc.Digest.String(), nil

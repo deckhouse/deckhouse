@@ -373,7 +373,7 @@ func (md *ModuleDownloader) FetchModuleReleaseDigestFromReleaseChannel(ctx conte
 	// Use cr.Get instead of cr.Image to get only descriptor
 	desc, err := regCli.Get(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return "", fmt.Errorf("get descriptor: %w", err)
+		return "", fmt.Errorf("get image info: %w", err)
 	}
 
 	return desc.Digest.String(), nil
