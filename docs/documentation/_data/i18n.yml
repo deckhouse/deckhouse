@@ -256,6 +256,9 @@ common:
   role:
     en: role
     ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
   related_links:
     en: Related links
     ru: Связанные ссылки

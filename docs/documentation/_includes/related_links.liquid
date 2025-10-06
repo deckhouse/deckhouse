@@ -3,7 +3,7 @@
 {%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_ref'"  %}
 {% if page_related_module_reference.size > 0 or page_related_global_reference.size > 0 %}
   {%- alert level="info" %}
-{{ site.data.i18n.common['related_links'][page.lang] }}:
+{{ site.data.i18n.common['related_reference_links'][page.lang] }}:
   {% if page_related_global_reference.size > 0 %}
     {%- for link in page_related_global_reference %}
 - [{{ link.title }}]({{ link.url }})
