@@ -77,6 +77,8 @@ spec:
         - containerPort: 8443
           protocol: TCP
         volumeMounts:
+        - mountPath: /tmp
+          name: tmp
         - mountPath: /certs
           name: cert
           readOnly: true
@@ -102,6 +104,8 @@ spec:
       terminationGracePeriodSeconds: 60
       serviceAccountName: admission-policy-engine
       volumes:
+      - name: tmp
+        emptyDir: {}
       - name: cert
         secret:
           defaultMode: 420

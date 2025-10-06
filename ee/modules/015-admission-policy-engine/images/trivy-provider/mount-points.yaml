@@ -3,3 +3,4 @@ dirs:
 - /client-cert
 - /.docker
 - /home/javadb
+- /tmp
