@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry: пример использования"
-description: ""
+description: "Пошаговые примеры переключения между режимами Direct и Unmanaged registry в Deckhouse Kubernets Platform, включая примеры конфигурации и мониторинг статуса."
 ---
 
 ## Переключение на режим `Direct`
