@@ -86,6 +86,7 @@
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "vsphere" }!}
+  LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
   LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- else if eq $provider "vcd" }!}
@@ -277,6 +278,7 @@ run: |
   {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
   export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
   {!{- else if eq $provider "vsphere" }!}
+  export LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided}
   export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
   export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
   {!{- else if eq $provider "vcd" }!}
@@ -337,6 +339,7 @@ run: |
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
     -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
 {!{- else if eq $provider "vsphere" }!}
+    -e LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided} \
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
 {!{- else if eq $provider "vcd" }!}
@@ -480,8 +483,9 @@ check_e2e_labels:
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "username" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
 {!{- else if eq $provider "vcd" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "password" "LAYOUT_VCD_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}
@@ -853,8 +857,9 @@ check_e2e_labels:
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "username" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
 {!{- else if eq $provider "vcd" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "password" "LAYOUT_VCD_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}

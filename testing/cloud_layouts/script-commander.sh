@@ -63,7 +63,9 @@ Provider specific environment variables:
 
   vSphere:
 
+\$LAYOUT_VSPHERE_USERNAME
 \$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_BASE_DOMAIN
 
   VCD:
 
@@ -232,7 +234,7 @@ function prepare_environment() {
   "vSphere")
     # shellcheck disable=SC2016
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -424,7 +426,7 @@ CONF
 echo DAEMON_OPTS="-F 1 -f /etc/chrony/chrony.conf" > /etc/default/chrony
 systemctl daemon-reexec
 systemctl enable --now chronyd
-systemctl restart chronyd 
+systemctl restart chronyd
 chronyc tracking
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
@@ -1062,7 +1064,7 @@ function run-test() {
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
     echo http_code: $http_code
-    
+
     # Check for HTTP errors
     if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
       break
