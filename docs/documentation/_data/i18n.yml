@@ -272,14 +272,14 @@ common:
     en: Global custom resources
     ru: Глобальные кастомные ресурсы
   module_x_parameters:
-    en: Module XXXX parameters
-    ru: Параметры модуля XXXX
+    en: Module `XXXX` parameters
+    ru: Параметры модуля `XXXX`
   module_x_crds:
-    en: Module XXXX custom resources
-    ru: Кастомные ресурсы модуля XXXX
+    en: Module `XXXX` custom resources
+    ru: Кастомные ресурсы модуля `XXXX`
   module_x_documentation:
-    en: Module XXXX documentation
-    ru: Документация модуля XXXX
+    en: Module `XXXX` documentation
+    ru: Документация модуля `XXXX`
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
