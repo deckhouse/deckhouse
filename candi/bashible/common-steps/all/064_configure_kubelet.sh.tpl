@@ -27,7 +27,7 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`.
 cgroup_driver="systemd"
-{{- if eq .cri "Containerd" }}
+{{- if or (eq .cri "Containerd") (eq .cri "ContainerdV2") }}
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ]; then
   cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
@@ -53,10 +53,12 @@ fi
 
 {{- else if eq .cri "Containerd" }}
 cri_type="Containerd"
+{{- else if eq .cri "ContainerdV2" }}
+cri_type="ContainerdV2"
 {{- end }}
 
 
-if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
+if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "ContainerdV2" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
 fi
 
