@@ -17,11 +17,11 @@ package preflight
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func (s *PreflightChecksTestSuite) TestEditionBad() {

@@ -18,9 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"gopkg.in/yaml.v3"
 )
 
 func (pc *Checker) CheckStaticInstancesIPDuplication(_ context.Context) error {

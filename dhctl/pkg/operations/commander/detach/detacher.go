@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 

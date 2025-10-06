@@ -23,11 +23,10 @@ import (
 	"strings"
 
 	"github.com/bramvdbogaerde/go-scp"
-	"golang.org/x/crypto/ssh"
-	uuid "gopkg.in/satori/go.uuid.v1"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"golang.org/x/crypto/ssh"
+	uuid "gopkg.in/satori/go.uuid.v1"
 )
 
 type SSHFile struct {

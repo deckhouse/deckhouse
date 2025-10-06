@@ -37,7 +37,7 @@ const (
 
 // Mount ensures the mount path and mounts the device mapper to it
 func Mount(ctx context.Context, module, mountPath string) error {
-	_, span := otel.Tracer(tracerName).Start(ctx, "Mount")
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Mount")
 	defer span.End()
 
 	// /dev/mapper/<module>

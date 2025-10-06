@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -40,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"

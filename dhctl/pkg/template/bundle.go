@@ -17,9 +17,9 @@ package template
 import (
 	"path/filepath"
 
-	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v2"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"

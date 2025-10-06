@@ -15,10 +15,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/fsnotify/fsnotify"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

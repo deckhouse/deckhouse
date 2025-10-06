@@ -18,6 +18,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"trivy-provider/validators"
+	"trivy-provider/web"
 
 	ftypes "github.com/aquasecurity/trivy/pkg/fanal/types"
 	"github.com/aquasecurity/trivy/pkg/javadb"
@@ -25,8 +27,6 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/zap"
-	"trivy-provider/validators"
-	"trivy-provider/web"
 )
 
 func main() {

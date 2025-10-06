@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+
 func ExecutorProvider(metaConfig *config.MetaConfig) infrastructure.ExecutorProvider {
 	if metaConfig == nil {
 		panic("meta config must be provided")
