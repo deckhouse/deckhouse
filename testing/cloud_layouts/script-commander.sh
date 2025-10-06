@@ -105,18 +105,25 @@ function create_registry() {
       -w "\n%{http_code}")
 
     http_code=$(echo "$response" | tail -n 1)
-    response=$(echo "$response" | sed '$d')
+    response_body=$(echo "$response" | sed '$d')
 
     # Check for HTTP errors
     if [[ ${http_code} -ge 400 ]]; then
       echo "Error: HTTP error ${http_code}" >&2
-      echo "$response" >&2
+      echo "$response_body" >&2
       continue
     else
-      registry_id=$(jq -r '.id' <<< "$response")
-      echo "$registry_id"
+      registry_id=$(jq -r '.id' <<< "$response_body")
+      break
     fi
   done
+
+  if [[ -n "$registry_id" ]]; then
+      echo "$registry_id"
+  else
+      echo "Failed to create registry." >&2
+      return 1
+  fi
 }
 
 function prepare_environment() {
