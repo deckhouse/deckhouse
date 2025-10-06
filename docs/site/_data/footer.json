@@ -94,7 +94,7 @@
           },
           {
             "title": "Documentation",
-            "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+            "url": "/docs/",
             "target": "",
             "rel": ""
           },
@@ -132,6 +132,12 @@
           {
             "title": "Observability Platform",
             "url": "/products/observability-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Observability в&nbsp;кластере",
+            "url": "/products/observability-in-cluster/",
             "target": "",
             "rel": ""
           },

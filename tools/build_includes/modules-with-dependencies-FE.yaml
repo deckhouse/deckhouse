@@ -320,6 +320,29 @@
   stageDependencies:
     install:
         - '**/*.go'
+- add: /ee/se-plus/modules/030-csi-vsphere
+  to: /deckhouse/modules/030-csi-vsphere
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   excludePaths:
@@ -567,6 +590,62 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/templates/monitoring.yaml
+  to: /deckhouse/modules/040-node-manager/templates/monitoring.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
+  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
+  to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   excludePaths:
     - images
     - templates
@@ -926,29 +1005,6 @@
   stageDependencies:
     install:
         - '**/*.go'
-- add: /ee/modules/650-runtime-audit-engine
-  to: /deckhouse/modules/650-runtime-audit-engine
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*.go'
 - add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
@@ -956,16 +1012,6 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
   stageDependencies:
     install:
         - '**/*'

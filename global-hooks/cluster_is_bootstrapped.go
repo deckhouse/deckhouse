@@ -15,8 +15,8 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
-	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,8 +27,6 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
-
-const bootstrappedFileName = "/tmp/cluster-is-bootstrapped"
 
 const (
 	isBootstrappedCmSnapName    = "is_bootstraped_cm"
@@ -114,24 +112,24 @@ func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 	patchCollector.CreateIfNotExists(cm)
 }
 
-func clusterIsBootstrapped(input *go_hook.HookInput) error {
-	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
+func clusterIsBootstrapped(_ context.Context, input *go_hook.HookInput) error {
+	isBootstrappedCmSnap := input.Snapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
 		// if we have cm here then set value and return
 		// configmap is source of truth
 		input.Values.Set(clusterBootstrapFlagPath, true)
-		return createBootstrappedFile()
+		return nil
 	}
 	// not have `is bootstrap` configmap
 	if input.Values.Exists(clusterBootstrapFlagPath) {
 		// here cm was deleted probably
 		// create it!
 		createBootstrapClusterCm(input.PatchCollector)
-		return createBootstrappedFile()
+		return nil
 	}
 
-	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
+	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, readyNotMasterNodesSnapName)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal %s snapshot: %w", readyNotMasterNodesSnapName, err)
 	}
@@ -140,21 +138,9 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		if ready {
 			createBootstrapClusterCm(input.PatchCollector)
 			input.Values.Set(clusterBootstrapFlagPath, true)
-			if err := createBootstrappedFile(); err != nil {
-				return err
-			}
 			break
 		}
 	}
 
 	return nil
-}
-
-func createBootstrappedFile() error {
-	if _, err := os.Stat(bootstrappedFileName); err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-	return os.WriteFile(bootstrappedFileName, []byte("true"), 0644)
 }

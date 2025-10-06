@@ -1,3 +1,4 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- define "huaweicloud_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -75,7 +76,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: caphc-controller-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "caphcControllerManager") }}
         imagePullPolicy: IfNotPresent
         args:
@@ -106,6 +107,13 @@ spec:
               secretKeyRef:
                 name: huaweicloud-credentials
                 key: project-id
+          {{- if $providerClusterConfiguration.provider.enterpriseProjectID }}
+          - name: HUAWEICLOUD_ENTERPRISE_PROJECT_ID
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: enterprise-project-id
+          {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz

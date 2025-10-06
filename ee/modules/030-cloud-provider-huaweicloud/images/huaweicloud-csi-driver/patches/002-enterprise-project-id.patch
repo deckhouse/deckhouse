@@ -1,0 +1,83 @@
+diff --git a/pkg/config/cloud.go b/pkg/config/cloud.go
+index 6908bc0..66f6764 100644
+--- a/pkg/config/cloud.go
++++ b/pkg/config/cloud.go
+@@ -16,15 +16,16 @@ const (
+
+ // CloudCredentials define
+ type CloudCredentials struct {
+ 	Global struct {
+-		Cloud     string `gcfg:"cloud"`
+-		AuthURL   string `gcfg:"auth-url"`
+-		Region    string `gcfg:"region"`
+-		AccessKey string `gcfg:"access-key"`
+-		SecretKey string `gcfg:"secret-key"`
+-		ProjectID string `gcfg:"project-id"`
+-		Idc       bool   `gcfg:"idc"`
++		Cloud               string `gcfg:"cloud"`
++		AuthURL             string `gcfg:"auth-url"`
++		Region              string `gcfg:"region"`
++		AccessKey           string `gcfg:"access-key"`
++		SecretKey           string `gcfg:"secret-key"`
++		ProjectID           string `gcfg:"project-id"`
++		Idc                 bool   `gcfg:"idc"`
++		EnterpriseProjectID string `gcfg:"enterprise-project-id"`
+ 	}
+
+ 	Vpc struct {
+ 		ID              string `gcfg:"id"`
+diff --git a/pkg/evs/controllerserver.go b/pkg/evs/controllerserver.go
+index ef6b11d..6e09b4a 100644
+--- a/pkg/evs/controllerserver.go
++++ b/pkg/evs/controllerserver.go
+@@ -82,16 +82,17 @@ func (cs *ControllerServer) CreateVolume(_ context.Context, req *csi.CreateVolum
+
+ 	metadata := cs.parseMetadata(req, snapshotID)
+ 	createOpts := &cloudvolumes.CreateOpts{
+ 		Volume: cloudvolumes.VolumeOpts{
+-			Name:             volName,
+-			Size:             sizeGB,
+-			VolumeType:       volumeType,
+-			AvailabilityZone: volumeAz,
+-			SnapshotID:       snapshotID,
+-			Metadata:         metadata,
+-			IOPS:             iops,
+-			Throughput:       throughput,
++			Name:                volName,
++			Size:                sizeGB,
++			VolumeType:          volumeType,
++			AvailabilityZone:    volumeAz,
++			SnapshotID:          snapshotID,
++			Metadata:            metadata,
++			IOPS:                iops,
++			Throughput:          throughput,
++			EnterpriseProjectID: credentials.Global.EnterpriseProjectID,
+ 		},
+ 		Scheduler: &cloudvolumes.SchedulerOpts{
+ 			StorageID: dssID,
+ 		},
+diff --git a/pkg/evs/nodeserver.go b/pkg/evs/nodeserver.go
+index 2c99b51..277960a 100644
+--- a/pkg/evs/nodeserver.go
++++ b/pkg/evs/nodeserver.go
+@@ -516,13 +516,14 @@ func nodePublishEphemeral(req *csi.NodePublishVolumeRequest, ns *nodeServer) (*c
+ 	metadata[DssIDKey] = req.VolumeContext[DssIDKey]
+
+ 	volumeID, err = services.CreateVolumeCompleted(cc, &cloudvolumes.CreateOpts{
+ 		Volume: cloudvolumes.VolumeOpts{
+-			Name:             volumeName,
+-			Size:             size,
+-			VolumeType:       volumeType,
+-			AvailabilityZone: volAvailability,
+-			Metadata:         metadata,
++			Name:                volumeName,
++			Size:                size,
++			VolumeType:          volumeType,
++			AvailabilityZone:    volAvailability,
++			Metadata:            metadata,
++			EnterpriseProjectID: cc.Global.EnterpriseProjectID,
+ 		},
+ 		Scheduler: &cloudvolumes.SchedulerOpts{
+ 			StorageID: req.VolumeContext[DssIDKey],
+ 		},
+

@@ -18,6 +18,8 @@ import:
   add: /livenessprobe
   to: /livenessprobe
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/livenessprobe"]
@@ -61,7 +63,7 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash git
   install:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src

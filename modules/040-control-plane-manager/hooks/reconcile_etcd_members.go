@@ -28,6 +28,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -92,18 +94,21 @@ type recicleEtcdNode struct {
 	Name string
 }
 
-func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
-	snap := input.Snapshots["master_nodes"]
+func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	snaps := input.Snapshots.Get("master_nodes")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
-	etcdServersEndpoints := make([]string, 0, len(snap))
-	discoveredMasterMap := make(map[string]string, len(snap))
-	for _, s := range snap {
-		node := s.(recicleEtcdNode)
+	etcdServersEndpoints := make([]string, 0, len(snaps))
+	discoveredMasterMap := make(map[string]string, len(snaps))
+	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'master_nodes' snapshots: %v", err)
+		}
+
 		if node.Name == "" {
 			return fmt.Errorf("node_name should not be empty")
 		}

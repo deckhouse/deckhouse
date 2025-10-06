@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -65,7 +66,8 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	}
 
 	var metaConfig *config.MetaConfig
-	metaConfig, err = config.ParseConfigFromData(string(ccYaml))
+	// only cluster configuration, provider preparation and validation do not need here
+	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -78,17 +80,20 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	return kubernetesVersion, err
 }
 
-func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
+func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput) error {
 	var kubernetesVersionStr string
-	clusterConfigurationSnapshots, ok := input.Snapshots["cluster-configuration"]
-	if !ok || len(clusterConfigurationSnapshots) == 0 {
+	clusterConfigurationSnapshots := input.Snapshots.Get("cluster-configuration")
+	if len(clusterConfigurationSnapshots) == 0 {
 		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
 		if len(versionParts) < 2 {
 			return errors.New("cluster configuration kubernetesVersion is empty or invalid")
 		}
 		kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
 	} else {
-		kubernetesVersionStr = clusterConfigurationSnapshots[0].(string)
+		err := clusterConfigurationSnapshots[0].UnmarshalTo(&kubernetesVersionStr)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'cluster-configuration' snapshot: %w", err)
+		}
 	}
 
 	// Get array of compatibility k8s versions for every operator version

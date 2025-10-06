@@ -15,8 +15,10 @@
 package log_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -29,6 +31,8 @@ import (
 )
 
 func Test_JSON_Logger(t *testing.T) {
+	t.Parallel()
+
 	const (
 		message  = "stub msg"
 		argKey   = "stub_arg"
@@ -37,18 +41,19 @@ func Test_JSON_Logger(t *testing.T) {
 
 	buf := bytes.NewBuffer([]byte{})
 
-	logger := log.NewLogger(log.Options{
-		Level:  slog.LevelDebug,
-		Output: buf,
-		TimeFunc: func(_ time.Time) time.Time {
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelDebug),
+		log.WithOutput(buf),
+		log.WithHandlerType(log.JSONHandlerType),
+		log.WithTimeFunc(func(_ time.Time) time.Time {
 			parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 			if err != nil {
 				assert.NoError(t, err)
 			}
 
 			return parsedTime
-		},
-	})
+		}),
+	)
 
 	t.Run("log output without error", func(t *testing.T) {
 		logger.Debug(message, slog.String(argKey, argValue))
@@ -57,10 +62,15 @@ func Test_JSON_Logger(t *testing.T) {
 		//test fatal
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 
-		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:54","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:58","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
+		expectedRegex := `^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[0-9]+","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$`
+		reg := regexp.MustCompile(expectedRegex)
+
+		lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		assert.Equal(t, 4, len(lines))
+
+		for _, line := range lines {
+			assert.Regexp(t, reg, line)
+		}
 	})
 
 	t.Run("log output with error", func(t *testing.T) {
@@ -68,8 +78,45 @@ func Test_JSON_Logger(t *testing.T) {
 
 		logger.Error(message, slog.String(argKey, argValue))
 
-		assert.Contains(t, buf.String(), `{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":`)
+		expectedRegex := `^{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$`
+		reg := regexp.MustCompile(expectedRegex)
+
+		line := strings.TrimSpace(buf.String())
+		assert.Regexp(t, reg, line)
 	})
+}
+
+// Test that adapter is working through default import in another package
+func Test_JSON_Logger_Unmarshal(t *testing.T) {
+	t.Parallel()
+
+	buf := bytes.NewBuffer([]byte{})
+
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelDebug),
+		log.WithOutput(buf),
+	)
+
+	logger.Debug("test debug message")
+	logger.Info("test info message")
+	logger.Warn("test warn message")
+	logger.Error("test error message")
+	logger.Log(context.Background(), log.LevelFatal.Level(), "test fatal message")
+
+	// Catch log lines
+	lines := []string{}
+	scanner := bufio.NewScanner(buf)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	assert.Equal(t, 5, len(lines), "should have 5 log lines")
+
+	for _, line := range lines {
+		var record map[string]interface{}
+		err := json.Unmarshal([]byte(line), &record)
+		assert.NoError(t, err, line, "log line should be a valid JSON")
+	}
 }
 
 func Test_JSON_LoggerFormat(t *testing.T) {
@@ -159,7 +206,7 @@ func Test_JSON_LoggerFormat(t *testing.T) {
 				level:     log.LevelInfo,
 			},
 			wants: wants{
-				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
+				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
 					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(trace)".*`,
 			},
@@ -331,18 +378,19 @@ stubArg:
 
 			buf := bytes.NewBuffer([]byte{})
 
-			logger := log.NewLogger(log.Options{
-				Level:  tt.args.level.Level(),
-				Output: buf,
-				TimeFunc: func(_ time.Time) time.Time {
+			logger := log.NewLogger(
+				log.WithLevel(tt.args.level.Level()),
+				log.WithOutput(buf),
+				log.WithHandlerType(log.JSONHandlerType),
+				log.WithTimeFunc(func(_ time.Time) time.Time {
 					parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 					if err != nil {
 						assert.NoError(t, err)
 					}
 
 					return parsedTime
-				},
-			})
+				}),
+			)
 
 			logger = tt.fields.mutateLoggerfn(logger)
 
@@ -631,19 +679,19 @@ stubArg:
 
 			buf := bytes.NewBuffer([]byte{})
 
-			logger := log.NewLogger(log.Options{
-				Level:  tt.args.level.Level(),
-				Output: buf,
-				TimeFunc: func(_ time.Time) time.Time {
+			logger := log.NewLogger(
+				log.WithLevel(tt.args.level.Level()),
+				log.WithOutput(buf),
+				log.WithHandlerType(log.TextHandlerType),
+				log.WithTimeFunc(func(_ time.Time) time.Time {
 					parsedTime, err := time.Parse(time.DateTime, "2006-01-02 15:04:05")
 					if err != nil {
 						assert.NoError(t, err)
 					}
 
 					return parsedTime
-				},
-				HandlerType: log.TextHandlerType,
-			})
+				}),
+			)
 
 			logger = tt.fields.mutateLoggerfn(logger)
 

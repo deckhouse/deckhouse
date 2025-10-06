@@ -37,4 +37,5 @@ locals {
   ssh_allow_list        = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
   server_group          = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
   server_group_policy   = lookup(local.server_group, "policy", "")
+  enterprise_project_id = lookup(var.providerClusterConfiguration.provider, "enterpriseProjectID", "")
 }

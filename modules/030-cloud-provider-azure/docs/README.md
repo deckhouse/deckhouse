@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Azure"
+description: "Cloud resource management in Deckhouse Kubernetes Platform using Microsoft Azure."
 ---
 
 The `cloud-provider-azure` module is responsible for interacting with the [Azure](https://portal.azure.com/) cloud resources. It allows the [node manager](../../modules/node-manager/) module to use Azure resources for provisioning nodes for the defined [node group](../../modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).

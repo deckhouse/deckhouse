@@ -10,10 +10,9 @@ Deckhouse Code is based on the GitLab platform and combines all the necessary to
 
 Documentation includes the following sections:
 
-- [Administrator guide](../documentation/admin/) — this section contains information about requirements, installation procedures, and platform configuration.  
-- [User guide](../documentation/user/) — information on project management and working with Git.  
-- [Reference](../documentation/reference/faq.html) — this section includes descriptions of custom resources for platform configuration, practical usage examples, and answers to frequently asked questions.  
-- [Functional specifications](../documentation/specifications/) — this section describes the key features of Deckhouse Code required for managing development processes, team collaboration, security, and integration with external systems. The section presents the main functions of the tool with descriptions of their purposes and usage results.
+- [Module installation and configuration instructions](/modules/code/stable/) — contain information on requirements, installation procedures, and platform configuration.
+- [Administrator guide](../documentation/admin/) — guide for users with administrator rights.
+- [User guide](../documentation/user/) — information and instructions for using the main service features.
 
 {% alert level="info" %}
 The Deckhouse Code tool is available via the web interface at `https://code.example.com`, provided that the `%s.example.com` public domain template is used. The `code` subdomain ensures convenient and quick access to the tool's functionality.

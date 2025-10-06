@@ -63,31 +63,59 @@ type Logger struct {
 	slogHandler Handler
 }
 
-type Options struct {
-	handlerOptions
+type Option func(*Options)
 
+type Options struct {
 	Level       slog.Level
 	Output      io.Writer
 	HandlerType HandlerType
+	TimeFunc    func(t time.Time) time.Time
+}
 
-	TimeFunc func(t time.Time) time.Time
+// WithLevel sets the logging level
+func WithLevel(level slog.Level) Option {
+	return func(o *Options) {
+		o.Level = level
+	}
+}
+
+// WithOutput sets the output writer
+func WithOutput(output io.Writer) Option {
+	return func(o *Options) {
+		o.Output = output
+	}
+}
+
+// WithHandlerType sets the handler type
+func WithHandlerType(handlerType HandlerType) Option {
+	return func(o *Options) {
+		o.HandlerType = handlerType
+	}
+}
+
+// WithTimeFunc sets the time function
+func WithTimeFunc(timeFunc func(t time.Time) time.Time) Option {
+	return func(o *Options) {
+		o.TimeFunc = timeFunc
+	}
 }
 
 func NewNop() *Logger {
-	return NewLogger(Options{
-		Output: io.Discard,
-	})
+	return NewLogger(WithOutput(io.Discard))
 }
 
-func NewLogger(opts Options) *Logger {
-	if opts.Output == nil {
-		opts.Output = os.Stdout
+func NewLogger(opts ...Option) *Logger {
+	options := Options{
+		Level:       slog.LevelInfo,
+		Output:      os.Stdout,
+		HandlerType: JSONHandlerType,
+		TimeFunc: func(t time.Time) time.Time {
+			return t
+		},
 	}
 
-	if opts.TimeFunc == nil {
-		opts.TimeFunc = func(t time.Time) time.Time {
-			return t
-		}
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	l := &Logger{
@@ -95,7 +123,7 @@ func NewLogger(opts Options) *Logger {
 		level:        new(slog.LevelVar),
 	}
 
-	l.SetLevel(Level(opts.Level))
+	l.SetLevel(Level(options.Level))
 
 	// getting absolute binary path
 	binaryPath := filepath.Dir(os.Args[0])
@@ -141,13 +169,13 @@ func NewLogger(opts Options) *Logger {
 		},
 	}
 
-	switch opts.HandlerType {
+	switch options.HandlerType {
 	case JSONHandlerType:
-		l.slogHandler = NewJSONHandler(opts.Output, handlerOpts, opts.TimeFunc)
+		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
 	case TextHandlerType:
-		l.slogHandler = NewTextHandler(opts.Output, handlerOpts, opts.TimeFunc)
+		l.slogHandler = NewTextHandler(options.Output, handlerOpts, options.TimeFunc)
 	default:
-		l.slogHandler = NewJSONHandler(opts.Output, handlerOpts, opts.TimeFunc)
+		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
 	}
 
 	l.logger = slog.New(l.slogHandler.WithAttrs(nil))

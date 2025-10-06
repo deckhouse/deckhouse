@@ -1,0 +1,27 @@
+{{- if eq .Values.csiVsphere.internal.compatibilityFlag "Legacy" }}
+{{- range $index, $storageClass := .Values.csiVsphere.internal.storageClasses }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+  {{- include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | nindent 2 }}
+  name: {{ $storageClass.name | quote }}
+provisioner: vsphere.csi.vmware.com
+parameters:
+  parent_type: {{ $storageClass.datastoreType | quote }}
+  parent_name: {{ $storageClass.path | quote }}
+allowedTopologies:
+- matchLabelExpressions:
+  - key: failure-domain.beta.kubernetes.io/region
+    values:
+    - {{ $.Values.csiVsphere.internal.providerClusterConfiguration.region }}
+  - key: failure-domain.beta.kubernetes.io/zone
+    values:
+  {{- range $storageClass.zones}}
+    - {{ . }}
+  {{- end }}
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+{{- end }}
+{{- end }}

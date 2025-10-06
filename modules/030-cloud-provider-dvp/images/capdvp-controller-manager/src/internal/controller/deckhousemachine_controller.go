@@ -403,20 +403,24 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
-	// FIXME remove this user after testing
-	cloudInitScript = append(cloudInitScript, []byte(`
-ssh_pwauth: true
-users:
-- name: cloud
-  passwd: $6$rounds=4096$vln/.aPHBOI7BMYR$bBMkqQvuGs5Gyd/1H5DP4m9HjQSy.kgrxpaGEHwkX7KEFV8BS.HZWPitAtZ2Vd8ZqIZRqmlykRCagTgPejt1i.
-  shell: /bin/bash
-  sudo: ALL=(ALL) NOPASSWD:ALL
-  chpasswd: { expire: False }
-  lock_passwd: false`)...)
-
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
+	}
+	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
+		{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
+	}
+
+	for i, d := range dvpMachine.Spec.AdditionalDisks {
+		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
+		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, addDiskName, d.Size.Value(), d.StorageClass)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
+		}
+		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
+			Kind: v1alpha2.DiskDevice,
+			Name: addDisk.Name,
+		})
 	}
 
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
@@ -446,9 +450,7 @@ users:
 			Memory: v1alpha2.MemorySpec{
 				Size: dvpMachine.Spec.Memory,
 			},
-			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{
-				{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
-			},
+			BlockDeviceRefs: blockDeviceRefs,
 		},
 	})
 	if err != nil {

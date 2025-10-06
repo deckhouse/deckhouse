@@ -2,10 +2,10 @@
 title: "The deckhouse-tools module"
 webIfaces:
 - name: deckhouse-tools
-description: "The deckhouse-tools Deckhouse module provides a web interface in the cluster for downloading Deckhouse utilities (Deckhouse CLI)"
+description: "A web interface for downloading Deckhouse CLI (d8) for various operating systems."
 ---
 
-The module creates a web UI with links to download Deckhouse tools (currently [Deckhouse CLI](../../deckhouse-cli/) for various operating systems).
+The module creates a web UI with links to download [Deckhouse CLI]({% if site.mode != 'module' %}{{ site.canonical_url_prefix_documentation }}{% endif %}/cli/d8/) tool for various operating systems.
 
 The web interface address is composed based on the [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) template of the Deckhouse global configuration parameter (the `%s` key is replaced with `tools`).
 

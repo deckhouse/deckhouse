@@ -1,7 +1,7 @@
 {%- assign moduleSnakeName = page['module-snake-name'] %}
 {%- assign moduleKebabName = page['module-kebab-name'] %}
 
-{%- assign configVersion = site.data.schemas[moduleKebabName].config-values.x-config-version |  default: "1" %}
+{%- assign configVersion = site.data.schemas.modules[moduleKebabName].config-values.x-config-version |  default: "1" %}
 
 {%- if configVersion.size < 1 %}
   {%- assign configVersion = "1" %}
@@ -10,13 +10,13 @@
 {%- if page.lang == 'ru' %}
 ## Настройки
 
-Чтобы настроить модуль, используйте ресурс `ModuleConfig` с именем `{{ moduleKebabName }}` ([подробнее о настройке Deckhouse...](../../)).
+Чтобы настроить модуль, используйте ресурс `ModuleConfig` с именем `{{ moduleKebabName }}` ([подробнее о настройке Deckhouse...](../../{% if page.url contains '/reference/mc/' %}../{% endif %})).
 
 Пример ресурса `ModuleConfig/{{ moduleKebabName }}` для настройки модуля:
 {%- else %}
 ## Settings
 
-The module is configured using the ModuleConfig custom resource named `{{ moduleKebabName }}` ([learn more about setting up Deckhouse...](../../)).
+The module is configured using the ModuleConfig custom resource named `{{ moduleKebabName }}` ([learn more about setting up Deckhouse...](../../{% if page.url contains '/reference/mc/' %}../{% endif %})).
 
 Example of the `ModuleConfig/{{ moduleKebabName }}` resource for configuring the module:
 {%- endif %}
@@ -34,4 +34,4 @@ spec:
 
 ## {{ site.data.i18n.common['parameters'][page.lang] }}
 
-{{ site.data.schemas[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}
+{{ site.data.schemas.modules[moduleKebabName].config-values | format_module_configuration: moduleKebabName }}

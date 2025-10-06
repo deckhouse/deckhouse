@@ -19,9 +19,12 @@ package helpers
 import (
 	"sync"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather
@@ -33,12 +36,14 @@ type DeckhouseSettings struct {
 		Windows                update.Windows                    `json:"windows"`
 		NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
 	} `json:"update"`
-	ReleaseChannel string `json:"releaseChannel"`
+	ReleaseChannel           string `json:"releaseChannel"`
+	AllowExperimentalModules bool   `json:"allowExperimentalModules"`
 }
 
 func DefaultDeckhouseSettings() *DeckhouseSettings {
 	settings := &DeckhouseSettings{
-		ReleaseChannel: "",
+		ReleaseChannel:           "",
+		AllowExperimentalModules: false,
 	}
 	settings.Update.Mode = "Auto"
 	settings.Update.DisruptionApprovalMode = "Auto"
@@ -46,14 +51,15 @@ func DefaultDeckhouseSettings() *DeckhouseSettings {
 	return settings
 }
 
-func NewDeckhouseSettingsContainer(spec *DeckhouseSettings) *DeckhouseSettingsContainer {
-	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{})}
+func NewDeckhouseSettingsContainer(spec *DeckhouseSettings, metricStorage metricsstorage.Storage) *DeckhouseSettingsContainer {
+	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{}), metricStorage: metricStorage}
 }
 
 type DeckhouseSettingsContainer struct {
-	settings *DeckhouseSettings
-	lock     sync.Mutex
-	inited   chan struct{}
+	settings      *DeckhouseSettings
+	lock          sync.Mutex
+	inited        chan struct{}
+	metricStorage metricsstorage.Storage
 }
 
 // Set update settings in container
@@ -72,10 +78,19 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	}
 
 	c.settings.ReleaseChannel = settings.ReleaseChannel
+	c.settings.AllowExperimentalModules = settings.AllowExperimentalModules
 	c.settings.Update.Mode = settings.Update.Mode
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
+
+	allowExperimentalModules := 0.
+
+	if c.settings.AllowExperimentalModules {
+		allowExperimentalModules = 1.
+	}
+
+	c.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModulesAreAllowedMetricName), allowExperimentalModules, map[string]string{"module": "deckhouse-controller"})
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {

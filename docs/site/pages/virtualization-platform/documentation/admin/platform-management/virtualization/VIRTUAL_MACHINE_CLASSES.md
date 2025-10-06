@@ -3,9 +3,9 @@ title: "Virtual Machine Classes"
 permalink: en/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
 ---
 
-The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
+The [`VirtualMachineClass`](/modules/virtualization/cr.html#virtualmachineclass) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
-By default, a single VirtualMachineClass `generic` resource is automatically created, which represents a universal CPU model that uses the rather old but supported by most modern processors Nehalem model. This allows you to run VMs on any nodes in the cluster with the possibility of live migration.
+During installation, a single VirtualMachineClass `generic` resource is automatically created. It represents a universal CPU type based on the older, but widely supported, Nehalem architecture. This enables running VMs on any nodes in the cluster and allows live migration.
 
 {% alert level="info" %}
 It is recommended that you create at least one VirtualMachineClass resource in the cluster with the `Discovery` type immediately after all nodes are configured and added to the cluster. This allows virtual machines to utilize a generic CPU with the highest possible CPU performance considering the CPUs on the cluster nodes. This allows the virtual machines to utilize the maximum CPU capabilities and migrate seamlessly between cluster nodes if necessary.
@@ -39,6 +39,56 @@ spec:
   ...
 ```
 
+### Default VirtualMachineClass
+
+For convenience, you can assign a default VirtualMachineClass. This class will be used in the `spec.virtualMachineClassName` field if it is not specified in the virtual machine manifest.
+
+The default VirtualMachineClass is set via the `virtualmachineclass.virtualization.deckhouse.io/is-default-class` annotation. There can be only one default class in the cluster. To change the default class, remove the annotation from one class and add it to another.
+
+It is not recommended to set the annotation on the `generic` class, since the annotation may be removed during an update. It is recommended to create your own class and assign it as the default.
+
+To list all VirtualMachineClass resources, run the following command:
+
+```shell
+d8 k get virtualmachineclass
+```
+
+Example output (no default class):
+
+```console
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready               1d
+```
+
+To assign the default class, run:
+
+```shell
+d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
+```
+
+Example output:
+
+```console
+virtualmachineclass.virtualization.deckhouse.io/host-passthrough-custom annotated
+```
+
+After assigning the default class, list all VirtualMachineClass resources again:
+
+```shell
+d8 k get vmclass
+```
+
+Example output (with default class):
+
+```console
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready   true        1d
+```
+
+When creating a VM without specifying the `spec.virtualMachineClassName` field, it will be set to `host-passthrough-custom`.
+
 ## VirtualMachineClass settings
 
 The structure of the `VirtualMachineClass` resource is as follows:
@@ -47,20 +97,27 @@ The structure of the `VirtualMachineClass` resource is as follows:
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineClass
 metadata:
-name: <vmclass-name>
+  name: <vmclass-name>
+  # (optional) Set class as a default.
+  # annotations:
+  #   virtualmachineclass.virtualization.deckhouse.io/is-default-class: "true"
 spec:
-# Block describes the parameters of the virtual processor for virtual machines.
-# This block cannot be changed after the resource is created.
-cpu: ...
+  # The section describes virtual processor parameters for virtual machines.
+  # This block cannot be changed after the resource has been created.
+  cpu: ...
+  # (optional) Describes the rules for allocating virtual machines between nodes.
+  # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+  nodeSelector: ...
+  # (optional) Describes the sizing policy for configuring virtual machine resources.
+  # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+  sizingPolicies: ...
+```
 
-# (optional block) Describes the rules for placing virtual machines on nodes.
-# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
-nodeSelector: ...
+How to configure VirtualMachineClass in the web interface:
 
-# (optional block) Describes the policy for configuring virtual machine resources.
-# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
-sizingPolicies: ...
-  ```
+- Go to the "System" tab, then to the "Virtualization" → "VM Classes" section.
+- Click the "Create" button.
+- In the window that opens, enter a name for the VM class in the "Name" field.
 
 Next, let's take a closer look at the setting blocks.
 
@@ -84,6 +141,12 @@ Examples of the `.spec.cpu` block settings:
       type: Features
   ```
 
+  How to configure vCPU in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+  - In the "CPU Settings" block, select `Features` in the "Type" field.
+  - In the "Required set of supported instructions" field, select the instructions you need for the processor.
+  - To create a VM class, click the "Create" button.
+
 - A class with a universal vCPU for a given set of nodes. In this case, use `type: Discovery`:
 
   ```yaml
@@ -97,6 +160,14 @@ Examples of the `.spec.cpu` block settings:
       type: Discovery
   ```
 
+  How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+  - In the "CPU Settings" block, select `Discovery` in the "Type" field.
+  - Click "Add" in the "Conditions for creating a universal processor" → "Labels and expressions" block.
+  - In the pop-up window, you can set the "Key", "Operator" and "Value" of the key that corresponds to the `spec.cpu.discovery.nodeSelector` settings.
+  - To confirm the key parameters, click the "Enter" button.
+  - To create a VM class, click the "Create" button.
+
 - The vmclass with `type: Host` uses a virtual vCPU that matches the platform node's vCPU instruction set as closely as possible, ensuring high performance and functionality. It also guarantees compatibility with live migration for nodes with similar vCPU types. For example, it is not possible to migrate a virtual machine between nodes with Intel and AMD processors. This also applies to processors of different generations, as their instruction sets may differ.
 
   ```yaml
@@ -105,6 +176,11 @@ Examples of the `.spec.cpu` block settings:
       type: Host
   ```
 
+  How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+  - In the "CPU Settings" block, select `Host` in the "Type" field.
+  - To create a VM class, click the "Create" button.
+
 - A vmclass with `type: HostPassthrough` uses a physical CPU of the platform node without modification. A virtual machine using this class can only be migrated to a node that has a CPU that exactly matches the CPU of the source node.
 
   ```yaml
@@ -112,6 +188,11 @@ Examples of the `.spec.cpu` block settings:
     cpu:
       type: HostPassthrough
   ```
+
+  How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+  - In the "CPU Settings" block, select `HostPassthrough` in the "Type" field.
+  - To create a VM class, click the "Create" button.
 
 - To create a vCPU of a specific CPU with a predefined instruction set, use `type: Model`. To get a list of supported CPU names for the cluster node, run the command in advance:
 
@@ -147,6 +228,12 @@ Examples of the `.spec.cpu` block settings:
       type: Model
   ```
 
+  How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+  - In the "CPU Settings" block, select `Model` in the "Type" field.
+  - Select the required processor model in the "Model" field.
+  - To create a VM class, click the "Create" button.
+
 ### Placement settings
 
 The `.spec.nodeSelector` block is optional. It allows you to specify the nodes that will host VMs using this vmclass:
@@ -168,6 +255,13 @@ Since changing the `.spec.nodeSelector` parameter affects all virtual machines u
 - For the Community edition, this may cause virtual machines to restart according to the automatic change application policy set in the `.spec.disruptions.restartApprovalMode` parameter.
 {% endalert %}
 
+How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+- Click "Add" in the "VM scheduling conditions on nodes" → "Labels and expressions" block.
+- In the pop-up window, you can set the "Key", "Operator" and "Value" of the key that corresponds to the `spec.nodeSelector` settings.
+- To confirm the key parameters, click the "Enter" button.
+- To create a VM class, click the "Create" button.
+
 ### Sizing policy settings
 
 The `.spec.sizingPolicy` block allows you to set sizing policies for virtual machine resources that use vmclass.
@@ -175,7 +269,7 @@ The `.spec.sizingPolicy` block allows you to set sizing policies for virtual mac
 {% alert level="warning" %}
 Changes in the `.spec.sizingPolicy` block can also affect virtual machines. For virtual machines whose sizing policy will not meet the new policy requirements, the `SizingPolicyMatched` condition in the `.status.conditions` block will be false (`status: False`).
 
-When configuring `sizingPolicy`, be sure to consider the [CPU topology](./user_guide.html#automatic-cpu-topology-configuration) for virtual machines.
+When configuring `sizingPolicy`, be sure to consider the [CPU topology](../../../user/resource-management/virtual-machines.html#automatic-cpu-topology-configuration) for virtual machines.
 {% endalert %}
 
 The `cores` block is mandatory and specifies the range of cores to which the rule described in the same block applies.
@@ -284,6 +378,19 @@ spec:
       coreFractions: [100]
 ```
 
+How to configure sizing policies in the web interface in the [VM class creation form](#virtualmachineclass-settings):
+
+- Click "Add" in the "Resource allocation rules for virtual machines" block.
+- In the "CPU" block, enter `1` in the "Min" field.
+- In the "CPU" block, enter `4` in the "Max" field.
+- In the "CPU" block, select the values `5%`, `10%`, `20%`, `50%`, `100%` in order in the "Allow setting core fractions" field.
+- In the "Memory" block, set the switch to "Amount per core".
+- In the "Memory" block, enter `1` in the "Min" field.
+- In the "Memory" block, enter `8` in the "Max" field.
+- In the "Memory" block, enter `1` in the "Sampling step" field.
+- You can add more ranges using the "Add" button.
+- To create a VM class, click the "Create" button.
+
 ## vCPU Discovery configuration example
 
 ![VirtualMachineClass configuration example](/../../../../../images/virtualization-platform/vmclass-examples.png)
@@ -320,7 +427,12 @@ metadata:
   name: cpuX
 spec:
   cpu:
-    discovery: {}
+    discovery:
+      nodeSelector:
+        matchExpressions:
+          - key: group
+            operator: In
+            values: ["blue"]
     type: Discovery
   nodeSelector:
     matchExpressions:

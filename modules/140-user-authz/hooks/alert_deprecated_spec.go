@@ -19,12 +19,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -66,10 +69,13 @@ func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hoo
 	return car, nil
 }
 
-func handleClusterAuthorizationRulesWithDeprecatedSpec(input *go_hook.HookInput) error {
+func handleClusterAuthorizationRulesWithDeprecatedSpec(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_car_spec")
-	for _, obj := range input.Snapshots["cluster_authorization_rules"] {
-		car := obj.(ObjectCAR)
+	for car, err := range sdkobjectpatch.SnapshotIter[ObjectCAR](input.Snapshots.Get("cluster_authorization_rules")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'cluster_authorization_rules' snapshot: %w", err)
+		}
+
 		if car.Deprecated {
 			input.MetricsCollector.Set("d8_deprecated_car_spec", 1, map[string]string{"kind": car.Kind, "name": car.Name}, metrics.WithGroup("d8_deprecated_car_spec"))
 		}

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -25,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 )
 
 const (
@@ -66,7 +69,6 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	var scheme []byte
 	scheme, ok := secret.Data["scheme"]
 	if !ok {
 		scheme = []byte("https")
@@ -81,8 +83,8 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
-	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.NewSnapshots, imageModulesD8RegistryConfSnap)
+func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) error {
+	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.Snapshots, imageModulesD8RegistryConfSnap)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal %s snapshot: %w", imageModulesD8RegistryConfSnap, err)
 	}
@@ -111,5 +113,20 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	input.Values.Set("global.modulesImages.registry.address", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registry.path", registrySecretRaw.Path)
 
+	// Create registry config and calculate hash
+	registryConfig := deckhouse_registry.Config{
+		Address:      registrySecretRaw.Address,
+		Path:         registrySecretRaw.Path,
+		Scheme:       registrySecretRaw.Scheme,
+		CA:           registrySecretRaw.CA,
+		DockerConfig: registrySecretRaw.RegistryDockercfg,
+	}
+
+	hash, err := registryConfig.Hash()
+	if err != nil {
+		return fmt.Errorf("failed to calculate registry config hash: %w", err)
+	}
+
+	input.Values.Set("global.modulesImages.registry.hash", hash)
 	return nil
 }

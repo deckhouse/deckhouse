@@ -15,7 +15,10 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,6 +26,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -63,26 +68,62 @@ func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.F
 	return version, err
 }
 
-func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
-	snap := input.Snapshots["nodes_os_version"]
-	if len(snap) == 0 {
+// normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
+func normalizeUbuntuVersionForSemver(version string) string {
+	parts := strings.Split(version, ".")
+	if len(parts) < 2 {
+		return version
+	}
+
+	// Normalize major version
+	major := strings.TrimLeft(parts[0], "0")
+	if major == "" {
+		major = "0"
+	}
+
+	// Normalize minor version
+	minor := strings.TrimLeft(parts[1], "0")
+	if minor == "" {
+		minor = "0"
+	}
+
+	// Handle patch version
+	patch := "0"
+	if len(parts) > 2 {
+		patch = strings.TrimLeft(parts[2], "0")
+		if patch == "" {
+			patch = "0"
+		}
+	}
+
+	return major + "." + minor + "." + patch
+}
+
+func discoverMinimalNodesOSVersion(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("nodes_os_version")
+	if len(snaps) == 0 {
 		return nil
 	}
 
 	var minUbuntuVersion, minDebianVersion *semver.Version
+	for version, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_os_version' snapshots: %w", err)
+		}
 
-	for _, s := range snap {
 		switch {
-		case osImageUbuntuRegex.MatchString(s.(string)):
-			ctrlUbuntuVersion, err := semver.NewVersion(osImageUbuntuRegex.FindStringSubmatch(s.(string))[1])
+		case osImageUbuntuRegex.MatchString(version):
+			rawVersion := osImageUbuntuRegex.FindStringSubmatch(version)[1]
+			normalizedVersion := normalizeUbuntuVersionForSemver(rawVersion)
+			ctrlUbuntuVersion, err := semver.NewVersion(normalizedVersion)
 			if err != nil {
 				return err
 			}
 			if minUbuntuVersion == nil || ctrlUbuntuVersion.LessThan(minUbuntuVersion) {
 				minUbuntuVersion = ctrlUbuntuVersion
 			}
-		case osImageDebianRegex.MatchString(s.(string)):
-			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(s.(string))[1])
+		case osImageDebianRegex.MatchString(version):
+			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(version)[1])
 			if err != nil {
 				return err
 			}

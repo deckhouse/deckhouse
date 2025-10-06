@@ -10,7 +10,7 @@ apiVersions:
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 platform edit cluster-configuration
       ```
     properties:
       apiVersion:
@@ -50,15 +50,22 @@ apiVersions:
         description: |
           Домен кластера (используется для маршрутизации внутри кластера).
 
-          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
+          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
 
-          > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](../modules/kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
+          > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](/modules/kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
       defaultCRI:
         description: |
           Тип container runtime, используемый на узлах кластера (в NodeGroup'ах) по умолчанию.
 
           Если используется значение `NotManaged`, то Deckhouse не будет управлять (устанавливать и настраивать) container runtime.
           В этом случае образы, используемые в NodeGroup'ах, должны содержать уже установленный container runtime.
+
+          Если установлено значение `ContainerdV2`, будет использоваться `CgroupsV2` (обеспечивает улучшенную безопасность и управление ресурсами). Для использования `ContainerdV2` в качестве container runtime узлы кластера должны соответствовать следующим требованиям:
+
+          - поддержка `CgroupsV2`;
+          - ядро Linux версии `5.8` и новее;
+          - systemd версии `244` и новее;
+          - поддержка модуля ядра `erofs`.
       kubernetesVersion:
         description: |
           Версия Kubernetes (компонентов control plane кластера).
@@ -91,7 +98,7 @@ apiVersions:
 
           Описанные в этой секции параметры будут транслированы в переменные окружения `HTTP_PROXY`, `HTTPS_PROXY` и `NO_PROXY` для всех узлов кластера и компонентов Deckhouse. Это приведёт к тому, что HTTP(S) запросы (например, при выполнении curl, git и т. д.) ко всем не указанным в параметре `noProxy` ресурсам будут выполняться через прокси. Подсети `podSubnetCIDR`, `serviceSubnetCIDR` и домен `clusterDomain` добавляются в `noProxy` автоматически.
 
-          > **Внимание!** Чтобы избежать использования прокси в запросах между компонентами кластера, важно заполнить параметр `noProxy` списком подсетей, которые используются на узлах.
+          > **Внимание!** Чтобы избежать использования прокси в запросах между подами кластера и сервисами расположенными в сети узлов кластера, заполните параметр `noProxy` списком подсетей, которые используются на узлах.
         properties:
           httpProxy:
             description: |
@@ -108,3 +115,5 @@ apiVersions:
               Список IP и доменных имен, для которых проксирование не применяется.
 
               Для настройки wildcard-доменов используйте написание вида ".example.com".
+
+              > **Внимание.** Если в кластере предполагается взаимодействие подов с сервисами, размещенными в сети узлов кластера, то укажите список подсетей, которые используются на узлах.

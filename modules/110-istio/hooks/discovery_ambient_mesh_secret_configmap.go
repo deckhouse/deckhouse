@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -67,14 +70,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, monitorAmbientModeConfigMap)
 
-func monitorAmbientModeConfigMap(input *go_hook.HookInput) error {
-	if len(input.Snapshots["ambientmode_configmap"]) == 0 {
+func monitorAmbientModeConfigMap(_ context.Context, input *go_hook.HookInput) error {
+	configMapSnaps := input.Snapshots.Get("ambientmode_configmap")
+	if len(configMapSnaps) == 0 {
 		// ConfigMap doesn't exist
 		input.Values.Set(ambientModeValuesKey, false)
 		return nil
 	}
 
-	configMapInfo := input.Snapshots["ambientmode_configmap"][0].(ConfigMapInfo)
+	var configMapInfo ConfigMapInfo
+	err := configMapSnaps[0].UnmarshalTo(&configMapInfo)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal first 'ambientmode_configmap' snapshot: %w", err)
+	}
+
 	if configMapInfo.Exists {
 		// ConfigMap exists - enable ambient mode
 		input.Values.Set(ambientModeValuesKey, true)

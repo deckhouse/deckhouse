@@ -18,6 +18,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -115,6 +116,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// validate helm render
 	if err = v.helmClient.ValidateRender(project, template); err != nil {
+		// warning errors allow deploying the project
+		if errors.Is(err, helm.ErrNamespaceOverride) {
+			return admission.Allowed("").WithWarnings(err.Error())
+		}
+
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 

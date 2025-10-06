@@ -63,7 +63,7 @@ type imagesDigests map[string]map[string]interface{}
 func loadImagesDigests(filename string) (imagesDigests, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
 		return map[string]map[string]interface{}{
-			"common": {
+			"deckhouse": {
 				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
 			},
 		}, nil
@@ -181,7 +181,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -297,6 +297,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/tmp",
 			},
 			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/run",
+			},
+			{
 				Name:      "kube",
 				ReadOnly:  false,
 				MountPath: "/.kube",
@@ -307,6 +312,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/deckhouse/downloaded",
 			},
 		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
+		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
@@ -314,7 +322,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
+			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -322,6 +330,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse",
 			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
 		},
 	}
 
@@ -405,7 +416,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
-			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+			Value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency",
 		},
 		{
 			Name:  "DOWNLOADED_MODULES_DIR",
@@ -606,7 +617,7 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		"d8-provider-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-provider-cluster-configuration"},
 	)
 }
 
@@ -619,7 +630,7 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 		"d8-static-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-static-cluster-configuration"},
 	)
 }
 

@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
+    ingress-nginx-controller.deckhouse.io/checksum: 2ce05910aa99582281943ce7993acc0c81436c5995310c05337f237dd9811791
   labels:
     app: proxy-failover
     heritage: deckhouse
@@ -53,10 +53,13 @@ spec:
       name: solid
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: proxy-failover
         name: solid
     spec:
+      automountServiceAccountToken: true
       containers:
       - env:
         - name: CONTROLLER_NAME
@@ -81,19 +84,31 @@ spec:
             ephemeral-storage: 50Mi
             memory: 500Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+            - NET_RAW
             - NET_BIND_SERVICE
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
-      - image: registry.example.com@imageHash-ingressNginx-proxyFailoverIptables
+        - mountPath: /opt/nginx-static/writable
+          name: writable
+      - env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: registry.example.com@imageHash-ingressNginx-proxyFailoverIptables
         name: iptables-loop
         resources:
           requests:
@@ -101,15 +116,24 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
           runAsNonRoot: false
+          runAsUser: 0
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
       - args:
         - -web.listen-address=127.0.0.1:10354
         - -nginx.scrape-uri=http://127.0.0.1:10253/nginx_status
@@ -129,9 +153,11 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
       - args:
         - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208
         - --v=2
@@ -159,16 +185,60 @@ spec:
         name: kube-rbac-proxy
         ports:
         - containerPort: 4208
+          hostPort: 4208
           name: https-metrics
         resources:
           requests:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - command:
+        - /bin/bash
+        - -ec
+        - |
+          /usr/bin/cp /iptables-wrapper /sbin/ -rv
+          /usr/bin/cp /_sbin/* /sbin/ -rv
+          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+          /sbin/iptables --version
+          /usr/bin/rm /sbin/iptables-wrapper -v
+        image: registry.example.com@imageHash-ingressNginx-iptablesWrapperInit
+        name: iptables-wrapper-init
+        resources:
+          requests:
+            ephemeral-storage: 60Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsGroup: 64535
+        runAsNonRoot: true
+        runAsUser: 64535
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       tolerations:
@@ -189,6 +259,13 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
         name: xtables-lock
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+        name: sbin
+      - emptyDir:
+          medium: Memory
+        name: writable
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

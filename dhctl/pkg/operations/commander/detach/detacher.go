@@ -22,7 +22,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -36,7 +37,7 @@ type Detacher struct {
 	DetacherOptions
 
 	AgentModuleName string
-	SSHClient       *ssh.Client
+	SSHClient       node.SSHClient
 	Checker         *check.Checker
 }
 
@@ -45,7 +46,7 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient *ssh.Client, opts DetacherOptions) *Detacher {
+func NewDetacher(checker *check.Checker, sshClient node.SSHClient, opts DetacherOptions) *Detacher {
 	return &Detacher{
 		DetacherOptions: opts,
 		SSHClient:       sshClient,
@@ -54,8 +55,13 @@ func NewDetacher(checker *check.Checker, sshClient *ssh.Client, opts DetacherOpt
 }
 
 func (op *Detacher) Detach(ctx context.Context) error {
+	providerCleanup := func() error {
+		return nil
+	}
+
 	err := log.Process("commander/detach", "Check cluster", func() error {
-		checkRes, err := op.Checker.Check(ctx)
+		checkRes, cleanup, err := op.Checker.Check(ctx)
+		providerCleanup = cleanup
 		if err != nil {
 			return fmt.Errorf("check failed: %w", err)
 		}
@@ -67,6 +73,14 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		}
 		return nil
 	})
+
+	defer func() {
+		err = providerCleanup()
+		if err != nil {
+			op.Checker.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}()
+
 	if err != nil {
 		return err
 	}

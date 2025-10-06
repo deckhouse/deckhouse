@@ -17,6 +17,7 @@ package preflight
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -32,6 +33,14 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
+
+	s.checker.metaConfig = &config.MetaConfig{
+		Registry: config.RegistryData{
+			Scheme:  "https",
+			Address: "test.registry.io",
+			CA:      "",
+		},
+	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
 		ExpectReference(ref).
@@ -54,6 +63,14 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
 
+	s.checker.metaConfig = &config.MetaConfig{
+		Registry: config.RegistryData{
+			Scheme:  "https",
+			Address: "test.registry.io",
+			CA:      "",
+		},
+	}
+
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
 		ExpectReference(ref).
 		Return(&v1.ConfigFile{
@@ -74,6 +91,14 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	image := s.checker.installConfig.GetImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
+
+	s.checker.metaConfig = &config.MetaConfig{
+		Registry: config.RegistryData{
+			Scheme:  "https",
+			Address: "test.registry.io",
+			CA:      "",
+		},
+	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
 		ExpectReference(ref).

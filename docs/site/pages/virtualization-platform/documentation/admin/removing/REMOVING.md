@@ -20,7 +20,7 @@ To delete a cluster, several steps need to be followed:
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. Check the update channel set in the cluster. To do this, run the command:
+1. Check the release channel set in the cluster. To do this, run the command:
 
    ```shell
    d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
@@ -36,12 +36,12 @@ To delete a cluster, several steps need to be followed:
    where:
    - `<MOUNT_OPTIONS>` — the options for mounting files into the installer container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — [edition](../../about/editions.html) of the platform (e.g., `ee` — for Enterprise Edition, `ce` — for Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — [update channel](../../about/release-channels.html) of the platform in kebab-case:
-     - `alpha` — for the *Alpha* update channel;
-     - `beta` — for the *Beta* update channel;
-     - `early-access` — for the *Early Access* update channel;
-     - `stable` — for the *Stable* update channel;
-     - `rock-solid` — for the *Rock Solid* update channel.
+   - `<RELEASE_CHANNEL>` — [release channel](../../about/release-channels.html) of the platform in kebab-case:
+     - `alpha` — for the *Alpha* release channel;
+     - `beta` — for the *Beta* release channel;
+     - `early-access` — for the *Early Access* release channel;
+     - `stable` — for the *Stable* release channel;
+     - `rock-solid` — for the *Rock Solid* release channel.
 
    Example of running the installer container for the CE edition:
 

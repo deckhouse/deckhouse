@@ -43,7 +43,7 @@ data "vsphere_resource_pool" "resource_pool" {
 }
 
 data "vsphere_network" "main" {
-  name          = local.master_instance_class.mainNetwork
+  name          = replace(replace(local.master_instance_class.mainNetwork, "[", "\\["), "]", "\\]")
   datacenter_id = data.vsphere_dynamic.datacenter_id.id
 }
 
@@ -78,7 +78,7 @@ locals {
     } : tomap({})
   ))
 
-  internalNodeNetworkPrefix = split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1]
+  internalNodeNetworkPrefix = try(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1], "")
   first_interface_index     = 192
 
   additional_interface_configurations = {
@@ -134,6 +134,7 @@ resource "vsphere_virtual_machine" "master" {
   resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
+  storage_policy_id = lookup(var.providerClusterConfiguration, "storagePolicyID", "")
 
   firmware = data.vsphere_virtual_machine.template.firmware
   num_cpus = local.master_instance_class.numCPUs
@@ -199,6 +200,8 @@ resource "vsphere_virtual_machine" "master" {
       disk,
       vapp,
       firmware,
+      ept_rvi_mode,
+      hv_mode,
     ]
   }
 

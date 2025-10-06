@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -27,11 +28,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 type CiliumConfigStruct struct {
 	Mode           string `json:"mode,omitempty"`
 	MasqueradeMode string `json:"masqueradeMode,omitempty"`
+}
+
+type resultStruct struct {
+	DesiredCniConfigSourcePriorityFlagExists bool
+	DesiredCniConfigSourcePriority           string
+	CniConfigFromSecret                      CiliumConfigStruct
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -55,7 +64,26 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal cilium config json: %v", err)
 	}
-	return ciliumConfig, nil
+
+	cniConfigSourcePriorityFlagExists := false
+	cniConfigSourcePriority := ""
+	cniConfigSourcePriority, cniConfigSourcePriorityFlagExists = secret.Annotations[cniConfigSourcePriorityAnnotation]
+
+	return resultStruct{
+		DesiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
+		DesiredCniConfigSourcePriority:           cniConfigSourcePriority,
+		CniConfigFromSecret:                      ciliumConfig,
+	}, nil
+}
+
+func applyCNIFromMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &v1alpha1.ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
+	}
+
+	return mc, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -76,57 +104,145 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyCNIConfigurationSecretFilter,
 		},
+		{
+			Name:       "deckhouse_cni_mc",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{cniName},
+			},
+			FilterFunc: applyCNIFromMCFilter,
+		},
 	},
 }, setCiliumMode)
 
-func setCiliumMode(input *go_hook.HookInput) error {
-	// if secret exists, use it
-	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
+func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
+	clusterIsBootstrapped := input.Values.Get("global.clusterIsBootstrapped").Bool()
+
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[resultStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.Snapshots, "deckhouse_cni_mc")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
+
+	typeOfMergingCNIParameters := "SecretNotExists"
+
 	if len(cniConfigurationSecrets) > 0 {
-		ciliumConfig := cniConfigurationSecrets[0]
-		if ciliumConfig.Mode != "" {
-			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
+		switch {
+		case len(cniModuleConfigs) == 0:
+			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
+		case cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists:
+			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority == "ModuleConfig" {
+				typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
+			} else {
+				typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
+			}
+		case clusterIsBootstrapped:
+			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
+		default:
+			typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
 		}
-		if ciliumConfig.MasqueradeMode != "" {
-			input.Values.Set("cniCilium.internal.masqueradeMode", ciliumConfig.MasqueradeMode)
+	}
+	input.Logger.Debug("The type of CNI parameter merging has been identified.", "merging type is ", typeOfMergingCNIParameters)
+
+	switch typeOfMergingCNIParameters {
+	case "SecretExistsAndHasPriority":
+		// Secret exists and has priority (old logic); merging priority: Secret > MC(if exists) > Defaults
+
+		// masqueradeMode
+		if value := cniConfigurationSecrets[0].CniConfigFromSecret.MasqueradeMode; value != "" {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value)
 		}
+		// tunnelMode
+		if value := cniConfigurationSecrets[0].CniConfigFromSecret.Mode; value != "" {
+			input.Values.Set("cniCilium.internal.mode", value)
+		}
+
+		return nil
+	case "SecretExistsAndMCHasPriority":
+		// Secret and MC exist, and MC has priority (new logic); merging priority: MC > Secret > Default
+
+		// masqueradeMode
+		if value, ok := cniModuleConfigs[0].Spec.Settings["masqueradeMode"]; ok && value != nil {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value.(string))
+		} else if value := cniConfigurationSecrets[0].CniConfigFromSecret.MasqueradeMode; value != "" {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value)
+		} else if value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode"); ok {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
+		}
+		// tunnelMode
+		if value, ok := cniModuleConfigs[0].Spec.Settings["tunnelMode"]; ok && value != nil {
+			switch value.(string) {
+			case "VXLAN":
+				input.Values.Set("cniCilium.internal.mode", "VXLAN")
+				return nil
+			case "Disabled":
+				input.Values.Set("cniCilium.internal.mode", "Direct")
+			}
+		} else if value := cniConfigurationSecrets[0].CniConfigFromSecret.Mode; value != "" {
+			input.Values.Set("cniCilium.internal.mode", value)
+		} else if value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode"); ok {
+			switch value.String() {
+			case "VXLAN":
+				input.Values.Set("cniCilium.internal.mode", "VXLAN")
+				return nil
+			case "Disabled":
+				input.Values.Set("cniCilium.internal.mode", "Direct")
+			}
+		}
+		// createNodeRoutes
+		if value, ok := cniModuleConfigs[0].Spec.Settings["createNodeRoutes"]; ok && value != nil {
+			if value.(bool) {
+				input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+			}
+		} else if value := cniConfigurationSecrets[0].CniConfigFromSecret.Mode; value == "DirectWithNodeRoutes" {
+			input.Values.Set("cniCilium.internal.mode", value)
+		} else if value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes"); ok && value.Bool() {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		}
+
+		// for static clusters we should use DirectWithNodeRoutes mode
+		if value, ok := input.Values.GetOk("global.clusterConfiguration.clusterType"); ok && value.String() == "Static" {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		}
+
+		return nil
+	default:
+		// No secret exists (default logic); merging priority: MC(if exists) > Defaults
+
+		// masqueradeMode
+		if value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode"); ok {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
+		}
+		// tunnelMode
+		if value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode"); ok {
+			switch value.String() {
+			case "VXLAN":
+				input.Values.Set("cniCilium.internal.mode", "VXLAN")
+				return nil
+			case "Disabled":
+				// to recover the default value if it was discovered before
+				input.Values.Set("cniCilium.internal.mode", "Direct")
+			}
+		}
+		// createNodeRoutes
+		if value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes"); ok && value.Bool() {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		}
+
+		// for static clusters we should use DirectWithNodeRoutes mode
+		if value, ok := input.Values.GetOk("global.clusterConfiguration.clusterType"); ok && value.String() == "Static" {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		}
+
 		return nil
 	}
 
-	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-	if ok {
-		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
-	}
-
-	value, ok = input.ConfigValues.GetOk("cniCilium.tunnelMode")
-	if ok {
-		switch value.String() {
-		case "VXLAN":
-			input.Values.Set("cniCilium.internal.mode", "VXLAN")
-			return nil
-		case "Disabled":
-			// to recover default value if it was discovered before
-			input.Values.Set("cniCilium.internal.mode", "Direct")
-		}
-	}
-
-	value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
-	if ok && value.Bool() {
-		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-	}
-
-	// for static clusters we should use DirectWithNodeRoutes mode
-	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
-	if ok && value.String() == "Static" {
-		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-	}
-
-	// default
-	// mode = Direct
-	// masqueradeMode = BPF
-	return nil
+	// default_mode = Direct
+	// default_masqueradeMode = BPF
+	// return nil
 }

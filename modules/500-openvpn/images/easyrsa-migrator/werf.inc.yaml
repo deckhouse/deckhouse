@@ -6,6 +6,8 @@ import:
   add: /src/easyrsa-migrator
   to: /bin/easyrsa-migrator
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/easyrsa-migrator"]

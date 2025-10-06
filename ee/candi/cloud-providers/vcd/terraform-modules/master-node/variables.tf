@@ -9,7 +9,7 @@ variable "providerClusterConfiguration" {
   type = any
 
   validation {
-    condition     = cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR
+    condition     = contains(keys(var.providerClusterConfiguration), "internalNetworkCIDR") ? cidrsubnet(var.providerClusterConfiguration.internalNetworkCIDR, 0, 0) == var.providerClusterConfiguration.internalNetworkCIDR : true
     error_message = "Invalid internalNetworkCIDR in VCDClusterConfiguration."
   }
 
@@ -26,7 +26,7 @@ variable "nodeIndex" {
 }
 
 variable "cloudConfig" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -35,14 +35,18 @@ variable "clusterUUID" {
 }
 
 variable "resourceManagementTimeout" {
-  type = string
+  type    = string
   default = "10m"
 }
 
 locals {
-  prefix = var.clusterConfiguration.cloud.prefix
-  vapp_name = var.providerClusterConfiguration.virtualApplicationName
+  prefix                = var.clusterConfiguration.cloud.prefix
+  vapp_name             = var.providerClusterConfiguration.virtualApplicationName
   master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
-  main_ip_addresses = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
-  main_network_name = var.providerClusterConfiguration.mainNetwork
+  main_ip_addresses     = lookup(local.master_instance_class, "mainNetworkIPAddresses", [])
+  main_network_name     = var.providerClusterConfiguration.mainNetwork
+  metadata = merge(
+    (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),
+    (contains(keys(local.master_instance_class), "additionalMetadata") ? local.master_instance_class.additionalMetadata : {}),
+  )
 }

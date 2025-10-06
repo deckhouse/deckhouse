@@ -48,7 +48,7 @@ type CPU struct {
 	// Fraction is a guaranteed share of CPU time that will be allocated to the VM.
 	// Expressed as percentage.
 	// +kubebuilder:default="100%"
-	// +kubebuilder:validation:Enum:={"5%", "10%", "25%", "50%", "100%"}
+	// +kubebuilder:validation:Pattern=`^100%$|^[1-9][0-9]?%$`
 	Fraction string `json:"cpuFraction"`
 }
 
@@ -66,6 +66,12 @@ type VMAddress struct {
 	Type clusterv1b1.MachineAddressType `json:"type"`
 	// Address in IPv4 or IPv6 notation.
 	Address string `json:"address"`
+}
+
+type AdditionalDisks struct {
+	// Size of the disk.
+	Size         resource.Quantity `json:"size"`
+	StorageClass string            `json:"storageClass"`
 }
 
 // DeckhouseMachineSpec defines the desired state of DeckhouseMachine.
@@ -93,6 +99,9 @@ type DeckhouseMachineSpec struct {
 
 	// RootDiskStorageClass holds the name of the StorageClass to use for bootable disk.
 	RootDiskStorageClass string `json:"rootDiskStorageClass"`
+
+	// AdditionalDisks holds the list of additional disks to attach to the VM.
+	AdditionalDisks []AdditionalDisks `json:"additionalDisks,omitempty"`
 
 	// BootDiskImageRef holds the image to boot this VM from.
 	BootDiskImageRef DiskImageRef `json:"bootDiskImageRef"`

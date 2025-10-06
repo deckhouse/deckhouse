@@ -18,6 +18,9 @@ be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
 ee: Enterprise Edition
+kubernetes-platform: Deckhouse Kubernetes Platform
+virtualization-platform: Deckhouse Virtualization Platform
+stronghold: Deckhouse Stronghold
 
 common:
   of:
@@ -83,7 +86,7 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
-  documentation_title:
+  documentation:
     en: Documentation
     ru: Документация
   contact_us_button:
@@ -95,6 +98,12 @@ common:
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
+  tech_support_stronghold_notice_ce:
+    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Kubernetes Platform, with a valid Deckhouse Kubernetes Platform Technical Support certificate and compliance with the Terms."
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Kubernetes Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Kubernetes Platform и выполнения Условий, опубликованных на legal.flant.ru"
+  tech_support_stronghold_notice_commercial:
+    en: "Purchased separately"
+    ru: "Приобретается отдельно"
   for_example:
     en: for example
     ru: например
@@ -116,6 +125,15 @@ common:
   pattern:
     en: pattern
     ru: шаблон
+  port:
+    en: port
+    ru: порт
+  protocol:
+    en: protocol
+    ru: протокол
+  purpose:
+    en: purpose
+    ru: назначение
   length:
     en: length
     ru: длина
@@ -158,6 +176,9 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_modules:
+    en: Search by modules documentation...
+    ru: Поиск по документации модулей...
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -176,6 +197,9 @@ common:
   all_namespaces:
     en: All namespaces
     ru: Все пространства имен
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
@@ -243,6 +267,47 @@ comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
     ru: "Кроме следующих параметров:<br />"
+
+feedback:
+  thanks:
+    en: Thanks for the review!
+    ru: Спасибо за&nbsp;оценку!
+  useful:
+    en: Was the page useful?
+    ru: Была&nbsp;ли страница полезна?
+  response_processed:
+    en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
+    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+  error_happened:
+    en: An error has occurred
+    ru: Произошла ошибка
+  try_later:
+    en: Please try again later
+    ru: Пожалуйста, попробуйте позже
+  tell_us_what_you_didnt_like:
+    en: Tell&nbsp;us what you didn&rsquo;t like.
+    ru: Расскажите, что не&nbsp;понравилось
+  not_useful:
+    en: Little useful
+    ru: Мало полезного
+  there_are_errors:
+    en: There are errors
+    ru: Есть ошибки
+  written_incomprehensibly:
+    en: It&rsquo;s written incomprehensibly
+    ru: Непонятно написано
+  outdated_information:
+    en: Outdated information
+    ru: Устаревшая информация
+  other:
+    en: Other
+    ru: Другое
+  share_the_details:
+    en: Share the details
+    ru: Поделитесь деталями
+  send:
+    en: Send
+    ru: Отправить
 
 features:
   experimental:

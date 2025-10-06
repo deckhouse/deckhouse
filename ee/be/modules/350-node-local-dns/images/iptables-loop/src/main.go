@@ -24,7 +24,7 @@ const (
 	iptablesLoopBinary = "/iptables-loop"
 
 	readinessFilePath = "/tmp/coredns-readiness"
-	readyState         = "ready"
+	readyState        = "ready"
 	notReadyState     = "not-ready"
 
 	iptableName      = "raw"
@@ -208,7 +208,7 @@ loop:
 }
 
 func main() {
-	logger := log.NewLogger(log.Options{})
+	logger := log.NewLogger()
 	log.SetDefault(logger)
 
 	kubeDnsSvc := os.Getenv("KUBE_DNS_SVC_IP")
@@ -223,7 +223,7 @@ func main() {
 
 	iptablesMgr, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4), iptables.Timeout(60))
 	if err != nil {
-		logger.Errorf("failed to init iptables manager: %v", err)
+		logger.Fatalf("failed to init iptables manager: %v", err)
 	}
 
 	rf := newReadinessMgr(readinessFilePath, iptablesMgr, iptablesRule, sigs, logger)

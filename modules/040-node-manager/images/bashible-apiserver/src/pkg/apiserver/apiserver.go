@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/apis/bashible/install"
@@ -68,6 +69,7 @@ func init() {
 
 // ExtraConfig holds custom apiserver config
 type ExtraConfig struct { // Place you custom config here.
+	CtrlManager ctrl.Manager
 }
 
 // Config defines the config for the apiserver
@@ -79,6 +81,7 @@ type Config struct {
 // BashibleServer contains state for a Kubernetes cluster master/api server.
 type BashibleServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
+	CtrlManager      ctrl.Manager
 }
 
 type completedConfig struct {
@@ -124,6 +127,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 
 	s := &BashibleServer{
 		GenericAPIServer: genericServer,
+		CtrlManager:      c.ExtraConfig.CtrlManager,
 	}
 
 	// Config hardcode, could be put to `ExtraConfig`
@@ -142,7 +146,7 @@ func (c completedConfig) New() (*BashibleServer, error) {
 
 	cachesManager := bashibleregistry.NewCachesManager()
 	secretUpdater := checksumSecretUpdater{client: kubeClient}
-	bashibleContext := template.NewContext(ctx, stepsStorage, kubeClient, resyncTimeout, secretUpdater, cachesManager)
+	bashibleContext := template.NewContext(ctx, stepsStorage, kubeClient, resyncTimeout, secretUpdater, cachesManager, s.CtrlManager)
 
 	// Template-based REST API
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(bashible.GroupName, Scheme, metav1.ParameterCodec, Codecs)

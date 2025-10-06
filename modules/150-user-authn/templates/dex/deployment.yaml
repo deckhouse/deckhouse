@@ -89,7 +89,7 @@ spec:
       {{- end }}
       containers:
       - name: dex
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "dex") }}
         command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
         env:
@@ -99,6 +99,9 @@ spec:
               fieldPath: metadata.namespace
         - name: DEX_EXPAND_ENV
           value: "false"
+        - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
+          value: "true"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https
           containerPort: 5556
@@ -134,7 +137,7 @@ spec:
 {{- end }}
 
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5559"

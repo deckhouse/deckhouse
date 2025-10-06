@@ -6,12 +6,18 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package kubernetes
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 const KubectlPath = "/opt/deckhouse/bin/kubectl"
 const KubeConfigPath = "/etc/kubernetes/kubelet.conf"
+const CordonAnnotationKey = "node.deckhouse.io/cordoned-by"
+const CordonAnnotationValue = "shutdown-inhibitor"
 
 type Kubectl struct {
 	kubectlPath    string
@@ -30,7 +36,14 @@ func NewKubectlWithConf(kubectlPath, kubeConfigPath string) *Kubectl {
 }
 
 func (k *Kubectl) Cordon(nodeName string) ([]byte, error) {
-	cmd := k.cmd("cordon", nodeName)
+	cmd, cancel := k.cmd("cordon", nodeName)
+	defer cancel()
+	return cmd.CombinedOutput()
+}
+
+func (k *Kubectl) Uncordon(nodeName string) ([]byte, error) {
+	cmd, cancel := k.cmd("uncordon", nodeName)
+	defer cancel()
 	return cmd.CombinedOutput()
 }
 
@@ -48,9 +61,27 @@ func (k *Kubectl) ListPods(nodeName string) (*PodList, error) {
 	return podList, nil
 }
 
+func (k *Kubectl) GetAnnotationCordonedBy(nodeName string) (string, error) {
+	out, err := k.getAnnotationCordonedBy(nodeName)
+	if err != nil {
+		return "", err
+	}
+	annotationStr := fmt.Sprintf("%s", bytes.Trim(out, `"'`))
+
+	return annotationStr, nil
+}
+
+func (k *Kubectl) getAnnotationCordonedBy(nodeName string) ([]byte, error) {
+	jsonPath := fmt.Sprintf("jsonpath='{.metadata.annotations.%s}'", strings.ReplaceAll(CordonAnnotationKey, ".", `\.`))
+	cmd, cancel := k.cmd("get", "node", nodeName, "-o", jsonPath)
+	defer cancel()
+	return cmd.Output()
+}
+
 func (k *Kubectl) listPods(nodeName string) ([]byte, error) {
 	nodeNameFieldSelector := fmt.Sprintf("spec.nodeName=%s", nodeName)
-	cmd := k.cmd("get", "po", "-A", "-o", "json", "--field-selector", nodeNameFieldSelector)
+	cmd, cancel := k.cmd("get", "po", "-A", "-o", "json", "--field-selector", nodeNameFieldSelector)
+	defer cancel()
 	return cmd.Output()
 }
 
@@ -61,13 +92,43 @@ func (k *Kubectl) PatchCondition(kind, name, condType, status, reason, message s
 }
 
 func (k *Kubectl) patchStatusStrategic(kind, name, patch string) error {
-	cmd := k.cmd("patch", kind, name, "--subresource=status", "--type", "strategic", "-p", patch)
+	cmd, cancel := k.cmd("patch", kind, name, "--subresource=status", "--type", "strategic", "-p", patch)
+	defer cancel()
 	_, err := cmd.Output()
 	return err
 }
 
-func (k *Kubectl) cmd(args ...string) *exec.Cmd {
+func (k *Kubectl) SetCordonAnnotation(nodeName string) ([]byte, error) {
+	cmd, cancel := k.cmd("annotate", "node", nodeName, fmt.Sprintf("%s=%s", CordonAnnotationKey, CordonAnnotationValue))
+	defer cancel()
+	return cmd.Output()
+}
+
+func (k *Kubectl) RemoveCordonAnnotation(nodeName string) ([]byte, error) {
+	cmd, cancel := k.cmd("annotate", "node", nodeName, fmt.Sprintf("%s-", CordonAnnotationKey))
+	defer cancel()
+	return cmd.Output()
+}
+
+func (k *Kubectl) GetCondition(nodeName, reason string) (*Condition, error) {
+	out, err := k.getCondition(nodeName, reason)
+	if err != nil {
+		return nil, err
+	}
+
+	return ConditionFromJSON(out)
+}
+
+func (k *Kubectl) getCondition(nodeName, reason string) ([]byte, error) {
+	jsonPath := fmt.Sprintf(`jsonpath={.status.conditions[?(@.reason=="%s")]}`, reason)
+	cmd, cancel := k.cmd("get", "node", nodeName, "-o", jsonPath)
+	defer cancel()
+	return cmd.Output()
+}
+
+func (k *Kubectl) cmd(args ...string) (*exec.Cmd, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	kArgs := append([]string{}, "--kubeconfig", KubeConfigPath)
 	kArgs = append(kArgs, args...)
-	return exec.Command(k.kubectlPath, kArgs...)
+	return exec.CommandContext(ctx, k.kubectlPath, kArgs...), cancel
 }

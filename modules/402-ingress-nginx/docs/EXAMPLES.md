@@ -164,7 +164,7 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # node-balancer selector
+       node-role.kubernetes.io/loadbalancer: "" # label on load-balancing nodes
      type: L2
    ```
 
@@ -181,14 +181,21 @@ metallb:
      loadBalancer:
        loadBalancerClass: ingress
        annotations:
-       # The number of addresses that will be allocated from the pool described in _MetalLoadBalancerClass_.
+       # The number of addresses that will be allocated from the pool declared in MetalLoadBalancerClass.
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-   ```
+     # Label selector and tolerations. Ingress-controller pods must be scheduled on same nodes as MetalLB speaker pods.
+     nodeSelector:
+        node-role.kubernetes.io/loadbalancer: ""
+     tolerations:
+     - effect: NoSchedule
+       key: node-role/loadbalancer
+       operator: Exists
+      ```
 
 1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:
 
    ```shell
-   $ kubectl -n d8-ingress-nginx get svc
+   d8 k -n d8-ingress-nginx get svc
    NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
    main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
    ```

@@ -37,14 +37,16 @@ type InstanceScope struct {
 	*Scope
 	MachineScope *MachineScope
 
-	Instance    *deckhousev1.StaticInstance
-	Credentials *deckhousev1.SSHCredentials
+	Instance      *deckhousev1.StaticInstance
+	Credentials   *deckhousev1.SSHCredentials
+	SSHLegacyMode bool
 }
 
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
 	staticInstance *deckhousev1.StaticInstance,
+	ctx context.Context,
 ) (*InstanceScope, error) {
 	if scope == nil {
 		return nil, errors.New("Scope is required when creating an InstanceScope")
@@ -61,8 +63,9 @@ func NewInstanceScope(
 	scope.PatchHelper = patchHelper
 
 	return &InstanceScope{
-		Scope:    scope,
-		Instance: staticInstance,
+		Scope:         scope,
+		Instance:      staticInstance,
+		SSHLegacyMode: true,
 	}, nil
 }
 
@@ -85,6 +88,9 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	}
 
 	i.Credentials = credentials
+	if len(i.Credentials.Spec.PrivateSSHKey) == 0 {
+		i.SSHLegacyMode = false
+	}
 
 	return nil
 }

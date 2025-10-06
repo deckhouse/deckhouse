@@ -238,7 +238,7 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 			errStr = fmt.Sprintf("Error during waiting, err: %v", err)
 		}
 		//goland:noinspection GoErrorStringFormat
-		return fmt.Errorf(errStr)
+		return fmt.Errorf("%s", errStr)
 	})
 }
 

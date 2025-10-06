@@ -19,6 +19,31 @@
     extra:
       # TODO(nabokihms): make it configurable
       lang: en
+  {{- with $context.Values.userAuthn.passwordPolicy }}
+  {{ if . }}
+  passwordPolicy:
+    id: local
+    complexityLevel: {{ .complexityLevel | quote }}
+    passwordHistoryLimit: {{ .passwordHistoryLimit }}
+    {{- if .rotation }}
+    rotation:
+      interval: {{ .rotation.interval | quote }}
+    {{- end }}
+    {{- if .lockout }}
+    lockout:
+      maxAttempts: {{ .lockout.maxAttempts }}
+      lockDuration: {{ .lockout.lockDuration | quote }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- with $context.Values.userAuthn.staticUsers2FA }}
+    {{ if .enabled }}
+  twoFactorAuthn:
+    issuer: {{ .issuerName  | quote }}
+    connectors:
+    - local
+    {{- end }}
+  {{- end }}
   expiry:
     authRequests: "10m"
     signingKeys: "6h"
@@ -31,7 +56,14 @@
     format: json
   oauth2:
     responseTypes: ["code", "token", "id_token"]
+  {{- with $context.Values.userAuthn.staticUsers2FA }}
+    {{/* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */}}
+    {{ if .enabled }}
+    skipApprovalScreen: false
+    {{- else }}
     skipApprovalScreen: true
+    {{- end }}
+  {{- end }}
   {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
   enablePasswordDB: true
   {{- end }}
@@ -161,6 +193,12 @@
         {{- end }}
         {{- if $provider.oidc.claimMappingOverride }}
         overrideClaimMapping: true
+        {{- end }}
+        {{- if $provider.oidc.allowedGroups }}
+        allowedGroups:
+          {{- range $group := $provider.oidc.allowedGroups }}
+          - {{ $group | quote }}
+          {{- end }}
         {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}

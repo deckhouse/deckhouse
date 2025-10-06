@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -155,9 +156,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -182,9 +183,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -205,9 +206,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -232,9 +233,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -387,9 +388,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -410,9 +411,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})
@@ -468,9 +469,9 @@ enabledModules:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Name).Should(Equal("d8_cni_cilium_non_standard_vxlan_port"))
-			Expect(m[1].Action).To(BeEquivalentTo("set"))
+			Expect(m[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 			Expect(m[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 		})
 	})

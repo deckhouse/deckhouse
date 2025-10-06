@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -62,9 +63,9 @@ func init() {
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
-var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
-	Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-		Mode: v1alpha1.UpdateModeAuto.String(),
+var embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
+	Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+		Mode: v1alpha2.UpdateModeAuto.String(),
 	},
 	ReleaseChannel: "Stable",
 }
@@ -152,7 +153,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
-	mup *v1alpha1.ModuleUpdatePolicySpec,
+	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
@@ -266,7 +267,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual approval mode is set", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("manual-approval-mode-is-set.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -276,7 +277,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("After setting manual approve", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("after-setting-manual-approve.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -286,7 +287,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Auto deploy Patch release in Manual mode", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -299,7 +300,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual approval mode with canary process", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 		suite.setupController("manual-approval-mode-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -308,7 +309,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("After setting manual approve with canary process", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("after-setting-manual-approve-with-canary-process.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.36.0")
@@ -318,7 +319,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Manual mode", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("manual-mode.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.27.0")
@@ -328,7 +329,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Second run of the hook in a Manual mode should not change state", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupController("second-run-of-the-hook-in-a-manual-mode-should-not-change-state.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.27.0")
@@ -435,7 +436,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("minor release and patch release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeAuto.String()
+		mup.Update.Mode = v1alpha2.UpdateModeAuto.String()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 		dependency.TestDC.HTTPClient.DoMock.
@@ -481,9 +482,27 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Process major releases", func() {
+		suite.Run("major release from 1 to 2 must be not allowed", func() {
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
+			suite.setupController("major-release-from-1-to-2.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v2.10.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			dr = suite.getDeckhouseRelease("v1.31.0")
+			_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
 	suite.Run("Pending Manual release on cluster bootstrap", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		values, err := sjson.Delete(initValues, "global.clusterIsBootstrapped")
 		require.NoError(suite.T(), err)
@@ -574,7 +593,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.DisruptionApprovalMode = v1alpha1.UpdateModeManual.String()
+		ds.Update.DisruptionApprovalMode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupControllerSettings("disruption-release.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
@@ -588,43 +607,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		}
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.DisruptionApprovalMode = v1alpha1.UpdateModeManual.String()
+		ds.Update.DisruptionApprovalMode = v1alpha2.UpdateModeManual.String()
 
 		suite.setupControllerSettings("disruption-release-approved.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("Notification: release with notification settings", func() {
-		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			data, _ := io.ReadAll(r.Body)
-			httpBody = string(data)
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
-
-		suite.setupControllerSettings("release-with-notification-settings.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Thursday, 17-Oct-19 16:33:00 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
-		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
-	})
-
-	suite.Run("Notification: after met conditions", func() {
-		suite.setupController("notification-after-met-conditions.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
@@ -636,131 +622,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Notification: release applyAfter time is after notification period", func() {
-		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			data, _ := io.ReadAll(r.Body)
-			httpBody = string(data)
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 4*time.Hour + 10*time.Minute}
-
-		suite.setupControllerSettings("notification-release-apply-after-time-is-after-notification-period.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36.0 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.36.0"`)
-		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
-	})
-
-	suite.Run("Notification: basic auth", func() {
-		var (
-			username string
-			password string
-		)
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			username, password, _ = r.BasicAuth()
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.Auth = &updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}}
-
-		suite.setupControllerSettings("notification-basic-auth.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		require.Equal(suite.T(), username, "user")
-		require.Equal(suite.T(), password, "pass")
-	})
-
-	suite.Run("Notification: bearer token auth", func() {
-		var headerValue string
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			headerValue = r.Header.Get("Authorization")
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: ptr.To("the_token")}
-
-		suite.setupControllerSettings("notification-bearer-token-auth.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.36.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		require.Equal(suite.T(), headerValue, "Bearer the_token")
-	})
-
-	suite.Run("Update minimal notification time without configuring notification webhook", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
-
-		suite.setupControllerSettings("update-minimal-notification-time-without-configuring-notification-webhook.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("Patch release notification", func() {
-		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			data, _ := io.ReadAll(r.Body)
-			httpBody = string(data)
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
-		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
-
-		suite.setupControllerSettings("patch-release-notification.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Thursday, 17-Oct-19 17:33:00 UTC")
-		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
-		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
-	})
-
 	suite.Run("apply now annotation", func() {
 		suite.Run("Minor update out of window", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAuto.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAuto.String()
 			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 			suite.setupController("release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
@@ -806,7 +671,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Patch update out of window", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 			suite.setupController("patch-release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
@@ -833,7 +698,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Manual approval mode is set", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+			mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
@@ -864,7 +729,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test autoPatch-mode for postponed patch release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+		mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -883,7 +748,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test autoPatch-mode for postponed minor release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+		mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -899,7 +764,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test autoPatch-mode for approved minor release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+		mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -947,7 +812,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test manual-mode for approved minor release", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+		mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -963,7 +828,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("ApplyNow: AutoPatch mode is set", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+		mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 		dependency.TestDC.HTTPClient.DoMock.
 			Expect(&http.Request{}).
@@ -979,8 +844,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("AutoPatch", func() {
 		suite.Run("patch update respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00"}},
 				},
@@ -994,8 +859,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("minor update don't respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00"}},
 				},
@@ -1010,8 +875,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 	suite.Run("LTS Release channel", func() {
 		suite.Run("auto", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
@@ -1028,8 +893,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("several releases", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
@@ -1044,8 +909,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 		suite.Run("cannot upgrade", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode: "Auto",
 				},
 				ReleaseChannel: "LTS",
@@ -1061,7 +926,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 		suite.Run("clear data after deploy", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeManual.String()
+			mup.Update.Mode = v1alpha2.UpdateModeManual.String()
 
 			dependency.TestDC.HTTPClient.DoMock.
 				Expect(&http.Request{}).
@@ -1073,6 +938,104 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 			require.Empty(suite.T(), dr.Status.Message)
+		})
+	})
+
+	suite.Run("Migrated Modules", func() {
+		suite.Run("No migrated modules", func() {
+			suite.setupController("migrated-modules-no-migrated-modules.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Empty migrated modules", func() {
+			suite.setupController("migrated-modules-empty-migrated-modules.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Modules available", func() {
+			suite.setupController("migrated-modules-modules-available.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Module missing", func() {
+			suite.setupController("migrated-modules-module-missing.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Module pull error", func() {
+			suite.setupController("migrated-modules-module-pull-error.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("MC disabled not in source", func() {
+			suite.setupController("migrated-modules-mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("MC enabled not in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-not-in-source.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
+		})
+
+		suite.Run("MC enabled in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-in-source.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 	})
 }
@@ -1192,9 +1155,464 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 type stubModulesManager struct{}
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
-	return []string{"cert-manager", "prometheus"}
+	return []string{
+		"cert-manager",
+		"prometheus",
+		"test-module-1",
+		"test-module-2",
+		"test-module-missing",
+		"enabled-module-not-found",
+		"enabled-module",
+	}
 }
 
 func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 	return true
+}
+
+func (suite *ControllerTestSuite) TestWebhookNotifications() {
+	ctx := context.Background()
+
+	suite.Run("Notification: release with notification settings", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
+
+		suite.setupControllerSettings("notifier-webhook-release-with-settings.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Thursday, 17-Oct-19 16:33:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
+	})
+
+	suite.Run("Notification: after met conditions", func() {
+		suite.setupController("notifier-webhook-after-met-conditions.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Notification: release applyAfter time is after notification period", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 4*time.Hour + 10*time.Minute}
+
+		suite.setupControllerSettings("notifier-webhook-release-apply-after-time-is-after-notifier-webhook-period.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.36.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.36.0 is available. Release will be applied at: Monday, 11-Nov-22 23:23:23 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.36.0"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
+	})
+
+	suite.Run("Notification: basic auth", func() {
+		var (
+			username string
+			password string
+		)
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			username, password, _ = r.BasicAuth()
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.Auth = &updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}}
+
+		suite.setupControllerSettings("notifier-webhook-basic-auth.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.36.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Equal(suite.T(), username, "user")
+		require.Equal(suite.T(), password, "pass")
+	})
+
+	suite.Run("Notification: bearer token auth", func() {
+		var headerValue string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			headerValue = r.Header.Get("Authorization")
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: ptr.To("the_token")}
+
+		suite.setupControllerSettings("notifier-webhook-bearer-token-auth.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.36.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Equal(suite.T(), headerValue, "Bearer the_token")
+	})
+
+	suite.Run("Update minimal notification time without configuring notification webhook", func() {
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
+
+		suite.setupControllerSettings("notifier-webhook-update-minimal-time-without-configuring-notifier-webhook.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Patch release notification", func() {
+		var httpBody string
+		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			data, _ := io.ReadAll(r.Body)
+			httpBody = string(data)
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
+		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
+
+		suite.setupControllerSettings("notifier-webhook-patch-release.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Thursday, 17-Oct-19 17:33:00 UTC")
+		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
+		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
+	})
+
+	suite.Run("Webhook returns 4 bad status codes then succeeds", func() {
+		attemptCount := 0
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			attemptCount++
+			switch attemptCount {
+			case 1:
+				w.WriteHeader(http.StatusBadRequest)
+				if _, err := w.Write([]byte("Bad Request")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			case 2:
+				w.WriteHeader(http.StatusUnauthorized)
+				if _, err := w.Write([]byte("Unauthorized")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			case 3:
+				w.WriteHeader(http.StatusForbidden)
+				if _, err := w.Write([]byte("Forbidden")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			case 4:
+				w.WriteHeader(http.StatusNotFound)
+				if _, err := w.Write([]byte("Not Found")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			default:
+				w.WriteHeader(http.StatusOK)
+				if _, err := w.Write([]byte("Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond} // Fast retry for testing
+
+		suite.setupControllerSettings("notifier-webhook-4-bad-then-success.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+		// Should succeed after 5th attempt
+		require.NoError(suite.T(), err)
+		require.Equal(suite.T(), 5, attemptCount)
+	})
+
+	suite.Run("Webhook returns success status codes", func() {
+		suite.Run("Webhook returns 200 - should succeed immediately", func() {
+			var httpBody string
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				data, _ := io.ReadAll(r.Body)
+				httpBody = string(data)
+				w.WriteHeader(http.StatusOK)
+				if _, err := w.Write([]byte("Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-200-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			require.NoError(suite.T(), err)
+			require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available")
+		})
+
+		suite.Run("Webhook returns 201 - should succeed (2xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusCreated)
+				if _, err := w.Write([]byte("Created")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-201-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Webhook returns 299 - should succeed (2xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(299) // Custom 2xx status
+				if _, err := w.Write([]byte("Custom Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-299-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	suite.Run("Webhook returns error status codes", func() {
+		suite.Run("Webhook returns 300 - should block release (3xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusMultipleChoices)
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-300-fail.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
+
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
+
+		suite.Run("Webhook returns 404 with large body - should block release", func() {
+			largeBody := string(make([]byte, 4000))
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				if _, err := w.Write([]byte(largeBody)); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-404-large-body.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
+
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
+
+		suite.Run("Webhook returns 500 error - should block release", func() {
+			attemptCount := 0
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				attemptCount++
+				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
+
+			// Should have made 5 attempts (initial + 4 retries)
+			require.Equal(suite.T(), 5, attemptCount)
+
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
+
+		suite.Run("Webhook returns 500 error with not json response - should block release", func() {
+			attemptCount := 0
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				attemptCount++
+				w.WriteHeader(http.StatusInternalServerError)
+				if _, err := w.Write([]byte("Internal Server Error")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-500-not-json-error.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
+
+			// Should have made 5 attempts (initial + 4 retries)
+			require.Equal(suite.T(), 5, attemptCount)
+
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
+	})
+
+	suite.Run("Webhook network error - should retry and fail", func() {
+		attemptCount := 0
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			attemptCount++
+			if attemptCount < 3 {
+				// Simulate network error by closing connection
+				hj, ok := w.(http.Hijacker)
+				if ok {
+					conn, _, _ := hj.Hijack()
+					conn.Close()
+					return
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write([]byte("Success after retries")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
+		}))
+		defer svr.Close()
+
+		ds := &helpers.DeckhouseSettings{
+			ReleaseChannel: embeddedMUP.ReleaseChannel,
+		}
+		ds.Update.Mode = embeddedMUP.Update.Mode
+		ds.Update.Windows = embeddedMUP.Update.Windows
+		ds.Update.NotificationConfig.WebhookURL = svr.URL
+		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+		suite.setupControllerSettings("notifier-webhook-network-error.yaml", initValues, ds)
+		dr := suite.getDeckhouseRelease("v1.26.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+		// Should succeed after network errors are resolved
+		require.NoError(suite.T(), err)
+		require.GreaterOrEqual(suite.T(), attemptCount, 3)
+	})
 }

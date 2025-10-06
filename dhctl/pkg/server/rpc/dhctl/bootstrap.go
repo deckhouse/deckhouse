@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
@@ -38,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -175,13 +177,15 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var (
 		configPaths             []string
@@ -189,7 +193,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
-	err = log.Process("default", "Preparing configuration", func() error {
+	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -231,7 +235,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 	}
 
 	var initialState phases.DhctlState
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -244,11 +248,11 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
+	var sshClient node.SSHClient
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
-			s.schemaStore,
+			s.params.SchemaStore,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -262,6 +266,14 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
+
+		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -292,6 +304,9 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		UseTfCache:                 ptr.To(true),
 		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
+		TmpDir:                     s.params.TmpDir,
+		Logger:                     loggerFor,
+		IsDebug:                    s.params.IsDebug,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

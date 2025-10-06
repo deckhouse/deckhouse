@@ -179,4 +179,17 @@ metadata:
 
 	})
 
+	Context("Cluster having justRolledOutDaemonSet and notUpdatedPods", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(runningReadyPods + justRolledOutDaemonSet))
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("Should exit with error", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+
+	})
+
 })

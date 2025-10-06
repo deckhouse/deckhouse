@@ -187,6 +187,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se-plus/modules/030-csi-vsphere
+  to: /deckhouse/modules/030-csi-vsphere
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   excludePaths:
@@ -319,6 +332,42 @@
     - .build.yaml
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/templates/monitoring.yaml
+  to: /deckhouse/modules/040-node-manager/templates/monitoring.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
+  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
+  to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   excludePaths:
     - docs
     - README.md
@@ -504,19 +553,6 @@
     - .build.yaml
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/650-runtime-audit-engine
-  to: /deckhouse/modules/650-runtime-audit-engine
   excludePaths:
     - docs
     - README.md

@@ -1,0 +1,198 @@
+{{- $dcgm_version := "4.2.3" }}
+{{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $dcgm_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/DCGM.git /src/DCGM
+  - cd /src/DCGM
+  - git apply /patches/*.patch --verbose
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
+final: false
+fromImage: builder/golang-bookworm
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+shell:
+  beforeInstall:
+  - set -ex
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update
+  - apt install --quiet --assume-yes --no-install-recommends autoconf automake bison build-essential curl file flex gawk git gperf help2man libexpat1-dev libncurses5-dev libtool libtool-bin python3 python3-dev subversion texinfo unzip wget
+  - apt autoremove --purge --quiet --assume-yes
+  - apt clean --quiet --assume-yes
+  - rm -rf /var/lib/apt/lists/*
+  install:
+  - export CROSSTOOL_SHA512SUM=5297954cfdf7e59493e91060c996b8fe7843d155378066faa1d26a23a417b17cc4d008ed93d6408db89cf1b8c336729e22b5a104d6ccec096bdc2b958977ec41
+  - export CROSSTOOL_URL=https://github.com/crosstool-ng/crosstool-ng/archive/c5a17024a9af713a218d533fe78b7cf9a02ec67e.tar.gz
+  - cd /root; set -ex
+  - mkdir -p crosstool-ng
+  - wget $CROSSTOOL_URL -O crosstool-ng.tar.gz
+  - echo "$CROSSTOOL_SHA512SUM  crosstool-ng.tar.gz" | sha512sum -c -
+  - tar xf crosstool-ng.tar.gz -C crosstool-ng --strip-components=1
+  - cd crosstool-ng
+  - ./bootstrap
+  - ./configure --prefix=/opt/crosstool-ng
+  - make -j12
+  - make install
+  - rm -rf /root/crosstool-ng
+  - useradd --create-home builder
+  - mkdir -p /home/builder/x86_64 && chown -R builder:builder /home/builder/
+  - mkdir /opt/cross
+  - cp /src/DCGM/dcgmbuild/crosstool-ng/x86_64.config /home/builder/x86_64/.config && chown -R builder:builder /home/builder/
+  - chown builder:builder /opt/cross
+  - su - builder -c 'cd /home/builder/x86_64/ && CT_PREFIX=/opt/cross /opt/crosstool-ng/bin/ct-ng build'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+final: false
+fromImage: builder/golang-bookworm
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
+  add: /opt/cross
+  to: /opt/cross
+  before: install
+shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt update
+  - apt install --quiet --assume-yes --no-install-recommends bzip2 cpio curl dwz elfutils file gcovr gettext graphviz libedit-dev make ninja-build patch pkg-config pylint python3 python3-dev python3-distro python3-requests rpm software-properties-common unzip vim wget xz-utils yq git
+  - apt autoremove --purge --quiet --assume-yes
+  - apt clean --quiet --assume-yes
+  - rm -rf /var/lib/apt/lists/*
+  install:
+  - mkdir -p /tmp/scripts
+  - cp -a /src/DCGM/dcgmbuild/scripts/host /tmp/scripts/host
+  - cp /src/scripts/llvm.sh /tmp/scripts/
+  - |
+    set -ex
+    find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
+    do $SCRIPT /tmp/scripts/host/urls.txt
+    done
+    mkdir -p /tmp/cross
+    cp -a /opt/cross/x86_64-linux-gnu/* /tmp/cross/
+    rm -rf /opt/cross/*
+    cp -a /tmp/cross/* /opt/cross/
+    rm -rf /tmp/cross
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
+final: false
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+shell:
+  beforeInstall:
+  - |
+    set -ex
+    export DEBIAN_FRONTEND=noninteractive
+    apt update
+    apt install --quiet --assume-yes autoconf automake libtool
+    apt autoremove --purge --quiet --assume-yes
+    apt clean --quiet --assume-yes
+    rm -rf /var/lib/apt/lists/*
+  install:
+  - |
+    export ARCHITECTURE=x86_64
+    export TARGET=x86_64-linux-gnu
+    cp -a /src/DCGM/dcgmbuild/cmake/$TARGET-toolchain.cmake /tmp/$TARGET.cmake
+    export CC=/opt/cross/bin/$TARGET-gcc
+    export CPP=/opt/cross/bin/$TARGET-cpp
+    export CXX=/opt/cross/bin/$TARGET-g++
+    export LD=/opt/cross/bin/$TARGET-ld
+    export AS=/opt/cross/bin/$TARGET-as
+    export CMAKE_INSTALL_PREFIX=/tmp/$TARGET
+    export CMAKE_BUILD_TYPE=RelWithDebInfo
+    export CMAKE_TOOLCHAIN_FILE=/tmp/$TARGET.cmake
+    cp -a /src/DCGM/dcgmbuild/scripts/target /tmp/scripts/target
+    sed -E -i "s#(cuda11-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda-repo-debian11-11-8-local_11.8.0-520.61.05-1_amd64.deb d0f173c6ec89fa2f8e3b73fac711ffcd7ed19b0f556fd9a803354d0c94e04385c63f5cc6be1d09d245052bedd412034567b59964418341656667d35faf5512b7#" /tmp/scripts/target/urls.txt
+    sed -E -i "s#(cuda12-x86_64-linux-gnu) ([^ ]+) (.+)#\1 https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-debian12-12-8-local_12.8.0-570.86.10-1_amd64.deb aa4e02e39bbc9c764446aa774b6cca0a81f432c0306f6dc2d61fd5e8c2f013834f0951a43e184743310921b75fbd9086bc7176ddc7ab92b7461c9d387b68de65#" /tmp/scripts/target/urls.txt
+    set -ex
+    echo $CC
+    $CC --version
+    mkdir --parents $CMAKE_INSTALL_PREFIX
+    export MAKEFLAGS="--jobs=${JOBS:-$(nproc)}"
+    find /tmp/scripts/target -name '*.sh' | sort | while read -r SCRIPT
+    do $SCRIPT /tmp/scripts/target/urls.txt
+    done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
+  add: /tmp/x86_64-linux-gnu
+  before: install
+- image: libs/glibc
+  add: /
+  to: /tmp/glibc
+  includePaths:
+  - usr/*
+  - lib64/*
+  before: install
+shell:
+  install:
+  - cp -a /tmp/x86_64-linux-gnu/* /opt/cross/x86_64-linux-gnu/
+  - rm -rf /tmp/x86_64-linux-gnu/*
+  - cd /src/DCGM
+  - export ARCHITECTURE=x86_64
+  - export TARGET=x86_64-linux-gnu
+  - |
+    DCGM_BUILD_INSIDE_DOCKER=1 ./build.sh -r -p -n -c
+    mkdir -p /out
+    cp /src/DCGM/_out/Linux-amd64-relwithdebinfo/datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz /out
+    rm -rf /src/DCGM/_out
+    cd /out
+    tar xzf datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
+    rm -f datacenter-gpu-manager-4-{{ $dcgm_version }}-amd64.tar.gz
+    mkdir -p /out/usr/lib64/
+    for i in {{ $libs }}
+      do
+        cp /usr/lib/x86_64-linux-gnu/${i} /out/usr/lib64/
+    done
+    for i in /out/usr/bin/*
+      do
+        strip $i
+    done
+    for i in /out/usr/lib/x86_64-linux-gnu/*
+      do
+        strip $i
+    done
+    cp -a /tmp/glibc/* /out/
+    ln -s /usr/lib64 /out/lib64
+    ln -s /usr/lib /out/lib
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /out/
+  to: /
+  includePaths:
+  - usr/*
+  - lib64
+  before: setup

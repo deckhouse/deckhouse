@@ -23,7 +23,7 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
@@ -36,6 +36,7 @@ var (
 	SSHBastionHost       = ""
 	SSHBastionPort       = ""
 	SSHBastionUser       = os.Getenv("USER")
+	SSHBastionPass       = ""
 	SSHUser              = os.Getenv("USER")
 	SSHHosts             = make([]session.Host, 0)
 	sshHostsRaw          = make([]string, 0)
@@ -44,6 +45,11 @@ var (
 
 	AskBecomePass = false
 	BecomePass    = ""
+
+	AskBastionPass = false
+
+	SSHLegacyMode = false
+	SSHModernMode = false
 )
 
 type connectionConfigParser interface {
@@ -62,6 +68,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)
@@ -80,6 +87,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_HOSTS")).
 		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
@@ -90,6 +98,15 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
+	cmd.Flag("ssh-legacy-mode", "Force legacy SSH mode").
+		Envar(configEnvName("SSH_LEGACY_MODE")).
+		BoolVar(&SSHLegacyMode)
+	cmd.Flag("ssh-modern-mode", "Force modern SSH mode").
+		Envar(configEnvName("SSH_MODERN_MODE")).
+		BoolVar(&SSHModernMode)
+	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
+		Envar(configEnvName("ASK_BASTION_PASS")).
+		BoolVar(&AskBastionPass)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
@@ -120,6 +137,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		}
 		return processConnectionConfigFlags()
 	})
+	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+		if SSHLegacyMode && (AskBecomePass && len(SSHPrivateKeys) == 0) {
+			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
+		}
+		return nil
+	})
 }
 
 func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
@@ -142,6 +165,14 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 			keyPath, err := filepath.Abs(k)
 			if err != nil {
 				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
+			}
+
+			_, err = os.Stat(keyPath)
+			if err != nil {
+				if pathSet == DefaultSSHAgentPrivateKeys {
+					continue
+				}
+				return nil, fmt.Errorf("cannot stat file %s", keyPath)
 			}
 			res = append(res, keyPath)
 		}

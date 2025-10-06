@@ -56,6 +56,8 @@ import:
   add: /usr/lib64/libpthread.so.0
   to: /usr/lib64/libpthread.so.0
   before: install
+git:
+{{- include "image mount points" . }}
 shell:
   beforeInstall:
   - |

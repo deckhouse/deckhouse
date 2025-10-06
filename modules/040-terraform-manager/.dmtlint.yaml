@@ -6,8 +6,17 @@ linters-settings:
           name: terraform-auto-converger
           container: converger
         - kind: Deployment
+          name: terraform-auto-converger
+          container: to-tofu-migrator
+        - kind: Deployment
           name: terraform-state-exporter
           container: exporter
+        - kind: Deployment
+          name: terraform-auto-converger
+          container: prepare-converger
+        - kind: Deployment
+          name: terraform-state-exporter
+          container: prepare-exporter
       liveness-probe:
         - kind: Deployment
           name: terraform-auto-converger

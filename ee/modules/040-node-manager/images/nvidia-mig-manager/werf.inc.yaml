@@ -1,0 +1,93 @@
+{{- $mig_manager_version := "0.12.1" }}
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $kubectl_version  := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/nvidia-mig-manager-{{ $image_version }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+  add: /usr/bin
+  includePaths:
+    - nvidia-mig-parted
+    - nvidia-mig-manager
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+  add: /usr/lib64
+  includePaths:
+    - libc.so.6
+    - libresolv.so.2
+    - ld-linux-x86-64.so.2
+    - libpthread.so.0
+    - librt.so.1
+    - libdl.so.2
+    - libm.so.6
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+  add: /
+  includePaths:
+    - lib64
+  before: setup
+- image: {{ $.ModuleName }}/nvidia-container-toolkit-build-artifact
+  add: /usr/bin/nvidia-ctk
+  to: /usr/bin/nvidia-ctk
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /usr/bin/bash
+  before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/*
+  before: setup
+- image: common/kubernetes-artifact-{{ $kubectl_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/bin/kubectl
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $mig_manager_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
+  - cd /src/mig-parted
+  - rm -rf .git hack test
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
+final: false
+from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+  install:
+  - export GOPATH=/go
+  - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+  - export GIT_COMMIT=$(cat /src/.GIT_HASH)
+  - cd /src/mig-parted
+  - export CLI_VERSION_PACKAGE=github.com/NVIDIA/mig-parted/internal/info
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - make PREFIX=/usr/bin/ cmds
+  - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager
+{{- end }}

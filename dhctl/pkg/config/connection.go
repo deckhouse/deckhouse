@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -37,12 +37,15 @@ const (
 type SSHConfig struct {
 	SSHUser             string               `json:"sshUser"`
 	SSHPort             *int32               `json:"sshPort,omitempty"`
-	SSHAgentPrivateKeys []SSHAgentPrivateKey `json:"sshAgentPrivateKeys"`
+	SSHAgentPrivateKeys []SSHAgentPrivateKey `json:"sshAgentPrivateKeys,omitempty"`
 	SSHExtraArgs        string               `json:"sshExtraArgs,omitempty"`
 	SSHBastionHost      string               `json:"sshBastionHost,omitempty"`
 	SSHBastionPort      *int32               `json:"sshBastionPort,omitempty"`
 	SSHBastionUser      string               `json:"sshBastionUser,omitempty"`
+	SSHBastionPassword  string               `json:"sshBastionPassword,omitempty"`
 	SudoPassword        string               `json:"sudoPassword,omitempty"`
+	LegacyMode          bool                 `json:"legacyMode,omitempty"`
+	ModernMode          bool                 `json:"modernMode,omitempty"`
 }
 
 type SSHAgentPrivateKey struct {
@@ -201,6 +204,9 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHHosts = hosts
 	app.SSHPort = port
 	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
+	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
+	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
+	app.SSHModernMode = cfg.SSHConfig.ModernMode
 
 	return nil
 }

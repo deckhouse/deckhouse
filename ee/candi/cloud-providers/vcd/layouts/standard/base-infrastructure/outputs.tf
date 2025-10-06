@@ -3,10 +3,10 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion"       = "deckhouse.io/v1"
-    "kind"             = "VCDCloudProviderDiscoveryData"
+    "apiVersion" = "deckhouse.io/v1"
+    "kind"       = "VCDCloudProviderDiscoveryData"
     # vcloud director does not contain meaning zones
     # but our machinery use them. we use default as one zone
-    "zones"            = ["default"]
+    "zones" = ["default"]
   }
 }

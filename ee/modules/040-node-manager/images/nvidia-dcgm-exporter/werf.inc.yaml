@@ -1,0 +1,104 @@
+{{ $version := "4.2.3-4.1.3" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version}} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/dcgm-exporter.git /src
+  - cd /src
+  - echo $(git rev-parse --short HEAD) > .GIT_HASH
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+from: nvcr.io/nvidia/cuda:12.9.0-base-ubi9
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+- image: {{ .ModuleName }}/nvidia-dcgm-build-artifact
+  add: /out
+  to: /
+  includePaths:
+  - usr/*
+  before: setup
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+  install:
+  - export GOPATH=/go
+  - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+  - export GIT_COMMIT=$(cat /src/.GIT_HASH)
+  - cd /src
+  - export CLI_VERSION_PACKAGE=github.com/NVIDIA/k8s-device-plugin/internal/info
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - make PREFIX=/ binary
+  - cp cmd/dcgm-exporter/dcgm-exporter /
+  - cp docker/dcgm-exporter-entrypoint.sh /dcgm-exporter-entrypoint.sh
+  - sed -i "s/env bash/bash/" /dcgm-exporter-entrypoint.sh
+  - sed -E -i "s#DCGM_EXPORTER=.+#DCGM_EXPORTER=/usr/bin/dcgm-exporter#" /dcgm-exporter-entrypoint.sh
+  - chmod 700 /dcgm-exporter /dcgm-exporter-entrypoint.sh
+  - |
+    mkdir -p /ldconf
+    echo "include /etc/ld.so.conf.d/*.conf" > /ldconf/ld.so.conf
+    mkdir -p /ldconf/ld.so.conf.d
+    echo "/usr/lib/x86_64-linux-gnu" > /ldconf/ld.so.conf.d/x86_64-linux-gnu.conf
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /ldconf
+  to: /etc
+  includePaths:
+  - ld.so.conf
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /ldconf/ld.so.conf.d
+  to: /etc/ld.so.conf.d
+  includePaths:
+  - x86_64-linux-gnu.conf
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  to: /usr/bin
+  includePaths:
+  - dcgm-exporter
+  - dcgm-exporter-entrypoint.sh
+  before: setup
+- image: {{ .ModuleName }}/nvidia-dcgm-build-artifact
+  add: /out/
+  to: /
+  includePaths:
+  - usr/*
+  - lib
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/etc/*
+  to: /etc/dcgm-exporter
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /
+  includePaths:
+    - lib64
+  before: setup
+- image: libs/glibc
+  add: /
+  to: /
+  includePaths:
+  - sbin/*
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /usr/bin/bash
+  before: setup

@@ -6,6 +6,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
+    {{- $featureGates = list $featureGates "StructuredAuthenticationConfiguration=true" | join "," }}
 {{- end }}
 
 apiVersion: kubeadm.k8s.io/v1beta3
@@ -32,7 +33,7 @@ apiServer:
   {{- if eq .apiserver.auditLog.output "File" }}
   - name: "kube-audit-log"
     hostPath: "{{ .apiserver.auditLog.path }}"
-    mountPath: "{{ .apiserver.auditLog.path }}"
+    mountPath: /var/log/kube-audit
     readOnly: false
     pathType: DirectoryOrCreate
   {{- end }}
@@ -105,15 +106,6 @@ apiServer:
   {{- else }}
     bind-address: "0.0.0.0"
   {{- end }}
-  {{- if .apiserver.oidcCA }}
-    oidc-ca-file: /etc/kubernetes/deckhouse/extra-files/oidc-ca.crt
-  {{- end }}
-  {{- if .apiserver.oidcIssuerURL }}
-    oidc-client-id: kubernetes
-    oidc-groups-claim: groups
-    oidc-username-claim: email
-    oidc-issuer-url: {{ .apiserver.oidcIssuerURL }}
-  {{- end }}
   {{ if .apiserver.webhookURL }}
     authorization-mode: Node,Webhook,RBAC
     authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
@@ -131,7 +123,7 @@ apiServer:
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
     audit-log-format: json
     {{- if eq .apiserver.auditLog.output "File" }}
-    audit-log-path: "{{ .apiserver.auditLog.path }}/audit.log"
+    audit-log-path: "/var/log/kube-audit/audit.log"
     audit-log-truncate-enabled: "true"
     audit-log-maxage: "30"
     audit-log-maxsize: "100"
@@ -146,7 +138,10 @@ apiServer:
     profiling: "false"
     request-timeout: "60s"
     tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
-  {{- if hasKey .apiserver "certSANs" }}
+    {{- if .apiserver.oidcIssuerURL }}
+    authentication-config: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
+    {{- end }}
+    {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}
   - {{ $san | quote }}

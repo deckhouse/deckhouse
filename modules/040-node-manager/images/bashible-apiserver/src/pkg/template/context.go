@@ -23,9 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -40,7 +38,10 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+
+	"bashible-apiserver/pkg/template/registry"
 )
 
 const (
@@ -109,7 +110,7 @@ type UserConfiguration struct {
 	Spec NodeUserSpec `json:"spec" yaml:"spec"`
 }
 
-func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
+func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler, ctrlManager ctrl.Manager) *BashibleContext {
 	c := BashibleContext{
 		ctx:                               ctx,
 		updateHandler:                     updateHandler,
@@ -127,17 +128,18 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 
 	// Bashible context and its dynamic update
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
-	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
 	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
-	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
+
+	registryStateCtrl := &registry.StateController{}
+	registryDataCh := registryStateCtrl.SetupWithManager(ctx, ctrlManager)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataCh)
 
 	return &c
 }
@@ -288,7 +290,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	}
 }
 
-func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, registrySecretC chan map[string][]byte) {
+func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC chan map[string][]byte, registryDataCh <-chan registry.HashedRegistryData) {
 	for {
 		select {
 		case data := <-contextSecretC:
@@ -310,25 +312,13 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.saveChecksum(dataKey, checksum)
 			c.update("secret: bashible-apiserver-context")
 
-		case data := <-registrySecretC:
-			var input registryInputData
-			hash := sha256.New()
-			arr := make([]string, 0, len(data))
-			for k, v := range data {
-				arr = append(arr, k+"_"+string(v))
-			}
-			sort.Strings(arr)
-			for _, v := range arr {
-				hash.Write([]byte(v))
-			}
-			checksum := fmt.Sprintf("%x", hash.Sum(nil))
-			if c.isChecksumEqual("registry", checksum) {
+		case registryData := <-registryDataCh:
+			if c.isChecksumEqual("registry", registryData.HashSum) {
 				continue
 			}
-			input.FromMap(data)
-			c.contextBuilder.SetRegistryData(input.toRegistry())
+			c.contextBuilder.SetRegistryData(registryData.Data)
 			c.registrySynced = true
-			c.saveChecksum("registry", checksum)
+			c.saveChecksum("registry", registryData.HashSum)
 			c.update("secret: registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():
@@ -372,7 +362,7 @@ func (c *BashibleContext) update(src string) {
 	}
 
 	// write for ability to check generated context from container
-	_ = ioutil.WriteFile("/tmp/context.yaml", rawData, 0666)
+	_ = os.WriteFile("/tmp/context.yaml", rawData, 0666)
 
 	if len(checksumErrors) > 0 {
 		klog.Warning("Context was saved without checksums. Bashible context hasn't been upgraded")
@@ -381,7 +371,7 @@ func (c *BashibleContext) update(src string) {
 			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
-		_ = ioutil.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
+		_ = os.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
 		return
 	}
 

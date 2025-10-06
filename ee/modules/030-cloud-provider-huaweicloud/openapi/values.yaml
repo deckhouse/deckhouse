@@ -19,7 +19,7 @@ properties:
           Run the following command to change the configuration in a running cluster:
 
           ```shell
-          kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          d8 platform edit provider-cluster-configuration
           ```
         x-doc-search: |
           ProviderClusterConfiguration
@@ -345,6 +345,10 @@ properties:
                 type: string
                 description: |
                   The project ID.
+              enterpriseProjectID:
+                type: string
+                description: |
+                  The enterprise project ID.
       providerDiscoveryData:
         type: object
         additionalProperties: false

@@ -30,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -111,13 +113,16 @@ func applyIngressDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
-	controllers := input.Snapshots["controllers"]
-	daemonsets := input.Snapshots["daemonsets"]
+func chaosMonkey(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	controllers := input.Snapshots.Get("controllers")
+	daemonsets := input.Snapshots.Get("daemonsets")
 
 	chaosMonkeyEnabled := make(map[string]bool)
-	for _, c := range controllers {
-		controller := c.(ingressControllerChaosConfig)
+	for controller, err := range sdkobjectpatch.SnapshotIter[ingressControllerChaosConfig](controllers) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controllers' snapshots: %w", err)
+		}
+
 		chaosMonkeyEnabled[controller.ControllerName] = controller.ChaosMonkeyEnabled
 	}
 
@@ -126,8 +131,11 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	for _, ds := range daemonsets {
-		res := ds.(ingressDaemonSetFilterResult)
+	for res, err := range sdkobjectpatch.SnapshotIter[ingressDaemonSetFilterResult](daemonsets) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'daemonsets' snapshots: %w", err)
+		}
+
 		if !chaosMonkeyEnabled[res.ControllerName] {
 			input.Logger.Debug("chaos monkey is disabled for controller, skipping", slog.String("name", res.ControllerName))
 			continue

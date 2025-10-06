@@ -37,6 +37,13 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "additional_disks" {
+  type = list(object({
+    size         = string
+    storageClass = optional(string)
+  }))
+  default = []
+}
 
 locals {
   prefix         = var.clusterConfiguration.cloud.prefix
@@ -55,11 +62,20 @@ locals {
   root_disk_size          = local.instance_class.rootDisk.size
   root_disk_storage_class = lookup(local.instance_class.rootDisk, "storageClass", null)
 
+  additional_disks = [
+    for d in try(local.instance_class.additionalDisks, []) : {
+      size          = d.size
+      storage_class = try(d.storageClass, null)
+    }
+  ]
+
+
   cpu = {
     cores         = local.instance_class.virtualMachine.cpu.cores
     core_fraction = lookup(local.instance_class.virtualMachine.cpu, "coreFraction", "100%")
   }
-  memory_size = local.instance_class.virtualMachine.memory.size
+  memory_size                = local.instance_class.virtualMachine.memory.size
+  virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
 
   bootloader = lookup(local.instance_class.virtualMachine, "bootloader", null)
 

@@ -86,6 +86,7 @@
           "severity": "cef.severity",
           "version": "V1",
           "extensions": {
+            "cefseverity": "cef.severity",
             "container": "container",
             "host": "host",
             "image": "image",

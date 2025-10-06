@@ -25,7 +25,7 @@ description: Мультитенантность и проекты в Kubernetes.
 Функционал проектов позволяет решить эти проблемы.
 
 {% alert level="warning" %}
-Модуль `secret-copier` [не может использоваться совместно](../secret-copier/) с модулем `multitenancy-manager`.
+Модуль [`secret-copier`](../secret-copier/) не может использоваться совместно с модулем `multitenancy-manager`.
 {% endalert %}
 
 ## Преимущества модуля
@@ -41,20 +41,28 @@ description: Мультитенантность и проекты в Kubernetes.
 * **Быстрый старт**: Разработчики могут запрашивать у администраторов проекты, созданные по готовым шаблонам, что позволяет быстро начать разработку нового приложения.
 * **Изоляция**: Каждый проект обеспечивает изолированное окружение, где разработчики могут развертывать и тестировать свои приложения без влияния на другие проекты.
 
+## Ограничения
+
+Модуль работает только в рамках перечисленных ниже ограничений:
+
+- Создание более одного пространства имён внутри проекта не предусматривается. Если требуется несколько пространств имён, создайте отдельный проект для каждого из них.
+- Ресурсы шаблона применяются только к одному пространству имён, имя которого совпадает с именем проекта.
+
 ## Внутренняя логика работы
 
 ### Создание проекта
 
 Для создания проекта используются [ресурсы](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/):
 
-* [ProjectTemplate](cr.html#projecttemplate) — ресурс, который описывает шаблон проекта. При помощи него задается список ресурсов, которые будут созданы в проекте, а также схема параметров, которые можно передать при создании проекта;
-* [Project](cr.html#project) — ресурс, который описывает конкретный проект.
+* [ProjectTemplate](./cr.html#projecttemplate) — ресурс, который описывает шаблон проекта. При помощи него задается список ресурсов, которые будут созданы в проекте, а также схема параметров, которые можно передать при создании проекта;
+* [Project](./cr.html#project) — ресурс, который описывает конкретный проект.
 
-При создании ресурса [Project](cr.html#project) из определенного [ProjectTemplate](cr.html#projecttemplate) происходит следующее:
+При создании ресурса [Project](./cr.html#project) из определенного [ProjectTemplate](./cr.html#projecttemplate) происходит следующее:
 
-1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
-1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](cr.html#project);
+1. Переданные [параметры](./cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [`parametersSchema.openAPIV3Schema`
+](./cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса [ProjectTemplate](./cr.html#projecttemplate));
+1. Выполняется рендеринг [шаблона для ресурсов](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [`parameters`](./cr.html#project-v1alpha2-spec-parameters) ресурса [Project](./cr.html#project);
+1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](./cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 
 > **Внимание!** При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.

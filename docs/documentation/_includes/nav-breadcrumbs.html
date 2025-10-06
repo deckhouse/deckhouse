@@ -1,50 +1,38 @@
 <div class="breadcrumbs-container">
   <div class="breadcrumbs__left">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+      {% if page.sidebar == 'embedded-modules' %}
+        <!--<li class="breadcrumbs__item"><strong><a href="/modules/">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</a></strong></li>-->
+      {% else %}
+        <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation_platform[page.lang] }}</li>
+      {% endif %}
     </ol>
   </div>
   <div class="breadcrumbs__right">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
-      {%- assign page_url_parts = page.url | split: '/' -%}
-      {%- assign max_ind = page_url_parts.size | minus: 1 -%}
-      {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}
-
-      {%- for i in (2..max_ind) %}
-      {%- if forloop.last %}
-      <li class="breadcrumbs__item">{{ page.title }}</li>
-      {% else %}
-      {% unless page_url_parts[i].title %}
-        {% continue %}
-      {% endunless -%}
-      {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-      {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-
-      {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
-      {%- if breadcrumb %}
-          <li class="breadcrumbs__item">
-             <a href="{{ breadcrumb.url | true_relative_url }}">{%- if breadcrumb.title[page.lang] %}{{ breadcrumb.title[page.lang] }}{% else %}{{ breadcrumb.title }}{% endif -%}</a>
-          </li>
-      {% else %}
-          {%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
-          {% comment %}{{ breadcrumb_err | raise_error }}{% endcomment %}
-      {%- endif -%}
-      {%- endif -%}
-      {%- endfor %}
+      {% include nav-breadcrumbs-pagepath.html %}
     </ol>
   </div>
 
   <!--start search-->
-  <div class="search">
-      <form action='{{ "search.html" | true_relative_url }}' method="get">
-      <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
-      </form>
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+        {%- if page.sidebar == 'embedded-modules' %}
+        data-search-index-path="/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
+        {%- else %}
+        data-search-index-path="{{ '/search.json' | true_relative_url }}:2.0,/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        {%- endif -%}
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
   </div>
   <!--end search-->
-  {% unless site.mode == 'module' %}
-  <div id="doc-versions-menu" class="channel-menu submenu-parent">
-    <!-- #include virtual="/includes/channel-menu.html" -->
-  </div>
-  {% endunless %}
+  <!--loading search JS-->
+  {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
+  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+  <!--end loading search JS-->
 </div>

@@ -1,6 +1,6 @@
 ---
-title: Deckhouse CLI
-permalink: en/deckhouse-cli/
+title: "Deckhouse CLI overview and installation"
+permalink: en/cli/d8/
 description: Deckhouse CLI is a command line interface for cluster management created by the Deckhouse team.
 ---
 
@@ -9,22 +9,25 @@ Deckhouse CLI is a command line interface for cluster management created by the 
 On the command line, the utility can be invoked using the `d8` alias. All the commands are grouped by their function:
 
 {% alert level="info" %}
-The `d8 d` and `d8 mirror` command groups are not available for Community Edition (CE) and Basic Edition (BE).
+The `d8 dk` and `d8 mirror` command groups are not available for Community Edition (CE) and Basic Edition (BE).
 {% endalert %}
 
 * `d8 k` — the `kubectl` command family.  
     For example, `d8 k get pods` is the same as `kubectl get pods`.
 * `d8 dk` — the range of delivery-related commands (see the `werf` tool).  
-    For example, you can run `d8 d plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
+    For example, you can run `d8 dk plan --repo registry.deckhouse.io` instead of `werf plan --repo registry.deckhouse.io`.
 
 * `d8 mirror` — the range of commands that allow you to copy DKP distribution images to a private container registry (previously the `dhctl mirror` tool was used for this purpose).
   For example, you can run `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` instead of `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
-  Usage scenario:
+  The `--only-extra-images` flag allows pulling only extra images for modules (such as vulnerability databases) without downloading the main module images.
 
-  - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry).
+  Usage scenarios:
 
-* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
+  - [Manually uploading images to an air-gapped registry](../../installing/#manual-loading-of-deckhouse-kubernetes-platform-images-vulnerability-scanner-db-and-dkp-modules-into-a-private-registry).
+  - Updating module extra images (such as vulnerability databases): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`
+
+* `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     For example, the `d8 virtualization console` command execs you into the VM console.
 
     <div markdown="0">

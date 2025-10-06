@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
@@ -131,7 +131,6 @@ run: |
     CRI=${CRI}
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
-    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS}
     TMP_DIR_PATH=${TMP_DIR_PATH}
     MASTERS_COUNT=${MASTERS_COUNT}
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
@@ -185,9 +184,9 @@ run: |
   -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-  -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -203,6 +202,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
@@ -227,9 +227,9 @@ run: |
   -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-  -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
+  -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
   -e USER_RUNNER_ID=${user_runner_id} \
   {!{- if $run_from_issue_or_pr }!}
   -e CIS_ENABLED=${CIS_ENABLED} \
@@ -242,7 +242,8 @@ run: |
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
-  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
+  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready &&\
+  /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
   {!{- end }!}
 
@@ -284,11 +285,17 @@ run: |
   export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
   export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
   export LAYOUT_STATIC_BASTION_IP=80.249.129.56
-  export SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0}
+  {!{- end }!}
+  {!{- if eq $provider "static" }!}
+  export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+  export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
+  export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+  export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   export CIS_ENABLED=${CIS_ENABLED}
   {!{- end }!}
+  export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
   # for logs upload
   ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -307,7 +314,6 @@ run: |
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
     -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-    -e SLEEP_BEFORE_TESTING_CLUSTER_ALERTS=${SLEEP_BEFORE_TESTING_CLUSTER_ALERTS:-0} \
     -e LAYOUT=${LAYOUT:-not_provided} \
     -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
     -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -347,6 +353,7 @@ run: |
 {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
     -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
 {!{- end }!}
+    -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -403,7 +410,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
@@ -433,7 +440,6 @@ check_e2e_labels:
     issue_number: ${{ inputs.issue_number }}
     install_image_path: ${{ steps.setup.outputs.install-image-path }}
   env:
-    SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
@@ -450,12 +456,16 @@ check_e2e_labels:
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
-
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 {!{- end }!}
@@ -608,7 +618,6 @@ check_e2e_labels:
       id: e2e_test_run
       timeout-minutes: {!{ $ctx.e2eStepTimeoutMinutes }!}
       env:
-        SLEEP_BEFORE_TESTING_CLUSTER_ALERTS: "{!{ $ctx.sleepBeforeClusterTestingAlerts }!}"
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
@@ -771,7 +780,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}
@@ -798,6 +807,11 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
 
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}

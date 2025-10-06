@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -47,15 +49,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleUpdateFreq)
 
-func handleUpdateFreq(input *go_hook.HookInput) error {
-	snap := input.Snapshots["secret"]
+func handleUpdateFreq(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("secret")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		input.Values.Remove("nodeManager.internal.nodeStatusUpdateFrequency")
 		return nil
 	}
+	var args nodeArguments
+	err := snaps[0].UnmarshalTo(&args)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'secret' snapshots: %w", err)
+	}
 
-	args := snap[0].(nodeArguments)
 	if args.NodeMonitorGracePeriodSeconds == 0 {
 		input.Values.Remove("nodeManager.internal.nodeStatusUpdateFrequency")
 		return nil

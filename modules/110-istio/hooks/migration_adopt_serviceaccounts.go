@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -77,7 +80,7 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func migrateServiceAccounts(input *go_hook.HookInput) error {
+func migrateServiceAccounts(_ context.Context, input *go_hook.HookInput) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -90,8 +93,11 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	for _, serviceAccountSnap := range input.Snapshots["istio_serviceaccounts"] {
-		serviceAccount := serviceAccountSnap.(ServiceAccountInfo)
+	for serviceAccount, err := range sdkobjectpatch.SnapshotIter[ServiceAccountInfo](input.Snapshots.Get("istio_serviceaccounts")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istio_serviceaccounts' snapshot: %w", err)
+		}
+
 		if !serviceAccount.IsLabeledAndAnnotated {
 			input.PatchCollector.PatchWithMerge(patch, "v1", "ServiceAccount", "d8-istio", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 		}

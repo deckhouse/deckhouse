@@ -62,7 +62,7 @@ Istio позволяет настроить приоритетный геогр�
 * `topology.kubernetes.io/zone`;
 * `topology.kubernetes.io/region`.
 
-Это полезно для межкластерного фейловера при использовании совместно с [мультикластером](#устройство-мультикластера-из-двух-кластеров-с-помощью-ресурса-istiomulticluster).
+Это полезно для межкластерного failover при использовании совместно с [мультикластером](#устройство-мультикластера-из-двух-кластеров-с-помощью-ресурса-istiomulticluster).
 
 > **Важно!** Для включения Locality Failover используется ресурс DestinationRule, в котором также необходимо настроить `outlierDetection`.
 
@@ -208,7 +208,7 @@ spec:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role/frontend: ''
+    node-role.deckhouse.io/frontend: ""
   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io
@@ -637,6 +637,8 @@ annotations:
 * Запустить прикладной init-контейнер от пользователя с uid `1337`. Запросы данного пользователя не перехватываются под управление Istio.
 * Исключить IP-адрес или порт сервиса из-под контроля Istio с помощью аннотаций `traffic.sidecar.istio.io/excludeOutboundIPRanges` или `traffic.sidecar.istio.io/excludeOutboundPorts`.
 
+{% alert level="warning" %}Каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
+
 ## Обновление Istio
 
 ## Обновление control plane Istio
@@ -659,13 +661,82 @@ annotations:
 Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 19), выполните команду:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
+{% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
 
 ### Автоматическое обновление data plane Istio
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
+
+## Настройка ресурсов istio-proxy sidecar
+
+Для переопределения глобальных ограничений ресурсов для istio-proxy sidecar в отдельных рабочих нагрузках через аннотации, поддерживаются следующие аннотации:
+
+### Поддерживаемые аннотации
+
+| Аннотация                          | Описание                     | Пример значения |
+|-------------------------------------|-----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | Запрос CPU для sidecar      | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | Лимит CPU для sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Запрос памяти для sidecar   | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Лимит памяти для sidecar    | `512Mi`       |
+
+### Примеры конфигурации
+
+Для Deployment:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для ReplicaSet:
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+Для Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... остальная часть манифеста
+```
+
+{% alert level="warning" %}Все четыре параметра должны быть указаны вместе — `sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory` и `sidecar.istio.io/proxyMemoryLimit`. Частичная конфигурация не поддерживается.{% endalert %}

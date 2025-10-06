@@ -29,7 +29,6 @@ area/cluster-and-infrastructure:
   - ee/modules/040-terraform-manager/**
   - modules/011-flow-schema/**
   - modules/042-kube-dns/**
-  - modules/465-pod-reloader/**
   - modules/470-chrony/**
   - modules/600-namespace-configurator/**
   - modules/600-secret-copier/**
@@ -103,7 +102,6 @@ area/security:
   - modules/500-openvpn/**
   - ee/modules/160-multitenancy-manager/**
   - ee/modules/500-operator-trivy/**
-  - ee/modules/650-runtime-audit-engine/**
 
 area/storage:
   - modules/031-local-path-provisioner/**

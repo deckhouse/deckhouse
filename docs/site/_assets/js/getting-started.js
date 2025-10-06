@@ -1,4 +1,4 @@
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
     var $parent = $(this).closest('[data-features-tabs]');
@@ -283,7 +283,15 @@ function update_license_parameters(newtoken = '') {
     $('.highlight code').filter(function () {
       return this.innerText.match(matchStringDockerLogin) == matchStringDockerLogin;
     }).each(function (index) {
-      $(this).text($(this).text().replace(matchStringDockerLogin, replacePartStringDockerLogin));
+      let originalCode = $(this);
+      let cloneCode = originalCode.clone();
+      let ignoreElement = cloneCode.find('[data-copy="ignore"]').detach();
+      let originalText = cloneCode.text();
+      let newText = originalText.replace(matchStringDockerLogin, replacePartStringDockerLogin);
+      originalCode.empty().text(newText);
+      if(ignoreElement.length > 0) {
+        originalCode.prepend(ignoreElement);
+      }
     });
   } else {
     console.log("No license token, so InitConfiguration was not updated");

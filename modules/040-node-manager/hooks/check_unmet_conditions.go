@@ -15,13 +15,17 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -54,19 +58,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, checkCloudConditions)
 
-func checkCloudConditions(input *go_hook.HookInput) error {
-	if len(input.Snapshots["conditions"]) == 0 {
+func checkCloudConditions(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("conditions")) == 0 {
 		requirements.SaveValue(unmetCloudConditionsKey, false)
 		return nil
 	}
 
-	conditions := input.Snapshots["conditions"][0].([]CloudCondition)
+	conditionsSnaps, err := sdkobjectpatch.UnmarshalToStruct[[]CloudCondition](input.Snapshots, "conditions")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'conditions' snapshot: %w", err)
+	}
 
-	if len(conditions) == 0 {
+	if len(conditionsSnaps) == 0 {
 		requirements.SaveValue(unmetCloudConditionsKey, false)
 		return nil
 	}
 
+	conditions := conditionsSnaps[0]
 	var unmetConditions bool
 	for i := range conditions {
 		if !conditions[i].Ok {

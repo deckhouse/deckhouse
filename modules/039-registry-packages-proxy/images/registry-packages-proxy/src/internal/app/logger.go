@@ -19,7 +19,7 @@ import (
 )
 
 func InitLogger(config *Config) *log.Logger {
-	l := log.NewLogger(log.Options{})
+	l := log.NewLogger()
 	l.SetLevel(config.LogLevel)
 
 	return l

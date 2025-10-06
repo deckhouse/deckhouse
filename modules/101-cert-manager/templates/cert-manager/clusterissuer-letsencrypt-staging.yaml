@@ -16,7 +16,9 @@ spec:
     solvers:
     - http01:
         ingress:
-          {{- if hasKey .Values.global.modules "ingressClass" }}
+          {{- if hasKey .Values.certManager "ingressClassHttp01" }}
+          ingressClassName: {{ .Values.certManager.ingressClassHttp01 }}
+          {{- else if hasKey .Values.global.modules "ingressClass" }}
           ingressClassName: {{ .Values.global.modules.ingressClass }}
           {{- end }}
           podTemplate:

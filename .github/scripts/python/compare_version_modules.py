@@ -30,24 +30,41 @@ dangerous_modules = ["controlPlaneManager", "ingressNginx.controller"]
 
 image_from = os.getenv("IMAGE_FROM")
 image_to = os.getenv("IMAGE_TO")
+max_attempts = int(os.getenv("COMPARE_MAX_ATTEMPTS", 1))
+retry_delay = int(os.getenv("COMPARE_RETRY_DELAY", 30))
 
 print(f"Lookup image_digests from {image_from}")
 
-digests_from = json.loads(regctl([
-    "image",
-    "get-file",
-    image_from,
-    "/deckhouse/modules/images_digests.json"
-]))
+for attempts in range(1, max_attempts+1):
+    try:
+        digests_from = json.loads(regctl([
+            "image",
+            "get-file",
+            image_from,
+            "/deckhouse/modules/images_digests.json"
+        ]))
+    except subprocess.CalledProcessError as e:
+        if attempts == max_attempts:
+            raise
+    else:
+        break
+
 
 print(f"Lookup image_digests from {image_to}")
 
-digests_to = json.loads(regctl([
-    "image",
-    "get-file",
-    image_to,
-    "/deckhouse/modules/images_digests.json"
-]))
+for attempts in range(1, max_attempts+1):
+    try:
+        digests_to = json.loads(regctl([
+            "image",
+            "get-file",
+            image_to,
+            "/deckhouse/modules/images_digests.json"
+        ]))
+    except subprocess.CalledProcessError as e:
+        if attempts == max_attempts:
+            raise
+    else:
+        break
 
 digests_unique = {}
 
@@ -78,13 +95,13 @@ results.sort()
 
 dangerous_results = [i for i in results if any(m in i for m in dangerous_modules)]
 
-if len(results) != 0:
+if len(results) > 0:
     print("Found changes in following module images:")
     print(*results, sep="\n")
 else:
     print("No changed module images found.")
 
-if len(dangerous_results != 0):
+if len(dangerous_results) > 0:
     print("Found possibly dangerous changes in following module images:")
     print(*dangerous_results, sep="\n")
     exit(1)

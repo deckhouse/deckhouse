@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -122,21 +126,29 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}, nil
 }
 
-func syncBindings(input *go_hook.HookInput) error {
+func syncBindings(_ context.Context, input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
-	for _, snap := range input.Snapshots["manageBindings"] {
-		binding := snap.(*filteredManageBinding)
-		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
+	for binding, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.Snapshots.Get("manageBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'manageBindings' snapshot: %w", err)
+		}
+		role, namespaces, err := roleAndNamespacesByBinding(input.Snapshots.Get("manageRoles"), binding.RoleName)
+		if err != nil {
+			return fmt.Errorf("failed to get role and namespaces for binding '%s': %w", binding.Name, err)
+		}
+
 		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
-			input.PatchCollector.CreateOrUpdate(createBinding(binding, role, namespace))
+			input.PatchCollector.CreateOrUpdate(createBinding(&binding, role, namespace))
 			expected[useBindingName] = true
 		}
 	}
 
 	// delete excess use bindings
-	for _, snap := range input.Snapshots["useBindings"] {
-		existing := snap.(*filteredUseBinding)
+	for existing, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.Snapshots.Get("useBindings")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
+		}
 		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
@@ -145,26 +157,32 @@ func syncBindings(input *go_hook.HookInput) error {
 	return nil
 }
 
-func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName string) (string, map[string]bool) {
+func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (string, map[string]bool, error) {
 	var useRole string
 	var found *filteredManageRole
-	for _, snap := range manageRoles {
-		if role := snap.(*filteredManageRole); role.Name == roleName {
-			found = role
+	for role, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
+		}
+		if role.Name == roleName {
+			found = &role
 			var ok bool
 			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
-				return "", nil
+				return "", nil, nil
 			}
 			break
 		}
 	}
 	if found == nil {
-		return "", nil
+		return "", nil, nil
 	}
 
 	var namespaces = make(map[string]bool)
-	for _, snap := range manageRoles {
-		role := snap.(*filteredManageRole)
+	for role, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
+		}
+
 		if matchAggregationRule(found.Rule, role.Labels) {
 			if role.Rule == nil {
 				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
@@ -172,8 +190,10 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 				}
 				continue
 			}
-			for _, nestedSnap := range manageRoles {
-				nested := nestedSnap.(*filteredManageRole)
+			for nested, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
+				if err != nil {
+					return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
+				}
 				if matchAggregationRule(role.Rule, nested.Labels) {
 					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
 						namespaces[namespace] = true
@@ -183,7 +203,7 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 		}
 	}
 
-	return useRole, namespaces
+	return useRole, namespaces, nil
 }
 
 func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {

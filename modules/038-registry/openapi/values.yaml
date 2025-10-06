@@ -1,0 +1,254 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      orchestrator:
+        type: object
+        default: {}
+        properties:
+          ready:
+            type: boolean
+          hash:
+            type: string
+          state:
+            type: object
+            default: {}
+            properties:
+              target_mode:
+                type: string
+                enum: [Unmanaged, Direct]
+              mode:
+                type: string
+                enum: [Unmanaged, Direct]
+              pki:
+                type: object
+                properties:
+                  ca: &certKey
+                    type: object
+                    properties:
+                      cert:
+                        type: string
+                      key:
+                        type: string
+                  token:
+                    <<: *certKey
+              secrets:
+                type: object
+                properties:
+                  http:
+                    type: string
+              users:
+                type: object
+                properties:
+                  ro: &user
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      password:
+                        type: string
+                      password_hash:
+                        type: string
+              bashible:
+                type: object
+                properties:
+                  unmanaged_params:
+                    type: object
+                    properties:
+                      imagesRepo:
+                        type: string
+                      scheme:
+                        type: string
+                      ca:
+                        type: string
+                      username:
+                        type: string
+                      password:
+                        type: string
+                  actual_params:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                        enum: [Unmanaged, Direct]
+                      unmanaged:
+                        type: object
+                        properties:
+                          imagesRepo:
+                            type: string
+                          scheme:
+                            type: string
+                          ca:
+                            type: string
+                          username:
+                            type: string
+                          password:
+                            type: string
+                      direct:
+                        type: object
+                        properties:
+                          imagesRepo:
+                            type: string
+                          scheme:
+                            type: string
+                          ca:
+                            type: string
+                          username:
+                            type: string
+                          password:
+                            type: string
+                  config:
+                    type: object
+                    additionalProperties: true
+                    x-kubernetes-preserve-unknown-fields: true
+              in_cluster_proxy:
+                type: object
+                properties:
+                  config:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                      config:
+                        type: object
+                        properties:
+                          ca:
+                            type: string
+                          auth_cert:
+                            type: string
+                          auth_key:
+                            type: string
+                          token_cert:
+                            type: string
+                          token_key:
+                            type: string
+                          distribution_cert:
+                            type: string
+                          distribution_key:
+                            type: string
+                          http_secret:
+                            type: string
+                          upstream:
+                            type: object
+                            properties:
+                              scheme:
+                                type: string
+                              host:
+                                type: string
+                              path:
+                                type: string
+                              ca:
+                                type: string
+                              user:
+                                <<: *user
+              ingress_enabled:
+                type: boolean
+              registry_service:
+                type: string
+              conditions:
+                x-kubernetes-patch-strategy: merge
+                x-kubernetes-patch-merge-key: type
+                type: array
+                default: []
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      type: integer
+      checker:
+        type: object
+        default: {}
+        properties:
+          initialized:
+            type: boolean
+            default: false
+          params:
+            type: object
+            default: {}
+            properties:
+              registries:
+                type: object
+                additionalProperties:
+                  type: object
+                  required: ["address", "scheme"]
+                  properties:
+                    address:
+                      type: string
+                    scheme:
+                      type: string
+                      enum: [HTTP, HTTPS]
+                      default: "HTTPS"
+                    ca:
+                      type: string
+                    username:
+                      type: string
+                    password:
+                      type: string
+              version:
+                type: string
+              checkMode:
+                type: string
+                enum: [Default, Relax]
+                default: Default
+          state:
+            type: object
+            default: {}
+            properties:
+              queues:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    processed:
+                      type: integer
+                      format: int
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          image:
+                            type: string
+                          info:
+                            type: string
+                          error:
+                            type: string
+                    retry:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          image:
+                            type: string
+                          info:
+                            type: string
+                          error:
+                            type: string
+                    last_attempt:
+                      type: string
+                      format: date-time
+                    params_hash:
+                      type: string
+              version:
+                type: string
+              ready:
+                type: boolean
+                default: false
+              message:
+                type: string

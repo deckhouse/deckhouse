@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -28,6 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
 	mcmv1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
@@ -172,30 +176,41 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func instanceController(input *go_hook.HookInput) error {
-	instances := make(map[string]*instance, len(input.Snapshots["instances"]))
-	machines := make(map[string]*machineForInstance, len(input.Snapshots["machines"]))
-	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots["cluster_api_machines"]))
-	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots["ngs"]))
+func instanceController(_ context.Context, input *go_hook.HookInput) error {
+	instances := make(map[string]*instance, len(input.Snapshots.Get("instances")))
+	machines := make(map[string]*machineForInstance, len(input.Snapshots.Get("machines")))
+	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots.Get("cluster_api_machines")))
+	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots.Get("ngs")))
+	for ins, err := range sdkobjectpatch.SnapshotIter[instance](input.Snapshots.Get("instances")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'instances' snapshots: %w", err)
+		}
 
-	for _, i := range input.Snapshots["instances"] {
-		ins := i.(*instance)
-		instances[ins.Name] = ins
+		instances[ins.Name] = &ins
 	}
 
-	for _, m := range input.Snapshots["machines"] {
-		mc := m.(*machineForInstance)
-		machines[mc.Name] = mc
+	for mc, err := range sdkobjectpatch.SnapshotIter[machineForInstance](input.Snapshots.Get("machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machines' snapshots: %w", err)
+		}
+
+		machines[mc.Name] = &mc
 	}
 
-	for _, m := range input.Snapshots["cluster_api_machines"] {
-		mc := m.(*machineForInstance)
-		clusterAPIMachines[mc.Name] = mc
+	for mc, err := range sdkobjectpatch.SnapshotIter[machineForInstance](input.Snapshots.Get("cluster_api_machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'cluster_api_machines' snapshots: %w", err)
+		}
+
+		clusterAPIMachines[mc.Name] = &mc
 	}
 
-	for _, m := range input.Snapshots["ngs"] {
-		ng := m.(*nodeGroupForInstance)
-		nodeGroups[ng.Name] = ng
+	for ng, err := range sdkobjectpatch.SnapshotIter[nodeGroupForInstance](input.Snapshots.Get("ngs")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
+		nodeGroups[ng.Name] = &ng
 	}
 
 	// first, check mapping from machines to instance

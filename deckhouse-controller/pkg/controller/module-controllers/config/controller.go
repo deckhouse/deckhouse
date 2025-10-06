@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/shell-operator/pkg/metric"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -39,12 +39,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -56,16 +60,14 @@ const (
 
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
-
-	obsoleteConfigMetricGroup = "obsoleteVersion_%s"
-	moduleConflictMetricGroup = "module_%s_at_conflict"
 )
 
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	edition *d8edition.Edition,
 	handler *confighandler.Handler,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
@@ -75,6 +77,7 @@ func RegisterController(
 		logger:          logger,
 		handler:         handler,
 		moduleManager:   mm,
+		edition:         edition,
 		metricStorage:   ms,
 		configValidator: configtools.NewValidator(mm),
 		exts:            exts,
@@ -119,9 +122,10 @@ func RegisterController(
 type reconciler struct {
 	init            *sync.WaitGroup
 	client          client.Client
+	edition         *d8edition.Edition
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
-	metricStorage   metric.Storage
+	metricStorage   metricsstorage.Storage
 	configValidator *configtools.Validator
 	exts            *extenders.ExtendersStack
 	logger          *log.Logger
@@ -191,6 +195,17 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	// TODO: remove after 1.73+
+	if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld) {
+		patch := client.MergeFrom(moduleConfig.DeepCopy())
+		controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizerOld)
+
+		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
+			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
+
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
@@ -229,10 +244,42 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	if !moduleConfig.IsEnabled() {
+		// delete all pending releases for EnabledByModuleConfig disabled modules
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+			releases := new(v1alpha1.ModuleReleaseList)
+			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
+			if err := r.client.List(ctx, releases, selector); err != nil {
+				r.logger.Warn("list module releases", slog.String("module", module.Name), log.Err(err))
+				return ctrl.Result{}, fmt.Errorf("list module releases: %w", err)
+			}
+
+			pendingReleases := make([]*v1alpha1.ModuleRelease, 0)
+			for _, release := range releases.Items {
+				if release.GetPhase() == v1alpha1.ModuleReleasePhasePending {
+					pendingReleases = append(pendingReleases, &release)
+				}
+			}
+
+			if len(pendingReleases) > 0 {
+				for _, release := range pendingReleases {
+					err := r.client.Delete(ctx, release)
+					if err != nil && !apierrors.IsNotFound(err) {
+						r.logger.Error("failed to delete pending release", slog.String("pending_release", release.Name), log.Err(err))
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
+
 		if err := r.disableModule(ctx, module); err != nil {
 			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
@@ -260,6 +307,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+	}
+
+	if module.IsExperimental() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
+	}
+
+	if module.IsDeprecated() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
 	}
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -315,7 +370,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				return ctrl.Result{}, err
 			}
 			// fire alert at Conflict
-			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
+			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
 				"moduleName": module.Name,
 			})
 		}
@@ -342,12 +397,15 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, moduleConfig.Name)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// clear conflict metrics
-	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
@@ -378,7 +436,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// clear downloaded module
-	if !module.IsEmbedded() {
+	if !module.IsEmbedded() && !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
 		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Properties.UpdatePolicy = ""
 			module.Properties.Source = ""
@@ -388,6 +446,16 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 			r.logger.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+	}
+
+	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+
+		return true
+	})
+	if err != nil {
+		r.logger.Error("failed to update module", slog.String("name", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
@@ -431,6 +499,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			needsUpdate = true
 		}
+
 		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 			needsUpdate = true
@@ -443,7 +512,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false
 		}
 
@@ -457,10 +526,12 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			}
 		}
 
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
 
 		return true
@@ -470,7 +541,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("enable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			return false
 		}
 		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)

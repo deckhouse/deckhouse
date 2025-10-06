@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -76,7 +77,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			metaConfig, err := config.ParseConfigFromData(clusterConfigYAML)
+			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider())
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

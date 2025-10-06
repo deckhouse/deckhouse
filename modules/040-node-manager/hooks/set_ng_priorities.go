@@ -17,11 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -66,19 +69,19 @@ func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}, nil
 }
 
-func handleSetPriorities(input *go_hook.HookInput) error {
+func handleSetPriorities(_ context.Context, input *go_hook.HookInput) error {
 	priorities := make(map[int32][]string)
 	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
 	if !exists {
 		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
 	}
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		if sn == nil {
-			continue
+	snaps := input.Snapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[setPriorityNodeGroup](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
-		ng := sn.(setPriorityNodeGroup)
+
 		if ng.Priority != nil {
 			key := fmt.Sprintf("^%s-%s-[0-9a-zA-Z]+$", prefix, ng.Name)
 			priorities[*ng.Priority] = append(priorities[*ng.Priority], key)

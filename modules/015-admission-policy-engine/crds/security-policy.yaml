@@ -123,6 +123,15 @@ spec:
                     allowHostNetwork:
                       type: boolean
                       description: Allows containers to use the host's network.
+                    allowRbacWildcards:
+                      type: boolean
+                      default: true
+                      description: |
+                        Allows using wildcards (`*`) in namespaced Role and RoleBinding resources.
+
+                        ClusterRole and ClusterRoleBinding are not validated by SecurityPolicy.
+
+                        **By default** (if not specified) — `true`. This means that if the field is omitted or explicitly set to `true`, using wildcards is allowed. If you want to deny wildcards, set this parameter to `false`.
                     allowedHostPorts:
                       type: array
                       description: The list of `hostPort` ranges allowed by the rule.
@@ -240,6 +249,20 @@ spec:
                       x-doc-examples: [["kernel.msg*", "net.core.somaxconn"]]
                       items:
                         type: string
+                    allowedServiceTypes:
+                      type: array
+                      description: The list of allowed [service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+                      x-doc-examples: [["LoadBalancer", "ClusterIP"]]
+                      items:
+                        type: string
+                        enum:
+                          - ClusterIP
+                          - NodePort
+                          - LoadBalancer
+                          - ExternalName
+                    blockWildcardDomains:
+                      type: boolean
+                      description: Block creation of Ingress objects with `*` in DNS domains.
                     forbiddenSysctls:
                       type: array
                       description: |

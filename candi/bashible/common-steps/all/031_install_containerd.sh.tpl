@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
 bb-event-on 'bb-package-installed' 'post-install'
 
 # This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
-# from bb-rp-install() function (defined in 50_deckhouse_registrypackages.sh).
 # All arguments (except the event name, i.e. 'bb-package-installed')
 # passed to the bb-event-fire() function are passed to the post-install() function.
 # This means that the post-install() function is called with an argument
@@ -37,5 +36,23 @@ post-install() {
   fi
 }
 
-bb-package-install "containerd:{{- index $.images.registrypackages "containerd1727" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+cntrd_version_change_check() {
+  local cur target
+  cur=$(containerd --version | awk '{print $3}' | grep -oE '[12]' | head -n1)
+  target={{ if eq .cri "ContainerdV2" }}2{{ else }}1{{ end }}
+  if [[ -n $cur && $cur != $target ]]; then
+    bb-flag-set cntrd-major-version-changed
+    bb-deckhouse-get-disruptive-update-approval
+  fi
+}
+
+command -v containerd &>/dev/null && cntrd_version_change_check
+
+{{- $containerd := "containerd1728"}}
+{{- if eq .cri "ContainerdV2" }}
+  {{- $containerd = "containerd214" }}
+bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
+{{- end }}
+
+bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

@@ -15,6 +15,7 @@
 package registry
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -152,12 +153,16 @@ func handleGetDeckhouseRelease(ctx context.Context, svc *deckhouseReleaseService
 		return nil
 	}
 
-	b, err := json.MarshalIndent(meta, "", "    ")
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "    ")
+	err = encoder.Encode(meta)
 	if err != nil {
 		return fmt.Errorf("marshall indent: %w", err)
 	}
 
-	fmt.Printf("%s\n", b)
+	fmt.Printf("%s\n", buffer.String())
 
 	return nil
 }
@@ -241,12 +246,16 @@ func handleGetModuleInfoInChannel(ctx context.Context, svc *moduleReleaseService
 		return nil
 	}
 
-	b, err := json.MarshalIndent(meta, "", "    ")
+	buffer := &bytes.Buffer{}
+	encoder := json.NewEncoder(buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "    ")
+	err = encoder.Encode(meta)
 	if err != nil {
 		return fmt.Errorf("marshall indent: %w", err)
 	}
 
-	fmt.Printf("%s\n", b)
+	fmt.Printf("%s\n", buffer.String())
 
 	return nil
 }

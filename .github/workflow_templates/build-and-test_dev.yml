@@ -33,31 +33,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
-
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -67,12 +55,10 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ee')
+    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -80,12 +66,10 @@ jobs:
 
   build_se:
     name: Build SE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se')
+    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -93,12 +77,10 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se-plus')
+    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -106,12 +88,10 @@ jobs:
 
   build_be:
     name: Build BE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/be')
+    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -119,12 +99,10 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ce')
+    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
     needs:
       - git_info
       - pull_request_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"
@@ -137,9 +115,9 @@ jobs:
     needs:
       - build_fe
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
           ci_commit_hash: ${{ github.event.pull_request.head.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -226,17 +204,6 @@ jobs:
       - pull_request_info
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
-
-  web_links_test:
-    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' && github.repository == 'deckhouse/deckhouse' }}
-    name: Web links test
-    needs:
-      - git_info
-      - pull_request_info
-      - doc_web_build
-      - main_web_build
-    continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

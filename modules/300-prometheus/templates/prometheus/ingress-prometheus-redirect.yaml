@@ -1,0 +1,29 @@
+{{- if and (not .Values.prometheus.internal.grafana.enabled) (has "console" .Values.global.enabledModules) .Values.global.modules.publicDomainTemplate }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-redirect
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/permanent-redirect: {{ printf "https://%s/monitoring/monitoring/pods" (include "helm_lib_module_public_domain" (list . "console")) | quote }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+spec:
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+    http:
+      paths:
+      - path: /prometheus(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: nonexistent-service
+            port:
+              number: 8080
+{{- end }}

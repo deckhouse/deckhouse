@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -59,17 +60,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, kubernetesDexClientAppSecret)
 
-func kubernetesDexClientAppSecret(input *go_hook.HookInput) error {
+func kubernetesDexClientAppSecret(_ context.Context, input *go_hook.HookInput) error {
 	secretPath := "userAuthn.internal.kubernetesDexClientAppSecret"
 	if input.Values.Exists(secretPath) && input.Values.Get(secretPath).String() != "" {
 		return nil
 	}
 
-	kubernetesSecrets, ok := input.Snapshots["kubernetes_secret"]
-	if ok && len(kubernetesSecrets) > 0 {
-		secretContent, ok := kubernetesSecrets[0].([]byte)
-		if !ok {
-			return fmt.Errorf("cannot conver kubernetes secret to bytes")
+	kubernetesSecrets := input.Snapshots.Get("kubernetes_secret")
+	if len(kubernetesSecrets) > 0 {
+		var secretContent []byte
+		err := kubernetesSecrets[0].UnmarshalTo(&secretContent)
+		if err != nil {
+			return fmt.Errorf("cannot convert kubernetes secret to bytes: failed to unmarshal 'kubernetes_secret' snapshot: %w", err)
 		}
 
 		// if secret field was removed, generate a new one

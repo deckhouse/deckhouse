@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -168,10 +170,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, exposeMetrics)
 
-func exposeMetrics(input *go_hook.HookInput) error {
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_service_monitor_total", float64(len(input.Snapshots["service_monitors"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_pod_monitor_total", float64(len(input.Snapshots["pod_monitors"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_prometheus_rules_total", float64(len(input.Snapshots["rules"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_old_prometheus_custom_targets_total", float64(len(input.Snapshots["custom_services"])), nil)
+func exposeMetrics(_ context.Context, input *go_hook.HookInput) error {
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_service_monitor_total", float64(len(input.Snapshots.Get("service_monitors"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_pod_monitor_total", float64(len(input.Snapshots.Get("pod_monitors"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_prometheus_rules_total", float64(len(input.Snapshots.Get("rules"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_old_prometheus_custom_targets_total", float64(len(input.Snapshots.Get("custom_services"))), nil)
+
 	return nil
 }

@@ -47,6 +47,8 @@ import:
     add: /src/adapter
     to: /adapter
     before: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: ["/adapter"]

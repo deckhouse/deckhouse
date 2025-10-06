@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -26,6 +28,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -98,7 +102,7 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func setInstanceClassUsage(input *go_hook.HookInput) error {
+func setInstanceClassUsage(_ context.Context, input *go_hook.HookInput) error {
 	// dynamic InstanceClass binding
 	{
 		kindInUse, kindFromSecret := detectInstanceClassKind(input, setInstanceClassNGUsageConfig)
@@ -131,22 +135,21 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 	icNodeConsumers := make(map[usedInstanceClass][]string)
 
-	snap := input.Snapshots["ngs"]
-	for _, sn := range snap {
-		if sn == nil {
-			// not ephemeral
-			continue
+	snaps := input.Snapshots.Get("ngs")
+	for usedIC, err := range sdkobjectpatch.SnapshotIter[ngUsedInstanceClass](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
-
-		usedIC := sn.(ngUsedInstanceClass)
 
 		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
-	snap = input.Snapshots["ics"]
-	for _, sn := range snap {
-		icm := sn.(usedInstanceClassWithConsumers)
+	snaps = input.Snapshots.Get("ics")
+	for icm, err := range sdkobjectpatch.SnapshotIter[usedInstanceClassWithConsumers](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+		}
 
 		// if not found in NGs - remove consumers
 		if _, ok := icNodeConsumers[icm.UsedInstanceClass]; !ok {

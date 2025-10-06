@@ -35,6 +35,13 @@ spec:
           path: /health
           port: 2381
           scheme: HTTP
+      startupProbe:
+        failureThreshold: 24
+        httpGet:
+          host: 127.0.0.1
+          path: /readyz?exclude=non_learner
+          port: 2381
+          scheme: HTTP
 {{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
 ---
@@ -65,7 +72,15 @@ metadata:
   name: etcd
   namespace: kube-system
 spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
+  containers:
+    - name: etcd
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        seccompProfile:
+          type: RuntimeDefault

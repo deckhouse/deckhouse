@@ -21,6 +21,10 @@ import (
 	"sync/atomic"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/spf13/fsync"
+
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
@@ -31,8 +35,9 @@ var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.ya
 var assembleErrorRegexp = regexp.MustCompile(`"(?P<base>.+?/modules/(?P<module>[^/]+))/(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)"`)
 
 const (
-	modulesDir = "data/modules/"
-	contentDir = "content/modules/"
+	hugoInitDir = "/app/hugo-init/"
+	modulesDir  = "data/modules/"
+	contentDir  = "content/modules/"
 )
 
 type Service struct {
@@ -41,15 +46,17 @@ type Service struct {
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
 
-	logger *log.Logger
+	logger  *log.Logger
+	metrics *metricsstorage.MetricStorage
 }
 
-func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger) *Service {
+func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger, ms *metricsstorage.MetricStorage) *Service {
 	svc := &Service{
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
 		logger:               logger,
+		metrics:              ms,
 	}
 
 	if !highAvailability {
@@ -61,6 +68,30 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 	if err != nil {
 		svc.logger.Error("mkdir all", log.Err(err))
 	}
+
+	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+	// do not delete files in baseDir
+	syncer.DeleteFilter = func(_ fsync.FileInfo) bool {
+		return false
+	}
+
+	oldLocation := filepath.Join(hugoInitDir)
+	newLocation := filepath.Join(svc.baseDir)
+	err = syncer.Sync(newLocation, oldLocation)
+	if err != nil {
+		svc.logger.Error("sync init folder with base dir", log.Err(err))
+	}
+
+	svc.metrics.AddCollectorFunc(func(s metricsstorage.Storage) {
+		modulesCount, err := svc.channelMappingEditor.getModulesCount()
+		if err != nil {
+			svc.logger.Warn("can not read modules count from channel mapping editor")
+		}
+
+		s.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
+	})
 
 	return svc
 }

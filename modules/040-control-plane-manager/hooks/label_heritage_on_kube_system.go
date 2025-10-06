@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -47,7 +50,7 @@ func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 	return unstructured.GetName(), nil
 }
 
-func labelHeritage(input *go_hook.HookInput) error {
+func labelHeritage(_ context.Context, input *go_hook.HookInput) error {
 	nsPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -56,12 +59,16 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-	snap := input.Snapshots["ns"]
-	if len(snap) == 1 {
-		if snap[0] != nil {
-			name := snap[0].(string)
-			input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
+	snaps := input.Snapshots.Get("ns")
+
+	if len(snaps) == 1 {
+		var name string
+		err := snaps[0].UnmarshalTo(&name)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'ns' snapshot: %w", err)
 		}
+
+		input.PatchCollector.PatchWithMerge(nsPatch, "v1", "Namespace", "", name)
 	}
 
 	return nil

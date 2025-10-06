@@ -16,6 +16,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -213,7 +214,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(configData)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider())
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -252,14 +253,6 @@ func TestPrepareRegistry(t *testing.T) {
 		})
 	})
 
-	t.Run("Validate HTTP imagesRepo with CA", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-		cfg.Registry.Scheme = "http"
-		cfg.Registry.CA = "==exampleCA=="
-		err := validateHTTPRegistryScheme(cfg.Registry.Scheme, cfg.Registry.CA)
-		require.EqualError(t, err, "registry CA is not allowed for HTTP scheme")
-	})
-
 	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
@@ -273,132 +266,6 @@ func TestPrepareRegistry(t *testing.T) {
 			}
 
 			require.Equal(t, cfg.Registry, expectedData)
-		})
-	})
-
-	t.Run("Validate registryDockerCfg", func(t *testing.T) {
-		t.Run("Expect successful validation", func(t *testing.T) {
-			creds := map[string]string{
-				"registry.deckhouse.io":                `{"auths": { "registry.deckhouse.io": {}}}`,
-				"regi-stry.deckhouse.io":               `{"auths": { "regi-stry.deckhouse.io": {}}}`,
-				"registry.io":                          `{"auths": { "registry.io": {}}}`,
-				"1.io":                                 `{"auths": { "1.io": {}}}`,
-				"1.s.io":                               `{"auths": { "1.s.io": {}}}`,
-				"regi.stry:5000":                       `{"auths": { "regi.stry:5000": {}}}`,
-				"1.2.3":                                `{"auths": { "1.2.3": {}}}`,
-				"1.2:5000":                             `{"auths": { "1.2:5000": {}}}`,
-				"reg.dec.io1":                          `{"auths": { "reg.dec.io1": {}}}`,
-				"one.two.three.four.five.six.whatever": `{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
-				"1.2.3.4.5.6.0":                        `{"auths": { "1.2.3.4.5.6.0": {}}}`,
-			}
-
-			for host, cred := range creds {
-				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
-
-				err := validateRegistryDockerCfg(dockerCfg, host)
-				require.NoError(t, err)
-			}
-		})
-
-		t.Run("Expect failed validation", func(t *testing.T) {
-			hosts := []string{
-				"some-bad-host:1434/deckhouse",
-				"some-bad/deckhouse",
-				".some-bad/deckhouse",
-				"-some.bad",
-				"somebad.",
-				"some--ba",
-				"some..ba",
-				"14214.ba1::1554",
-				"some.bad:host",
-				"some-bad:host1",
-			}
-
-			for _, host := range hosts {
-				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
-				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
-
-				err := validateRegistryDockerCfg(dockerCfg, host)
-				require.EqualErrorf(t,
-					err,
-					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
-					err.Error())
-			}
-		})
-	})
-}
-
-func TestParseRegistryData(t *testing.T) {
-	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
-		t.Run("sets auth key from auth string", func(t *testing.T) {
-			user, password := "user", "password"
-			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-				"dockerCfg":  generateDockerCfg("r.example.com", user, password),
-				"imagesRepo": "r.example.com/deckhouse/ce/",
-			})
-
-			m, err := cfg.ParseRegistryData()
-			require.NoError(t, err)
-
-			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
-		})
-	})
-
-	t.Run("dockerCfg in old format (has username and password)", func(t *testing.T) {
-		t.Run("correct", func(t *testing.T) {
-			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
-				user, password := "old_user", "old_password"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
-			})
-		})
-
-		t.Run("does not have username", func(t *testing.T) {
-			t.Run("sets empty auth key", func(t *testing.T) {
-				password := "old_password"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], "")
-			})
-		})
-
-		t.Run("does not have password", func(t *testing.T) {
-			t.Run("sets empty auth key", func(t *testing.T) {
-				user := "old_user"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], "")
-			})
-		})
-	})
-
-	t.Run("default dockerCfg", func(t *testing.T) {
-		t.Run("sets empty auth key", func(t *testing.T) {
-			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-
-			m, err := cfg.ParseRegistryData()
-			require.NoError(t, err)
-
-			require.Equal(t, m["auth"], "")
 		})
 	})
 }

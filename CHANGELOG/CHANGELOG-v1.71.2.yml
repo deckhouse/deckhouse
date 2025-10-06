@@ -1,0 +1,86 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        Added the ability to specify allowedServiceTypes and blockWildcardDomains in the
+        SecurityPolicy object
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14436
+  fixes:
+    - summary: Fix validation policy for pods with skip-pss-check labels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14614
+ci:
+  fixes:
+    - summary: fix e2e creds
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14719
+    - summary: fix e2e creds
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14691
+    - summary: Run changelog check only on tag pushes to enforce release documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14670
+    - summary: create resources before deckhouse manifest and mutating webhook for prom rules for e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14584
+    - summary: Run changelog check only on tag pushes to enforce release documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14352
+    - summary: create resources before deckhouse manifest and mutating webhook for prom rules for e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13898
+cloud-provider-aws:
+  fixes:
+    - summary: Fix root_block_device converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14764
+cni-cilium:
+  fixes:
+    - summary: Fixed least-conn logs when feature is disabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14572
+deckhouse-controller:
+  features:
+    - summary: add leader election for non ha clusters
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14634
+  fixes:
+    - summary: fix new snapshot logic bag
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14697
+    - summary: add more verbosity to snapshot error
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14682
+dhctl:
+  fixes:
+    - summary: Fix false-positive staticinstance ip duplication preflight checks fails.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14163
+docs:
+  fixes:
+    - summary: Correction of KeyCloak documentation in d8-user-authn
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14755
+      impact: >-
+        Users will know how to configure KeyCloak and dexProvider to get user rights in dashboard
+        and console.
+    - summary: Refactored table of supported OS versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14411
+istio:
+  fixes:
+    - summary: Added missed documentation about version 1.25
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14749
+metallb:
+  fixes:
+    - summary: Fixed overwriting of Service `status` field by module components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14664
+    - summary: avoid double prefixes in the dashboard names.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14608
+      impact: default
+node-manager:
+  fixes:
+    - summary: Changed draining logic in update_approval
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14646
+    - summary: fixed render nvidia-mig-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14560
+prometheus:
+  fixes:
+    - summary: use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14612
+      impact: >-
+        if there are several ModuleSources with the prompp module available, the "deckhouse"
+        ModuleSource will be used.
+runtime-audit-engine:
+  fixes:
+    - summary: Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14673
+user-authn:
+  features:
+    - summary: Add allowedGroup in dexProvider OIDC
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14570
+

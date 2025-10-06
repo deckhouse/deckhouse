@@ -116,6 +116,7 @@ resource "vsphere_virtual_machine" "node" {
   resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
+  storage_policy_id = lookup(var.providerClusterConfiguration, "storagePolicyID", "")
 
   firmware = data.vsphere_virtual_machine.template.firmware
   num_cpus = local.instance_class.numCPUs
@@ -171,6 +172,8 @@ resource "vsphere_virtual_machine" "node" {
       disk,
       vapp,
       firmware,
+      ept_rvi_mode,
+      hv_mode,
     ]
   }
   wait_for_guest_net_routable = false

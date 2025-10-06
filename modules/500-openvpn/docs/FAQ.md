@@ -34,11 +34,11 @@ Scripts must have execution permissions.
 
 All operations with client certificates are performed via the openvpn-admin web interface. Buttons for managing certificates are available to the right of each user's name:
 
-![Actions with an active user](../../images/openvpn/active_user.png)
+![Actions with an active user](images/active_user.png)
 
 To rotate (issue a new certificate) or delete a client, you must first revoke their current certificate:
 
-![Actions with a revoked user](../../images/openvpn/revoked_user.png)
+![Actions with a revoked user](images/revoked_user.png)
 
 Once revoked, the Renew (rotation) and Delete (removal) actions become available.
 
@@ -51,13 +51,13 @@ If you need to rotate the certificate manually (e.g., due to certificate corrupt
 1. Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-server
    ```
 
 1. Restart the OpenVPN pods to trigger the generation of a new certificate:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 A new certificate will be generated automatically when the pods start.
@@ -75,13 +75,13 @@ If you choose to revoke certificates, you can rotate them later (Renew) after th
 1. Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
    ```
 
 1. Restart OpenVPN pods:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 1. [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
@@ -89,5 +89,5 @@ If you choose to revoke certificates, you can rotate them later (Renew) after th
 1. Delete all revoked certificate secrets:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets -l revokedForever=true
+   d8 k -n d8-openvpn delete secrets -l revokedForever=true
    ```

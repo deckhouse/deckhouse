@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 platform edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
@@ -105,9 +105,9 @@ apiVersions:
         description: |
           Cluster domain (used for local routing).
 
-          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
-          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](../modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
+          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
         default: "cluster.local"
       defaultCRI:
         type: string
@@ -116,8 +116,16 @@ apiVersions:
 
           If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
+
+          If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
+
+          - Support for `CgroupsV2`.
+          - Linux kernel version `5.8` or newer.
+          - Systemd version `244` or newer.
+          - Support for `erofs` kernel module.
         enum:
         - "Containerd"
+        - "ContainerdV2"
         - "NotManaged"
         default: "Containerd"
       kubernetesVersion:
@@ -175,7 +183,7 @@ apiVersions:
 
           The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` for all cluster nodes and Deckhouse components. This will result in HTTP(S) requests (curl, git, registry, etc.) to all resources not listed in the `noProxy` parameter being made through a proxy. Note that the `podSubnetCIDR` and `serviceSubnetCIDR` subnets, as well as the `clusterDomain` domain are added to `noProxy` automatically.
 
-          > **Caution!** To avoid interfering with internal requests, make sure you list all the host subnets in the `noProxy` parameter.
+          > **Caution!** To avoid using proxies in requests between pods and services located in the cluster node network, make sure you list all the host subnets in the `noProxy` parameter.
         additionalProperties: false
         properties:
           httpProxy:
@@ -228,6 +236,8 @@ apiVersions:
               List of no proxy IP and domain entries.
 
               For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+
+              > **Caution.** If the cluster is supposed to have pods interacting with services located in the cluster node network, then specify the list of subnets that are used on the nodes.
             type: array
             items:
               type: string

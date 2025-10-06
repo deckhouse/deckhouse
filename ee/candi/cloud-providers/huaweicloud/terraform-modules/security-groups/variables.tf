@@ -14,3 +14,7 @@ variable "layout_security_group_names" {
 variable "security_group_names" {
   type = list(string)
 }
+
+variable "enterprise_project_id" {
+  type = string
+}

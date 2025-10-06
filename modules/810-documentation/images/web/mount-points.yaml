@@ -1,0 +1,8 @@
+files:
+- /opt/nginx-static/conf/nginx.conf
+dirs:
+- /app/config
+- /app/modules/en
+- /app/modules/ru
+- /app/search-external-modules-index/en
+- /app/search-external-modules-index/ru

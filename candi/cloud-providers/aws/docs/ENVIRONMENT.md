@@ -11,6 +11,10 @@ To use the `cloud-provider` and `machine-controller-manager` modules, you must a
 Make sure that you have access to the desired regions and that you have the necessary quotas.
 {% endalert %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## JSON Policy
 
 First, prepare a JSON file with the configuration of the necessary privileges:
@@ -192,7 +196,7 @@ Save credentials (`Access key ID` and `Secret access key`).
 >
 > If there is no access to the region, then you will receive the following message (may differ):
 >
-> ![Enable region](../../images/cloud-provider-aws/region_enable.png)
+> ![Enable region](images/region_enable.png)
 >
 > In this case, click `Continue` to enable the region.
 

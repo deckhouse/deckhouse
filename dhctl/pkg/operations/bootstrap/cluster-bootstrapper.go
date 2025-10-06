@@ -22,11 +22,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -42,8 +44,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -98,6 +101,10 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
+
 	*client.KubernetesInitParams
 }
 
@@ -107,11 +114,17 @@ type ClusterBootstrapper struct {
 	initializeNewAgent     bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
+	logger    log.Logger
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	if app.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
+	logger := params.Logger
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
 	}
 
 	return &ClusterBootstrapper{
@@ -120,6 +133,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
 		lastState: params.InitialState,
+		logger:    logger,
 	}
 }
 
@@ -168,6 +182,25 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
+	if b.InfrastructureContext == nil {
+		b.logger.LogDebugF("InfrastructureContext is nil. Skip cleanup.\n")
+		return func() {}, nil
+	}
+
+	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		err = provider.Cleanup()
+		if err != nil {
+			b.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}, nil
+}
+
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -190,12 +223,25 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")
@@ -203,10 +249,25 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			sshClient := ssh.NewClientFromFlags()
-			if _, err := sshClient.Start(); err != nil {
-				return fmt.Errorf("unable to start ssh client: %w", err)
+			sshClient, err := sshclient.NewClientFromFlags()
+			if err != nil {
+				return err
 			}
+
+			if metaConfig.IsStatic() {
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
+			}
+
 			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
@@ -237,11 +298,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
 	defer b.PhasedExecutionContext.Finalize(stateCache)
-
-	err = terminal.AskBecomePassword()
-	if err != nil {
-		return err
-	}
 
 	printBanner()
 
@@ -288,13 +344,23 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	var devicePath string
 	var resourcesTemplateData map[string]interface{}
 
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer cleanup()
+
 	if metaConfig.ClusterType == config.CloudClusterType {
 		err = preflightChecker.Cloud(ctx)
 		if err != nil {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := b.InfrastructureContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
+			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+			if err != nil {
+				return err
+			}
 
 			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 			if err != nil {
@@ -314,14 +380,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := b.Params.InfrastructureContext.GetBootstrapNodeRunner(metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
+			masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
 				NodeName:        masterNodeName,
-				NodeGroupStep:   "master-node",
+				NodeGroupStep:   infrastructure.MasterNodeStep,
 				NodeGroupName:   "master",
 				NodeIndex:       0,
 				NodeCloudConfig: "",
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
+			if err != nil {
+				return err
+			}
 
 			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, infrastructure.GetMasterNodeResult)
 			if err != nil {
@@ -336,10 +405,21 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 				sshClient := wrapper.Client()
 				if baseOutputs.BastionHost != "" {
-					sshClient.Settings.BastionHost = baseOutputs.BastionHost
+					sshClient.Session().BastionHost = baseOutputs.BastionHost
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
-				sshClient.Settings.SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
@@ -368,12 +448,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 			sshClient := wrapper.Client()
-			if sshClient.Settings.BastionHost != "" {
-				SaveBastionHostToCache(sshClient.Settings.BastionHost)
+			if sshClient.Session().BastionHost != "" {
+				SaveBastionHostToCache(sshClient.Session().BastionHost)
 			}
 
 			SaveMasterHostsToCache(map[string]string{
-				"first-master": sshClient.Settings.Host(),
+				"first-master": sshClient.Session().Host(),
 			})
 		}
 	}
@@ -536,7 +616,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
 			wrapper := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := wrapper.Client().Settings.Copy()
+				fakeSession := wrapper.Client().Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
@@ -647,7 +727,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 

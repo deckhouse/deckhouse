@@ -5,11 +5,11 @@ permalink: en/stronghold/documentation/admin/platform-management/access-control/
 
 ## Description
 
-DVP projects (the [Project](../../reference/cr/project.html) resource) provide isolated environments for creating user resources.
+DVP projects (the [Project](/modules/multitenancy-manager/cr.html#project) resource) provide isolated environments for creating user resources.
 
 Project settings let you set resource quotas and restrict network communication both within and outside DVP.
 
-You can create a project using a template (the [ProjectTemplate](../../reference/cr/projecttemplate.html) resource).
+You can create a project using a template (the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
 
 {% alert level="warning" %}
 If you modify a project template, all projects created from it will be updated to match the modified template.
@@ -39,8 +39,8 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
 ## Create a project
 
-1. For a new project, create a [Project](../../reference/cr/project.html) resource, specifying the project template name in the `.spec.projectTemplateName` field.
-1. In the `.spec.parameters` parameter of the [Project](../../reference/cr/project.html) resource, specify values for parameters from the `.spec.parametersSchema.openAPIV3Schema` section of the [ProjectTemplate](../../reference/cr/projecttemplate.html) resource.
+1. For a new project, create a [Project](/modules/multitenancy-manager/cr.html#project) resource, specifying the project template name in the `.spec.projectTemplateName` field.
+1. In the `.spec.parameters` parameter of the [Project](/modules/multitenancy-manager/cr.html#projecttemplate) resource.
 
     Example of creating a project using the Project resource based on the `default` project template:
 

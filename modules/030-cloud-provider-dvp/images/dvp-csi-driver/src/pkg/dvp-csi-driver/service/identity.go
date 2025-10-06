@@ -83,7 +83,7 @@ func (i *IdentityService) GetPluginCapabilities(
 	}, nil
 }
 
-// Probe checks the state of the connection to ovirt-engine
+// Probe checks the state of the connection
 func (i *IdentityService) Probe(
 	ctx context.Context,
 	_ *csi.ProbeRequest,

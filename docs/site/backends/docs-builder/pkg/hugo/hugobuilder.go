@@ -23,7 +23,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/herrors"
 	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/maps"
@@ -34,7 +33,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/fsync"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// TODO: refactor hugo build to one structure
+// mutex for entire hugo
+var mu sync.Mutex
 
 type hugoBuilder struct {
 	c *command
@@ -42,7 +47,17 @@ type hugoBuilder struct {
 	confmu sync.Mutex
 	conf   *commonConfig
 
+	flags *Flags
+
 	logger *log.Logger
+}
+
+func newHugoBuilder(c *command, logger *log.Logger) *hugoBuilder {
+	return &hugoBuilder{
+		c:      c,
+		flags:  c.flags,
+		logger: logger,
+	}
 }
 
 func (b *hugoBuilder) withConfE(fn func(conf *commonConfig) error) error {
@@ -55,23 +70,24 @@ func (b *hugoBuilder) withConf(fn func(conf *commonConfig)) {
 	b.confmu.Lock()
 	defer b.confmu.Unlock()
 	fn(b.conf)
-
 }
 
 func (b *hugoBuilder) build() error {
-	if err := b.fullBuild(false); err != nil {
-		return err
+	err := b.fullBuild()
+	if err != nil {
+		return fmt.Errorf("full build: %w", err)
 	}
 
-	if !b.c.flags.Quiet {
+	if !b.flags.Quiet {
 		h, err := b.hugo()
 		if err != nil {
-			return err
+			return fmt.Errorf("hugo: %w", err)
 		}
 
 		stats := map[string]any{}
-		if err := mapstructure.Decode(h.ProcessingStats, &stats); err != nil {
-			return err
+		err = mapstructure.Decode(h.ProcessingStats, &stats)
+		if err != nil {
+			return fmt.Errorf("decode processing stats: %w", err)
 		}
 
 		attrs := make([]any, 0, len(stats))
@@ -85,12 +101,23 @@ func (b *hugoBuilder) build() error {
 	return nil
 }
 
-func (b *hugoBuilder) buildSites(noBuildLock bool) error {
+func (b *hugoBuilder) buildSites() error {
 	h, err := b.hugo()
 	if err != nil {
-		return err
+		return fmt.Errorf("hugo: %w", err)
 	}
-	return h.Build(hugolib.BuildCfg{NoBuildLock: noBuildLock})
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	// NoBuildLock is true to prevent hugo creating lock file
+	// we use mutex to lock the entire hugo build
+	err = h.Build(hugolib.BuildCfg{NoBuildLock: true})
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	return nil
 }
 
 func (b *hugoBuilder) copyStatic() (map[string]uint64, error) {
@@ -98,11 +125,13 @@ func (b *hugoBuilder) copyStatic() (map[string]uint64, error) {
 	if err == nil || herrors.IsNotExist(err) {
 		return m, nil
 	}
-	return m, err
+
+	return m, fmt.Errorf("do with publish dirs: %w", err)
 }
 
 func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint64, error) {
-	infol := b.c.hugologger.InfoCommand("copy static")
+	logentry := b.logger.WithGroup("copy static")
+
 	publishDir := helpers.FilePathSeparator
 
 	if sourceFs.PublishFolder != "" {
@@ -112,6 +141,9 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	fs := &countingStatFs{Fs: sourceFs.Fs}
 
 	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+
 	b.withConf(func(conf *commonConfig) {
 		syncer.NoTimes = conf.configs.Base.NoTimes
 		syncer.NoChmod = conf.configs.Base.NoChmod
@@ -126,13 +158,14 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	syncer.SrcFs = fs
 
 	if syncer.Delete {
-		infol.Logf("removing all files from destination that don't exist in static dirs")
+		logentry.Info("removing all files from destination that don't exist in static dirs")
 
 		syncer.DeleteFilter = func(f fsync.FileInfo) bool {
 			return f.IsDir() && strings.HasPrefix(f.Name(), ".")
 		}
 	}
-	infol.Logf("syncing static files to %s", publishDir)
+
+	logentry.Info("syncing static files to", slog.String("publish_dir", publishDir))
 
 	// because we are using a baseFs (to get the union right).
 	// set sync src to root
@@ -157,7 +190,7 @@ func (b *hugoBuilder) doWithPublishDirs(f func(sourceFs *filesystems.SourceFiles
 	staticFilesystems := h.BaseFs.SourceFilesystems.Static
 
 	if len(staticFilesystems) == 0 {
-		b.c.hugologger.Infoln("No static directories found to sync")
+		b.logger.Info("No static directories found to sync")
 		return langCount, nil
 	}
 
@@ -181,15 +214,14 @@ func (b *hugoBuilder) doWithPublishDirs(f func(sourceFs *filesystems.SourceFiles
 	return langCount, nil
 }
 
-func (b *hugoBuilder) fullBuild(noBuildLock bool) error {
+func (b *hugoBuilder) fullBuild() error {
 	var (
 		g         errgroup.Group
 		langCount map[string]uint64
 	)
 
-	b.c.hugologger.Println("Start building sites … ")
-	b.c.hugologger.Println(hugo.BuildVersionString())
-	b.c.hugologger.Println()
+	b.logger.Info("Start building sites … ")
+	b.logger.Info(hugo.BuildVersionString())
 
 	copyStaticFunc := func() error {
 		cnt, err := b.copyStatic()
@@ -200,7 +232,7 @@ func (b *hugoBuilder) fullBuild(noBuildLock bool) error {
 		return nil
 	}
 	buildSitesFunc := func() error {
-		if err := b.buildSites(noBuildLock); err != nil {
+		if err := b.buildSites(); err != nil {
 			return fmt.Errorf("error building site: %w", err)
 		}
 		return nil
@@ -235,7 +267,7 @@ func (b *hugoBuilder) fullBuild(noBuildLock bool) error {
 		s.ProcessingStats.Static = langCount[s.Language().Lang]
 	}
 
-	if b.c.flags.GC {
+	if b.flags.GC {
 		count, err := h.GC()
 		if err != nil {
 			return err
@@ -255,7 +287,6 @@ func (b *hugoBuilder) hugo() (*hugolib.HugoSites, error) {
 		var err error
 		h, err = b.c.HugFromConfig(conf)
 		return err
-
 	}); err != nil {
 		return nil, err
 	}
@@ -265,19 +296,19 @@ func (b *hugoBuilder) hugo() (*hugolib.HugoSites, error) {
 
 func (b *hugoBuilder) loadConfig() error {
 	cfg := config.New()
-	cfg.Set("renderToDisk", !b.c.flags.RenderToMemory)
-	if b.c.flags.Environment == "" {
+	cfg.Set("renderToDisk", !b.flags.RenderToMemory)
+	if b.flags.Environment == "" {
 		// We need to set the environment as early as possible because we need it to load the correct config.
 		// Check if the user has set it in env.
 		if env := os.Getenv("HUGO_ENVIRONMENT"); env != "" {
-			b.c.flags.Environment = env
+			b.flags.Environment = env
 		} else if env := os.Getenv("HUGO_ENV"); env != "" {
-			b.c.flags.Environment = env
+			b.flags.Environment = env
 		} else {
-			b.c.flags.Environment = hugo.EnvironmentProduction
+			b.flags.Environment = hugo.EnvironmentProduction
 		}
 	}
-	cfg.Set("environment", b.c.flags.Environment)
+	cfg.Set("environment", b.flags.Environment)
 
 	cfg.Set("internal", maps.Params{
 		"running": false,
@@ -291,7 +322,7 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 
 	if len(conf.configs.LoadingInfo.ConfigFiles) == 0 {
-		return errors.New("Unable to locate config file or config directory. Perhaps you need to create a new site.\nRun `hugo help new` for details.")
+		return errors.New("unable to locate config file or config directory, perhaps you need to create a new site, run `hugo help new` for details")
 	}
 
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"

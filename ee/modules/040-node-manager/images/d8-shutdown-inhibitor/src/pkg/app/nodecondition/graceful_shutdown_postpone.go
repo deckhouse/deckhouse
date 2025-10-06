@@ -17,6 +17,7 @@ const (
 	ReasonOnStart                = "ShutdownInhibitorIsStarted"
 	ReasonOnUnlock               = "NoRunningPodsWithLabel"
 	ReasonPodsArePresent         = "PodsWithLabelAreRunningOnNode"
+	ReasonPendindgState          = "Pending"
 )
 
 func GracefulShutdownPostpone() *gracefulShutdownPostpone {
@@ -26,7 +27,18 @@ func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 type gracefulShutdownPostpone struct{}
 
 func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonOnStart)
+	afterReboot, err := uncordonOnStart(nodeName)
+	if err != nil {
+		return err
+	}
+	if !afterReboot {
+		return nil
+	}
+	return g.SetStatusUnknow(nodeName)
+}
+
+func (g *gracefulShutdownPostpone) SetStatusUnknow(nodeName string) error {
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusUnknown, ReasonPendindgState)
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
@@ -51,6 +63,92 @@ func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) err
 	k := kubernetes.NewDefaultKubectl()
 	err := k.PatchCondition("Node", nodeName, GracefulShutdownPostponeType, status, reason, "")
 	return reformatExitError(err)
+}
+
+func nodeShutdownInProgress(k *kubernetes.Kubectl, nodeName string) (bool, error) {
+	nodeNotReadyCondition, err := k.GetCondition(nodeName, "KubeletNotReady")
+	if err != nil {
+		return false, reformatExitError(err)
+	}
+	if nodeNotReadyCondition != nil &&
+		nodeNotReadyCondition.Status == "False" &&
+		nodeNotReadyCondition.Type == "Ready" &&
+		nodeNotReadyCondition.Message == "node is shutting down" &&
+		nodeNotReadyCondition.Reason == "KubeletNotReady" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func cordonedByInhibitor(k *kubernetes.Kubectl, nodeName string) (bool, error) {
+	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
+	if err != nil {
+		fmt.Printf("uncordonOnStart: error getting cordonBy annotation: %v\n", err)
+		return false, reformatExitError(err)
+	}
+
+	if cordonBy == kubernetes.CordonAnnotationValue {
+		return true, nil
+	}
+	return false, nil
+}
+
+func uncordonAndCleanup(k *kubernetes.Kubectl, nodeName string) error {
+	if _, err := k.Uncordon(nodeName); err != nil {
+		fmt.Printf("uncordonAndCleanup: error during Uncordon: %v\n", err)
+		return reformatExitError(err)
+	}
+
+	if _, err := k.RemoveCordonAnnotation(nodeName); err != nil {
+		fmt.Printf("uncordonAndCleanup: error removing cordon annotation: %v\n", err)
+		return reformatExitError(err)
+	}
+	return nil
+}
+
+func isShutdownInhibitedByPods(condition *kubernetes.Condition) bool {
+	fmt.Printf("isShutdownInhibitedByPods: condition=%+v\n", condition)
+	if condition == nil {
+		return false
+	}
+	return condition.Status == "True" &&
+		condition.Type == GracefulShutdownPostponeType &&
+		condition.Reason == ReasonPodsArePresent
+}
+
+func uncordonOnStart(nodeName string) (bool, error) {
+	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
+	k := kubernetes.NewDefaultKubectl()
+
+	isShutdownInProgress, err := nodeShutdownInProgress(k, nodeName)
+	if err != nil {
+		return false, err
+	}
+	fmt.Printf("uncordonOnStart: isShutdownInProgress %t\n", isShutdownInProgress)
+
+	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
+	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
+	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
+
+	if isShutdownInProgress && isInhibited {
+		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
+		return false, nil
+	}
+
+	fmt.Println("uncordonOnStart: uncordonAndCleanup")
+	isOurCordon, err := cordonedByInhibitor(k, nodeName)
+	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
+	if err != nil {
+		return false, err
+	}
+
+	if !isOurCordon {
+		fmt.Println("uncordonOnStart: Node is not cordoned by inhibitor. No action needed")
+		return true, nil
+	}
+
+	return true, uncordonAndCleanup(k, nodeName)
+
 }
 
 func reformatExitError(err error) error {

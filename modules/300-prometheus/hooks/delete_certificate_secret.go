@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -22,6 +24,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -40,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:         "secret",
 			ApiVersion:   "v1",
 			Kind:         "Secret",
-			NameSelector: &types.NameSelector{MatchNames: []string{"ingress-tls-v10"}},
+			NameSelector: &types.NameSelector{MatchNames: []string{"ingress-tls-v10", "prometheus-scraper-tls", "prometheus-api-client-tls"}},
 			FilterFunc:   applySecretFilter,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -49,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 	},
-}, removeSecretGrfana)
+}, removeDeprecatedCertificateSecrets)
 
 func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret corev1.Secret
@@ -66,10 +70,13 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func removeSecretGrfana(input *go_hook.HookInput) error {
-	if secretSnapshot := input.Snapshots["secret"]; len(secretSnapshot) > 0 {
-		for _, snap := range secretSnapshot {
-			secret := snap.(*Secret)
+func removeDeprecatedCertificateSecrets(_ context.Context, input *go_hook.HookInput) error {
+	if secretSnapshot := input.Snapshots.Get("secret"); len(secretSnapshot) > 0 {
+		for secret, err := range sdkobjectpatch.SnapshotIter[Secret](secretSnapshot) {
+			if err != nil {
+				return fmt.Errorf("cannot iterate over secret snapshot: %v", err)
+			}
+
 			log.Debug("Deleting secret", slog.String("namespace", secret.Namespace), slog.String("name", secret.Name))
 			input.PatchCollector.Delete(secret.APIVersion, secret.Kind, secret.Namespace, secret.Name)
 		}

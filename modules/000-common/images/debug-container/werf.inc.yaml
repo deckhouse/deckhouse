@@ -1,0 +1,253 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /scripts
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: install
+shell:
+  install:
+  - chmod +x /scripts/entrypoint.sh
+  - cd /usr/bin
+  - |
+    for mode in legacy nft; do
+      for base in iptables ip6tables; do
+        for cmd in ${base}-${mode} ${base}-${mode}-save ${base}-${mode}-restore; do
+          ln -sf xtables-${mode}-multi "${cmd}"
+        done
+      done
+    done
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+import:
+- image: common-base-python-artifact
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/bin/python*
+  - usr/lib/python*
+  - usr/lib/libc.so
+  - lib/ld-musl-x86_64.so.1
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: install
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: install
+- image: tools/jq
+  add: /usr/bin/jq
+  before: install
+- image: tools/yq
+  add: /usr/bin/yq
+  before: install
+- image: tools/sed
+  add: /usr/bin/sed
+  before: install
+- image: tools/grep
+  add: /usr/bin/grep
+  before: install
+- image: tools/gawk
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+  before: install
+- image: tools/findutils
+  add: /usr/bin/find
+  before: install
+- image: tools/coreutils
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/[
+  - usr/bin/b2sum
+  - usr/bin/base32
+  - usr/bin/base64
+  - usr/bin/basename
+  - usr/bin/basenc
+  - usr/bin/cat
+  - usr/bin/chcon
+  - usr/bin/chgrp
+  - usr/bin/chmod
+  - usr/bin/chown
+  - usr/bin/chroot
+  - usr/bin/cksum
+  - usr/bin/comm
+  - usr/bin/coreutils
+  - usr/bin/cp
+  - usr/bin/csplit
+  - usr/bin/cut
+  - usr/bin/date
+  - usr/bin/dd
+  - usr/bin/df
+  - usr/bin/dir
+  - usr/bin/dircolors
+  - usr/bin/dirname
+  - usr/bin/du
+  - usr/bin/echo
+  - usr/bin/env
+  - usr/bin/expand
+  - usr/bin/expr
+  - usr/bin/factor
+  - usr/bin/false
+  - usr/bin/fmt
+  - usr/bin/fold
+  - usr/bin/groups
+  - usr/bin/head
+  - usr/bin/hostid
+  - usr/bin/id
+  - usr/bin/install
+  - usr/bin/join
+  - usr/bin/kill
+  - usr/bin/link
+  - usr/bin/ln
+  - usr/bin/logname
+  - usr/bin/ls
+  - usr/bin/md5sum
+  - usr/bin/mkdir
+  - usr/bin/mkfifo
+  - usr/bin/mknod
+  - usr/bin/mktemp
+  - usr/bin/mv
+  - usr/bin/nice
+  - usr/bin/nl
+  - usr/bin/nohup
+  - usr/bin/nproc
+  - usr/bin/numfmt
+  - usr/bin/od
+  - usr/bin/paste
+  - usr/bin/pathchk
+  - usr/bin/pinky
+  - usr/bin/pr
+  - usr/bin/printenv
+  - usr/bin/printf
+  - usr/bin/ptx
+  - usr/bin/pwd
+  - usr/bin/readlink
+  - usr/bin/realpath
+  - usr/bin/rm
+  - usr/bin/rmdir
+  - usr/bin/runcon
+  - usr/bin/seq
+  - usr/bin/sha1sum
+  - usr/bin/sha224sum
+  - usr/bin/sha256sum
+  - usr/bin/sha384sum
+  - usr/bin/sha512sum
+  - usr/bin/shred
+  - usr/bin/shuf
+  - usr/bin/sleep
+  - usr/bin/sort
+  - usr/bin/split
+  - usr/bin/stat
+  - usr/bin/stdbuf
+  - usr/bin/stty
+  - usr/bin/sum
+  - usr/bin/sync
+  - usr/bin/tac
+  - usr/bin/tail
+  - usr/bin/tee
+  - usr/bin/test
+  - usr/bin/timeout
+  - usr/bin/touch
+  - usr/bin/tr
+  - usr/bin/true
+  - usr/bin/truncate
+  - usr/bin/tsort
+  - usr/bin/tty
+  - usr/bin/uname
+  - usr/bin/unexpand
+  - usr/bin/uniq
+  - usr/bin/unlink
+  - usr/bin/uptime
+  - usr/bin/users
+  - usr/bin/vdir
+  - usr/bin/wc
+  - usr/bin/who
+  - usr/bin/whoami
+  - usr/bin/yes
+  before: install
+- image: tools/openssl
+  add: /usr/lib
+  to: /usr/lib
+  includePaths:
+  - libcrypto.so*
+  - libssl.so*
+  - engines-3
+  - ossl-modules
+  before: install
+- image: tools/openssl
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
+  before: install
+- image: tools/vim
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/vim
+  - usr/share/vim
+  before: install
+- image: tools/less
+  add: /usr/bin/less
+  to: /usr/bin/less
+  before: install
+- image: tools/ethtool
+  add: /usr/sbin/ethtool
+  to: /usr/bin/ethtool
+  before: install
+- image: tools/pwru
+  add: /usr/bin/pwru
+  to: /usr/bin/pwru
+  before: install
+- image: control-plane-manager/etcd
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - etcdctl
+  - etcdutl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - iptables-*
+  - ip6tables-*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /scripts/etc/bashrc
+  to: /etc/bashrc
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /scripts/entrypoint.sh
+  to: /opt/entrypoint.sh
+  before: install
+shell:
+  install:
+  - ln -s /var/run /run
+imageSpec:
+  config:
+    env: { "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8", "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
+    workingDir: "/"
+    user: "root:root"
+    entrypoint: ["/opt/entrypoint.sh"]
+    cmd: ["/bin/bash"]

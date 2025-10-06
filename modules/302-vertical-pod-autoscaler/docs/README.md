@@ -1,6 +1,7 @@
 ---
 title: "The vertical-pod-autoscaler module"
 search: autoscaler
+description: "Automatic calculation and setting of resource request parameters for pods in the Deckhouse Kubernetes Platform cluster."
 ---
 
 Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)) is an infrastructure service that allows you to avoid setting exact resource requests for a container if their values are not known in advance. VPA can automatically adjust the CPU and memory reservations (providing that the corresponding mode is enabled) based on the actual resource consumption (as shown by the Prometheus data).
@@ -11,7 +12,7 @@ VPA has the following operating modes:
 - `"Auto"` (default) — currently the `Auto` and `Recreate` modes do the same thing. However, when [Pod in-place resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) appears in Kubernetes, this mode will do exactly that.
 - `"Recreate"` — the mode allows VPA to change resources of running pods (restart them while running). In case of one pod running (`replicas: 1`), this will lead to the service being unavailable during the restart. In this mode, VPA does not recreate pods that were created without a controller.
 - `"Initial"` — VPA modifies Pod resources only when Pods are started (but not during operation).
-- `"Off"` — VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (kubectl describe vpa <vpa-name>)
+- `"Off"` — VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (`d8 k describe vpa <vpa-name>`).
 
 VPA limitations:
 

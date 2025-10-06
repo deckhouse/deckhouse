@@ -43,6 +43,15 @@ var (
 	ShellOperatorVersion = "dev"
 )
 
+// Variables to configure with build flags.
+var (
+	DefaultReleaseChannel = ""
+)
+
+const (
+	defaultReleaseChannel = "Stable"
+)
+
 func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, runtime.Version())
 }
@@ -63,7 +72,7 @@ func main() {
 
 	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
-	logger := log.NewLogger(log.Options{})
+	logger := log.NewLogger()
 	log.SetDefault(logger)
 
 	// override usage template to reveal additional commands with information about start command

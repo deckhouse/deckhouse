@@ -1,15 +1,23 @@
-{{- $MimirVersion := "2.15.3" }}
+{{- $MimirVersion := "2.14.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - "**/*"
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
-    - rm -rf /src/.git /src/operations
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -40,6 +48,8 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: ["/bin/mimir"]

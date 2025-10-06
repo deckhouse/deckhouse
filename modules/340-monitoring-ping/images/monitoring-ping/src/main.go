@@ -22,6 +22,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"flag"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
@@ -29,12 +30,19 @@ import (
 
 var (
 	countPings int = 30 // Count pings on every cycle
+	cleanupNodeExporterMetrics bool
 )
 
 func main() {
 
-	// TODO remove volumes in future, need for clean staled medtrics
-	CleanUpDeprecatedExporterFile()
+	flag.BoolVar(&cleanupNodeExporterMetrics, "cleanup-node-exporter-metrics", false, "Clean up node exporter metrics")
+	flag.Parse()
+	if cleanupNodeExporterMetrics {
+		// TODO remove volumes in future, need for clean staled metrics
+		log.Info("cleanup mode enabled, running CleanUpDeprecatedExporterFile")
+		CleanUpDeprecatedExporterFile()
+		return
+	}
 
 	reg := prometheus.NewRegistry()
 	metrics := RegisterMetrics(reg)

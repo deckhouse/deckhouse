@@ -26,7 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type testState struct{}
@@ -186,7 +190,7 @@ deckhouse:
   registryScheme: HTTP
 `, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress, test.registryDockerCfg)
 
-		metaConfig, err := config.ParseConfigFromData(clusterConfig)
+		metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig, config.DummyPreparatorProvider())
 		s.NoError(err)
 
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
@@ -194,7 +198,14 @@ deckhouse:
 
 		bootstrapState := &testState{}
 
-		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(&ssh.Client{}), installer, metaConfig, bootstrapState)
+		var sshCl node.SSHClient
+		if sshclient.IsLegacyMode() {
+			sshCl = &gossh.Client{}
+		} else {
+			sshCl = &clissh.Client{}
+		}
+
+		preflightChecker := NewChecker(ssh.NewNodeInterfaceWrapper(sshCl), installer, metaConfig, bootstrapState)
 
 		err = preflightChecker.CheckRegistryAccessThroughProxy(context.Background())
 		if test.skipped {

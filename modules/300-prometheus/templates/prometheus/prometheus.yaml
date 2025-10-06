@@ -81,8 +81,13 @@ spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
+{{- if (.Values.global.enabledModules | has "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
+  version: v2.53.2
+{{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
   version: v2.55.1
+{{- end }}
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
@@ -96,12 +101,18 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+  {{- include "prometheus_init_containers" (list . "prometheus-main-db") | nindent 2 }}
   containers:
   - name: prometheus
     startupProbe:
       failureThreshold: 300
+{{- if (.Values.global.enabledModules | has "prompp") }}
+    envFrom:
+      - configMapRef:
+          name: prometheus-pp-envs
+{{- end }}
   - name: kube-rbac-proxy
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
+    {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
@@ -109,9 +120,20 @@ spec:
     - "--v=2"
     - "--logtostderr=true"
     - "--stale-cache-interval=1h30m"
+    - "--livez-path=/livez"
     ports:
     - containerPort: 9090
       name: https
+    livenessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
+    readinessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
     env:
     - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
       valueFrom:
@@ -287,9 +309,13 @@ spec:
     {{- $alertmanagers_internal = true }}
   {{- end }}
 {{- end }}
-{{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
     alertmanagers:
+    - name: alerts-receiver
+      namespace: d8-monitoring
+      pathPrefix: /
+      port: http
+      resourceName: alerts-receiver
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}
@@ -310,7 +336,6 @@ spec:
         insecureSkipVerify: true
     {{- end }}
   {{- end }}
-{{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
@@ -334,9 +359,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
       {{- include "prometheus_resources" . | nindent 6 }}
-{{- end }}
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:

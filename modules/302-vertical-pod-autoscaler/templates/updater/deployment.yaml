@@ -1,6 +1,6 @@
 {{- define "updater_resources" }}
 cpu: 25m
-memory: 50Mi
+memory: 100Mi
 {{- end }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -22,8 +22,9 @@ spec:
       minAllowed:
         {{- include "updater_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 50m
-        memory: 100Mi
+        cpu: 200m
+        memory: 1000Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,6 +42,7 @@ spec:
     metadata:
       labels:
         app: vpa-updater
+        tier: vpa-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
@@ -52,23 +54,70 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: updater
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "updater") }}
         command:
         - /updater
-        - --address=:8943
+        - --address=127.0.0.1:8943 # prometheus metrics address
         - --eviction-tolerance=0.1
         - --eviction-rate-limit=1
+        {{- if eq .Values.global.deckhouseVersion "dev" }}
+        - --min-replicas=1
+        {{- else }}
         - --min-replicas=2
+        {{- end }}
         - --stderrthreshold=0
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
+        - --feature-gates=InPlaceOrRecreate=true
         - --v=4
         ports:
-        - containerPort: 8080
+        - containerPort: 8943
+          name: http-metrics
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "updater_resources" . | nindent 12 }}
-{{- end }}
-
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4204"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:8943/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: kube-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: vpa-updater
+        ports:
+          - containerPort: 4204
+            name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4204
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4204
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}

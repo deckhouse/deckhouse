@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -96,8 +100,8 @@ func filterNodeGroupStatus(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func handleNodeGroupStatus(input *go_hook.HookInput) error {
-	nodeGroupStatusSnapshots := input.Snapshots["node_group_status"]
+func handleNodeGroupStatus(_ context.Context, input *go_hook.HookInput) error {
+	nodeGroupStatusSnapshots := input.Snapshots.Get("node_group_status")
 
 	input.MetricsCollector.Expire(nodeGroupMetricsGroup)
 
@@ -105,8 +109,10 @@ func handleNodeGroupStatus(input *go_hook.HookInput) error {
 		metrics.WithGroup(nodeGroupMetricsGroup),
 	}
 
-	for _, nodeGroupStatusSnapshot := range nodeGroupStatusSnapshots {
-		nodeGroupStatus := nodeGroupStatusSnapshot.(nodeGroupStatus)
+	for nodeGroupStatus, err := range sdkobjectpatch.SnapshotIter[nodeGroupStatus](nodeGroupStatusSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_group_status' snapshots: %w", err)
+		}
 
 		labels := map[string]string{"node_group_name": nodeGroupStatus.Name}
 

@@ -212,10 +212,15 @@ metadata:
 spec:
   secretName: example-com-tls                # Название Secret'а, в который положить приватный ключ и сертификат.
   issuerRef:
-    kind: ClusterIssuer                      # Ссылка на "выдаватель" сертификатов, см. подробнее ниже.
+    kind: ClusterIssuer                      # Ссылка на ClusterIssuer.
     name: selfsigned
   commonName: example.com                    # Основной домен сертификата.
-  dnsNames:                                  # Дополнительные домены сертификата, указывать необязательно.
+  dnsNames:                                  # Дополнительные домены сертификата. Требуется, как минимум, дублирование записи из commonName.
+  - example.com
   - www.example.com
   - admin.example.com
 ```
+
+{% alert level="info" %}
+Пример создания самоподписанного сертификата вручную, без использования утилиты `cert-manager`, доступен в разделе [FAQ](../../deckhouse-faq.html#как-сгенерировать-самоподписанный-сертификат).
+{% endalert %}

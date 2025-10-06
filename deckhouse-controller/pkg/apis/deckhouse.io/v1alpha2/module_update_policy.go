@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,6 +29,8 @@ import (
 const (
 	ModuleUpdatePolicyResource = "moduleupdatepolicies"
 	ModuleUpdatePolicyKind     = "ModuleUpdatePolicy"
+
+	ModuleUpdatePolicyModeIgnore = "Ignore"
 )
 
 var (
@@ -44,21 +48,10 @@ var (
 
 var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
-type ModuleUpdatePolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleUpdatePolicy `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleUpdatePolicy source
 type ModuleUpdatePolicy struct {
@@ -71,16 +64,74 @@ type ModuleUpdatePolicy struct {
 	Spec ModuleUpdatePolicySpec `json:"spec"`
 }
 
-// +k8s:deepcopy-gen=true
-
 type ModuleUpdatePolicySpec struct {
 	Update         ModuleUpdatePolicySpecUpdate `json:"update"`
 	ReleaseChannel string                       `json:"releaseChannel"`
 }
 
-// +k8s:deepcopy-gen=true
-
 type ModuleUpdatePolicySpecUpdate struct {
 	Mode    string         `json:"mode"`
 	Windows update.Windows `json:"windows"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
+type ModuleUpdatePolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleUpdatePolicy `json:"items"`
+}
+
+// Update mode consts
+
+type UpdateMode string
+
+const (
+	// UpdateModeAutoPatch is default mode for updater,
+	// deckhouse automatically applies patch releases, but asks for approval of minor releases
+	UpdateModeAutoPatch UpdateMode = "AutoPatch"
+	// UpdateModeAuto is updater mode when deckhouse automatically applies all releases
+	UpdateModeAuto UpdateMode = "Auto"
+	// UpdateModeManual is updater mode when deckhouse downloads releases info, but does not apply them
+	UpdateModeManual UpdateMode = "Manual"
+)
+
+var updateModeMap = map[UpdateMode]string{
+	UpdateModeAutoPatch: string(UpdateModeAutoPatch),
+	UpdateModeAuto:      string(UpdateModeAuto),
+	UpdateModeManual:    string(UpdateModeManual),
+}
+
+// String implements the Stringer interface.
+func (x UpdateMode) String() string {
+	if str, ok := updateModeMap[x]; ok {
+		return str
+	}
+	return fmt.Sprintf("UpdateMode(%s)", string(x))
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x UpdateMode) IsValid() bool {
+	_, ok := updateModeMap[x]
+	return ok
+}
+
+var updateModeValue = map[string]UpdateMode{
+	string(UpdateModeAutoPatch): UpdateModeAutoPatch,
+	string(UpdateModeAuto):      UpdateModeAuto,
+	string(UpdateModeManual):    UpdateModeManual,
+}
+
+// ParseUpdateMode attempts to convert a string to a UpdateMode.
+//
+// AutoPatch used by default
+func ParseUpdateMode(name string) UpdateMode {
+	if x, ok := updateModeValue[name]; ok {
+		return x
+	}
+
+	return UpdateModeAutoPatch
 }

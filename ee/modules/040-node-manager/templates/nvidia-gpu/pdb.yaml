@@ -1,0 +1,14 @@
+{{- if include "nvidia_gpu_enabled" . }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nvidia-gpu
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      component: "nvidia-device-plugin"
+{{- end }}

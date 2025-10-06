@@ -18,16 +18,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error, error) {
+func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -83,14 +86,15 @@ func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error
 	app.SSHHosts = sshHosts
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
+	app.SSHLegacyMode = config.SSHConfig.LegacyMode
+	app.SSHModernMode = config.SSHConfig.ModernMode
 
-	sshClient, err := ssh.NewClient(sess, keys).Start()
-	if err != nil {
-		return nil, cleanuper.AsFunc(), err
-	}
+	sshClient := sshclient.NewClient(sess, keys)
 
 	cleanuper.Add(func() error {
-		sshClient.Stop()
+		if !govalue.IsNil(sshClient) {
+			sshClient.Stop()
+		}
 		return nil
 	})
 

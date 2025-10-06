@@ -73,6 +73,9 @@ type NodeGroupSpec struct {
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
 
+	// GPU parameters. Optional.
+	GPU GPU `json:"gpu,omitempty"`
+
 	// staticInstances. Optional.
 	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
 
@@ -101,12 +104,29 @@ type NodeGroupSpec struct {
 	Fencing Fencing `json:"fencing,omitempty"`
 }
 
+type GPU struct {
+	// Resources sharing type. timeSlicing, mig or exclusive(without sharing)
+	Sharing string `json:"sharing,omitempty"`
+
+	TimeSlicing *TimeSlicing `json:"timeSlicing,omitempty"`
+
+	// MIG parameters.
+	Mig *Mig `json:"mig,omitempty"`
+}
+
+func (g GPU) IsEmpty() bool {
+	return g.Sharing == "" && g.Mig == nil && g.TimeSlicing == nil
+}
+
 type CRI struct {
 	// Container runtime type. Docker, Containerd or NotManaged
 	Type string `json:"type,omitempty"`
 
 	// Containerd runtime parameters.
 	Containerd *Containerd `json:"containerd,omitempty"`
+
+	// Containerd runtime parameters.
+	ContainerdV2 *Containerd `json:"containerdV2,omitempty"`
 
 	// Docker settings for nodes.
 	Docker *Docker `json:"docker,omitempty"`
@@ -117,6 +137,16 @@ type CRI struct {
 
 func (c CRI) IsEmpty() bool {
 	return c.Type == "" && c.Containerd == nil && c.Docker == nil
+}
+
+type TimeSlicing struct {
+	// count replicas
+	GpuPartitionCount *int32 `json:"partitionCount,omitempty"`
+}
+
+type Mig struct {
+	// MIG profiles
+	PartedConfig *string `json:"partedConfig,omitempty"`
 }
 
 type Containerd struct {

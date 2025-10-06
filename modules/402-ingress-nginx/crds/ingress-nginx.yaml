@@ -704,6 +704,7 @@ spec:
                   default: true
                   description: |
                     Enables validation for Ingress rules.
+                    > **Warning.** Enabling validation increases the load on the master nodes of the cluster.
                 annotationValidationEnabled:
                   type: boolean
                   default: false
@@ -1179,7 +1180,7 @@ spec:
                   type: boolean
                   description: |
                     Enables using the underscore symbol in headers.
-                    
+
                     Related resources:
 
                     - [On using the underscores in headers](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
@@ -1258,6 +1259,20 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
+                nginxProfilingEnabled:
+                  type: boolean
+                  description: |
+                    Enables NGINX profiling using Valgrind.
+                    A memory analysis report is saved to the `/var/log/valgrind` directory on the host.
+                    When enabled, Valgrind creates a file named `memcheck.${timestamp}.log`.
+
+                    After debugging is complete, don't forget to disable profiling mode!
+
+                    The report contains information about the process behavior, including potential memory leaks.
+
+                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/HTTPS request handling by the NGINX process.
+
+                    > **Be aware.** When the option is enabled, the ingress-nginx controller pod starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:
@@ -1295,6 +1310,8 @@ spec:
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
+                - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
+                  rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

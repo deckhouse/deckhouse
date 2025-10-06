@@ -23,7 +23,7 @@ rules:
   resources: ["*"] # We want to read all resources from the deckhouse.io group
   verbs: ["get","list","watch"]
 - apiGroups: [""]
-  resources: ["secrets","endpoints","configmaps","namespaces"]
+  resources: ["secrets","endpoints","configmaps","namespaces", "nodes"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["clusterroles"]

@@ -29,11 +29,6 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
       )
     }
   }
-  wait {
-    fields = {
-      "status.phase" = "Ready"
-    }
-  }
   timeouts {
     create = var.timeouts.create
     update = var.timeouts.update

@@ -2,6 +2,7 @@
 title: "Удаление"
 permalink: ru/uninstalling/
 lang: ru
+search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, cluster deletion, удаление Deckhouse, удаление кластера, удаление платформы, очистка, удаление кластера
 ---
 
 ## Удаление кластера, развёрнутого в облачном провайдере
@@ -24,7 +25,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
@@ -58,7 +59,7 @@ lang: ru
 
 Для удаления гибридного кластера, состоящего из автоматически развёрнутых узлов в облаке и вручную подключённых статических узлов, выполните следующие действия:
 
-1. [Удалите](../modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключённые [дополнительные узлы](../modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
+1. [Удалите](/modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все вручную подключённые [дополнительные узлы](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) — CloudStatic и Static.
 
 2. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
 
@@ -76,7 +77,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа:
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
@@ -110,7 +111,7 @@ lang: ru
 
 Для удаления кластера, установленного вручную (например, bare metal), нужно выполнить несколько шагов:
 
-1. [Удалите](../modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все дополнительные узлы.
+1. [Удалите](/modules/node-manager/faq.html#как-очистить-узел-для-последующего-ввода-в-кластер) из кластера все дополнительные узлы.
 
 2. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
 
@@ -128,7 +129,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;

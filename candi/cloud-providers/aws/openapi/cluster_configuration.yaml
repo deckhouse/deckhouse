@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -390,6 +390,18 @@ apiVersions:
         type: string
         description: |
           A public key for accessing nodes.
+      disableDefaultSecurityGroup:
+        type: boolean
+        description: |
+          If set to `true`, the default security group will not be created.
+
+          **Warning.** When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
+
+          - `additionalSecurityGroups` in the `masterNodeGroup` section of the `AWSClusterConfiguration` resource;
+          - `additionalSecurityGroups` in the `AWSInstanceClass` resource;
+          - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
+
+          To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
       sshAllowList:
         type: array
         items:
