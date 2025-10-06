@@ -1,6 +1,6 @@
 ---
 title: "Registry Module"
-description: ""
+description: "Configuration management of DKP component registry and organization of an internal container registry."
 ---
 
 ## Description

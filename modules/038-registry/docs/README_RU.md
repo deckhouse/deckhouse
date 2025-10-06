@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry"
-description: ""
+description: "Управление конфигурацией registry компонентов DKP и организация внутреннего хранилища образов контейнеров (container registry, registry)."
 ---
 
 ## Описание
