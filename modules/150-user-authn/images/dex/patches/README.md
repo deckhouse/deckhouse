@@ -68,6 +68,10 @@ This patch fixes:
 - CVE-2025-47914
 - CVE-2025-58181
 
+<<<<<<< HEAD
 ### 010-provide-custom-CA-to-gitlab-connector.patch
+=======
+### 011-provide-custom-CA-to-gitlab-connector.patch
+>>>>>>> 5d8da2deaa ([150-user-authn] add gitlab ca to dex)
 
 This patch allows Gitlab connector to use custom CA for HTTPS connections.
