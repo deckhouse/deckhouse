@@ -315,7 +315,7 @@ spec:
         command:
         - cilium-dbg
         - build-config
-        - --allow-config-keys=debug,single-cluster-route,mtu,route-mtu
+        - --allow-config-keys=debug,single-cluster-route,mtu
         env:
         - name: K8S_NODE_NAME
           valueFrom:
