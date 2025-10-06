@@ -23,7 +23,7 @@ index 2d7786f7..31074cf1 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 5b1f2f5a..9b86f7d1 100644
+index 5b1f2f5a..355021f5 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -102,9 +102,11 @@ index 5b1f2f5a..9b86f7d1 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -224,9 +256,10 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -223,10 +255,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
++			m.logger.V(1).Info("Blocking read from shutdownEvents")
  			select {
 -			case isShuttingDown, ok := <-events:
 +			case isShuttingDown, ok := <-shutdownEvents:
@@ -114,42 +116,44 @@ index 5b1f2f5a..9b86f7d1 100644
  					close(stop)
  					return
  				}
-@@ -245,6 +278,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -245,6 +279,33 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
-+				// If shutting down, check postpone condition before flipping nodeShuttingDownNow
++				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
-+					postponeStatus, perr := m.conditionChecker.PostponeStatus()
-+					if perr != nil {
-+						m.logger.Error(perr, "Read postponed condition", "status", postponeStatus)
-+						m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Fail to check GracefulShutdownPostpone condition: %v", perr)
-+						// fall through, proceed with current event handling
-+					} else if isPostponed(postponeStatus) {
++					postponeStatus, err := m.conditionChecker.PostponeStatus()
++					if err != nil {
++						m.logger.Error(err, "Read postponed condition", "status", postponeStatus)
++						m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Fail to check GracefulShutdownPostpone condition: %v", err)
++						break
++					}
++
++					if isPostponed(postponeStatus) {
 +						switch postponeStatus {
 +						case v1.ConditionTrue:
-+							m.logger.V(1).Info("Graceful shutdown postponed, d8-shutdown-inhibitor requested shutdown block", "GracefulShutdownPostpone", postponeStatus)
++							m.logger.V(1).Info("managerImpl.start: Graceful shutdown postponed, d8-shutdown-inhibitor requested shutdown block", "GracefulShutdownPostpone", postponeStatus)
 +							m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed by d8-shutdown-inhibitor (GracefulShutdownPostpone=%s)", postponeStatus)
 +						case v1.ConditionUnknown:
-+							m.logger.V(1).Info("Graceful shutdown postponed, waiting for d8-shutdown-inhibitor response", "GracefulShutdownPostpone", postponeStatus)
++							m.logger.V(1).Info("managerImpl.start: Graceful shutdown postponed, waiting for d8-shutdown-inhibitor response", "GracefulShutdownPostpone", postponeStatus)
 +							m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed, waiting for d8-shutdown-inhibitor response (GracefulShutdownPostpone=%s)", postponeStatus)
 +						}
++
 +						m.conditionChecker.StartMonitor()
 +						break
-+					} else {
-+						m.logger.V(1).Info("Graceful shutdown postpone disabled, stopping monitor and proceeding with the shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
-+						m.conditionChecker.PauseMonitor()
 +					}
++
++					m.logger.V(1).Info("managerImpl.start: Graceful shutdown postpone disabled, stopping GracefulShutdownPostpone monitor and proceeding with the shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
++					m.conditionChecker.PauseMonitor()
 +				}
 +
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -321,3 +378,121 @@ func (m *managerImpl) processShutdownEvent() error {
- 
- 	return m.podManager.killPods(activePods)
+@@ -263,6 +324,127 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 	return stop, nil
  }
-+
+ 
 +type conditionChecker struct {
 +	logger klog.Logger
 +
@@ -179,18 +183,18 @@ index 5b1f2f5a..9b86f7d1 100644
 +}
 +
 +func (c *conditionChecker) Cleanup() {
-+	if c.events != nil {
-+		close(c.events)
-+	}
-+	if c.cancel != nil {
-+		c.cancel()
-+	}
++	close(c.events)
++	c.cancel()
 +}
 +
 +// checkLoop is a main loop that checks GracefulShutdownPostpone condition.
 +// The loop is designed with "shutdown cancel" in mind, so it can be paused.
 +// If loop is not paused and condition is removed, it sends shutdown event to unlock
 +// shutdown sequence in managerImpl.start.
++//
++// TODO We may have a rather long InhibitorsDelayMaxSec, but we should (should we?) let kubelet to do its job,
++// TODO so global timer can be added to unlock and run shutdown sequence anyway some minutes before InhibitorsDelayMaxSec is passed.
++// TODO It is still uncertain if we should implement this timer.
 +func (c *conditionChecker) checkLoop(ctx context.Context) {
 +	const (
 +		checkInterval       = 5 * time.Second
@@ -202,6 +206,7 @@ index 5b1f2f5a..9b86f7d1 100644
 +	defer ticker.Stop()
 +
 +	var lastLogTime time.Time
++
 +	isStarted := false
 +
 +	for {
@@ -214,6 +219,7 @@ index 5b1f2f5a..9b86f7d1 100644
 +				isStarted = false
 +			}
 +		case <-ticker.C():
++			// Check postpone condition if in the "started" state. If not postponed, send event to unpause shutdown sequence.
 +			if isStarted {
 +				postponeStatus, err := c.PostponeStatus()
 +				if err != nil {
@@ -221,14 +227,15 @@ index 5b1f2f5a..9b86f7d1 100644
 +					break
 +				}
 +
-+				if isPostponed(postponeStatus) {
++				switch {
++				case isPostponed(postponeStatus):
 +					now := time.Now()
 +					if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
 +						lastLogTime = now
-+						c.logger.V(1).Info("Graceful shutdown postponed", "GracefulShutdownPostpone", postponeStatus)
++						c.logger.V(1).Info("conditionChecker.checkLoop: Graceful shutdown postponed", "GracefulShutdownPostpone", postponeStatus)
 +					}
-+				} else {
-+					c.logger.V(1).Info("Graceful shutdown postpone condition cleared, continue with shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
++				default:
++					c.logger.V(1).Info("conditionChecker.checkLoop: Graceful shutdown postpone condition cleared, continue with shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
 +					// Send event to unpause shutdown sequence. Self pause to prevent events spamming.
 +					isStarted = false
 +					lastLogTime = time.Time{}
@@ -267,3 +274,8 @@ index 5b1f2f5a..9b86f7d1 100644
 +func isPostponed(status v1.ConditionStatus) bool {
 +	return status == v1.ConditionTrue || status == v1.ConditionUnknown
 +}
++
+ func (m *managerImpl) acquireInhibitLock() error {
+ 	lock, err := m.dbusCon.InhibitShutdown()
+ 	if err != nil {
+
