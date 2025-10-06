@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.17.0",
+  "version": "v0.16.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -248,11 +248,6 @@
               "description": "Provide access outside of cluster",
               "shorthand": "",
               "global": false
-            },
-            "ttl": {
-              "description": "Time to live for auto-created DataExport",
-              "shorthand": "",
-              "global": false
             }
           },
           "subcommands": null
@@ -271,11 +266,6 @@
             },
             "publish": {
               "description": "Provide access outside of cluster",
-              "shorthand": "",
-              "global": false
-            },
-            "ttl": {
-              "description": "Time to live for auto-created DataExport",
               "shorthand": "",
               "global": false
             }
