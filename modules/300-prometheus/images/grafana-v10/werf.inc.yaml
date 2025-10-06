@@ -29,7 +29,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
 fromCacheVersion: "2025-10-03"
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/debian-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace-1.25" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
