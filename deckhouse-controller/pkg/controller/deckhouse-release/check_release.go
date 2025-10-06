@@ -652,9 +652,9 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 		return nil, ErrImageNotChanged
 	}
 
-	image, err := imageDesc.Image()
+	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
-		return nil, fmt.Errorf("get image from descriptor: %w", err)
+		return nil, fmt.Errorf("get image: %w", err)
 	}
 
 	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
