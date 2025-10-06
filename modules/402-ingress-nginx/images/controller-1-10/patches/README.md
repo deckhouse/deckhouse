@@ -118,3 +118,5 @@ The metric `geoip_errors_total` has been added, which indicates the number of er
 ### 020-fix-sorting.patch
 
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
+
+https://github.com/kubernetes/ingress-nginx/pull/14005
