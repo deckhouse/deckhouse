@@ -6,6 +6,8 @@ import:
     add: /trivy_provider
     to: /trivy_provider
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/trivy_provider" ]
