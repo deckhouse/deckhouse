@@ -439,7 +439,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -981,7 +981,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -1523,7 +1523,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -2065,7 +2065,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -2607,7 +2607,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -3149,7 +3149,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -3691,7 +3691,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -4233,7 +4233,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -4775,7 +4775,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -5317,7 +5317,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -5859,7 +5859,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -6401,7 +6401,7 @@ jobs:
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
 
-          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG"
+          echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
