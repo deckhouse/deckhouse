@@ -100,3 +100,9 @@ Slightly tunes some logic related to validating ingress objects.
 ### 016-verbose-maxmind-logs.patch
 
 Added additional logging when downloading GeoIP databases from the MaxMind service.
+
+### 017-fix-sorting.patch
+
+There is a sorting issue in a couple of files that causes unnecessary config reloads.
+
+https://github.com/kubernetes/ingress-nginx/pull/14005
