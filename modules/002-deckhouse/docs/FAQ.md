@@ -44,9 +44,17 @@ We always appreciate helping users with debugging complex issues. Please follow 
    d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
+{% alert level="info" %}
+The `--exclude` flag allows you to exclude files whose data will not be included in the archive..
+   ```sh
+   d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   ```
+The `--list-exclude` flag displays a list of files that can be excluded from the selection.
+{% endalert %}
+
 2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
 
-Data that will be collected:
+Data that will be collected (file names containing the corresponding data are indicated after "/"):
 
 <table>
   <thead>
@@ -60,12 +68,12 @@ Data that will be collected:
       <td><strong>Deckhouse</strong></td>
       <td>
         <ul>
-          <li>Deckhouse queue state</li>
-          <li>Deckhouse values (except for <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>)</li>
-          <li>Current version of the <code>deckhouse</code> Pod</li>
-          <li>All DeckhouseRelease objects</li>
-          <li>Logs of Deckhouse Pods</li>
-          <li>Manifests of controllers and Pods from all Deckhouse namespaces</li>
+          <li>Deckhouse queue state / <code>queue</code></li>
+          <li>Deckhouse values (except for <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>) / <code>global-values</code></li>
+          <li>Current version of the <code>deckhouse</code> Pod / <code>deckhouse-version</code></li>
+          <li>All DeckhouseRelease objects / <code>deckhouse-releases</code></li>
+          <li>Logs of Deckhouse Pods / <code>deckhouse-logs</code></li>
+          <li>Manifests of controllers and Pods from all Deckhouse namespaces / <code>d8-all</code></li>
         </ul>
       </td>
     </tr>
@@ -74,28 +82,28 @@ Data that will be collected:
       <td>
         All objects of the following resources:
         <ul>
-          <li>NodeGroup</li>
-          <li>NodeGroupConfiguration</li>
-          <li>Node</li>
-          <li>Machine</li>
-          <li>Instance</li>
-          <li>StaticInstance</li>
-          <li>MachineDeployment</li>
-          <li>ClusterAuthorizationRule</li>
-          <li>AuthorizationRule</li>
-          <li>ModuleConfig</li>
+          <li>NodeGroup / <code>node-groups</code></li>
+          <li>NodeGroupConfiguration / <code>node-group-configuration</code></li>
+          <li>Node / <code>nodes</code></li>
+          <li>Machine / <code>machines</code></li>
+          <li>Instance / <code>instances</code></li>
+          <li>StaticInstance / <code>staticinstances</code></li>
+          <li>MachineDeployment / <code>cloud-machine-deployment</code>, <code>static-machine-deployment</code></li>
+          <li>ClusterAuthorizationRule / <code>cluster-authorization-rules</code></li>
+          <li>AuthorizationRule / <code>authorization-rules</code></li>
+          <li>ModuleConfig / <code>module-configs</code></li>
         </ul>
-        As well as Events from all namespaces
+        As well as Events from all namespaces / <code>events</code>
       </td>
     </tr>
     <tr>
       <td><strong>Modules and their states</strong></td>
       <td>
         <ul>
-          <li>List of enabled modules</li>
-          <li>List of ModuleSource objects in the cluster</li>
-          <li>List of ModulePullOverride objects in the cluster</li>
-          <li>List of modules in <code>maintenance</code> mode</li>
+          <li>List of enabled modules / <code>deckhouse-enabled-modules</code></li>
+          <li>List of ModuleSource objects in the cluster / <code>deckhouse-module-sources</code></li>
+          <li>List of ModulePullOverride objects in the cluster / <code>deckhouse-module-pull-overrides</code></li>
+          <li>List of modules in <code>maintenance</code> mode / <code>deckhouse-maintenance-modules</code></li>
         </ul>
       </td>
     </tr>
@@ -104,19 +112,19 @@ Data that will be collected:
       <td>
         Logs of the following components:
         <ul>
-          <li><code>machine-controller-manager</code></li>
-          <li><code>cloud-controller-manager</code></li>
-          <li><code>csi-controller</code></li>
-          <li><code>cluster-autoscaler</code></li>
-          <li>Vertical Pod Autoscaler admission controller</li>
-          <li>Vertical Pod Autoscaler recommender</li>
-          <li>Vertical Pod Autoscaler updater</li>
+          <li><code>machine-controller-manager</code> / <code>mcm-logs</code></li>
+          <li><code>cloud-controller-manager</code> / <code>ccm-logs</code></li>
+          <li><code>csi-controller</code> / <code>csi-controller-logs</code></li>
+          <li><code>cluster-autoscaler</code> / <code>cluster-autoscaler-logs</code></li>
+          <li>Vertical Pod Autoscaler admission controller / <code>vpa-admission-controller-logs</code></li>
+          <li>Vertical Pod Autoscaler recommender / <code>vpa-recommender-logs</code></li>
+          <li>Vertical Pod Autoscaler updater / <code>vpa-updater-logs</code></li>
         </ul>
         YAML manifests of the following controllers:
         <ul>
-          <li><code>capi-controller-manager</code></li>
-          <li><code>caps-controller-manager</code></li>
-          <li><code>machine-controller-manager</code></li>
+          <li><code>capi-controller-manager</code> / <code>capi-controller-manager</code></li>
+          <li><code>caps-controller-manager</code> / <code>caps-controller-manager</code></li>
+          <li><code>machine-controller-manager</code> / <code>machine-controller-manager</code></li>
         </ul>
       </td>
     </tr>
@@ -124,9 +132,10 @@ Data that will be collected:
       <td><strong>Monitoring and alerts</strong></td>
       <td>
         <ul>
-          <li>Prometheus logs</li>
-          <li>All active alerts in Prometheus</li>
-          <li>List of all Pods not in the <code>Running</code> state, except those in <code>Completed</code> or <code>Evicted</code> states</li>
+          <li>Prometheus logs / <code>prometheus-logs</code></li>
+          <li>All active alerts in Prometheus / <code>alerts</code></li>
+          <li>List of all Pods not in the <code>Running</code> state, except those in <code>Completed</code> or <code>Evicted</code> states / <code>bad-pods</code></li>
+          <li>Audit Policy List / <code>audit-policy</code></li>
         </ul>
       </td>
     </tr>
@@ -134,13 +143,13 @@ Data that will be collected:
       <td><strong>Network</strong></td>
       <td>
         <ul>
-          <li>All objects from the <code>d8-istio</code> namespace</li>
-          <li>All <code>istio</code> custom resources</li>
-          <li>Envoy configuration for <code>istio</code></li>
-          <li>Logs of <code>istio</code></li>
-          <li>Logs of the <code>istio</code> ingressgateway</li>
-          <li>Logs of the <code>istio</code> users</li>
-          <li>Cilium connection status (<code>cilium health status</code>)</li>
+          <li>All objects from the <code>d8-istio</code> namespace / <code>d8-istio-resources</code></li>
+          <li>All <code>istio</code> custom resources / <code>d8-istio-custom-resources</code></li>
+          <li>Envoy configuration for <code>istio</code> / <code>d8-istio-envoy-config</code></li>
+          <li>Logs of <code>istio</code> / <code>d8-istio-system-logs</code></li>
+          <li>Logs of the <code>istio</code> ingressgateway / <code>d8-istio-ingress-logs</code></li>
+          <li>Logs of the <code>istio</code> users / <code>d8-istio-users-logs</code></li>
+          <li>Cilium connection status (<code>cilium health status</code>) / <code>cilium-health-status</code></li>
         </ul>
       </td>
     </tr>
