@@ -470,7 +470,7 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "gcp" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials.json" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials_json_b64" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
 {!{- else if eq $provider "azure" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure" "subscriptionId" "LAYOUT_AZURE_SUBSCRIPTION_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure" "clientId" "LAYOUT_AZURE_CLIENT_ID" ) $secrets -}!}
@@ -479,7 +479,7 @@ check_e2e_labels:
 {!{- else if eq $provider "yandex-cloud" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key.json" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
@@ -844,7 +844,7 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "gcp" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials.json" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP" "credentials_json_b64" "LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON" ) $secrets -}!}
 {!{- else if eq $provider "azure" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure" "subscriptionId" "LAYOUT_AZURE_SUBSCRIPTION_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure" "clientId" "LAYOUT_AZURE_CLIENT_ID" ) $secrets -}!}
@@ -853,7 +853,7 @@ check_e2e_labels:
 {!{- else if eq $provider "yandex-cloud" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "cloud_id" "LAYOUT_YANDEX_CLOUD_ID" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "folder_id" "LAYOUT_YANDEX_FOLDER_ID" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key.json" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex" "authorized_key_json_b64" "LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON" ) $secrets -}!}
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}

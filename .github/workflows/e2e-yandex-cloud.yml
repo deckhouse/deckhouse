@@ -352,7 +352,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -778,7 +778,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1204,7 +1204,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1630,7 +1630,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2056,7 +2056,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2482,7 +2482,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2908,7 +2908,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -3334,7 +3334,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -3760,7 +3760,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -4186,7 +4186,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -4612,7 +4612,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -5038,7 +5038,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -5464,7 +5464,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -5890,7 +5890,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key.json | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 

@@ -287,7 +287,7 @@ function prepare_environment() {
   case "$PROVIDER" in
   "Yandex.Cloud")
     # shellcheck disable=SC2016
-    env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
+    env CLOUD_ID="$LAYOUT_YANDEX_CLOUD_ID" FOLDER_ID="$LAYOUT_YANDEX_FOLDER_ID" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
@@ -306,7 +306,7 @@ function prepare_environment() {
 
   "AWS")
     # shellcheck disable=SC2016
-    env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
+    env AWS_ACCESS_KEY="$LAYOUT_AWS_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
@@ -325,8 +325,14 @@ function prepare_environment() {
 
   "OpenStack")
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -334,8 +340,16 @@ function prepare_environment() {
 
   "vSphere")
     # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
+    env VSPHERE_PASSWORD="$LAYOUT_VSPHERE_PASSWORD" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
+        VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
+        VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -343,7 +357,7 @@ function prepare_environment() {
 
 "VCD")
     # shellcheck disable=SC2016
-    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
+    env VCD_PASSWORD="$LAYOUT_VCD_PASSWORD" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
@@ -366,7 +380,7 @@ function prepare_environment() {
   "Static")
     pre_bootstrap_static_setup
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
@@ -377,7 +391,7 @@ function prepare_environment() {
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" PREFIX="$PREFIX" \
         envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
