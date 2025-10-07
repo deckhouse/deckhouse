@@ -44,9 +44,17 @@ title: "Модуль deckhouse: FAQ"
    d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
+{% alert level="info" %}
+Флаг `--exclude` позволяет исключить файлы, данные по которым не будут включены в архив.
+   ```sh
+   d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   ```
+Флаг `--list-exclude` отображает список файлов, которые можно исключить из выборки.
+{% endalert %}
+
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
 
-Данные, которые будут собраны:
+Данные, которые будут собраны (через "/" указаны название файлов, который будет содержать соответствующие данные):
 
 <table>
   <thead>
@@ -60,12 +68,12 @@ title: "Модуль deckhouse: FAQ"
       <td><strong>Deckhouse</strong></td>
       <td>
         <ul>
-          <li>Состояние очереди Deckhouse</li>
-          <li>Deckhouse values (за исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>)</li>
-          <li>Данные о текущей версии пода <code>deckhouse</code></li>
-          <li>Все объекты DeckhouseRelease</li>
-          <li>Логи подов Deckhouse</li>
-          <li>Манифесты контроллеров и подов из всех пространств имен Deckhouse</li>
+          <li>Состояние очереди Deckhouse / <code>queue</code></li>
+          <li>Deckhouse values (за исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) / <code>global-values</code></li>
+          <li>Данные о текущей версии пода <code>deckhouse</code> / <code>deckhouse-version</code></li>
+          <li>Все объекты DeckhouseRelease / <code>deckhouse-releases</code></li>
+          <li>Логи подов Deckhouse / <code>deckhouse-logs</code></li>
+          <li>Манифесты контроллеров и подов из всех пространств имен Deckhouse / <code>d8-all</code></li>
         </ul>
       </td>
     </tr>
@@ -74,28 +82,28 @@ title: "Модуль deckhouse: FAQ"
       <td>
         Все объекты следующих ресурсов:
         <ul>
-          <li>NodeGroup</li>
-          <li>NodeGroupConfiguration</li>
-          <li>Node</li>
-          <li>Machine</li>
-          <li>Instance</li>
-          <li>StaticInstance</li>
-          <li>MachineDeployment</li>
-          <li>ClusterAuthorizationRule</li>
-          <li>AuthorizationRule</li>
-          <li>ModuleConfig</li>
+          <li>NodeGroup / <code>node-groups</code></li>
+          <li>NodeGroupConfiguration / <code>node-group-configuration</code></li>
+          <li>Node / <code>nodes</code></li>
+          <li>Machine / <code>machines</code></li>
+          <li>Instance / <code>instances</code></li>
+          <li>StaticInstance / <code>staticinstances</code></li>
+          <li>MachineDeployment / <code>cloud-machine-deployment</code>, <code>static-machine-deployment</code></li>
+          <li>ClusterAuthorizationRule / <code>cluster-authorization-rules</code></li>
+          <li>AuthorizationRule / <code>authorization-rules</code></li>
+          <li>ModuleConfig / <code>module-configs</code></li>
         </ul>
-        А также Events из всех пространств имен
+        А также Events из всех пространств имен / <code>events</code>
       </td>
     </tr>
     <tr>
       <td><strong>Модули и их состояния</strong></td>
       <td>
         <ul>
-          <li>Список включенных модулей</li>
-          <li>Список объектов ModuleSource в кластере</li>
-          <li>Список объектов ModulePullOverride в кластере</li>
-          <li>Список модулей в режиме <code>maintenance</code></li>
+          <li>Список включенных модулей / <code>deckhouse-enabled-modules</code></li>
+          <li>Список объектов ModuleSource в кластере / <code>deckhouse-module-sources</code></li>
+          <li>Список объектов ModulePullOverride в кластере / <code>deckhouse-module-pull-overrides</code></li>
+          <li>Список модулей в режиме <code>maintenance</code> / <code>deckhouse-maintenance-modules</code></li>
         </ul>
       </td>
     </tr>
@@ -104,19 +112,19 @@ title: "Модуль deckhouse: FAQ"
       <td>
         Логи следующих компонентов:
         <ul>
-          <li><code>machine-controller-manager</code></li>
-          <li><code>cloud-controller-manager</code></li>
-          <li><code>csi-controller</code></li>
-          <li><code>cluster-autoscaler</code></li>
-          <li>Vertical Pod Autoscaler admission controller</li>
-          <li>Vertical Pod Autoscaler recommender</li>
-          <li>Vertical Pod Autoscaler updater</li>
+          <li><code>machine-controller-manager</code> / <code>mcm-logs</code></li>
+          <li><code>cloud-controller-manager</code> / <code>ccm-logs</code></li>
+          <li><code>csi-controller</code> / <code>csi-controller-logs</code></li>
+          <li><code>cluster-autoscaler</code> / <code>cluster-autoscaler-logs</code></li>
+          <li>Vertical Pod Autoscaler admission controller / <code>vpa-admission-controller-logs</code></li>
+          <li>Vertical Pod Autoscaler recommender / <code>vpa-recommender-logs</code></li>
+          <li>Vertical Pod Autoscaler updater / <code>vpa-updater-logs</code></li>
         </ul>
         YAML-файлы следующих контроллеров:
         <ul>
-          <li><code>capi-controller-manager</code></li>
-          <li><code>caps-controller-manager</code></li>
-          <li><code>machine-controller-manager</code></li>
+          <li><code>capi-controller-manager</code> / <code>capi-controller-manager</code></li>
+          <li><code>caps-controller-manager</code> / <code>caps-controller-manager</code></li>
+          <li><code>machine-controller-manager</code> / <code>machine-controller-manager</code></li>
         </ul>
       </td>
     </tr>
@@ -124,9 +132,10 @@ title: "Модуль deckhouse: FAQ"
       <td><strong>Мониторинг и алерты</strong></td>
       <td>
         <ul>
-          <li>Логи Prometheus</li>
-          <li>Все горящие уведомления в Prometheus</li>
-          <li>Список всех подов, которые не находятся в состоянии <code>Running</code>, кроме подов в состояниях <code>Completed</code> и <code>Evicted</code></li>
+          <li>Логи Prometheus / <code>prometheus-logs</code></li>
+          <li>Все горящие уведомления в Prometheus / <code>alerts</code></li>
+          <li>Список всех подов, которые не находятся в состоянии <code>Running</code>, кроме подов в состояниях <code>Completed</code> и <code>Evicted</code> / <code>bad-pods</code></li>
+          <li>Список Audit Policy / <code>audit-policy</code></li>
         </ul>
       </td>
     </tr>
@@ -134,13 +143,13 @@ title: "Модуль deckhouse: FAQ"
       <td><strong>Сеть</strong></td>
       <td>
         <ul>
-          <li>Все объекты из пространства имен <code>d8-istio</code></li>
-          <li>Все кастомные ресурсы <code>istio</code></li>
-          <li>Конфигурация Envoy для <code>istio</code></li>
-          <li>Логи <code>istio</code></li>
-          <li>Логи <code>istio</code> ingress gateway</li>
-          <li>Логи <code>istio</code> users</li>
-          <li>Состояние соединения Cilium (<code>cilium health status</code>)</li>
+          <li>Все объекты из пространства имен <code>d8-istio</code> / <code>d8-istio-resources</code></li>
+          <li>Все кастомные ресурсы <code>istio</code> / <code>d8-istio-custom-resources</code></li>
+          <li>Конфигурация Envoy для <code>istio</code> / <code>d8-istio-envoy-config</code></li>
+          <li>Логи <code>istio</code> / <code>d8-istio-system-logs</code></li>
+          <li>Логи <code>istio</code> ingress gateway / <code>d8-istio-ingress-logs</code></li>
+          <li>Логи <code>istio</code> users / <code>d8-istio-users-logs</code></li>
+          <li>Состояние соединения Cilium (<code>cilium health status</code>) / <code>cilium-health-status</code></li>
         </ul>
       </td>
     </tr>

@@ -37,7 +37,7 @@ type Command struct {
 func (c *Command) Save(tarWriter *tar.Writer) error {
 	fileContent, err := exec.Command(c.Cmd, c.Args...).Output()
 	if err != nil {
-		return fmt.Errorf("execute %s %s command: %v", c.Cmd, c.Args, err)
+		return fmt.Errorf("execute %s %v command: %w", c.Cmd, c.Args, err)
 	}
 
 	header := &tar.Header{
@@ -47,13 +47,11 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 	}
 
 	if err := tarWriter.WriteHeader(header); err != nil {
-		return fmt.Errorf("write tar header: %v", err)
+		return fmt.Errorf("write tar header for %s: %w", c.File, err)
 	}
 
-	reader := bytes.NewReader(fileContent)
-
-	if _, err := io.Copy(tarWriter, reader); err != nil {
-		return fmt.Errorf("copy content: %v", err)
+	if _, err := io.Copy(tarWriter, bytes.NewReader(fileContent)); err != nil {
+		return fmt.Errorf("copy content for %s: %w", c.File, err)
 	}
 
 	return nil
@@ -68,13 +66,26 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 
-	// Create a map for faster lookup of excluded files
-	excludeMap := make(map[string]bool)
+	excludeMap := make(map[string]bool, len(excludeFiles))
 	for _, file := range excludeFiles {
 		excludeMap[file] = true
 	}
 
-	debugCommands := []Command{
+	for _, cmd := range getDebugCommands() {
+		if isFileExcluded(cmd.File, excludeMap) {
+			continue
+		}
+
+		if err := cmd.Save(tarWriter); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	}
+
+	return &buf
+}
+
+func getDebugCommands() []Command {
+	return []Command{
 		{
 			File: "queue.txt",
 			Cmd:  "deckhouse-controller",
@@ -291,29 +302,22 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 			Args: []string{"-n", "kube-system", "get", "secrets", "audit-policy", "-o", "json", "--ignore-not-found=true"},
 		},
 	}
-
-	for _, cmd := range debugCommands {
-		if excludeMap[cmd.File] {
-			continue
-		}
-		fileNameWithoutExt := strings.TrimSuffix(cmd.File, ".json")
-		fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
-		if excludeMap[fileNameWithoutExt] {
-			continue
-		}
-
-		if err := cmd.Save(tarWriter); err != nil {
-			fmt.Fprint(os.Stderr, err.Error())
-		}
-	}
-
-	return &buf
 }
 
-func printExcludableFiles() {
-	fmt.Println("List of possible data to exclude:")
+func isFileExcluded(fileName string, excludeMap map[string]bool) bool {
+	if excludeMap[fileName] {
+		return true
+	}
 
-	excludableFiles := []string{
+	// Check without extension
+	fileNameWithoutExt := strings.TrimSuffix(fileName, ".json")
+	fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
+
+	return excludeMap[fileNameWithoutExt]
+}
+
+func getExcludableFiles() []string {
+	return []string{
 		"queue",
 		"global-values",
 		"deckhouse-enabled-modules",
@@ -358,10 +362,27 @@ func printExcludableFiles() {
 		"cilium-health-status",
 		"audit-policy",
 	}
+}
 
-	for _, fileName := range excludableFiles {
+func printExcludableFiles() {
+	fmt.Println("List of possible data to exclude:")
+	for _, fileName := range getExcludableFiles() {
 		fmt.Println(fileName)
 	}
+}
+
+func parseExcludeFiles(excludeFiles string) []string {
+	if excludeFiles == "" {
+		return nil
+	}
+
+	var result []string
+	for _, part := range strings.Fields(excludeFiles) {
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
 }
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
@@ -375,17 +396,10 @@ func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 			return nil
 		}
 
-		var excludeList []string
-		if *excludeFiles != "" {
-			parts := strings.Fields(*excludeFiles)
-			for _, part := range parts {
-				if part != "" {
-					excludeList = append(excludeList, part)
-				}
-			}
-		}
-		res := createTarball(excludeList)
-		_, err := io.Copy(os.Stdout, res)
+		excludeList := parseExcludeFiles(*excludeFiles)
+		tarball := createTarball(excludeList)
+
+		_, err := io.Copy(os.Stdout, tarball)
 		return err
 	})
 }
