@@ -81,11 +81,8 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		if err != nil {
 			return err
 		}
-		comment, err := extractComment(privateSSHKey)
-		if err != nil {
-			return err
-		}
-		key, err := ssh.MarshalPrivateKey(crypto.PrivateKey(privateKey), comment)
+
+		key, err := ssh.MarshalPrivateKey(crypto.PrivateKey(privateKey), "")
 		if err != nil {
 			return err
 		}
@@ -187,51 +184,4 @@ func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command
 	}
 
 	return strings.TrimSpace(string(stdoutBytes)), nil
-}
-
-func extractSSHPrivateKey(data []byte) string {
-	lines := strings.Split(string(data), "\n")
-
-	var start, end int = -1, -1
-
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "-----BEGIN") {
-			start = i + 1
-		} else if strings.HasPrefix(trimmed, "-----END") {
-			end = i
-			break
-		}
-	}
-
-	if start == -1 || end == -1 || start >= end {
-		return ""
-	}
-
-	keyLines := lines[start:end]
-
-	return strings.Join(keyLines, "\n")
-}
-
-func extractComment(data []byte) (string, error) {
-	comment := ""
-	trimmedData := extractSSHPrivateKey(data)
-
-	decodedBuf, err := base64.StdEncoding.DecodeString(string(trimmedData))
-	if err != nil {
-		return comment, err
-	}
-	decodedStr := string(decodedBuf)
-	lastSpaceIndex := -1
-	for i := len(decodedStr) - 1; i >= 0; i-- {
-		if decodedStr[i] == ' ' {
-			lastSpaceIndex = i
-			break
-		}
-	}
-	if lastSpaceIndex != -1 && lastSpaceIndex < len(decodedStr)-1 {
-		comment = decodedStr[lastSpaceIndex+1:]
-	}
-
-	return comment, nil
 }
