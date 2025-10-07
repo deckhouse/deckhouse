@@ -32,3 +32,14 @@
   tags:
     - baremetal
     - production
+- name:
+    ru: "Разметка и объем дисков"
+    en: "Disk layout and size"
+  link: "./fs-requirements.html"
+  #minutesToRead: 30
+  description:
+    ru: Руководство по выбору объема дисков и разметке файловой системы перед установкой Deckhouse Kubernetes Platform.
+    en: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Kubernetes Platform.
+  tags:
+    - baremetal
+    - production
