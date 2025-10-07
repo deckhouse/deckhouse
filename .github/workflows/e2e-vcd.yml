@@ -348,6 +348,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -376,6 +395,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -890,6 +910,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -918,6 +957,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -1432,6 +1472,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -1460,6 +1519,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -1974,6 +2034,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2002,6 +2081,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -2516,6 +2596,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2544,6 +2643,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -3058,6 +3158,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -3086,6 +3205,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -3600,6 +3720,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -3628,6 +3767,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -4142,6 +4282,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4170,6 +4329,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -4684,6 +4844,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4712,6 +4891,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -5226,6 +5406,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5254,6 +5453,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -5768,6 +5968,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5796,6 +6015,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
@@ -6310,6 +6530,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -6338,6 +6577,7 @@ jobs:
           password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_rw_registry_step>
+
 
       # <template: werf_install_step>
       - name: Install werf CLI
