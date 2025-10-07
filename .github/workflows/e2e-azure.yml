@@ -391,15 +391,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -801,15 +806,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1211,15 +1221,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1621,15 +1636,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2031,15 +2051,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2441,15 +2466,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2851,15 +2881,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -3261,15 +3296,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -3671,15 +3711,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -4081,15 +4126,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -4491,15 +4541,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -4901,15 +4956,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
