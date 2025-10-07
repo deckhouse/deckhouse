@@ -1160,7 +1160,7 @@ function run-test() {
   set_common_ssh_parameters
 
   testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
-  testRunAttempts=60
+  testRunAttempts=5
   for ((i=1; i<=testRunAttempts; i++)); do
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo /bin/bash -s <<<"${testScript}"; then
       echo "Ingress and Istio test passed"
