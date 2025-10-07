@@ -50,17 +50,10 @@ if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
   exit 1
 fi
-
-{{- else if eq .cri "Containerd" }}
-cri_type="Containerd"
-{{- else if eq .cri "ContainerdV2" }}
-cri_type="ContainerdV2"
 {{- end }}
 
-
-if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "ContainerdV2" || "${cri_type}" == "NotManagedContainerd" ]]; then
-  criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
-fi
+# Get CRI directory for eviction thresholds calculation
+criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
 
 # Calculate eviction thresholds.
 
@@ -367,10 +360,8 @@ volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
-{{- if or (eq .cri "Containerd") (eq .cri "ContainerdV2") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
-{{- end }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriodByPodPriority:
 - priority: 2000000999
