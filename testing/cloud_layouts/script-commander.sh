@@ -236,7 +236,7 @@ function prepare_environment() {
     bastion_user="ubuntu"
     bastion_host="31.128.54.168"
     bastion_port="53359"
-    ssh_bastion="${bastion_user}@${bastion_host}"
+    ssh_bastion="-o \"ProxyJump=${bastion_user}@${bastion_host}:${bastion_port}\""
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -763,7 +763,6 @@ StrictHostKeyChecking no
 ServerAliveInterval 5
 ServerAliveCountMax 5
 ConnectTimeout 10
-LogLevel quiet
 EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
   chmod 600 id_rsa
@@ -1158,13 +1157,13 @@ function run-test() {
   # wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
-
+  eval "$(ssh-agent -s)"
   testScript="$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   testRunAttempts=5
-  $ssh_command -o "ProxyJump=$ssh_bastion" "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
+  $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
   echo exit code $?
   for ((i=1; i<=testRunAttempts; i++)); do
-    if $ssh_command -o "ProxyJump=$ssh_bastion" "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
       echo "Ingress and Istio test passed"
       break
     fi
