@@ -82,8 +82,8 @@ installTypes:
       ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
     type: cloud
     name:
-      en: DVP
-      ru: DVP
+      en: Deckhouse Virtualization Platform
+      ru: Deckhouse Virtualization Platform
     steps:
       step2:
         name:
