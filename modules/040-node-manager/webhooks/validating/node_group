@@ -281,7 +281,7 @@ EOF
     if [[ "${oldCriType}" != "${newCriType}" ]]; then
       nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
       nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '
-        .snapshots.nodes_with_containerd_custom_conf[]
+        .snapshots.nodes_with_containerd_custom_conf[]?
         | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup)
         | .filterResult.nodeName' | tr '\n' ' ')"
       if [[ $nodesForbidingChanges != "" ]]; then
