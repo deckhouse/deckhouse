@@ -46,7 +46,7 @@ lang: ru
    }
    ```
 
-   Эти параметры необходимо указать в объекте AzureClusterConfiguration:
+   Эти параметры необходимо указать в [объекте AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration):
 
    | Поле           | Значение из вывода команды |
    |----------------|-----------------------------|

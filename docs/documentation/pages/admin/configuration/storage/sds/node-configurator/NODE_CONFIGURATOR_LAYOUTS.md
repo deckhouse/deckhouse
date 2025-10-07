@@ -146,7 +146,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Configuring the sds-local-volume module (identical disks, "Full mirror")
 
-To configure `sds-local-volume` in "Full Mirror" mode, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and specify all discovered [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources in it. This ensures that the VG with the label `main` is available on each node in the module:
+To configure [`sds-local-volume`](/modules/sds-local-volume/) in "Full Mirror" mode, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and specify all discovered [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources in it. This ensures that the VG with the label `main` is available on each node in the module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -457,7 +457,7 @@ Where `<vg-name>` is the name assigned to the VG on the mirror in the previous s
 
 ##### Configuring the sds-local-volume module (combined storage, "Full mirror")
 
-To configure the `sds-local-volume` module according to the "Full Mirror" scenario, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and add all [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-local-volume` module:
+To configure the [`sds-local-volume`](/modules/sds-local-volume/) module according to the "Full Mirror" scenario, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and add all [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-local-volume` module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -489,7 +489,7 @@ Examples of informative names for the [LocalStorageClass](/modules/sds-local-vol
 
 ##### Configuring the sds-replicated-volume module (combined storage, "Full mirror")
 
-To configure the `sds-replicated-volume` module according to the "Full Mirror" scenario, follow these steps:
+To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module according to the "Full Mirror" scenario, follow these steps:
 
 1. Create a [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource and add all [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-replicated-volume` module:
 
@@ -615,7 +615,7 @@ Where `<vg-name>` is the prefix of the name assigned to the VGs created in the p
 
 ##### Configuring the sds-local-volume module (combined storage, "Partial mirror")
 
-To configure the `sds-local-volume` module according to the "Partial Mirror" scenario, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-local-volume` module:
+To configure the [`sds-local-volume`](/modules/sds-local-volume/) module according to the "Partial Mirror" scenario, create a [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-local-volume` module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -647,7 +647,7 @@ Examples of informative names for the [LocalStorageClass](/modules/sds-local-vol
 
 ##### Configuring the sds-replicated-volume module (combined storage, "Partial mirror")
 
-To configure the `sds-replicated-volume` module according to the "Partial mirror" scenario, follow these steps:
+To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module according to the "Partial mirror" scenario, follow these steps:
 
 1. Create a [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-<vg-name>-safe` and add the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: None`:
 

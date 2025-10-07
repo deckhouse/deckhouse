@@ -21,7 +21,7 @@ After booting up, make sure the following services are running:
 - `cloud-init.service`
 
 These services are required for correct EC2 instance initialization
-and for integration with DKP infrastructure modules such as `cloud-provider-aws` and `machine-controller-manager`.
+and for integration with DKP infrastructure modules such as [`cloud-provider-aws`](/modules/cloud-provider-aws/) and `machine-controller-manager`.
 
 ## Accessing the AWS API
 

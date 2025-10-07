@@ -21,7 +21,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64)"
    ```
 
-   Create a NodeGroupConfiguration resource to enable transitional authorization to `registry.deckhouse.ru`:
+   Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource to enable transitional authorization to `registry.deckhouse.ru`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -409,7 +409,7 @@ All commands must be executed on the master node of the existing cluster.
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Create a NodeGroupConfiguration resource to enable transitional authorization to `registry.deckhouse.ru`:
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource to enable transitional authorization to `registry.deckhouse.ru`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -671,13 +671,13 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    d8 platform edit cluster-configuration
    ```
 
-1. Change the `kubernetesVersion` parameter to the desired value, for example, `"1.27"` (in quotes) for Kubernetes 1.27.
+1. Change the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter to the desired value, for example, `"1.27"` (in quotes) for Kubernetes 1.27.
 
 1. Save the changes. The cluster nodes will begin updating sequentially.
 
 1. Wait for the update to complete. You can monitor the update progress using the `d8 k get no` command. The update is considered complete when the `VERSION` column for each node shows the updated version.
 
-1. Prepare the license token variables and create a NodeGroupConfiguration resource to configure temporary authorization for access to `registry-cse.deckhouse.ru`:
+1. Prepare the license token variables and create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource to configure temporary authorization for access to `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -772,7 +772,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    ```
 
 1. Make sure that the modules currently used in the cluster are supported in DKP CSE.  
-   For example, in Deckhouse CSE 1.58 and 1.64, the `cert-manager` module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) accordingly.
+   For example, in Deckhouse CSE 1.58 and 1.64, the [`cert-manager`](/modules/cert-manager/) module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) or [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) accordingly.
 
    To display the list of modules that are not supported in DKP CSE and will be disabled, run:
 
@@ -803,7 +803,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    d8 k get modules
    ```
 
-1. Create a NodeGroupConfiguration:
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -904,7 +904,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   If the output contains pods from the `chrony` module, re-enable the module (it's disabled by default in DKP CSE):
+   If the output contains pods from the [`chrony`](/modules/chrony/) module, re-enable the module (it's disabled by default in DKP CSE):
 
    ```shell
    d8 platform module enable chrony
@@ -948,7 +948,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 ## Switching DKP to CE/BE/SE/SE+/EE
 
 {% alert level="warning" %}
-When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
+When using the [`registry`](/modules/registry/) module, switching between editions is only possible in `Unmanaged` mode.  
 To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/examples.html).
 {% endalert %}
 

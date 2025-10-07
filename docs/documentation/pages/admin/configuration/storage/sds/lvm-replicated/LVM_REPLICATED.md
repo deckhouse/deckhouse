@@ -26,13 +26,13 @@ spec:
 EOF
 ```
 
-Wait for the `sds-node-configurator` module to reach the `Ready` status. To check the status, run the following command:
+Wait for the [`sds-node-configurator`](/modules/sds-node-configurator/) module to reach the `Ready` status. To check the status, run the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
 ```
 
-In the output, you should see information about the `sds-node-configurator` module:
+In the output, you should see information about the [`sds-node-configurator`](/modules/sds-node-configurator/) module:
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY

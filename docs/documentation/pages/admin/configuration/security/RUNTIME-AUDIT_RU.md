@@ -66,7 +66,7 @@ DKP использует два основных источника событи
      enabled: true
    ```
 
-1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи `control-plane-manager`,
+1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
    настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
 
 Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).

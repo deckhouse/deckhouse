@@ -38,7 +38,7 @@ Otherwise, volume provisioning will fail.
 
 If certain disk types won’t be used in the cluster,
 you can disable automatic creation of the corresponding StorageClass objects
-using the `settings.storageClass.exclude` parameter in the ModuleConfig resource:
+using the [`settings.storageClass.exclude`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-exclude) parameter in the ModuleConfig resource:
 
 ```yaml
 settings:
@@ -54,7 +54,7 @@ In this example, DKP will not create StorageClass resources for any `network-ssd
 
 By default, DKP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
 
-To explicitly set a different default StorageClass, use the global DKP parameter `global.defaultClusterStorageClass`.
+To explicitly set a different default StorageClass, use the global DKP parameter [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
 You can modify it with the following command:
 
 ```shell
@@ -102,12 +102,12 @@ This allows you to control the load balancer’s network exposure and limit it t
 DKP does not recreate existing Machine objects when configuration parameters change.
 Node recreation occurs only when:
 
-- NodeGroup section parameters change.
-- YandexInstanceClass parameters change.
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) section parameters change.
+- [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) parameters change.
 
 This behavior helps prevent unnecessary operations and node idling, but it means you must manually recreate VMs if needed.
 
-If you change the YandexClusterConfiguration resource (for example, change provider settings, layout, subnets, etc.),
+If you change the [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) resource (for example, change provider settings, layout, subnets, etc.),
 run the following command to apply the changes:
 
 ```shell
@@ -119,7 +119,7 @@ This command reconciles the cluster state with the configuration defined in the 
 ## Integrating manually created VMs
 
 DKP allows you to connect existing VMs in Yandex Cloud to the Kubernetes cluster as nodes.
-These nodes are called CloudStatic and they are not directly managed by the `node-manager` module
+These nodes are called CloudStatic and they are not directly managed by the [`node-manager`](/modules/node-manager/) module
 but can still be used in the cluster.
 
 To manually connect a VM as a CloudStatic node, follow these steps:
@@ -146,4 +146,4 @@ To manually connect a VM as a CloudStatic node, follow these steps:
    value: <nodeNetworkCIDR from the cluster>
    ```
 
-   The `node-network-cidr` parameter must match the value specified in the YandexClusterConfiguration resource under `nodeNetworkCIDR`.
+   The `node-network-cidr` parameter must match the value specified in the YandexClusterConfiguration resource under [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr).

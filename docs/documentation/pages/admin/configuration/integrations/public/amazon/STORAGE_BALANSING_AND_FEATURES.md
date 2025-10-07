@@ -25,7 +25,7 @@ StorageClasses are created automatically for the following disk types:
 
 Disk types `io1` and `io2` are also supported with IOPS and throughput settings in ModuleConfig.
 
-To exclude unnecessary StorageClasses from the cluster, specify filters in `settings.storageClass.exclude`:
+To exclude unnecessary StorageClasses from the cluster, specify filters in [`settings.storageClass.exclude`](/modules/cloud-provider-aws/configuration.html#parameters-storageclass-exclude):
 
 ```yaml
 settings:

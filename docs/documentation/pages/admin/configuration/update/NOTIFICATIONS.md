@@ -39,7 +39,7 @@ Notifications are available only in the `Auto` update mode; they are not generat
 {% endalert %}
 
 {% alert %}
-Specifying a webhook is optional: if the `update.notification.webhook` parameter is not set but the `update.notification.minimalNotificationTime` parameter is specified, the update will still be postponed for the defined duration. In this case, the appearance of the [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource in the cluster, named after the new version, can be considered the notification.
+Specifying a webhook is optional: if the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter is not set but the [`update.notification.minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is specified, the update will still be postponed for the defined duration. In this case, the appearance of the [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource in the cluster, named after the new version, can be considered the notification.
 {% endalert %}
 
 After a new minor DKP version appears in the selected update channel but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
@@ -157,7 +157,7 @@ func main() {
   (for example, if a self-signed certificate is used).
   Set to `false` by default.
 
-Example `update.notification` configuration using basic authentication:
+Example [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) configuration using basic authentication:
 
 ```yaml
 update:
@@ -171,7 +171,7 @@ update:
     tlsSkipVerify: true
 ```
 
-Example `update.notification` configuration  without authentication:
+Example [`update.notification`](/modules/deckhouse/configuration.html#parameters-update-notification) configuration  without authentication:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

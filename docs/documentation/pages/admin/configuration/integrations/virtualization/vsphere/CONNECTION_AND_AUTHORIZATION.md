@@ -78,7 +78,7 @@ For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vm
 {% endalert %}
 
 {% alert %}
-DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ## Installing govc

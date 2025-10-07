@@ -85,19 +85,19 @@ YAML-файл конфигурации установки содержит па�
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
+1. [ModuleConfig](/products/kubernetes-platform/documentation/latest/reference/api/cr.html#moduleconfig) — набор ресурсов, содержащих параметры конфигурации встроенных модулей Deckhouse.
 
    Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, системные узлы или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища явно задавать параметр `nodeSelector`.
 
    Например, для модуля `prometheus` настройка указывается в параметре [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
 
-1. `IngressNginxController` — развертывание Ingress-контроллера.
+1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — развертывание Ingress-контроллера.
 
-1. `NodeGroup` — создание дополнительных групп узлов.
+1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — создание дополнительных групп узлов.
 
-1. `InstanceClass` — добавление конфигурационных ресурсов.
+1. InstanceClass — добавление конфигурационных ресурсов.
 
-1. `ClusterAuthorizationRule`, `User` — настройка прав и пользователей.
+1. [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), [User](/modules/user-authn/cr.html#user) — настройка прав и пользователей.
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 

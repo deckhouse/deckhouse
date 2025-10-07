@@ -10,8 +10,8 @@ lang: ru
 
 Особенности:
 
-- Использование vSphere Datacenter в качестве региона (`region`);
-- Использование vSphere Cluster в качестве зоны (`zone`);
+- Использование vSphere Datacenter в качестве региона ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region));
+- Использование vSphere Cluster в качестве зоны ([`zone`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones));
 - Поддержка нескольких зон и размещения узлов по зонам;
 - Использование различных datastore для дисков и volume’ов;
 - Поддержка подключения сетей, включая дополнительную сетевую изоляцию (например, MetalLB + BGP).
@@ -63,7 +63,7 @@ zones:
   - ru-central1-b
 ```
 
-Обязательные параметры:
+Обязательные параметры [ресурса VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration):
 
 - `region` — тег, присвоенный объекту Datacenter;
 - `zoneTagCategory` и `regionTagCategory` — категории тегов, по которым распознаются регионы и зоны;

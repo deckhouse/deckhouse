@@ -15,7 +15,7 @@ You can configure Deckhouse using:
 An example of a set of custom resources for configuring Deckhouse:
 
 ```yaml
-# Global setting.
+# Global settings.
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -26,7 +26,7 @@ spec:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
 ---
-# The [`monitoring-ping`](/modules/monitoring-ping/) module settings.
+# The monitoring-ping module settings.
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -37,7 +37,7 @@ spec:
     externalTargets:
     - host: 8.8.8.8
 ---
-# Disable the [`dashboard`](/modules/dashboard/) module.
+# Disable the dashboard module.
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -118,7 +118,7 @@ DKP is managed through global settings, module configurations, and various custo
 
 ## Configuring the module
 
-The module is configured using the `ModuleConfig` custom resource , whose name is the same as the module name (in kebab-case). The `ModuleConfig` custom resource has the following fields:
+The module is configured using the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) custom resource , whose name is the same as the module name (in kebab-case). The ModuleConfig custom resource has the following fields:
 
 - `metadata.name` — the name of the module in kebab-case (e.g, `prometheus`, `node-manager`).
 - `spec.version` — version of the module settings schema. It is an integer greater than zero. This field is mandatory if `spec.settings` is not empty. You can find the latest version number in the module's documentation under *Settings*.
@@ -128,7 +128,7 @@ The module is configured using the `ModuleConfig` custom resource , whose name i
 
 > Deckhouse doesn't modify ModuleConfig resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, `d8 k`, and other familiar tools for deploy.
 
-An example of a custom resource for configuring the `kube-dns` module:
+An example of a custom resource for configuring the [`kube-dns`](/modules/kube-dns/) module:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -154,7 +154,7 @@ Some modules can also be configured using custom resources. Use the search bar a
 
 > Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
 
-To enable/disable the module, set `spec.enabled` field of the `ModuleConfig` custom resource to `true` or `false`. Note that this may require you to first create a `ModuleConfig` resource for the module.
+To enable/disable the module, set [`spec.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig-v1alpha1-spec-enabled) field of the ModuleConfig custom resource to `true` or `false`. Note that this may require you to first create a ModuleConfig resource for the module.
 
 Here is an example of disabling the [`user-authn`](/modules/user-authn/) module (the module will be turned off even if it is enabled as part of a module bundle):
 
@@ -216,13 +216,13 @@ To install Deckhouse with the `Minimal` module set, enable at least the followin
 * [`control-plane-manager`](/modules/control-plane-manager/);
 * [`kube-dns`](/modules/kube-dns/);
 * [`node-manager`](/modules/node-manager/);
-* registry-packages-proxy;
-* terraform-manager, in a case of deploying a cloud cluster.
+* `registry-packages-proxy`;
+* [`terraform-manager`](/modules/terraform-manager/), in a case of deploying a cloud cluster.
 
 ### Accessing documentation for the current version
 
 The documentation for the running version of Deckhouse is available at `documentation.<cluster_domain>`,  
-where `<cluster_domain>` is the DNS name generated according to the template specified in the `modules.publicDomainTemplate` parameter of the global configuration.
+where `<cluster_domain>` is the DNS name generated according to the template specified in the [`modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter of the global configuration.
 
 {% alert level="warning" %}
 Documentation is available only if the [documentation](/modules/documentation/) module is enabled in the cluster.  
@@ -240,14 +240,15 @@ If no `nodeSelector/tolerations` are explicitly specified in the module paramete
 1. If there are no nodes with a [specific role](#module-features-that-depend-on-its-type) in the cluster and `nodeSelector` is automatically selected (see point 1), `nodeSelector` will not be specified in the module resources. The module will then use any node with non-conflicting `taints`.
 
 You cannot set `nodeSelector` and `tolerations` for modules:
-- that involve running a DaemonSet on all cluster nodes (e.g., `cni-flannel`, `monitoring-ping`);
-- designed to run on master nodes (e.g., `prometheus-metrics-adapter` or some `vertical-pod-autoscaler` components).
+
+- running on all cluster nodes (such as [`cni-flannel`](/modules/cni-flannel/) or [`monitoring-ping`](/modules/monitoring-ping/));
+- running on all master nodes (such as [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) or [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)).
 
 ### Module features that depend on its type
 
 {% raw %}
-* The *monitoring*-related modules (`operator-prometheus`, `prometheus` and `vertical-pod-autoscaler`):
-  * Deckhouse examines nodes to determine a [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) in the following order:
+* The *monitoring*-related modules ([`operator-prometheus`](/modules/operator-prometheus/), [`prometheus`](/modules/prometheus/) and [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)):
+  * Deckhouse examines nodes to determine a [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/monitoring` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.
@@ -255,15 +256,15 @@ You cannot set `nodeSelector` and `tolerations` for modules:
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}` (e.g., `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`).
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`.
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`.
-* The *frontend*-related modules (`ingress-nginx` only):
-  * Deckhouse examines nodes to determine a nodeSelector in the following order:
+* The *frontend*-related modules ([`ingress-nginx`](/modules/ingress-nginx/) only):
+  * Deckhouse examines nodes to determine a `nodeSelector` in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/frontend` label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"MODULE_NAME"}`.
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"frontend"}`.
 * Other modules:
-  * Deckhouse examines nodes to determine a nodeSelector in the following order:
+  * Deckhouse examines nodes to determine a `nodeSelector` in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster (e.g., `node-role.deckhouse.io/cert-manager`).
     1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.
   * Tolerations to add (note that tolerations are added all at once):

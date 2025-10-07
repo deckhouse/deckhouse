@@ -16,7 +16,7 @@ You can enable HA mode globally for DKP in one of the following ways.
 
 ### Using ModuleConfig/global custom resource
 
-1. Set the `settings.highAvailability` parameter to `true` in `ModuleConfig/global`:
+1. Set the [`settings.highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter to `true` in `ModuleConfig/global`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -59,16 +59,16 @@ The HA mode operation in individual modules is independent of the global HA mode
 
 List of modules supporting individual HA mode:
 
-- `deckhouse`
-- `openvpn`
-- `istio`
-- `dashboard`
-- `multitenancy-manager`
-- `user-authn`
-- `ingress-nginx`
-- `prometheus-monitoring`
-- `monitoring-kubernetes`
-- `snapshot-controller`
+- [`deckhouse`](/modules/deckhouse/)
+- [`openvpn`](/modules/openvpn/)
+- [`istio`](/modules/istio/)
+- [`dashboard`](/modules/dashboard/)
+- [`multitenancy-manager`](/modules/multitenancy-manager/)
+- [`user-authn`](/modules/user-authn/)
+- [`ingress-nginx`](/modules/ingress-nginx/)
+- [`prometheus-monitoring`](/modules/prometheus/)
+- [`monitoring-kubernetes`](/modules/monitoring-kubernetes/)
+- [`snapshot-controller`](/modules/snapshot-controller/)
 
 To enable HA mode manually for a specific module,
 add the `settings.highAvailability` parameter to its configuration:

@@ -16,7 +16,7 @@ lang: ru
 
 Дополнительно можно:
 
-- Отключить ненужные классы хранилища через параметр `exclude`.
+- Отключить ненужные классы хранилища через [параметр `exclude`](/modules/cloud-provider-azure/configuration.html#parameters-storageclass-exclude).
 - Создать свои StorageClass с нужными параметрами пропускной способности и IOPS.
 
 Пример настройки в ModuleConfig:
@@ -47,6 +47,6 @@ DKP автоматически создает ресурсы LoadBalancer в Azu
 
 Дополнительные особенности:
 
-- Поддерживается использование NAT Gateway — можно явно задать количество публичных IP-адресов для SNAT через параметр `natGatewayPublicIpCount`.
+- Поддерживается использование NAT Gateway — можно явно задать количество публичных IP-адресов для SNAT через [параметр `natGatewayPublicIpCount`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-standard-natgatewaypublicipcount).
 - Возможна настройка пиринга VNet, в том числе с bastion-хостом или другими VNet в облаке.
 - Поддерживаются Service Endpoints — безопасное и прямое подключение к сервисам Azure без использования публичных IP. Подробнее – в разделе [Интеграция с сервисами Azure](./azure-services.html).

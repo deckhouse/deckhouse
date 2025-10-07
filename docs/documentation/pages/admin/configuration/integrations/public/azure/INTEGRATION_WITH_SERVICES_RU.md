@@ -12,7 +12,7 @@ Deckhouse Kubernetes Platform (DKP) использует возможности 
 - Обновляются метаданные узлов в соответствии с текущей конфигурацией;
 - Заказываются диски для узлов через CSI;
 - Подключается необходимая CNI-сеть (используется simple bridge);
-- Становятся доступны описания виртуальных машин в формате AzureInstanceClass для последующего использования в NodeGroup.
+- Становятся доступны описания виртуальных машин в [формате AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) для последующего использования в [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 {% alert level="info" %}
 Весь исходящий трафик из кластера проходит через балансировщики нагрузки. Если ни один из них не настроен для работы с UDP, весь исходящий UDP-трафик будет блокироваться, что может повлиять на работу NTP (`ntpdate`, `chrony` и др.). Решение: вручную добавить правило на любой UDP-порт в существующий LoadBalancer или создать Kubernetes-сервис типа LoadBalancer с UDP-портом.
@@ -42,4 +42,4 @@ Microsoft.Storage.Global
 Microsoft.Web
 ```
 
-Укажите необходимые сервисы в параметре `serviceEndpoints` объекта AzureClusterConfiguration.
+Укажите необходимые сервисы в [параметре `serviceEndpoints`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-serviceendpoints) объекта AzureClusterConfiguration.

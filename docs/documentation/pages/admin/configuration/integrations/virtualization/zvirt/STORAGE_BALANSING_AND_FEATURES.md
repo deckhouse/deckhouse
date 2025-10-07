@@ -5,14 +5,14 @@ permalink: en/admin/integrations/virtualization/zvirt/zvirt-storage.html
 
 ## Storage
 
-In a cluster hosted on a zVirt infrastructure, Storage Domains are used within the scope of the specified `clusterID`.
+In a cluster hosted on a zVirt infrastructure, Storage Domains are used within the scope of the specified [`clusterID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-clusterid).
 All virtual machine disks are created within the designated storage domain.
 
 ### Requirements
 
-- The `storageDomainID` specified in the configuration must be available to the `clusterID`
-  defined in the ZvirtClusterConfiguration resource.
-- Disks are created based on the specified `template` and placed in the storage domain.
+- The [`storageDomainID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-masternodegroup-instanceclass-storagedomainid) specified in the configuration must be available to the `clusterID`
+  defined in the [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) resource.
+- Disks are created based on the specified [`template`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-masternodegroup-instanceclass-template) and placed in the storage domain.
 - For PersistentVolume provisioning, VM root disks are used.
   Separate PVCs are not yet supported in zVirt.
 

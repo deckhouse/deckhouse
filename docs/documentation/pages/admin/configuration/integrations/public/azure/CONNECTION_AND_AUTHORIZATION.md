@@ -47,7 +47,7 @@ Follow these steps:
    }
    ```
 
-   Specify the output values in the AzureClusterConfiguration object:
+   Specify the output values in the [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) object:
 
    | Field           | Value from the output |
    |----------------|-----------------------------|

@@ -6,7 +6,7 @@ lang: ru
 
 ## Процедура переключения CNI с Flannel на Cilium
 
-1. Выключите модуль `kube-proxy`:
+1. Выключите [модуль `kube-proxy`](/modules/kube-proxy/):
 
    ```shell
    d8 k apply -f - << EOF
@@ -19,7 +19,7 @@ lang: ru
    EOF
    ```
 
-1. Включите модуль `cni-cilium`:
+1. Включите [модуль `cni-cilium`](/modules/cni-cilium/):
 
    ```shell
    d8 k create -f - << EOF
@@ -60,7 +60,7 @@ lang: ru
 
    > Если агенты Cilium не переходят в статус `Running`, перезагрузите проблемные узлы.
 
-1. Выключите модуль `cni-flannel`:
+1. Выключите [модуль `cni-flannel`](/modules/cni-flannel/):
 
    ```shell
    d8 k apply -f - << EOF
@@ -73,7 +73,7 @@ lang: ru
    EOF
    ```
 
-1. Включите модуль `node-local-dns`:
+1. Включите [модуль `node-local-dns`](/modules/node-local-dns/):
 
    ```shell
    d8 k apply -f - << EOF

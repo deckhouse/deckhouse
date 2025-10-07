@@ -3,7 +3,7 @@ title: "Writing Prometheus data to longterm storage"
 permalink: en/admin/configuration/monitoring/configuring/longterm-storage.html
 ---
 
-Prometheus supports the remote_write mechanism for sending data from a local Prometheus instance to a separate long-term storage (for example, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In DKP, support for this mechanism is implemented using the PrometheusRemoteWrite custom resource.
+Prometheus supports the remote_write mechanism for sending data from a local Prometheus instance to a separate long-term storage (for example, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). In DKP, support for this mechanism is implemented using the [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource.
 
 {% alert level="info" %}
 For VictoriaMetrics, detailed information about ways to send data to vmagent can be found in the [VictoriaMetrics documentation](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent).
@@ -11,7 +11,7 @@ For VictoriaMetrics, detailed information about ways to send data to vmagent can
 
 ## Example of minimal PrometheusRemoteWrite
 
-Below is an example of minimal configuration for the PrometheusRemoteWrite custom resource:
+Below is an example of minimal configuration for the [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -24,7 +24,7 @@ spec:
 
 ## Example of advanced PrometheusRemoteWrite
 
-Below is an example of advanced configuration for the PrometheusRemoteWrite custom resource:
+Below is an example of advanced configuration for the [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1

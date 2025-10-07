@@ -249,7 +249,7 @@ metallb:
 Available in DKP Enterprise Edition only.
 {% endalert %}
 
-1. Enable the `metallb` module:
+1. Enable the [`metallb`](/modules/metallb/) module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -261,7 +261,7 @@ Available in DKP Enterprise Edition only.
      version: 2
    ```
 
-1. Create a MetalLoadBalancerClass resource:
+1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -277,7 +277,7 @@ Available in DKP Enterprise Edition only.
      type: L2
    ```
 
-1. Create a IngressNginxController resource:
+1. Create a [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1

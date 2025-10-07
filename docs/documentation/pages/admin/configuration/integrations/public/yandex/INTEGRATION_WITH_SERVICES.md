@@ -174,7 +174,7 @@ To configure PrometheusRemoteWrite, follow these steps:
 
 1. Create a [service account](https://yandex.cloud/en/docs/iam/operations/sa/create) with the `monitoring.editor` role.
 1. Create an [API key](https://yandex.cloud/en/docs/iam/operations/authentication/manage-api-keys) for the service account.
-1. Create a PrometheusRemoteWrite resource:
+1. Create a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) resource:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -202,7 +202,7 @@ To read metrics in Grafana:
 
 1. Create a [service account](https://yandex.cloud/en/docs/iam/operations/sa/create) with the `monitoring.viewer` role.
 1. Create an [API key](https://yandex.cloud/en/docs/iam/operations/authentication/manage-api-keys) for the service account.
-1. Create a GrafanaAdditionalDatasource resource:
+1. Create a [GrafanaAdditionalDatasource](/modules/prometheus/cr.html#grafanaadditionaldatasource) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1

@@ -76,19 +76,19 @@ The installation configuration YAML file contains parameters for several resourc
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. `ModuleConfig` — a set of resources containing configuration parameters for [Deckhouse built-in modules](../).
+1. [ModuleConfig](/products/kubernetes-platform/documentation/latest/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
    For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter.
 
-1. `IngressNginxController` — deploying the Ingress controller.
+1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — deploying the Ingress controller.
 
-1. `NodeGroup` — creating additional node groups.
+1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — creating additional node groups.
 
-1. `InstanceClass` — adding configuration resources.
+1. InstanceClass — adding configuration resources.
 
-1. `ClusterAuthorizationRule`, `User` — setting up roles and users.
+1. [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), [User](/modules/user-authn/cr.html#user) — setting up roles and users.
 
 {% offtopic title="An example of the installation config..." %}
 

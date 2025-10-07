@@ -10,8 +10,8 @@ with full control over resources, networking, and storage.
 
 Key features:
 
-- Uses a vSphere Datacenter as a `region`.
-- Uses a vSphere Cluster as a `zone`.
+- Uses a vSphere Datacenter as a [`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region).
+- Uses a vSphere Cluster as a [`zone`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones).
 - Supports multiple zones and node placements across zones.
 - Supports using different datastores for disks and volumes.
 - Supports network connectivity including additional network isolation (for example, MetalLB + BGP).
@@ -62,7 +62,7 @@ zones:
   - ru-central1-b
 ```
 
-Required parameters:
+Required parameters for the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource:
 
 - `region`: Tag assigned to the Datacenter object.
 - `zoneTagCategory` and `regionTagCategory`: Tag categories used to identify regions and zones.

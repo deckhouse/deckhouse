@@ -64,7 +64,7 @@ On some systems, eBPF probes may not work.
      enabled: true
    ```
 
-1. (**Optional**) If the cluster control plane is not managed by DKP with `control-plane-manager`,
+1. (**Optional**) If the cluster control plane is not managed by DKP with [`control-plane-manager`](/modules/control-plane-manager/),
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
 All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.

@@ -15,7 +15,7 @@ When running on Azure, Deckhouse Kubernetes Platform (DKP) automatically creates
 
 You can additionally:
 
-- Disable unneeded storage classes using the `exclude` parameter.
+- Disable unneeded storage classes using the [`exclude`](/modules/cloud-provider-azure/configuration.html#parameters-storageclass-exclude) parameter.
 - Define custom StorageClass resources with the target throughput and IOPS settings.
 
 Example configuration in a ModuleConfig:
@@ -47,7 +47,7 @@ DKP automatically creates LoadBalancer resources in Azure when using Kubernetes 
 Additional features:
 
 - NAT Gateway is supported.
-  You can explicitly define the number of public IP addresses for SNAT using the `natGatewayPublicIpCount` parameter.
+  You can explicitly define the number of public IP addresses for SNAT using the [`natGatewayPublicIpCount`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-standard-natgatewaypublicipcount) parameter.
 - VNet peering can be configured, including with a bastion host or other VNets in the cloud.
 - Service Endpoints are supported.
   They provide secure and direct connections to Azure services without using public IPs.

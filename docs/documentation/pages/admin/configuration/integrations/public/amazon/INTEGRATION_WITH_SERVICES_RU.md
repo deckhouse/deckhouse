@@ -39,7 +39,7 @@ lang: ru
 
 1. Настройте эту политику в AWS Console: Amazon ECR → Private registry → Repositories → требуемый репозиторий → Permissions.
 
-1. Добавьте `ecr:GetAuthorizationToken` в `additionalRolePolicies` в AWSClusterConfiguration, чтобы узлы могли автоматически получать токен доступа к образам:
+1. Добавьте `ecr:GetAuthorizationToken` в [`additionalRolePolicies`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) в AWSClusterConfiguration, чтобы узлы могли автоматически получать токен доступа к образам:
 
    ```yaml
    additionalRolePolicies:

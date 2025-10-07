@@ -15,8 +15,8 @@ that is tagged as a `zone`.
 
 You can specify:
 
-- The default StorageClass name (`default`).
-- Exclusions via the `exclude` field in a form of a list of names or patterns for StorageClasses
+- The default StorageClass name ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default)).
+- Exclusions via the [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) field in a form of a list of names or patterns for StorageClasses
   that should not be created.
 
 Example configuration using ModuleConfig:
@@ -74,7 +74,7 @@ Make sure there is connectivity between BGP routers and frontend nodes in the de
 ## CSI
 
 The storage subsystem uses CNS disks by default, with support for online resizing.  
-Legacy mode with FCD disks is also supported. The subsystem behavior is configured via the `compatibilityFlag` parameter.
+Legacy mode with FCD disks is also supported. The subsystem behavior is configured via the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
 
 ## Important information on PVC size expansion
 

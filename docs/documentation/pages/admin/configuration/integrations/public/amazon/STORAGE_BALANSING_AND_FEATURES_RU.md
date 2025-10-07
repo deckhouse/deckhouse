@@ -25,7 +25,7 @@ StorageClass создаётся автоматически для следующ
 
 Также поддерживаются диски `io1` и `io2` с настройками IOPS и throughput в ModuleConfig.
 
-Для исключения из кластера ненужных StorageClass укажите фильтры в `settings.storageClass.exclude`:
+Для исключения из кластера ненужных StorageClass укажите фильтры в [`settings.storageClass.exclude`](/modules/cloud-provider-aws/configuration.html#parameters-storageclass-exclude):
 
 ```yaml
 settings:

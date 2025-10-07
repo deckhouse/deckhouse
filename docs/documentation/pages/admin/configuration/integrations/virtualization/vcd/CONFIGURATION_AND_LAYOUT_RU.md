@@ -46,11 +46,11 @@ masterNodeGroup:
 
 ![Схема размещения WithNAT](../../../../images/cloud-provider-vcd/vcd-withnat.png)
 
-При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
+При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в [параметре `edgeGateway.type`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-type). Поддерживаются два варианта: `NSX-T` и `NSX-V`.
 
 Для обеспечения административного доступа к узлам кластера разворачивается бастион. Параметры для его настройки описываются [в секции `bastion`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-bastion).
 
-Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью параметра `internalNetworkDHCPPoolStartAddress`.
+Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью [параметра `internalNetworkDHCPPoolStartAddress`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-internalnetworkdhcppoolstartaddress).
 
 Если используется `NSX-V`, DHCP необходимо настроить вручную. В противном случае узлы, ожидающие получение IP-адреса по DHCP, не смогут его получить.
 
@@ -60,14 +60,14 @@ masterNodeGroup:
 
 Схема размещения предполагает автоматическое создание следующих правил NAT:
 
-- SNAT — трансляция адресов внутренней сети узлов во внешний адрес, указанный в параметре `edgeGateway.externalIP`.
-- DNAT — трансляция внешнего адреса и порта, заданных в параметрах `edgeGateway.externalIP` и `edgeGateway.externalPort`, на внутренний IP-адрес бастиона по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
+- SNAT — трансляция адресов внутренней сети узлов во внешний адрес, указанный в [параметре `edgeGateway.externalIP`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-externalip).
+- DNAT — трансляция внешнего адреса и порта, заданных в параметрах [`edgeGateway.externalIP`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-externalip) и [`edgeGateway.externalPort`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-externalport), на внутренний IP-адрес бастиона по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
 
 {% alert level="warning" %}
-Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
+Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах [`edgeGateway.NSX-V.externalNetworkName`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-nsx-v-externalnetworkname) и [`edgeGateway.NSX-V.externalNetworkType`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-edgegateway-nsx-v-externalnetworktype) соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
 {% endalert %}
 
-Дополнительно возможно создание правил брандмауэра отдельным свойством `createDefaultFirewallRules`.
+Дополнительно возможно создание правил брандмауэра [отдельным свойством `createDefaultFirewallRules`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-createdefaultfirewallrules).
 
 {% alert level="warning" %}
 Если Edge Gateway обеспечивается средствами `NSX-T`, то существующие в Edge Gateway правила будут перезаписаны. Предполагается, что использование данной опции подразумевает размещение одного кластера на Edge Gateway.
@@ -171,7 +171,7 @@ masterNodeGroup:
 
 ## Конфигурация
 
-Интеграция осуществляется с помощью ресурса VCDClusterConfiguration, который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграция осуществляется с помощью [ресурса VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration), который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 
