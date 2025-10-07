@@ -480,9 +480,9 @@ check_e2e_labels:
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
 {!{- else if eq $provider "vcd" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "password" "LAYOUT_VCD_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}
@@ -854,9 +854,9 @@ check_e2e_labels:
 {!{- else if or (eq $provider "openstack") (eq $provider "static") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password" "password" "LAYOUT_OS_PASSWORD" ) $secrets -}!}
 {!{- else if eq $provider "vsphere" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vSphere" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-username" "LAYOUT_VSPHERE_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "e2e-password" "LAYOUT_VSPHERE_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new" "base-domain" "LAYOUT_VSPHERE_BASE_DOMAIN" ) $secrets -}!}
 {!{- else if eq $provider "vcd" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "password" "LAYOUT_VCD_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD" "login" "LAYOUT_VCD_USERNAME" ) $secrets -}!}
