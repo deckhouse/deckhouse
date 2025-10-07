@@ -46,13 +46,15 @@ We always appreciate helping users with debugging complex issues. Please follow 
 
 {% alert level="info" %}
 The `--exclude` flag allows you to exclude files whose data will not be included in the archive..
+
    ```sh
    d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
+
 The `--list-exclude` flag displays a list of files that can be excluded from the selection.
 {% endalert %}
 
-2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
+1. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
 
 Data that will be collected (file names containing the corresponding data are indicated after "/"):
 
