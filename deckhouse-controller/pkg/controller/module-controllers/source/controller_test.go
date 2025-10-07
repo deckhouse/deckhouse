@@ -31,6 +31,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -51,7 +52,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 var (
@@ -608,7 +608,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 		}
 
 		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.
-			GetMock.Optional().Set(func(_ context.Context, tag string) (*remote.Descriptor, error) {
+			GetMock.Optional().Set(func(_ context.Context, _ string) (*remote.Descriptor, error) {
 			return &remote.Descriptor{
 				Descriptor: crv1.Descriptor{
 					Digest: crv1.Hash{

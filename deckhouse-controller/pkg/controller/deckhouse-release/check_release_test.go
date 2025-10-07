@@ -839,10 +839,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags
 
 	// Setup GetMock to return descriptor with digest
 	deckhouseVersionsMock = deckhouseVersionsMock.GetMock.Set(func(_ context.Context, imageTag string) (*remote.Descriptor, error) {
-		_, err := semver.NewVersion(imageTag)
-		if err != nil {
-			imageTag = versionInChannel
-		}
+		_, _ = semver.NewVersion(imageTag)
 
 		img := &fake.FakeImage{
 			ManifestStub: manifestStub,
