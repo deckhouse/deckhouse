@@ -83,7 +83,7 @@ function prepare_environment() {
   fi
   export DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
-  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
     echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
     export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
   else
