@@ -16,12 +16,14 @@ import (
 	"time"
 )
 
-const KubectlPath = "/opt/deckhouse/bin/kubectl"
-const KubeConfigPath = "/etc/kubernetes/kubelet.conf"
-const AdminKubeConfigPath = "/etc/kubernetes/admin.conf"
-const CordonAnnotationKey = "node.deckhouse.io/cordoned-by"
-const CordonAnnotationValue = "shutdown-inhibitor"
-const NodeGroupLabelKey = "node.deckhouse.io/group"
+const (
+	KubectlPath           = "/opt/deckhouse/bin/kubectl"
+	KubeConfigPath        = "/etc/kubernetes/kubelet.conf"
+	AdminKubeConfigPath   = "/etc/kubernetes/admin.conf"
+	CordonAnnotationKey   = "node.deckhouse.io/cordoned-by"
+	CordonAnnotationValue = "shutdown-inhibitor"
+	NodeGroupLabelKey     = "node.deckhouse.io/group"
+)
 
 var ErrNodeIsNotNgManaged = errors.New("node is not managed by node group")
 
@@ -176,6 +178,24 @@ func (k *Kubectl) getNodeGroupObject(nodeGroupName string) ([]byte, error) {
 		return nil, fmt.Errorf("kubectl get nodegroup %s: %w (output: %s)", nodeGroupName, err, strings.TrimSpace(string(out)))
 	}
 	return out, nil
+}
+
+func (k *Kubectl) CountNodes() (int, error) {
+	cmd, cancel := k.cmd("get", "nodes", "-o", "json")
+	defer cancel()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("kubectl get nodes: %w (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+
+	var list NodeList
+	if err := json.Unmarshal(out, &list); err != nil {
+		return 0, fmt.Errorf("unmarshal nodes list: %w", err)
+	}
+
+	count := len(list.Items)
+	fmt.Printf("kubectl: total nodes count = %d\n", count)
+	return count, nil
 }
 
 func (k *Kubectl) GetCondition(nodeName, reason string) (*Condition, error) {

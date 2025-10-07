@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	MasterNgName                = "master"
-	defaultNodeCheckingInterval = 5 * time.Second
+	MasterNgName = "master"
 )
 
 type NodeInhibitorDecision struct {
@@ -114,11 +113,11 @@ func (p *NodeObserver) ShouldEnableInhibitor(ctx context.Context) (bool, error) 
 	}
 
 	adminKubectl := kubernetes.NewAdmintKubectl()
-	nodesCount, err := adminKubectl.GetNodesCountInNg(ngName)
+	nodesCount, err := adminKubectl.CountNodes()
 	if err != nil {
 		return false, err
 	}
-	fmt.Printf("nodeObserver: node group %q has %d nodes\n", ngName, nodesCount)
+	fmt.Printf("nodeObserver: cluster total nodes count = %d\n", nodesCount)
 	return nodesCount > 1, nil
 }
 
