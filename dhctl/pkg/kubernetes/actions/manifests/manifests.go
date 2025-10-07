@@ -226,6 +226,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
+				RunAsGroup:   ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
@@ -258,6 +259,15 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
 							Path: "/var/lib/deckhouse",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "dev-dir",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/dev",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -311,9 +321,18 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse/downloaded",
 			},
+			{
+				Name:      "dev-dir",
+				ReadOnly:  false,
+				MountPath: "/dev",
+			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
 			ReadOnlyRootFilesystem: ptr.To(true),
+			RunAsUser:              ptr.To(int64(0)),
+			RunAsGroup:             ptr.To(int64(0)),
+			RunAsNonRoot:           ptr.To(false),
+			Privileged:             ptr.To(true),
 		},
 	}
 
