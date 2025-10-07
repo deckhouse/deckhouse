@@ -16,13 +16,15 @@ const (
 	WallBroadcastInterval    = 42 * time.Second
 	PodsCheckingInterval     = 15 * time.Second
 	NodeCheckingInterval     = 15 * time.Second
+	MaxNodeObserverAttempts  = 6
 )
 
 type AppConfig struct {
-	InhibitDelayMax       time.Duration
-	WallBroadcastInterval time.Duration
-	PodsCheckingInterval  time.Duration
-	NodeCheckingInterval  time.Duration
-	PodLabel              string
-	NodeName              string
+	InhibitDelayMax         time.Duration
+	WallBroadcastInterval   time.Duration
+	PodsCheckingInterval    time.Duration
+	NodeCheckingInterval    time.Duration
+	MaxNodeObserverAttempts int
+	PodLabel                string
+	NodeName                string
 }

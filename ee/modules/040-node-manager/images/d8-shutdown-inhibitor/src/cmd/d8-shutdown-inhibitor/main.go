@@ -23,12 +23,13 @@ func main() {
 
 	// Start application.
 	app := app.NewApp(app.AppConfig{
-		PodLabel:              app.InhibitNodeShutdownLabel,
-		InhibitDelayMax:       app.InhibitDelayMaxSec,
-		PodsCheckingInterval:  app.PodsCheckingInterval,
-		NodeCheckingInterval:  app.NodeCheckingInterval,
-		WallBroadcastInterval: app.WallBroadcastInterval,
-		NodeName:              nodeName,
+		PodLabel:                app.InhibitNodeShutdownLabel,
+		InhibitDelayMax:         app.InhibitDelayMaxSec,
+		PodsCheckingInterval:    app.PodsCheckingInterval,
+		NodeCheckingInterval:    app.NodeCheckingInterval,
+		MaxNodeObserverAttempts: app.MaxNodeObserverAttempts,
+		WallBroadcastInterval:   app.WallBroadcastInterval,
+		NodeName:                nodeName,
 	})
 
 	err = app.Start()

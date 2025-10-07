@@ -121,11 +121,12 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
 		&tasks.NodeObserver{
-			NodeName:            a.config.NodeName,
-			ShutdownSignalCh:    shutdownSignalCh,
-			NodeCheckingInterval: a.config.NodeCheckingInterval,
-			InhibitorDecisionCh: nodeInhibitorDecisionCh,
-			StopInhibitorsCh:    unlockInhibitorsCh,
+			NodeName:                a.config.NodeName,
+			ShutdownSignalCh:        shutdownSignalCh,
+			NodeCheckingInterval:    a.config.NodeCheckingInterval,
+			MaxNodeObserverAttempts: a.config.MaxNodeObserverAttempts,
+			InhibitorDecisionCh:     nodeInhibitorDecisionCh,
+			StopInhibitorsCh:        unlockInhibitorsCh,
 		},
 		&tasks.PodObserver{
 			NodeName:                a.config.NodeName,

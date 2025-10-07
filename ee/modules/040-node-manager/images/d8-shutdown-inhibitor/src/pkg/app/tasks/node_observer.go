@@ -27,12 +27,13 @@ type NodeInhibitorDecision struct {
 // should keep the shutdown inhibitor active, and shares the decision with
 // other tasks.
 type NodeObserver struct {
-	NodeName             string
-	ShutdownSignalCh     <-chan struct{}
-	InhibitorDecisionCh  chan<- NodeInhibitorDecision
-	StopInhibitorsCh     chan<- struct{}
-	NodeGroup            string
-	NodeCheckingInterval time.Duration
+	NodeName                string
+	ShutdownSignalCh        <-chan struct{}
+	InhibitorDecisionCh     chan<- NodeInhibitorDecision
+	StopInhibitorsCh        chan<- struct{}
+	NodeGroup               string
+	NodeCheckingInterval    time.Duration
+	MaxNodeObserverAttempts int
 }
 
 func (p *NodeObserver) Name() string {
@@ -58,13 +59,22 @@ func (p *NodeObserver) Run(ctx context.Context, errCh chan error) {
 	ticker := time.NewTicker(p.NodeCheckingInterval)
 	defer ticker.Stop()
 
+	attempt := 0
+
 	for {
+		attempt++
 		enable, err := p.ShouldEnableInhibitor(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
-			fmt.Printf("nodeObserver: inhibitor check failed: %v\n", err)
+			fmt.Printf("nodeObserver: inhibitor check failed (attempt %d/%d): %v\n", attempt, p.MaxNodeObserverAttempts, err)
+			if attempt >= p.MaxNodeObserverAttempts {
+				// main priority is podObserver
+				fmt.Printf("nodeObserver: reached max attempts, keeping inhibitors enabled and exiting\n")
+				p.InhibitorDecisionCh <- NodeInhibitorDecision{Enable: true}
+				return
+			}
 			select {
 			case <-ctx.Done():
 				fmt.Printf("nodeObserver: stop on context cancel\n")

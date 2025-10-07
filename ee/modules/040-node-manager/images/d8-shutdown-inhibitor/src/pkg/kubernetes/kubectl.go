@@ -158,7 +158,6 @@ func (k *Kubectl) GetNodesCountInNg(nodeGroupName string) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	fmt.Printf("kubectl: raw nodegroup json for %q: %s\n", nodeGroupName, string(ngJSON))
 
 	var ng NodeGroup
 	if err = json.Unmarshal(ngJSON, &ng); err != nil {
