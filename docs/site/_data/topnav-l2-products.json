@@ -141,12 +141,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Documentation",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },
@@ -337,12 +331,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },

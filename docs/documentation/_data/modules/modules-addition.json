@@ -189,7 +189,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "istio": {
     "editionMinimumAvailable": "ce",
