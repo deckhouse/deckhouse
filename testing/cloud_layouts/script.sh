@@ -270,6 +270,8 @@ function prepare_environment() {
     echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
   fi
 
+  echo "DECKHOUSE_DOCKERCFG=$(echo -n ${DECKHOUSE_DOCKERCFG}| base64)}" #TODO DELETE
+
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
