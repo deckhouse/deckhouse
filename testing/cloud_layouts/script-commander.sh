@@ -237,7 +237,7 @@ function prepare_environment() {
     bastion_host="31.128.54.168"
     bastion_port="53359"
     # ssh_bastion="ProxyJump=${bastion_user}@${bastion_host}:${bastion_port}"
-    ssh_bastion="${bastion_user}@${bastion_host}:${bastion_port}"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
