@@ -236,7 +236,7 @@ function prepare_environment() {
     bastion_user="ubuntu"
     bastion_host="31.128.54.168"
     bastion_port="53359"
-    ssh_bastion="-J ${bastion_user}@${bastion_host} -p ${bastion_port}"
+    ssh_bastion="${bastion_user}@${bastion_host}"
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -1161,10 +1161,10 @@ function run-test() {
 
   testScript="$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   testRunAttempts=5
-  $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
+  $ssh_command -o "ProxyJump=$ssh_bastion" "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
   echo exit code $?
   for ((i=1; i<=testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
+    if $ssh_command -o "ProxyJump=$ssh_bastion" "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
       echo "Ingress and Istio test passed"
       break
     fi
