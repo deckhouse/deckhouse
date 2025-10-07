@@ -54,7 +54,7 @@ func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) nod
 	switch {
 	case app.SSHLegacyMode:
 		// if set --ssh-legacy-mode
-		client := clissh.NewClient(sess, privateKeys)
+		client := clissh.NewClient(sess, privateKeys, true)
 		client.InitializeNewAgent = false
 		return client
 	case app.SSHModernMode:
@@ -62,7 +62,7 @@ func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) nod
 		return gossh.NewClient(sess, privateKeys)
 	case len(app.SSHPrivateKeys) > 0:
 		// if flags doesn't set, but we have private keys
-		client := clissh.NewClient(sess, privateKeys)
+		client := clissh.NewClient(sess, privateKeys, true)
 		client.InitializeNewAgent = false
 		return client
 	default:
