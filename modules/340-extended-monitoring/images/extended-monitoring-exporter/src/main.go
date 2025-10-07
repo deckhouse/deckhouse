@@ -27,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/rest"
 )
 
@@ -55,17 +54,13 @@ func main() {
 		log.Fatal("Error getting kubernetes config: %v\n", err)
 	}
 
-	kubeMetadata, err := metadata.NewForConfig(config)
-	if err != nil {
-		log.Fatal("Error getting kubernetes metadata: %v\n", err)
-	}
-	_ = kubeMetadata
-
 	registry := prometheus.NewRegistry()
 
 	metrics := met.RegisterMetrics(registry)
 
 	watcher := w.NewWatcher(kubeClient, metrics)
+
+	go watcher.StartNodeWatcher(ctx)
 
 	go watcher.StartNamespaceWatcher(ctx)
 
