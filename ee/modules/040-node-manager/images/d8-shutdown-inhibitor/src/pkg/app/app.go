@@ -107,6 +107,7 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 	// Event to unlock all inhibitors when shutdown requirements are met.
 	unlockInhibitorsCh := make(chan struct{})
 	startCordonCh := make(chan struct{})
+	nodeInhibitorDecisionCh := make(chan tasks.NodeInhibitorDecision, 1)
 
 	return []taskstarter.Task{
 		&tasks.ShutdownInhibitor{
@@ -119,13 +120,21 @@ func (a *App) wireAppTasks() []taskstarter.Task {
 		&tasks.PowerKeyEvent{
 			UnlockInhibitorsCh: unlockInhibitorsCh,
 		},
+		&tasks.NodeObserver{
+			NodeName:            a.config.NodeName,
+			ShutdownSignalCh:    shutdownSignalCh,
+			NodeCheckingInterval: a.config.NodeCheckingInterval,
+			InhibitorDecisionCh: nodeInhibitorDecisionCh,
+			StopInhibitorsCh:    unlockInhibitorsCh,
+		},
 		&tasks.PodObserver{
-			NodeName:              a.config.NodeName,
-			PodsCheckingInterval:  a.config.PodsCheckingInterval,
-			WallBroadcastInterval: a.config.WallBroadcastInterval,
-			ShutdownSignalCh:      shutdownSignalCh,
-			StartCordonCh:         startCordonCh,
-			StopInhibitorsCh:      unlockInhibitorsCh,
+			NodeName:                a.config.NodeName,
+			PodsCheckingInterval:    a.config.PodsCheckingInterval,
+			WallBroadcastInterval:   a.config.WallBroadcastInterval,
+			ShutdownSignalCh:        shutdownSignalCh,
+			StartCordonCh:           startCordonCh,
+			StopInhibitorsCh:        unlockInhibitorsCh,
+			NodeInhibitorDecisionCh: nodeInhibitorDecisionCh,
 			PodMatchers: []kubernetes.PodMatcher{
 				kubernetes.WithLabel(a.config.PodLabel),
 				kubernetes.WithRunningPhase(),

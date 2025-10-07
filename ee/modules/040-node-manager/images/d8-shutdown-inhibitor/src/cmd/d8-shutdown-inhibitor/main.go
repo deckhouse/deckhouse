@@ -26,6 +26,7 @@ func main() {
 		PodLabel:              app.InhibitNodeShutdownLabel,
 		InhibitDelayMax:       app.InhibitDelayMaxSec,
 		PodsCheckingInterval:  app.PodsCheckingInterval,
+		NodeCheckingInterval:  app.NodeCheckingInterval,
 		WallBroadcastInterval: app.WallBroadcastInterval,
 		NodeName:              nodeName,
 	})

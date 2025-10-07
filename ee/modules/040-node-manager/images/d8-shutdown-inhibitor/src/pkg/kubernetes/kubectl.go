@@ -8,6 +8,8 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -16,8 +18,12 @@ import (
 
 const KubectlPath = "/opt/deckhouse/bin/kubectl"
 const KubeConfigPath = "/etc/kubernetes/kubelet.conf"
+const AdminKubeConfigPath = "/etc/kubernetes/admin.conf"
 const CordonAnnotationKey = "node.deckhouse.io/cordoned-by"
 const CordonAnnotationValue = "shutdown-inhibitor"
+const NodeGroupLabelKey = "node.deckhouse.io/group"
+
+var ErrNodeIsNotNgManaged = errors.New("node is not managed by node group")
 
 type Kubectl struct {
 	kubectlPath    string
@@ -26,6 +32,10 @@ type Kubectl struct {
 
 func NewDefaultKubectl() *Kubectl {
 	return NewKubectlWithConf(KubectlPath, KubeConfigPath)
+}
+
+func NewAdmintKubectl() *Kubectl {
+	return NewKubectlWithConf(KubectlPath, AdminKubeConfigPath)
 }
 
 func NewKubectlWithConf(kubectlPath, kubeConfigPath string) *Kubectl {
@@ -66,6 +76,7 @@ func (k *Kubectl) GetAnnotationCordonedBy(nodeName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	annotationStr := fmt.Sprintf("%s", bytes.Trim(out, `"'`))
 
 	return annotationStr, nil
@@ -110,6 +121,64 @@ func (k *Kubectl) RemoveCordonAnnotation(nodeName string) ([]byte, error) {
 	return cmd.Output()
 }
 
+func (k *Kubectl) GetNodeGroup(nodeName string) (string, error) {
+	out, err := k.getNodeGroup(nodeName)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Printf("kubectl: raw node group jsonpath output for node %q: %q\n", nodeName, string(out))
+	raw := strings.TrimSpace(string(out))
+	ngName := strings.Trim(raw, `"'`)
+	ngName = strings.TrimSpace(ngName)
+	fmt.Printf("kubectl: trimmed node group value for node %q: %q\n", nodeName, ngName)
+	if ngName == "" || strings.EqualFold(ngName, "<no value>") {
+		fmt.Printf("kubectl: node %q is considered unmanaged (empty label)\n", nodeName)
+		return "", ErrNodeIsNotNgManaged
+	}
+	fmt.Printf("kubectl: node %q resolved node group %q\n", nodeName, ngName)
+
+	return ngName, nil
+}
+
+func (k *Kubectl) getNodeGroup(nodeName string) ([]byte, error) {
+	escapedKey := strings.NewReplacer(".", `\.`, "/", `\/`).Replace(NodeGroupLabelKey)
+	jsonPath := fmt.Sprintf("jsonpath='{.metadata.labels.%s}'", escapedKey)
+	cmd, cancel := k.cmd("get", "node", nodeName, "-o", jsonPath)
+	defer cancel()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("kubectl get node %s: %w (output: %s)", nodeName, err, strings.TrimSpace(string(out)))
+	}
+	return out, nil
+}
+
+func (k *Kubectl) GetNodesCountInNg(nodeGroupName string) (int32, error) {
+	ngJSON, err := k.getNodeGroupObject(nodeGroupName)
+	if err != nil {
+		return 0, err
+	}
+	fmt.Printf("kubectl: raw nodegroup json for %q: %s\n", nodeGroupName, string(ngJSON))
+
+	var ng NodeGroup
+	if err = json.Unmarshal(ngJSON, &ng); err != nil {
+		return 0, fmt.Errorf("unmarshal nodegroup %s: %w", nodeGroupName, err)
+	}
+
+	fmt.Printf("kubectl: nodegroup %q reported nodes=%d\n", nodeGroupName, ng.Status.Nodes)
+	return ng.Status.Nodes, nil
+}
+
+func (k *Kubectl) getNodeGroupObject(nodeGroupName string) ([]byte, error) {
+	cmd, cancel := k.cmd("get", "nodegroup", nodeGroupName, "-o", "json")
+	defer cancel()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("kubectl get nodegroup %s: %w (output: %s)", nodeGroupName, err, strings.TrimSpace(string(out)))
+	}
+	return out, nil
+}
+
 func (k *Kubectl) GetCondition(nodeName, reason string) (*Condition, error) {
 	out, err := k.getCondition(nodeName, reason)
 	if err != nil {
@@ -128,7 +197,11 @@ func (k *Kubectl) getCondition(nodeName, reason string) ([]byte, error) {
 
 func (k *Kubectl) cmd(args ...string) (*exec.Cmd, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	kArgs := append([]string{}, "--kubeconfig", KubeConfigPath)
+	kubeConfig := k.kubeConfigPath
+	if kubeConfig == "" {
+		kubeConfig = KubeConfigPath
+	}
+	kArgs := append([]string{}, "--kubeconfig", kubeConfig)
 	kArgs = append(kArgs, args...)
 	return exec.CommandContext(ctx, k.kubectlPath, kArgs...), cancel
 }

@@ -19,14 +19,15 @@ import (
 
 // PodObserver starts to check Pods on node and stops inhibitors when no pods to wait remain.
 type PodObserver struct {
-	NodeName              string
-	PodsCheckingInterval  time.Duration
-	WallBroadcastInterval time.Duration
-	PodMatchers           []kubernetes.PodMatcher
-	ShutdownSignalCh      <-chan struct{}
-	StartCordonCh         chan<- struct{}
-	StopInhibitorsCh      chan<- struct{}
-	stopOnce             sync.Once
+	NodeName                string
+	PodsCheckingInterval    time.Duration
+	WallBroadcastInterval   time.Duration
+	PodMatchers             []kubernetes.PodMatcher
+	ShutdownSignalCh        <-chan struct{}
+	StartCordonCh           chan<- struct{}
+	StopInhibitorsCh        chan<- struct{}
+	NodeInhibitorDecisionCh <-chan NodeInhibitorDecision
+	stopOnce                sync.Once
 }
 
 func (p *PodObserver) Name() string {
@@ -54,6 +55,11 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	defer ticker.Stop()
 
 	lastWall := time.Time{}
+	var (
+		decisionCh = p.NodeInhibitorDecisionCh
+		decision   *NodeInhibitorDecision
+	)
+
 	for {
 		// Check for global stop (do it at the beginning so 'continue' work correctly).
 		select {
@@ -62,6 +68,21 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			return
 		default:
 		}
+
+		if decisionCh != nil {
+			select {
+			case d := <-decisionCh:
+				decision = &d
+				decisionCh = nil
+				fmt.Printf("podObserver(s2): received inhibitor decision: enable=%t\n", decision.Enable)
+				if !decision.Enable {
+					p.unlockInhibitorsAndExit("podObserver(s2)", "inhibitors disabled for node, unlock inhibitors and exit")
+					return
+				}
+			default:
+			}
+		}
+
 		matchedPods, err := p.ListMatchedPods()
 		if err != nil {
 			fmt.Printf("podObserver(s2): list matched Pods: %v\n", err)
@@ -70,19 +91,21 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			}
 		} else {
 			if len(matchedPods) == 0 {
-				fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
-				err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(p.NodeName)
-				if err != nil {
-					fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
-				}
-				close(p.StopInhibitorsCh)
+				p.unlockInhibitorsAndExit("podObserver(s2)", "no pods to wait, unlock inhibitors and exit")
 				return
 			}
 
+			if decision == nil {
+				fmt.Printf("podObserver(s2): %d pods running but no inhibitor decision yet, waiting next iteration\n", len(matchedPods))
+				continue
+			}
+
 			p.stopOnce.Do(func() {
+				fmt.Printf("podObserver(s2): decision allows cordon, proceeding\n")
 				fmt.Printf("podObserver(s2): %d pods are still running, triggering node cordon\n", len(matchedPods))
 				close(p.StartCordonCh)
 			})
+
 			fmt.Printf("podObserver(s2): %d pods are still running\n", len(matchedPods))
 
 			err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)
@@ -126,4 +149,15 @@ func (p *PodObserver) ListMatchedPods() ([]kubernetes.Pod, error) {
 	matchedPods := kubernetes.FilterPods(podList.Items, p.PodMatchers...)
 
 	return matchedPods, nil
+}
+
+func (p *PodObserver) unlockInhibitorsAndExit(prefix, message string) {
+	fmt.Printf("%s: %s\n", prefix, message)
+	if err := nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(p.NodeName); err != nil {
+		fmt.Printf("%s: update Node condition: %v\n", prefix, err)
+	}
+	if p.StopInhibitorsCh != nil {
+		close(p.StopInhibitorsCh)
+		p.StopInhibitorsCh = nil
+	}
 }
