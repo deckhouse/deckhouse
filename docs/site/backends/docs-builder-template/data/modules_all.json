@@ -187,7 +187,7 @@
       "delivery"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "managed-postgres": {
     "editions": [
