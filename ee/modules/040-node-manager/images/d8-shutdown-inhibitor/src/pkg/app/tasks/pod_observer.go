@@ -56,7 +56,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 
 	lastWall := time.Time{}
 	var (
-		decisionCh = p.NodeInhibitorDecisionCh
+		nodeDecisionCh = p.NodeInhibitorDecisionCh
 		decision   *NodeInhibitorDecision
 	)
 
@@ -69,11 +69,11 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		default:
 		}
 
-		if decisionCh != nil {
+		if nodeDecisionCh != nil {
 			select {
-			case d := <-decisionCh:
+			case d := <-nodeDecisionCh:
 				decision = &d
-				decisionCh = nil
+				nodeDecisionCh = nil
 				fmt.Printf("podObserver(s2): received inhibitor decision: enable=%t\n", decision.Enable)
 				if !decision.Enable {
 					p.unlockInhibitorsAndExit("podObserver(s2)", "inhibitors disabled for node, unlock inhibitors and exit")
