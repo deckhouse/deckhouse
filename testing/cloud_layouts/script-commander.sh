@@ -236,7 +236,7 @@ function prepare_environment() {
     bastion_user="ubuntu"
     bastion_host="31.128.54.168"
     bastion_port="53359"
-    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    ssh_bastion="-J ${bastion_user}@${bastion_host} -p ${bastion_port}"
     cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -1029,75 +1029,75 @@ function run-test() {
   local response
   local cluster_id
 
-  # if [[ ${PROVIDER} == "Static" ]]; then
-  #     bootstrap_static || return $?
-  #     values="{
-  #           \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
-  #           \"defaultCRI\": \"${CRI}\",
-  #           \"sshMasterHost\": \"${master_ip}\",
-  #           \"sshMasterUser\": \"${ssh_user}\",
-  #           \"sshBastionHost\": \"${bastion_ip}\",
-  #           \"sshBastionUser\": \"${ssh_user}\",
-  #           \"sshRedosHost\": \"${worker_redos_ip}\",
-  #           \"sshRedosUser\": \"${ssh_redos_user_worker}\",
-  #           \"sshOpensuseHost\": \"${worker_opensuse_ip}\",
-  #           \"sshOpensuseUser\": \"${ssh_opensuse_user_worker}\",
-  #           \"sshRosaHost\": \"${worker_rosa_ip}\",
-  #           \"sshRosaUser\": \"${ssh_rosa_user_worker}\",
-  #           \"sshPrivateKey\": \"${SSH_KEY}\",
-  #           \"imagesRepo\": \"${IMAGES_REPO}\",
-  #           \"branch\": \"${DEV_BRANCH}\",
-  #           \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
-  #         }"
-  # fi
+  if [[ ${PROVIDER} == "Static" ]]; then
+      bootstrap_static || return $?
+      values="{
+            \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+            \"defaultCRI\": \"${CRI}\",
+            \"sshMasterHost\": \"${master_ip}\",
+            \"sshMasterUser\": \"${ssh_user}\",
+            \"sshBastionHost\": \"${bastion_ip}\",
+            \"sshBastionUser\": \"${ssh_user}\",
+            \"sshRedosHost\": \"${worker_redos_ip}\",
+            \"sshRedosUser\": \"${ssh_redos_user_worker}\",
+            \"sshOpensuseHost\": \"${worker_opensuse_ip}\",
+            \"sshOpensuseUser\": \"${ssh_opensuse_user_worker}\",
+            \"sshRosaHost\": \"${worker_rosa_ip}\",
+            \"sshRosaUser\": \"${ssh_rosa_user_worker}\",
+            \"sshPrivateKey\": \"${SSH_KEY}\",
+            \"imagesRepo\": \"${IMAGES_REPO}\",
+            \"branch\": \"${DEV_BRANCH}\",
+            \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
+          }"
+  fi
 
-  # cluster_template_version_id=$(curl -s -X 'GET' \
-  #   "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
-  #   -H 'accept: application/json' \
-  #   -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
-  #   jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
+  cluster_template_version_id=$(curl -s -X 'GET' \
+    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
+    jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
-  # payload="{
-  #   \"name\": \"${PREFIX}\",
-  #   \"cluster_template_version_id\": \"${cluster_template_version_id}\",
-  #   \"values\": ${values}
-  # }"
+  payload="{
+    \"name\": \"${PREFIX}\",
+    \"cluster_template_version_id\": \"${cluster_template_version_id}\",
+    \"values\": ${values}
+  }"
 
-  # echo "Bootstrap payload: ${payload}"
+  echo "Bootstrap payload: ${payload}"
 
-  # sleep_second=0
-  # for (( j=1; j<=5; j++ )); do
-  #   sleep "$sleep_second"
-  #   sleep_second=5
+  sleep_second=0
+  for (( j=1; j<=5; j++ )); do
+    sleep "$sleep_second"
+    sleep_second=5
 
-  #   response=$(curl -s -X POST  \
-  #     "https://${COMMANDER_HOST}/api/v1/clusters" \
-  #     -H 'accept: application/json' \
-  #     -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
-  #     -H 'Content-Type: application/json' \
-  #     -d "$payload" \
-  #     -w "\n%{http_code}")
+    response=$(curl -s -X POST  \
+      "https://${COMMANDER_HOST}/api/v1/clusters" \
+      -H 'accept: application/json' \
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      -w "\n%{http_code}")
 
-  #   http_code=$(echo "$response" | tail -n 1)
-  #   response=$(echo "$response" | sed '$d')
-  #   echo http_code: $http_code
+    http_code=$(echo "$response" | tail -n 1)
+    response=$(echo "$response" | sed '$d')
+    echo http_code: $http_code
     
-  #   # Check for HTTP errors
-  #   if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
-  #     break
-  #   else
-  #     echo "Error: HTTP error ${http_code}" >&2
-  #     echo "$response" >&2
-  #     continue
-  #   fi
-  # done
-  # cluster_id=$(jq -r '.id' <<< "$response")
-  # if [[ $cluster_id == "null" ]]; then
-  #   echo "Error: jq failed to extract cluster ID" >&2
-  #    echo "$response" >&2
-  #   return 1
-  # fi
-  cluster_id=90ed17c6-1a1a-4f7a-8295-f26c658542cf
+    # Check for HTTP errors
+    if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+      break
+    else
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response" >&2
+      continue
+    fi
+  done
+  cluster_id=$(jq -r '.id' <<< "$response")
+  if [[ $cluster_id == "null" ]]; then
+    echo "Error: jq failed to extract cluster ID" >&2
+     echo "$response" >&2
+    return 1
+  fi
+
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
@@ -1151,16 +1151,16 @@ function run-test() {
     system_node_register || return $?
   fi
 
-  # wait_upmeter_green || return $?
+  wait_upmeter_green || return $?
 
-  # check_resources_state_results || return $?
+  check_resources_state_results || return $?
 
-  # wait_alerts_resolve || return $?
+  wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
 
   testScript="$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
-  testRunAttempts=60
+  testRunAttempts=5
   $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
   for ((i=1; i<=testRunAttempts; i++)); do
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
