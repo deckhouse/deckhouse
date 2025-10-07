@@ -128,12 +128,10 @@ func (k *Kubectl) GetNodeGroup(nodeName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Printf("kubectl: raw node group jsonpath output for node %q: %q\n", nodeName, string(out))
 	raw := strings.TrimSpace(string(out))
 	ngName := strings.Trim(raw, `"'`)
 	ngName = strings.TrimSpace(ngName)
-	fmt.Printf("kubectl: trimmed node group value for node %q: %q\n", nodeName, ngName)
+	fmt.Printf("kubectl: node group value for node %q: %q\n", nodeName, ngName)
 	if ngName == "" || strings.EqualFold(ngName, "<no value>") {
 		fmt.Printf("kubectl: node %q is considered unmanaged (empty label)\n", nodeName)
 		return "", ErrNodeIsNotNgManaged
