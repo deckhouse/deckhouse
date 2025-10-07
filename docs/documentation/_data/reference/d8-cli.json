@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.20.3",
+  "version": "v0.20.5",
   "aliases": null,
   "flags": {
     "help": {
