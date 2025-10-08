@@ -2,6 +2,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: commander-1.0.1
   labels:
     module: commander
@@ -18,6 +20,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: commander-1.0.2
   labels:
     module: commander
@@ -34,6 +38,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: commander-1.0.3
   labels:
     module: commander
@@ -50,6 +56,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: parca-1.2.1
   labels:
     module: parca
@@ -66,6 +74,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: parca-1.2.2
   labels:
     module: parca

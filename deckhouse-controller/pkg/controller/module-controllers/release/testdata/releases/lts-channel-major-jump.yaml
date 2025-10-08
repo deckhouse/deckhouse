@@ -1,6 +1,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: testmodule-0.8.0
   labels:
     module: testmodule
@@ -17,6 +19,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: testmodule-1.0.0
   labels:
     module: testmodule

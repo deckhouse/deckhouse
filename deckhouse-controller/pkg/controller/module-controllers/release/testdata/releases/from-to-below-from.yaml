@@ -1,6 +1,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: demo-1.66.25
   labels:
     module: demo
@@ -18,6 +20,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: demo-1.67.0
   labels:
     module: demo
@@ -34,6 +38,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: demo-1.68.4
   labels:
     module: demo
@@ -50,6 +56,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     modules.deckhouse.io/approved: "true"
   name: demo-1.75.2
   labels:
