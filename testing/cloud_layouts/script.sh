@@ -270,6 +270,9 @@ function prepare_environment() {
     echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
   fi
 
+  decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
+  REGISTRY_URL=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
+
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
@@ -359,6 +362,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
+        REGISTRY_URL="$REGISTRY_URL" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
