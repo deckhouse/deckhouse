@@ -271,7 +271,9 @@ function prepare_environment() {
   fi
 
   decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
-  REGISTRY_URL=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
+  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+
+  echo "IMAGES_REPO=$IMAGES_REPO"
 
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
@@ -362,7 +364,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
-        REGISTRY_URL="$REGISTRY_URL" \
+        IMAGES_REPO="$IMAGES_REPO" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \
