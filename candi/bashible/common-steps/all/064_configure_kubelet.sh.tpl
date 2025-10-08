@@ -52,7 +52,7 @@ if [[ -z "${cri_socket_path}" ]]; then
 fi
 {{- end }}
 
-{{- if not eq .cri "NotManaged" }}
+{{- if not (eq .cri "NotManaged") }}
 # Get CRI directory for eviction thresholds calculation
 criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
 {{- end }}
