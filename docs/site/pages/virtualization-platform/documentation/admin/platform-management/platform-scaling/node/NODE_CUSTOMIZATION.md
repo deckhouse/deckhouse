@@ -56,7 +56,7 @@ cloudProvider:
 </li>
 <li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is used).</li>
 <li><code>.kubernetesVersion</code> — the version of Kubernetes in use.</li>
-<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="cr.html#nodeuser">NodeUser</a> resource.
+<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a> resource.
 {% offtopic title="Example data..." %}
 ```yaml
 nodeUsers:

@@ -100,7 +100,7 @@ function main() {
   fi
 
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$unsupported" "$errs"
+    set_labels "$unsupported" "$errs" || exit 1
   fi
   {{- if eq .cri "ContainerdV2" }}
   fail_fast "$unsupported"

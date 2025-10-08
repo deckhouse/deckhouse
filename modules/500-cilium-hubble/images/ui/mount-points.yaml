@@ -1,0 +1,5 @@
+dirs:
+ - /tmp
+ - /var/cache/nginx
+ - /var/run
+ - /var/lib/hubble-ui/certs

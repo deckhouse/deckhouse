@@ -14,7 +14,7 @@ Using the web interface, you can:
 - Cancel certificate revocation.
 - Get a ready-to-use custom configuration file.
 
-Integrating with the [user-authn](../150-user-authn/) module lets you manage user access to the web interface.
+Integrating with the [user-authn](/modules/user-authn/) module lets you manage user access to the web interface.
 
 ## Exposing the VPN service
 
@@ -37,4 +37,4 @@ The following parameters are pushed to the user's computer after connecting to t
 
 The module can log user's activity via VPN in JSON format.
 Traffic is grouped by `src_ip`, `dst_ip`, `src_port`, `dst_port`, `ip_proto` fields.
-Using the [log-shipper](../460-log-shipper/) module, container logs can be collected and stored for later auditing.
+Using the [log-shipper](/modules/log-shipper/) module, container logs can be collected and stored for later auditing.

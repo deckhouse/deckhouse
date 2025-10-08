@@ -97,9 +97,9 @@ title: "Модуль cert-manager: FAQ"
                solverName: yandex-cloud-dns
    ```
 
-### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiСorp Vault для выпуска сертификатов?
+### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiCorp Vault для выпуска сертификатов?
 
-Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
+Для выпуска сертификатов с помощью HashiCorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
 
 После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
 - Создать `ServiceAccount` и скопировать ссылку на его `Secret`:

@@ -33,7 +33,7 @@ apiServer:
   {{- if eq .apiserver.auditLog.output "File" }}
   - name: "kube-audit-log"
     hostPath: "{{ .apiserver.auditLog.path }}"
-    mountPath: "{{ .apiserver.auditLog.path }}"
+    mountPath: /var/log/kube-audit
     readOnly: false
     pathType: DirectoryOrCreate
   {{- end }}
@@ -123,7 +123,7 @@ apiServer:
     audit-policy-file: /etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
     audit-log-format: json
     {{- if eq .apiserver.auditLog.output "File" }}
-    audit-log-path: "{{ .apiserver.auditLog.path }}/audit.log"
+    audit-log-path: "/var/log/kube-audit/audit.log"
     audit-log-truncate-enabled: "true"
     audit-log-maxage: "30"
     audit-log-maxsize: "100"

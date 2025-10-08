@@ -202,22 +202,6 @@ jobs:
           svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
-  doc_web_build:
-    name: Doc web build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    # Wait for success build of modules.
-    needs:
-      - git_info
-{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
-
-  main_web_build:
-    name: Main web build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    # Wait for success build of modules.
-    needs:
-      - git_info
-{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "release") | strings.Indent 4 }!}
-
   tests:
     name: Tests
     needs:
@@ -257,15 +241,6 @@ jobs:
       - git_info
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
-
-  web_links_test:
-    name: Web links test
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
-    needs:
-      - git_info
-      - doc_web_build
-      - main_web_build
-{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
 
   validators:
     name: Validators

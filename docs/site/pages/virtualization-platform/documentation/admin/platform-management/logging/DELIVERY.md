@@ -341,7 +341,7 @@ Example configuration for converting mixed format records:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -404,7 +404,7 @@ Example configuration for replacing dots with underscores in labels:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: replace-dot
 spec:
@@ -449,7 +449,7 @@ Example configuration with label removal and preliminary `ParseMessage` transfor
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:

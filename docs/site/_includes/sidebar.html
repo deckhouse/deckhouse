@@ -1,28 +1,14 @@
-{%- unless page.hide_sidebar or jekyll.environment == "development" %}
+{%- unless page.hide_sidebar or jekyll.environment == "development-nosidebar" %}
 
   {%- if page.product_code == kubernetes-platform %}
     <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
-      <div class="channel-menu submenu-parent">
-
-        <!-- documentation-section-badge -->
-        <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
-        <div class="submenu-container">
-          <ul class="submenu">
-            <li class="submenu-item">
-              <a data-proofer-ignore='' class='submenu-item-link' href='{% if site.mode == "module" %}/{{ page.lang }}{% endif %}/modules/'>
-                <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-        {% unless site.mode == 'module' %}
+        {%- unless site.mode == 'module' %}
+        <div><strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
         <!-- module-version-badge -->
         <div id="doc-versions-menu" class="channel-menu submenu-parent">
           <!--#include virtual="/includes/channel-menu-v2.html" -->
         </div>
-        {% endunless %}
+        {%- endunless %}
     </div>
   {%- endif %}
   <div class="sidebar__wrapper-inner">

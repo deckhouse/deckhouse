@@ -21,12 +21,12 @@ MetalLB в режиме L2 позволяет заказать Service с тип
 - Узел, выбранный в качестве лидера для "публичного" IP становится "узким местом" без возможности горизонтального масштабирования.
 - В случае выхода узла-балансировщика из строя, все текущие соединения будут разорваны в процессе переключения на новый узел, который будет назначен лидером.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_ru.pdf"></div>
+<div data-presentation="presentations/basics_metallb_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1cs1uKeX53DB973EMtLFcc8UQ8BFCW6FY2vmEWua1tu8/ --->
 
 Данный модуль помогает обойти эти ограничения. Он предоставляет новый ресурс MetalLoadBalancerClass, который позволяет с помощью `nodeSelector` связать группу узлов и пул IP-адресов. После чего можно создать стандартный ресурс Service с типом `LoadBalancer` и в нем указать имя обслуживающего MetalLoadBalancerClass'a, а с помощью аннотации указать необходимое количество IP-адресов для L2-анонсирования.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_l2balancer_ru.pdf"></div>
+<div data-presentation="presentations/basics_metallb_l2balancer_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jDqC4Bhg5NMLZWaFM32bIAzqpkUo0hOkAaRzC0yKRxE/ --->
 
 Таким образом:

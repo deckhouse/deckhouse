@@ -364,6 +364,10 @@ apiVersions:
         x-examples:
           - "dev/test"
         x-unsafe: true
+      storagePolicyID:
+        type: string
+        description: |
+          ID of the SPBM (Storage Policy Based Management) storage policy.
       vmFolderExists:
         type: boolean
         default: false

@@ -1,0 +1,12 @@
+files:
+ - /etc/kubernetes/controller-manager.conf
+dirs:
+ - /etc/kubernetes/deckhouse/extra-files
+ - /etc/kubernetes/pki
+ - /etc/ssl/certs
+ - /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+ - /usr/share/ca-certificates
+ - /etc/ca-certificates
+ - /usr/local/share/ca-certificates
+ - /etc/pki/ca-trust
+ - /etc/pki/tls/certs

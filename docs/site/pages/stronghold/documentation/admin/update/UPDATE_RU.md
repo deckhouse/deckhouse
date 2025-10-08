@@ -110,10 +110,10 @@ d8 k get modulereleases
 
 ## Немедленное применение обновлений
 
-Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 {% alert level="info" %}
-**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](/products/kubernetes-platform/documentation/v1/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](manual-update-mode.html). Обновление применится сразу после установки аннотации.
+**Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](manual-update-mode.html). Обновление применится сразу после установки аннотации.
 {% endalert %}
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:

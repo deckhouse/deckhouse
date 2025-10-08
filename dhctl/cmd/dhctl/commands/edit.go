@@ -24,10 +24,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -43,9 +41,6 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	app.DefineSanityFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -53,11 +48,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}

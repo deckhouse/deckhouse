@@ -120,7 +120,7 @@ The cluster components are divided into two categories:
 - Control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
 - Data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
-![Architecture of the cluster with Istio enabled](../../images/istio/istio-architecture.svg)
+![Architecture of the cluster with Istio enabled](images/istio-architecture.svg)
 <!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
 All data plane services are grouped into a mesh with the following features:
@@ -178,12 +178,12 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned off
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_disabled_en.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_disabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/ --->
 
 #### Application with Istio turned on
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_enabled_en.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_enabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/ --->
 
 ## Activating Istio to work with the application
@@ -234,15 +234,15 @@ Below are their fundamental differences:
 
 #### Requirements for clusters
 
-- Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). The default value is `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) can be the same.
+- Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). The default value is `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) can be the same.
 
-* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
+* Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
 
   > `cluster.local` is an unmodified alias for the local cluster domain.
-  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../installing/configuration.html#cluster-configuration-cluster-domain) explicitly defined as `cluster.local`.
+  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`.
   > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
-* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each federation member.
+* Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be unique for each federation member.
 
   > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
   > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
@@ -259,7 +259,7 @@ Below are their fundamental differences:
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
 - You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-<div data-presentation="../../presentations/istio/federation_common_principles_en.pdf"></div>
+<div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
 
 #### Enabling the federation
@@ -274,7 +274,7 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 #### Managing the federation
 
-<div data-presentation="../../presentations/istio/federation_istio_federation_en.pdf"></div>
+<div data-presentation="presentations/federation_istio_federation_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/ --->
 
 To establish a federation, you must:
@@ -292,8 +292,8 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 
 #### Requirements for clusters
 
-- Cluster domains in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
+- Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be unique for each multicluster member.
 
   > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
   > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
@@ -307,7 +307,7 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 
 #### General principles
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_en.pdf"></div>
+<div data-presentation="presentations/multicluster_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -328,7 +328,7 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 #### Managing the multicluster
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_en.pdf"></div>
+<div data-presentation="presentations/multicluster_istio_multicluster_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.

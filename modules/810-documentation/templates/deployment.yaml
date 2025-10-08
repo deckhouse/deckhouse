@@ -59,6 +59,12 @@ spec:
           - mountPath: /app/modules/ru
             name: modules-docs-ru
             readOnly: true
+          - mountPath: /app/search-external-modules-index/en
+            name: modules-searchindex-en
+            readOnly: true
+          - mountPath: /app/search-external-modules-index/ru
+            name: modules-searchindex-ru
+            readOnly: true
       - name: builder
         image: {{ include "helm_lib_module_image" (list $ "docsBuilder") }}
         {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -105,10 +111,16 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /app/hugo
+            name: app-hugo
           - mountPath: "/mount/public/en/modules"
             name: modules-docs-en
           - mountPath: "/mount/public/ru/modules"
             name: modules-docs-ru
+          - mountPath: "/mount/public/en/search"
+            name: modules-searchindex-en
+          - mountPath: "/mount/public/ru/search"
+            name: modules-searchindex-ru
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -168,9 +180,15 @@ spec:
             name: documentation-nginx-config
         - name: tmp
           emptyDir: {}
+        - name: app-hugo
+          emptyDir: {}
         - name: modules-docs-en
           emptyDir: {}
         - name: modules-docs-ru
+          emptyDir: {}
+        - name: modules-searchindex-en
+          emptyDir: {}
+        - name: modules-searchindex-ru
           emptyDir: {}
         - name: kube-rbac-proxy-ca
           configMap:

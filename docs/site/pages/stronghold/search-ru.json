@@ -1,0 +1,9 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: ru/stronghold/documentation/search.json
+lang: ru
+---
+
+{% include search4product.liquid productCode=page.product_code %}

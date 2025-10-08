@@ -25,12 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type testState struct{}
@@ -199,7 +199,7 @@ deckhouse:
 		bootstrapState := &testState{}
 
 		var sshCl node.SSHClient
-		if app.SSHLegacyMode {
+		if sshclient.IsLegacyMode() {
 			sshCl = &gossh.Client{}
 		} else {
 			sshCl = &clissh.Client{}

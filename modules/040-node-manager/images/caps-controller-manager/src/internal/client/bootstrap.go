@@ -202,6 +202,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		}
 		if err != nil {
 			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+			return false
 		}
 		data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
 		if err != nil {

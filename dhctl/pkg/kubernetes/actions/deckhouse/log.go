@@ -260,8 +260,6 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 			return true
 		}
 
-		// let it be in debug
-		log.DebugF(line.StringWithLogLevel())
 		return true
 	})
 }

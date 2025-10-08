@@ -11,11 +11,11 @@ To install the platform, you need to create an installation YAML configuration f
 
 The YAML installation configuration file includes parameters for several resources (manifests):
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — general cluster settings such as control plane version, networking parameters, CRI settings, and more.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster settings such as control plane version, networking parameters, CRI settings, and more.
 
   > The ClusterConfiguration resource should only be included in the configuration if the platform installation involves deploying a new Kubernetes cluster. It is not required when installing the platform into an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — settings for a Kubernetes cluster deployed on bare-metal servers.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — settings for a Kubernetes cluster deployed on bare-metal servers.
 
   > Similar to ClusterConfiguration, the StaticClusterConfiguration resource is not required if the platform is being installed in an existing Kubernetes cluster.
 

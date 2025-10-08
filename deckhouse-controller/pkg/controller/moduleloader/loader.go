@@ -493,6 +493,11 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 
 				// set deckhouse version to embedded modules
 				module.Properties.Version = l.version
+
+				// set embedded source if its unset
+				if len(module.Properties.Source) == 0 {
+					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
+				}
 			}
 
 			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||

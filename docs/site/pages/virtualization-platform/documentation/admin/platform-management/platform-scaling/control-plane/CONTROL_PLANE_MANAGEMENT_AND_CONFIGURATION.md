@@ -19,7 +19,7 @@ The control plane management functionality includes:
 
 - Configuring kubeconfig. DVP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
 
-> Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) resource.
+> Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
 
 ## Enabling, disabling, and configuring the module
 

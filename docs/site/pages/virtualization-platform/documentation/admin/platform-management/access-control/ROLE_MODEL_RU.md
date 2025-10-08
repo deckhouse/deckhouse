@@ -86,9 +86,9 @@ Manage-роль определяет права на доступ:
 
 - Модуль реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
 - Настройка прав доступа происходит с помощью ресурсов.
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](../../../../reference/cr/authorizationrule.html#authorizationrule-v1alpha1-spec-allowscale)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](../../../../reference/cr/authorizationrule.html#authorizationrule-v1alpha1-spec-portforwarding)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 В модуле, кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
@@ -104,7 +104,7 @@ Manage-роль определяет права на доступ:
 Режим multi-tenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
 {% endalert %}
 
-В случае, если в [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
+В случае, если в [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
 
 Если вебхук, который реализовывает систему авторизации, по какой-то причине будет недоступен, опции `allowAccessToSystemNamespaces`, `namespaceSelector` и `limitNamespaces` в custom resource перестанут применяться и пользователи будут иметь доступ во все пространства имён. После восстановления доступности вебхука опции продолжат работать.
 
@@ -119,7 +119,7 @@ Manage-роль определяет права на доступ:
   Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в `ClusterRoleBinding` роль `d8:manage:networking:manager`.
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
-  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](../../../../reference/cr/podloggingconfig.html#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](../../../../reference/cr/clusterloggingconfig.html#clusterloggingconfig) и [ClusterLogDestination](../../../../reference/cr/clusterlogdestination.html#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+  Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
 
 ### Список доступа для каждой роли модуля по умолчанию
 

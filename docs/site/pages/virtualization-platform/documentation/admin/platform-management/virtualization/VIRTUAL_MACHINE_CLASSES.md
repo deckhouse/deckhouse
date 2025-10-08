@@ -3,7 +3,7 @@ title: "Virtual Machine Classes"
 permalink: en/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
 ---
 
-The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
+The [`VirtualMachineClass`](/modules/virtualization/cr.html#virtualmachineclass) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
 During installation, a single VirtualMachineClass `generic` resource is automatically created. It represents a universal CPU type based on the older, but widely supported, Nehalem architecture. This enables running VMs on any nodes in the cluster and allows live migration.
 

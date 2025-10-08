@@ -454,7 +454,7 @@ spec:
 {% alert level="info" %}
 Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
-Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в массив [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
+Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в массив [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
@@ -755,7 +755,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 {% endalert %}
 
 {% alert level="info" %}
-Используется в containerd v1, если Deckhouse не управляется с помощью модуля [registry](../registry).
+Используется в containerd v1, если Deckhouse не управляется с помощью модуля [registry](/modules/registry/).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
@@ -949,7 +949,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль [`registry`](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1357,7 +1357,7 @@ metadata:
          effect: NoSchedule
    ```
 
-   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
    Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 

@@ -29,7 +29,7 @@ Using projects helps address these limitations and offers the following benefits
   allowing developers to deploy and test their applications without affecting others.
 
 {% alert level="warning" %}
-[Secret copying](/products/kubernetes-platform/documentation/v1/modules/secret-copier) across all namespaces is incompatible with projects in multitenancy mode.
+[Secret copying](/modules/secret-copier/) across all namespaces is incompatible with projects in multitenancy mode.
 
 This mode creates isolated environments for users within their projects,
 while `secret-copier` automatically distributes secrets to all namespaces.
@@ -46,12 +46,12 @@ Projects has several limitations:
 
 ## Creating a project
 
-1. To create a project, create a [Project](/products/virtualization-platform/reference/cr/project.html) custom resource
-   and specify the project template name in the [`.spec.projectTemplateName`](/products/virtualization-platform/reference/cr/project.html#projectv1alpha2-spec-projecttemplatename) field.
-1. In the [`.spec.parameters`](/products/virtualization-platform/reference/cr/project.html#projectv1alpha2-spec-parameters) field,
-   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplatev1alpha1-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
+1. To create a project, create a [Project](/modules/multitenancy-manager/cr.html#project) custom resource
+   and specify the project template name in the [`.spec.projectTemplateName`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename) field.
+1. In the [`.spec.parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field,
+   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
 
-   Example of creating a project using [Project](/products/virtualization-platform/reference/cr/project.html) from the `default` [ProjectTemplate](/products/virtualization-platform/reference/cr/projecttemplate.html):
+   Example of creating a project using [Project](/modules/multitenancy-manager/cr.html#project) from the `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

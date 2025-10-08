@@ -139,7 +139,7 @@ Run the following command to list nodegroups created in the cluster during the d
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
-[InstanceClass](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
+[InstanceClass](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | replace: "dvp-provider", "dvp" | downcase }}/cr.html) and a
 [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) referring to it to create new groups.
 </div>
 </div>

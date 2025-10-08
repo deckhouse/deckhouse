@@ -31,6 +31,17 @@ objectSelector: {}
     {{- $trackResource.resources | toYaml | nindent 4 }}
   {{- end }}
 - apiGroups:
+  - rbac.authorization.k8s.io
+  apiVersions:
+  - '*'
+  operations:
+  - CREATE
+  - UPDATE
+  - DELETE
+  resources:
+  - roles
+  - rolebindings
+- apiGroups:
   - constraints.gatekeeper.sh
   apiVersions:
   - '*'

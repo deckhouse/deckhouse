@@ -1,3 +1,4 @@
+---
 {{ $alertmanagerVersion := "0.27.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -7,6 +8,8 @@ import:
     add: /src/alertmanager
     to: /bin/alertmanager
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/alertmanager"]
@@ -31,7 +34,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -46,7 +49,10 @@ secrets:
 shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - |
+    export LDFLAGS="-w -s -extldflags '-static'"
   - cd /src
-  - go build -a -ldflags '-s -w -extldflags "-static"' -o alertmanager cmd/alertmanager/main.go
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -o alertmanager cmd/alertmanager/main.go`) | indent 6 }}
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/alertmanager

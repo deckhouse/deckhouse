@@ -56,7 +56,7 @@ cloudProvider:
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
-<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
+<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
 ```yaml
 nodeUsers:

@@ -1,6 +1,5 @@
 ---
 title: "Модуль registry: настройка"
-description: ""
 ---
 
 {% include module-alerts.liquid %}

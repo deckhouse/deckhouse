@@ -202,7 +202,7 @@ spec:
 To create a generic application in Atlassian Crowd, follow these steps:
 
 1. Go to **Applications** → **Add application**.
-1. Use `Application Name` and `Password` that you receive in the [DexProvider](../../reference/cr/dexprovider.html) resource.
+1. Use `Application Name` and `Password` that you receive in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 1. Specify CROWD groups in lowercase for the `DexProvider` resource.
 
 ### Bitbucket Cloud

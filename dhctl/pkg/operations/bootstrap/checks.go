@@ -63,25 +63,23 @@ Please check hostname.`, uuidInCluster, config.UUID)
 }
 
 func WaitForFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for first master node become ready", 45, 3*time.Second).RunContext(ctx, func() error {
-		var nodeName string
-		err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {
-			nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				return err
-			}
-
-			if len(nodes.Items) == 0 {
-				return fmt.Errorf("no master node found")
-			}
-
-			nodeName = nodes.Items[0].Name
-
-			return nil
-		})
+	var nodeName string
+	err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {
+		nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
-		return entity.WaitForSingleNodeBecomeReady(ctx, kubeCl, nodeName)
+
+		if len(nodes.Items) == 0 {
+			return fmt.Errorf("no master node found")
+		}
+
+		nodeName = nodes.Items[0].Name
+
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+	return entity.WaitForSingleNodeBecomeReady(ctx, kubeCl, nodeName)
 }

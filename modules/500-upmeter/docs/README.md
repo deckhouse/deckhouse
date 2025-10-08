@@ -29,7 +29,7 @@ The module sends about 100 metric readings every 5 minutes. This figure depends 
 ## Interface
 
 Example of a web interface:
-![Example of a web interface](../../images/upmeter/image1.png)
+![Example of a web interface](images/image1.png)
 
 Example of Grafana plots based on upmeter metrics:
-![Example of Grafana plots based on upmeter metrics](../../images/upmeter/image2.png)
+![Example of Grafana plots based on upmeter metrics](images/image2.png)

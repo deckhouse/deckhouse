@@ -320,9 +320,11 @@ function main() {
         do
           # Emulate pkill -U $local_user_id
           ps -u "$(id -nu $local_user_id)" --no-headers | awk '{print $1}' | xargs kill -9
-
-          if userdel -r "$(id -nu $local_user_id)"; then
+          
+          if errmsg=$(userdel -r "$(id -nu $local_user_id)" 2>&1); then
             break
+          else 
+            echo $errmsg |egrep -o "[0-9]{2,}" | xargs kill -9
           fi
         done
       else

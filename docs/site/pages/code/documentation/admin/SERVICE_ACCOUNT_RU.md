@@ -14,7 +14,7 @@ weight: 50
 
 ### Rails-консоль
 
-Для создания сервисного аккаунта используется Rails-консоль из набора служебных инструментов [Toolbox](https://deckhouse.ru/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox).
+Для создания сервисного аккаунта используется Rails-консоль из набора служебных инструментов [Toolbox](/modules/code/stable/maintenance.html#toolbox).
 Откройте консоль, выполнив следующую команду:
 
 ```shell

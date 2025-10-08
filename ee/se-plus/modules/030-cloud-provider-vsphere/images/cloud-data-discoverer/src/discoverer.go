@@ -180,12 +180,24 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
 	}
 
+	stroragePolicies, err := d.vsphereClient.ListPolicies()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Storage Policies: %v", err)
+	}
+
 	discoveryData.Kind = DiscoveryDataKind
 	discoveryData.APIVersion = DiscoveryDataVersion
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
 	discoveryData.VMFolderPath = d.vmFolderPath
+
+	for i := range stroragePolicies {
+		discoveryData.StoragePolicies = append(discoveryData.StoragePolicies, v1.VsphereStoragePolicy{
+			Name: stroragePolicies[i].Name,
+			ID:   stroragePolicies[i].ID,
+		})
+	}
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {

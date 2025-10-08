@@ -70,6 +70,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-{!{ .webEnv }!}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
@@ -86,6 +90,11 @@ jobs:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 
