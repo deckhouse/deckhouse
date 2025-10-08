@@ -124,17 +124,16 @@ This setting is available in:
 #### Defining Key Series
 
 1. **Total / Aggregate** — summary values, for example:
-- Total number of pods in a namespace (`sum by (namespace)`)
-- Total CPU consumption (`sum by (cluster)`)
-- Total memory
+    - Total number of pods in a namespace (`sum by (namespace)`)
+    - Total CPU consumption (`sum by (cluster)`)
+    - Total memory
 
-2. **Main Sections** — labels most often used to analyze graphs:
-- `namespace`
-- `node`
-- `cluster`
+1. **Main Sections** — labels most often used to analyze graphs:
+    - `namespace`
+    - `node`
+    - `cluster`
 
-3. **Service labels** (e.g. `pod`, `container`) are rarely key and usually clutter the graph.
-
+1. **Service labels** (e.g. `pod`, `container`) are rarely key and usually clutter the graph.
 #### Limiting the number of series
 
 - Use Prometheus aggregation functions:
@@ -171,6 +170,7 @@ For metrics where it is important to see the summary value (e.g., number of pods
 ### Data Source and Units
 
 #### Units
+
 - Units of measurement must be indicated on the graph. - Configuration is performed via: **All → Standard options → Unit**
 
 **Select units of measurement:**
@@ -187,6 +187,7 @@ For metrics where it is important to see the summary value (e.g., number of pods
 ### Select the presentation format (percentages or absolute values)
 
 #### Defining the format
+
 - When designing a graph, it is important to choose whether to display **percentages** or **absolute values**.
 
 ##### CPU
@@ -373,6 +374,7 @@ It makes sense to set automatic updates every 30 seconds since Prometheus scrape
 
 - All **non-essential series** on dashboards must be **collapsed by default**.
 - To do this, specify the following in the JSON configuration of the series:
+
 ```json
 "collapsed": true
 ```
