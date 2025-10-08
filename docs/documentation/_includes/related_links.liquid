@@ -14,12 +14,30 @@
 {%- assign page_related_module_reference = page_related_module_reference | sort: "module" %}
 {%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_conf' or item.type == 'global_crds'" %}
 {%- assign max_links = page.related_links_max | default: 999 %}
-{%- assign all_display_links = page_related_global_reference | concat: page_related_module_reference %}
-{%- assign display_links = all_display_links | slice: 0, max_links %}
-{% if display_links.size > 0 %}
+{%- assign global_links_count = page_related_global_reference.size %}
+{%- assign module_links_count = page_related_module_reference.size %}
+{%- assign total_available = global_links_count | plus: module_links_count %}
+{%- if global_links_count > max_links %}
+  {%- assign global_links_to_show = max_links %}
+  {%- assign module_links_to_show = 0 %}
+{%- else %}
+  {%- assign global_links_to_show = global_links_count %}
+  {%- assign remaining_slots = max_links | minus: global_links_count %}
+  {%- if module_links_count > remaining_slots %}
+    {%- assign module_links_to_show = remaining_slots %}
+  {%- else %}
+    {%- assign module_links_to_show = module_links_count %}
+  {%- endif %}
+{%- endif %}
+{%- assign global_links_display = page_related_global_reference | slice: 0, global_links_to_show %}
+{%- assign module_links_display = page_related_module_reference | slice: 0, module_links_to_show %}
+{% if total_available > 0 %}
   {%- alert level="info" %}
 {{ site.data.i18n.common['related_reference_and_documentation_links'][page.lang] }}:
-  {%- for link in display_links %}
+  {%- for link in global_links_display %}
+- [{{ link.title }}]({{ link.url }})
+  {%- endfor %}
+  {%- for link in module_links_display %}
 - [{{ link.title }}]({{ link.url }})
   {%- endfor %}
   {%- endalert %}
