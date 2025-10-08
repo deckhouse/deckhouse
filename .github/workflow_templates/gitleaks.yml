@@ -1,0 +1,33 @@
+name: Gitleaks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "gitleaks-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  gitleaks-diff:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: diff
+
+  gitleaks-full:
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: full
