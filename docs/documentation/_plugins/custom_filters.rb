@@ -44,6 +44,7 @@ module Jekyll
     end
 
     def normalizeSearchContent(text)
+      return text
       return text.to_s.gsub(STRIP_HTML_BLOCKS, ' ').
                        gsub(STRIP_HTML_TAGS, ' ').
                        gsub(STRIP_MD_TABLES,' ').
