@@ -1819,26 +1819,12 @@ spec:
       name: user-net # Network name
 ```
 
-It is allowed to connect a VM to the same network multiple times. Example:
-
-```yaml
-spec:
-  networks:
-    - type: Main # Must always be specified first
-    - type: Network
-      name: user-net # Network name
-    - type: Network
-      name: user-net # Network name
-```
-
 Example of connecting to the cluster network `corp-net`:
 
 ```yaml
 spec:
   networks:
     - type: Main # Must always be specified first
-    - type: Network
-      name: user-net
     - type: Network
       name: user-net
     - type: ClusterNetwork
@@ -1854,12 +1840,9 @@ status:
     - type: Network
       name: user-net
       macAddress: aa:bb:cc:dd:ee:01
-    - type: Network
-      name: user-net
-      macAddress: aa:bb:cc:dd:ee:02
     - type: ClusterNetwork
       name: corp-net
-      macAddress: aa:bb:cc:dd:ee:03
+      macAddress: aa:bb:cc:dd:ee:02
 ```
 
 For each additional network interface, a unique MAC address is automatically generated and reserved to avoid collisions. The following resources are used for this: `VirtualMachineMACAddress` (`vmmac`) and `VirtualMachineMACAddressLease` (`vmmacl`).

@@ -1843,26 +1843,12 @@ spec:
       name: user-net # Название сети
 ```
 
-Допускается подключать одну ВМ к одной и той же сети несколько раз. Пример:
-
-```yaml
-spec:
-  networks:
-    - type: Main # Обязательно указывать первым
-    - type: Network
-      name: user-net # Название сети
-    - type: Network
-      name: user-net # Название сети
-```
-
 Пример подключения кластерной сети `corp-net`:
 
 ```yaml
 spec:
   networks:
     - type: Main # Обязательно указывать первым
-    - type: Network
-      name: user-net
     - type: Network
       name: user-net
     - type: ClusterNetwork
@@ -1878,12 +1864,9 @@ status:
     - type: Network
       name: user-net
       macAddress: aa:bb:cc:dd:ee:01
-    - type: Network
-      name: user-net
-      macAddress: aa:bb:cc:dd:ee:02
     - type: ClusterNetwork
       name: corp-net
-      macAddress: aa:bb:cc:dd:ee:03
+      macAddress: aa:bb:cc:dd:ee:02
 ```
 
 Для каждого дополнительного сетевого интерфейса автоматически создается и резервируется уникальный MAC-адрес, что обеспечивает отсутствие коллизий MAC-адресов. Для этих целей используются ресурсы: `VirtualMachineMACAddress` (`vmmac`) и `VirtualMachineMACAddressLease` (`vmmacl`).
