@@ -588,6 +588,20 @@ After setting up a new CRI for NodeGroup, the node-manager module drains nodes o
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
 node updates or requires manual confirmation.
 
+## Why might the CRI change not apply?
+
+One of the main reasons for such behavior might be the presence of the labels `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
+
+The label `node.deckhouse.io/containerd-v2-unsupported` is set if the node does not meet the following criteria:
+1. Kernel version must be at least 5.8.
+2. Systemd version must be at least 244.
+3. Cgroup v2 must be enabled.
+4. EROFS must be available.
+
+The label `node.deckhouse.io/containerd-config=custom` is set if there is a file with a `.toml` extension in the `conf.d` or `conf2.d` directory on the node. In this case, you should try to remove them if it will not lead to critical consequences for the containers' operation and remove the NGC that might have added them.
+
+If you are using the Deckhouse Virtualization Platform module, one reason why switching the CRI is not possible may be the NGC `containerd-dvcr-config.sh`. If the virtualization platform is already installed and running, this NGC can be removed.
+
 ## How to change CRI for the whole cluster?
 
 {% alert level="warning" %}
