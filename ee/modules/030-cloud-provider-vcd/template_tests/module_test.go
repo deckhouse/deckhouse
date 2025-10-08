@@ -153,8 +153,9 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vcd
 spec:
-  nodeLabelSelector: 
-    node.deckhouse.io/group: master
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: master
   polarity: "AntiAffinity"
   required: false
 `))
@@ -171,7 +172,8 @@ metadata:
     module: cloud-provider-vcd
 spec:
   nodeLabelSelector:
-    node.deckhouse.io/group: front
+    matchLabels:
+      node.deckhouse.io/group: front
   polarity: "AntiAffinity"
   required: false
 `))
@@ -188,7 +190,8 @@ metadata:
     module: cloud-provider-vcd
 spec:
   nodeLabelSelector:
-    node.deckhouse.io/group: ephemeral-node
+    matchLabels:
+      node.deckhouse.io/group: ephemeral-node
   polarity: "Affinity"
   required: true
 `))
