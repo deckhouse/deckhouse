@@ -1,0 +1,56 @@
+diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
+index 7aa44398..ef7c9525 100644
+--- a/connector/gitlab/gitlab.go
++++ b/connector/gitlab/gitlab.go
+@@ -3,6 +3,8 @@ package gitlab
+ 
+ import (
+ 	"context"
++	"crypto/tls"
++	"crypto/x509"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
+@@ -35,6 +37,7 @@ type Config struct {
+ 	Groups              []string `json:"groups"`
+ 	UseLoginAsID        bool     `json:"useLoginAsID"`
+ 	GetGroupsPermission bool     `json:"getGroupsPermission"`
++	RootCAData          []byte   `json:"rootCAData,omitempty"`
+ }
+ 
+ type gitlabUser struct {
+@@ -51,6 +54,25 @@ func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, erro
+ 	if c.BaseURL == "" {
+ 		c.BaseURL = "https://gitlab.com"
+ 	}
++	var httpClient *http.Client
++	if len(c.RootCAData) > 0 {
++		pool, _ := x509.SystemCertPool()
++		if pool == nil {
++			pool = x509.NewCertPool()
++		}
++		if !pool.AppendCertsFromPEM(c.RootCAData) {
++			return nil, fmt.Errorf("gitlab: invalid rootCAData")
++		}
++
++		tr := http.DefaultTransport.(*http.Transport).Clone()
++		tr.Proxy = http.ProxyFromEnvironment
++		tr.TLSClientConfig = &tls.Config{RootCAs: pool}
++
++		httpClient = &http.Client{
++			Transport: tr,
++			Timeout:   30 * time.Second,
++		}
++	}
+ 	return &gitlabConnector{
+ 		baseURL:             c.BaseURL,
+ 		redirectURI:         c.RedirectURI,
+@@ -60,6 +82,7 @@ func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, erro
+ 		groups:              c.Groups,
+ 		useLoginAsID:        c.UseLoginAsID,
+ 		getGroupsPermission: c.GetGroupsPermission,
++		httpClient:          httpClient,
+ 	}, nil
+ }
+
+

@@ -131,6 +131,18 @@ spec:
                         It is possible for a user to change their own user name but it is very rare for them to do so.
 
                         Equals to false by default.
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                        - |
+                          ```yaml
+                          rootCAData: |
+                            -----BEGIN CERTIFICATE-----
+                            MIIFaDC...
+                            -----END CERTIFICATE-----
+                          ```
                 bitbucketCloud: &bitbucketCloud
                   type: object
                   required: ['clientID', 'clientSecret']

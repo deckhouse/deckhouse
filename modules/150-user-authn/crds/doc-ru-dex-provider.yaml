@@ -41,6 +41,9 @@ spec:
                     useLoginAsID:
                       description: |
                         Позволяет вместо использования внутреннего GitHub ID использовать имя пользователя.
+                    rootCAData:
+                      description: |
+                        Цепочка сертификатов в формате PEM для проверки подлинности провайдера..
                     orgs:
                       description: |
                         Массив названий организаций в GitHub.

@@ -37,3 +37,7 @@ for local user accounts. The following features are added:
 ### 006-fix-render-error.patch
 
 This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
+
+### 007-provide-custom-CA-to-gitlab-connector.patch
+
+This patch allows Gitlab connector to use custom CA for HTTPS connections.
