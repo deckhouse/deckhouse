@@ -189,7 +189,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Далее создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
+Далее создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -236,7 +236,7 @@ spec:
   weight: 31
 ```
 
-Добавьте ресурс NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
+Добавьте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для установки драйверов Nvidia для NodeGroup `gpu`.
 
 ### Ubuntu
 

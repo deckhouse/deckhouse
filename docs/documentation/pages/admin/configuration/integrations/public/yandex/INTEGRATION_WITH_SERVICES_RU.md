@@ -1,6 +1,6 @@
 ---
-title: Интеграция с службами Yandex Cloud
-permalink: ru/admin/integrations/public/yandex/yandex-services.html
+title: Интеграция со службами Yandex Cloud
+permalink: ru/admin/integrations/public/yandex/services.html
 lang: ru
 ---
 
@@ -169,7 +169,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс PrometheusRemoteWrite:
+1. Создайте [ресурс PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite):
 
    ```shell
    d8 k apply -f - <<EOF
@@ -197,7 +197,7 @@ DKP поддерживает интеграцию с Yandex Lockbox с помо�
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.viewer`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс GrafanaAdditionalDatasource:
+1. Создайте [ресурс GrafanaAdditionalDatasource](/modules/prometheus/cr.html#grafanaadditionaldatasource):
 
    ```yaml
    apiVersion: deckhouse.io/v1

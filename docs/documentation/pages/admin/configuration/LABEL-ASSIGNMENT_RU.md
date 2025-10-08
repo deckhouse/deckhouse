@@ -18,7 +18,7 @@ lang: ru
 
 ## Настройка автоматического назначения лейблов и аннотаций
 
-Включите модуль `namespace-configurator`:
+Включите [модуль `namespace-configurator`](/modules/namespace-configurator/):
 
 ```shell  
 d8 platform module enable namespace-configurator

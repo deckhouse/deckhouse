@@ -3,7 +3,7 @@ title: "Managing static routes and ip rules on cluster nodes"
 permalink: en/admin/configuration/network/other/static-routes.html
 ---
 
-In Deckhouse Kubernetes Platform, static-routing and ip rule management on cluster nodes is implemented using the [`static-routing-manager`](/modules/static-routing-manager/stable/) module.
+In Deckhouse Kubernetes Platform, static-routing and ip rule management on cluster nodes is implemented using the [`static-routing-manager`](/modules/static-routing-manager/) module.
 
 ## Configuration examples
 

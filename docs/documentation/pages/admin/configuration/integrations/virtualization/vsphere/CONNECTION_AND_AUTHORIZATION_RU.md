@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-authorization.html
+permalink: ru/admin/integrations/virtualization/vsphere/authorization.html
 lang: ru
 ---
 
@@ -79,7 +79,7 @@ DKP создаёт диски виртуальных машин с типом `e
 {% endalert %}
 
 {% alert %}
-DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
 ## Установка govc

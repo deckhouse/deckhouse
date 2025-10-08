@@ -17,7 +17,7 @@ without having to manually edit each one.
 
 ## Configuring automatic label and annotation assignment
 
-Enable the `namespace-configurator` module:
+Enable the [`namespace-configurator`](/modules/namespace-configurator/) module:
 
 ```shell  
 d8 platform module enable namespace-configurator

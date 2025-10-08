@@ -22,7 +22,7 @@ lang: ru
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Cоздайте ресурс NodeGroupConfiguration для переходной авторизации в `registry.deckhouse.ru`:
+1. Cоздайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -404,7 +404,7 @@ lang: ru
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Cоздайте ресурс NodeGroupConfiguration для переходной авторизации в `registry.deckhouse.ru`:
+1. Cоздайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -665,13 +665,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 platform edit cluster-configuration
    ```
 
-1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+1. Измените [параметр `kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
 
 1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
 
 1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
-1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+1. Подготовьте переменные с токеном лицензии и создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry-cse.deckhouse.ru`:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -766,7 +766,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует [модуль `cert-manager`](/modules/cert-manager/). Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) или [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
 
    Отобразить список модулей, которые не поддерживаются в DKP CSE и будут отключены, можно следующей командой:
 
@@ -797,7 +797,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k get modules
    ```
 
-1. Создайте NodeGroupConfiguration:
+1. Создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -898,7 +898,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в DKP CSE этот модуль по умолчанию выключен):
+   Если в выводе присутствуют поды [модуля `chrony`](/modules/chrony/), заново включите данный модуль (в DKP CSE этот модуль по умолчанию выключен):
 
    ```shell
    d8 platform module enable chrony
@@ -942,7 +942,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 ## Переключение DKP на CE/BE/SE/SE+/EE
 
 {% alert level="warning" %}
-При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
+При использовании [модуля `registry`](/modules/registry/) переключение между редакциями выполняется только в режиме `Unmanaged`.  
 Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/modules/registry/examples.html).
 {% endalert %}
 

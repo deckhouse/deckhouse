@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/private/dynamix/dynamix-authorization.html
+permalink: ru/admin/integrations/private/dynamix/authorization.html
 lang: ru
 ---
 
@@ -26,9 +26,9 @@ lang: ru
 Для интеграции Deckhouse Kubernetes Platform (DKP) с Dynamix необходимы:
 
 - доступ к API-контроллеру и SSO-контур Dynamix;
-- данные учётной записи (account) и параметры приложения (`appId` и `appSecret`);
+- данные учётной записи (account) и параметры приложения ([`appId`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appid) и [`appSecret`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appsecret));
 - размещённый в облаке cloud-образ операционной системы;
-- внешняя сеть (`externalNetwork`) и, при необходимости, параметры внутренней сети (CIDR, DNS);
+- внешняя сеть ([`externalNetwork`](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-externalnetwork)) и, при необходимости, параметры внутренней сети (CIDR, DNS);
 - сведения о хранилище (pool и storage endpoint);
 - публичный SSH-ключ для доступа к узлам кластера.
 

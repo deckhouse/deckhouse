@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/virtualization/vsphere/vsphere-layout.html
+permalink: en/admin/integrations/virtualization/vsphere/layout.html
 ---
 
 ## Standard
@@ -10,8 +10,8 @@ with full control over resources, networking, and storage.
 
 Key features:
 
-- Uses a vSphere Datacenter as a `region`.
-- Uses a vSphere Cluster as a `zone`.
+- Uses a vSphere Datacenter as a [`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region).
+- Uses a vSphere Cluster as a [`zone`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones).
 - Supports multiple zones and node placements across zones.
 - Supports using different datastores for disks and volumes.
 - Supports network connectivity including additional network isolation (for example, MetalLB + BGP).
@@ -62,7 +62,7 @@ zones:
   - ru-central1-b
 ```
 
-Required parameters:
+Required parameters for the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource:
 
 - `region`: Tag assigned to the Datacenter object.
 - `zoneTagCategory` and `regionTagCategory`: Tag categories used to identify regions and zones.
@@ -78,7 +78,7 @@ All nodes placed in different zones must have access to shared datastores with m
 ## List of required privileges
 
 {% alert level="info" %}
-Read [the documentation](vsphere-authorization.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
+Read [the documentation](authorization.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
 {% endalert %}
 
 **A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:**

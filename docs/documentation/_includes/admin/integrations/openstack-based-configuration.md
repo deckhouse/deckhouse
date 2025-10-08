@@ -119,7 +119,7 @@ This layout should be used if you want all nodes in the cluster to be directly a
   Thus, you cannot provision a LoadBalancer with the Floating IP.
   An internal LoadBalancer with the virtual IP in the public network is only accessible from cluster nodes.
 - Using this strategy, make sure to explicitly specify the name of the internal network in `additionalNetworks`
-  when creating an OpenStackInstanceClass in the cluster.
+  when creating an [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
 
 {% endalert %}
 
@@ -282,8 +282,8 @@ This layout can be useful if you need to merge a Kubernetes cluster with existin
 {% alert level="warning" %}
 This layout does not involve the management of SecurityGroups (it is assumed they were created beforehand).
 To configure security policies, you must explicitly specify both
-`additionalSecurityGroups` in the OpenStackClusterConfiguration for the masterNodeGroup and other nodeGroups,
-and `additionalSecurityGroups` when creating OpenStackInstanceClass in the cluster.
+`additionalSecurityGroups` in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) for the masterNodeGroup and other nodeGroups,
+and `additionalSecurityGroups` when creating [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
 {% endalert %}
 
 ![SimpleWithInternalNetwork layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
@@ -362,7 +362,7 @@ provider:
 ## Configuration
 
 Integration with {{ site.data.admin.cloud-types.types[page.cloud_type].name }} is performed
-using the OpenStackClusterConfiguration resource.
+using the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 It defines the configuration of the cloud cluster in {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 and is used by the cloud provider when the cluster control plane is hosted in the cloud.
 The DKP module responsible for the integration is automatically configured based on the selected layout.
@@ -386,7 +386,7 @@ which contains the specific configuration of the VMs.
 {% alert level="warning" %}
 When the module settings are changed, **existing Machine objects in the cluster are NOT recreated**
 (new Machine objects will use the updated parameters).
-The recreation only occurs if you modify the NodeGroup or the OpenStackInstanceClass parameters.
+The recreation only occurs if you modify the [NodeGroup](/modules/node-manager/cr.html#nodegroup) or the [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) parameters.
 {% endalert %}
 
 ### Configuration examples
@@ -465,7 +465,7 @@ To correctly detect client IP addresses, you must use a LoadBalancer that suppor
 
 #### Example: IngressNginxController
 
-The following is a simple configuration example for an IngressNginxController:
+The following is a simple configuration example for an [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -503,7 +503,7 @@ Only security groups that were pre-created in the cloud can be used.
 #### Assigning additional security groups to static and master nodes
 
 You can specify additional security groups either during cluster creation or in an existing cluster.
-In both cases, specify them in the OpenStackClusterConfiguration resource:
+In both cases, specify them in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource:
 
 - **For master nodes**: Under the `masterNodeGroup` section using the `additionalSecurityGroups` field.
 - **For static nodes**: Under the `nodeGroups` section of the corresponding node group configuration and also in the `additionalSecurityGroups` field.
@@ -513,7 +513,7 @@ The `additionalSecurityGroups` field is an array of strings representing the nam
 #### Assigning additional security groups to ephemeral nodes
 
 To assign additional security groups to ephemeral nodes,
-specify the `additionalSecurityGroups` parameter in all relevant OpenStackInstanceClass resources used by these nodes.
+specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resources used by these nodes.
 
 ### Uploading an image to {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 
@@ -666,7 +666,7 @@ while the persistent disk remains in the cloud even after the VM is deleted.
 
 #### rootDiskSize parameter
 
-The OpenStackInstanceClass resource includes a `rootDiskSize` parameter.
+The OpenStackInstanceClass resource includes a [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter.
 In {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, flavors may also define a disk size.
 
 The resulting disk type depends on the combination of the following parameters:
@@ -687,7 +687,7 @@ The resulting disk type depends on the combination of the following parameters:
 ##### Recommendations for master nodes and bastion with network-attached disks
 
 - Use a flavor with zero disk size.
-- Set `rootDiskSize` in the OpenStackInstanceClass resource.
+- Set [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) in the OpenStackInstanceClass resource.
 - Ensure the disk type is correct:
   - If specified in the OS image, it will be used.
   - If not specified, the type will be taken from [`volumeTypeMap`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
@@ -695,7 +695,7 @@ The resulting disk type depends on the combination of the following parameters:
 ##### Recommendations for ephemeral nodes with local disks
 
 - Use a flavor with a defined disk size.
-- Do not use the `rootDiskSize` parameter in OpenStackInstanceClass.
+- Do not use the [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter in OpenStackInstanceClass.
 - Ensure the disk type is correct:
   - If specified in the OS image, it will be used.
   - If not specified, the cloud provider's default disk type will be used.

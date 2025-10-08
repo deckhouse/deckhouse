@@ -1,6 +1,6 @@
 ---
 title: Integration with zVirt services
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-services.html
+permalink: en/admin/integrations/virtualization/zvirt/services.html
 ---
 
 {% alert level="info" %}
@@ -9,7 +9,7 @@ Interfaces and functionality may change in the future.
 {% endalert %}
 
 Deckhouse Kubernetes Platform supports integration with zVirt infrastructure,
-enabling the provisioning, management, and removal of virtual machines using definitions in the ZvirtInstanceClass resource.
+enabling the provisioning, management, and removal of virtual machines using definitions in the [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass) resource.
 
 ## Key features
 

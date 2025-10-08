@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/azure/azure-authorization.html
+permalink: en/admin/integrations/public/azure/authorization.html
 description: "Configure Azure connection and authorization for Deckhouse Kubernetes Platform. Service principal setup, credentials configuration, and Azure integration requirements for cloud deployment."
 ---
 
@@ -47,7 +47,7 @@ Follow these steps:
    }
    ```
 
-   Specify the output values in the AzureClusterConfiguration object:
+   Specify the output values in the [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) object:
 
    | Field           | Value from the output |
    |----------------|-----------------------------|

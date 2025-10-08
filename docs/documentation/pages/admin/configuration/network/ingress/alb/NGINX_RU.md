@@ -235,7 +235,7 @@ metallb:
 
 {% alert level="info" %}Доступно только в Enterprise Edition.{% endalert %}
 
-1. Включите модуль `metallb`:
+1. Включите [модуль `metallb`](/modules/metallb/):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -247,7 +247,7 @@ metallb:
      version: 2
    ```
 
-1. Создайте ресурс MetalLoadBalancerClass:
+1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -263,7 +263,7 @@ metallb:
      type: L2
    ```
 
-1. Создайте ресурс IngressNginxController:
+1. Создайте [ресурс IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
 
    ```yaml
    apiVersion: deckhouse.io/v1
