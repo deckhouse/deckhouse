@@ -22,9 +22,7 @@ type NodeInhibitorDecision struct {
 	Enable bool
 }
 
-// NodeObserver waits for the shutdown signal, checks whether the node
-// should keep the shutdown inhibitor active, and shares the decision with
-// other tasks.
+
 type NodeObserver struct {
 	NodeName                string
 	ShutdownSignalCh        <-chan struct{}

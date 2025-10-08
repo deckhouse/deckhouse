@@ -124,60 +124,36 @@ func (k *Kubectl) RemoveCordonAnnotation(nodeName string) ([]byte, error) {
 }
 
 func (k *Kubectl) GetNodeGroup(nodeName string) (string, error) {
-	out, err := k.getNodeGroup(nodeName)
+	n, err := k.getNode(nodeName)
 	if err != nil {
 		return "", err
 	}
-	raw := strings.TrimSpace(string(out))
-	ngName := strings.Trim(raw, `"'`)
-	ngName = strings.TrimSpace(ngName)
-	fmt.Printf("kubectl: node group value for node %q: %q\n", nodeName, ngName)
-	if ngName == "" || strings.EqualFold(ngName, "<no value>") {
+
+	ngName := strings.TrimSpace(n.Metadata.Labels[NodeGroupLabelKey])
+	fmt.Printf("kubectl: node %q label %q = %q\n", nodeName, NodeGroupLabelKey, ngName)
+	if ngName == "" {
 		fmt.Printf("kubectl: node %q is considered unmanaged (empty label)\n", nodeName)
 		return "", ErrNodeIsNotNgManaged
 	}
-	fmt.Printf("kubectl: node %q resolved node group %q\n", nodeName, ngName)
 
 	return ngName, nil
 }
 
-func (k *Kubectl) getNodeGroup(nodeName string) ([]byte, error) {
-	escapedKey := strings.NewReplacer(".", `\.`, "/", `\/`).Replace(NodeGroupLabelKey)
-	jsonPath := fmt.Sprintf("jsonpath='{.metadata.labels.%s}'", escapedKey)
-	cmd, cancel := k.cmd("get", "node", nodeName, "-o", jsonPath)
+func (k *Kubectl) getNode(nodeName string) (*Node, error) {
+	cmd, cancel := k.cmd("get", "node", nodeName, "-o", "json")
 	defer cancel()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("kubectl get node %s: %w (output: %s)", nodeName, err, strings.TrimSpace(string(out)))
 	}
-	return out, nil
-}
 
-func (k *Kubectl) GetNodesCountInNg(nodeGroupName string) (int32, error) {
-	ngJSON, err := k.getNodeGroupObject(nodeGroupName)
-	if err != nil {
-		return 0, err
+	var node Node
+	if err := json.Unmarshal(out, &node); err != nil {
+		return nil, fmt.Errorf("unmarshal node %s: %w", nodeName, err)
 	}
 
-	var ng NodeGroup
-	if err = json.Unmarshal(ngJSON, &ng); err != nil {
-		return 0, fmt.Errorf("unmarshal nodegroup %s: %w", nodeGroupName, err)
-	}
-
-	fmt.Printf("kubectl: nodegroup %q reported nodes=%d\n", nodeGroupName, ng.Status.Nodes)
-	return ng.Status.Nodes, nil
+	return &node, nil
 }
-
-func (k *Kubectl) getNodeGroupObject(nodeGroupName string) ([]byte, error) {
-	cmd, cancel := k.cmd("get", "nodegroup", nodeGroupName, "-o", "json")
-	defer cancel()
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("kubectl get nodegroup %s: %w (output: %s)", nodeGroupName, err, strings.TrimSpace(string(out)))
-	}
-	return out, nil
-}
-
 func (k *Kubectl) CountNodes() (int, error) {
 	cmd, cancel := k.cmd("get", "nodes", "-o", "json")
 	defer cancel()

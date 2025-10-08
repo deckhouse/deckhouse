@@ -17,3 +17,11 @@ type NodeGroupStatus struct {
 type NodeList struct {
 	Items []struct{} `json:"items"`
 }
+
+type Node struct {
+	Metadata NodeMetadata `json:"metadata"`
+}
+
+type NodeMetadata struct {
+	Labels map[string]string `json:"labels"`
+}
