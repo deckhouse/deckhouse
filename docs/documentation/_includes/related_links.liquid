@@ -13,7 +13,7 @@
 {%- endfor %}
 {%- assign page_related_module_reference = page_related_module_reference | sort: "module" %}
 {%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_conf' or item.type == 'global_crds'" %}
-{%- assign max_links = page.related_links_max | default: 999 %}
+{%- assign max_links = page.related_links_max | default: 5 %}
 {%- assign global_links_count = page_related_global_reference.size %}
 {%- assign module_links_count = page_related_module_reference.size %}
 {%- assign total_available = global_links_count | plus: module_links_count %}
