@@ -1,6 +1,6 @@
 ---
 title: Storage and load balancing
-permalink: en/admin/integrations/virtualization/vsphere/vsphere-storage.html
+permalink: en/admin/integrations/virtualization/vsphere/storage.html
 ---
 
 ## Storage

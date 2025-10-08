@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/yandex/yandex-authorization.html
+permalink: en/admin/integrations/public/yandex/authorization.html
 ---
 
 To allow Deckhouse Kubernetes Platform (DKP) to manage resources in Yandex Cloud, you need to:

@@ -1,6 +1,6 @@
 ---
 title: Интеграция с облаком Dynamix
-permalink: ru/admin/integrations/private/dynamix/dynamix-services.html
+permalink: ru/admin/integrations/private/dynamix/services.html
 lang: ru
 ---
 
@@ -31,7 +31,7 @@ spec:
   externalNetwork: extnet_vlan_1700
 ```
 
-На ресурс DynamixInstanceClass ссылается `CloudInstanceClass`, используемый модулем управления узлами ([`node-manager`](/modules/node-manager/)).
+На ресурс DynamixInstanceClass ссылается [CloudInstanceClass](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference), используемый модулем управления узлами ([`node-manager`](/modules/node-manager/)).
 
 ## Рекомендации
 

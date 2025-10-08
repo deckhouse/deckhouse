@@ -1,6 +1,6 @@
 ---
 title: Интеграция с службами Yandex Cloud
-permalink: ru/admin/integrations/public/yandex/yandex-services.html
+permalink: ru/admin/integrations/public/yandex/services.html
 lang: ru
 ---
 

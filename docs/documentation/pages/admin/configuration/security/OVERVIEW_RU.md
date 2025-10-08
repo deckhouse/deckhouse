@@ -28,7 +28,7 @@ search: security overview, security configuration, security management, platform
   - как просматривать результаты и вручную запускать повторную проверку.
 
 - Управление сертификатами:
-  - выпуск, продление и контроль TLS-сертификатов с помощью [встроенного инструмента `cert-manager`](/modules/cert-manager/);
+  - выпуск, продление и контроль TLS-сертификатов с помощью [модуля `cert-manager`](/modules/cert-manager/);
   - примеры использования Let’s Encrypt, HashiCorp Vault, самоподписанных и внешних CA;
   - поддержка видов валидации `HTTP-01` и `DNS-01`.
 

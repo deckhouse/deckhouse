@@ -1,6 +1,6 @@
 ---
 title: Integration with Yandex Cloud services
-permalink: en/admin/integrations/public/yandex/yandex-services.html
+permalink: en/admin/integrations/public/yandex/services.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports native integration with several Yandex Cloud services.

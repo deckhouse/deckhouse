@@ -1,6 +1,6 @@
 ---
 title: Integration with Huawei Cloud services
-permalink: en/admin/integrations/private/huaweicloud/huawei-services.html
+permalink: en/admin/integrations/private/huaweicloud/services.html
 ---
 
 Deckhouse Kubernetes Platform leverages Huawei Cloud's capabilities to operate Kubernetes clusters.
@@ -13,7 +13,7 @@ The following features are supported:
 ## Working with InstanceClass
 
 The [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource is used to define the parameters of virtual machines.
-It is referenced by [NodeGroup](/modules/node-manager/cr.html#nodegroup) and CloudInstanceClass.
+It is referenced by [NodeGroup](/modules/node-manager/cr.html#nodegroup) and [CloudInstanceClass](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 Example resource:
 

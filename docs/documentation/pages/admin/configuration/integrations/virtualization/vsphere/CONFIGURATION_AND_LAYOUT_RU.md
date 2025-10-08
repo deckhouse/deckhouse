@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-layout.html
+permalink: ru/admin/integrations/virtualization/vsphere/layout.html
 lang: ru
 ---
 
@@ -79,7 +79,7 @@ zones:
 ## Список необходимых привилегий
 
 {% alert level="info" %}
-О том, как создать и назначить роль пользователю, читайте [в документации](vsphere-authorization.html#создание-и-назначение-роли).
+О том, как создать и назначить роль пользователю, читайте [в документации](authorization.html#создание-и-назначение-роли).
 {% endalert %}
 
 **Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**

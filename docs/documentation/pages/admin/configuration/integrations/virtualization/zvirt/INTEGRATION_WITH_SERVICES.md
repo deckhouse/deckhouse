@@ -1,6 +1,6 @@
 ---
 title: Integration with zVirt services
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-services.html
+permalink: en/admin/integrations/virtualization/zvirt/services.html
 ---
 
 {% alert level="info" %}

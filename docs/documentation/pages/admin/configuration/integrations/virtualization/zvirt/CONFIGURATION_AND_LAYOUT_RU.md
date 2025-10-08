@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-layout.html
+permalink: ru/admin/integrations/virtualization/zvirt/layout.html
 lang: ru
 ---
 

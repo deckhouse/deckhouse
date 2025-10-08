@@ -1,6 +1,6 @@
 ---
 title: Storage and load balancing
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-storage.html
+permalink: en/admin/integrations/virtualization/zvirt/storage.html
 ---
 
 ## Storage

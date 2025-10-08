@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/public/amazon/amazon-layout.html
+permalink: ru/admin/integrations/public/amazon/layout.html
 lang: ru
 ---
 

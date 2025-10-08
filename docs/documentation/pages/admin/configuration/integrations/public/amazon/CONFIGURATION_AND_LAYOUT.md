@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/amazon/amazon-layout.html
+permalink: en/admin/integrations/public/amazon/layout.html
 ---
 
 This section describes cluster layouts in AWS infrastructure and their related parameters.

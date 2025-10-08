@@ -1,6 +1,6 @@
 ---
 title: Интеграция с службами Huawei Cloud
-permalink: ru/admin/integrations/private/huaweicloud/huawei-services.html
+permalink: ru/admin/integrations/private/huaweicloud/services.html
 lang: ru
 ---
 
@@ -12,7 +12,7 @@ Deckhouse Kubernetes Platform использует облачные возмож
 
 ## Работа с InstanceClass
 
-Для описания параметров виртуальных машин используется [ресурс HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass). На него ссылаются [NodeGroup](/modules/node-manager/cr.html#nodegroup) и CloudInstanceClass.
+Для описания параметров виртуальных машин используется [ресурс HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass). На него ссылаются [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [CloudInstanceClass](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 Пример ресурса:
 

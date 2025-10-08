@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/public/amazon/amazon-storage.html
+permalink: ru/admin/integrations/public/amazon/storage.html
 lang: ru
 ---
 

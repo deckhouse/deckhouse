@@ -1,6 +1,6 @@
 ---
 title: Интеграция со службами zVirt
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-services.html
+permalink: ru/admin/integrations/virtualization/zvirt/services.html
 lang: ru
 ---
 

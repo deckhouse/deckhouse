@@ -1,6 +1,6 @@
 ---
 title: Storage and load balancing
-permalink: en/admin/integrations/public/yandex/yandex-storage.html
+permalink: en/admin/integrations/public/yandex/storage.html
 ---
 
 This section covers additional aspects of Deckhouse Kubernetes Platform (DKP) integration with Yandex Cloud:

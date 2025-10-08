@@ -1,6 +1,6 @@
 ---
 title: Интеграция со службами VMware vSphere
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-services.html
+permalink: ru/admin/integrations/virtualization/vsphere/services.html
 lang: ru
 ---
 

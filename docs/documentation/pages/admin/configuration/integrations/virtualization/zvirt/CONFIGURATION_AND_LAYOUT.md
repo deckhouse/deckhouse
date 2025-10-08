@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-layout.html
+permalink: en/admin/integrations/virtualization/zvirt/layout.html
 ---
 
 ## Standard

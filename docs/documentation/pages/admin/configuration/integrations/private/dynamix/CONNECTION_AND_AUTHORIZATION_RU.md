@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/private/dynamix/dynamix-authorization.html
+permalink: ru/admin/integrations/private/dynamix/authorization.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/azure/azure-authorization.html
+permalink: ru/admin/integrations/public/azure/authorization.html
 lang: ru
 ---
 

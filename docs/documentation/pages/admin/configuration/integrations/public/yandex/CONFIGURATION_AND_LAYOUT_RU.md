@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/public/yandex/yandex-layout.html
+permalink: ru/admin/integrations/public/yandex/layout.html
 lang: ru
 ---
 

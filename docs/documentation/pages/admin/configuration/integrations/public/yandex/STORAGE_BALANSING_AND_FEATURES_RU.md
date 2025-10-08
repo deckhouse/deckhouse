@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/public/yandex/yandex-storage.html
+permalink: ru/admin/integrations/public/yandex/storage.html
 lang: ru
 ---
 

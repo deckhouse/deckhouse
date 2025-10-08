@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/virtualization/vsphere/vsphere-authorization.html
+permalink: en/admin/integrations/virtualization/vsphere/authorization.html
 ---
 
 ## Requirements

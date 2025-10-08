@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-storage.html
+permalink: ru/admin/integrations/virtualization/vsphere/storage.html
 lang: ru
 ---
 

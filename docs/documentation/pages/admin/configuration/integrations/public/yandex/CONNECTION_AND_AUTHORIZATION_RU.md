@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/yandex/yandex-authorization.html
+permalink: ru/admin/integrations/public/yandex/authorization.html
 lang: ru
 ---
 

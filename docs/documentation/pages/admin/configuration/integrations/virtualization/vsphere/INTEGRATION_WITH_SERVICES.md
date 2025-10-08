@@ -1,6 +1,6 @@
 ---
 title: Integration with VMware vSphere services
-permalink: en/admin/integrations/virtualization/vsphere/vsphere-services.html
+permalink: en/admin/integrations/virtualization/vsphere/services.html
 ---
 
 Deckhouse Kubernetes Platform integrates with VMware vSphere infrastructure and uses [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resources

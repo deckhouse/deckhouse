@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-authorization.html
+permalink: ru/admin/integrations/virtualization/vsphere/authorization.html
 lang: ru
 ---
 

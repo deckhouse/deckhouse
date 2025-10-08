@@ -1,6 +1,6 @@
 ---
 title: Storage and load balancing
-permalink: en/admin/integrations/public/amazon/amazon-storage.html
+permalink: en/admin/integrations/public/amazon/storage.html
 ---
 
 This section covers the following additional aspects of integrating Deckhouse Kubernetes Platform (DKP) with AWS:

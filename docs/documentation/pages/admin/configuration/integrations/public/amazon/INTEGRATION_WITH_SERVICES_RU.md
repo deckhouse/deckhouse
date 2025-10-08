@@ -1,6 +1,6 @@
 ---
 title: Интеграция с службами Amazon Web Services
-permalink: ru/admin/integrations/public/amazon/amazon-services.html
+permalink: ru/admin/integrations/public/amazon/services.html
 lang: ru
 ---
 
@@ -48,7 +48,7 @@ lang: ru
      - ecr:DescribeRepositories
    ```
 
-Параметр `additionalRolePolicies` позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DKP. Это особенно полезно, если требуется доступ к:
+Параметр [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DKP. Это особенно полезно, если требуется доступ к:
 
 - Amazon ECR;
 - Amazon S3;

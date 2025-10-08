@@ -1,6 +1,6 @@
 ---
 title: Integration with Amazon Web Services
-permalink: en/admin/integrations/public/amazon/amazon-services.html
+permalink: en/admin/integrations/public/amazon/services.html
 ---
 
 ## Working with Amazon Elastic Container Registry (ECR)
@@ -49,7 +49,7 @@ To allow cluster nodes to access private Amazon ECR repositories, follow these s
      - ecr:DescribeRepositories
    ```
 
-The `additionalRolePolicies` parameter lets you extend the set of IAM actions granted to EC2 instances managed by DKP.
+The [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) parameter lets you extend the set of IAM actions granted to EC2 instances managed by DKP.
 This is particularly useful if access to the following is required:
 
 - Amazon ECR

@@ -1,6 +1,6 @@
 ---
 title: Storage and load balancing
-permalink: en/admin/integrations/public/azure/azure-storage.html
+permalink: en/admin/integrations/public/azure/storage.html
 ---
 
 ## Storage
@@ -51,4 +51,4 @@ Additional features:
 - VNet peering can be configured, including with a bastion host or other VNets in the cloud.
 - Service Endpoints are supported.
   They provide secure and direct connections to Azure services without using public IPs.
-  For more details, refer to [Integration with Microsoft Azure services](./azure-services.html).
+  For more details, refer to [Integration with Microsoft Azure services](services.html).

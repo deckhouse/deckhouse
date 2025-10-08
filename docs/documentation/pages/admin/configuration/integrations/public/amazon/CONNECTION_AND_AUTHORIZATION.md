@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/amazon/amazon-authorization.html
+permalink: en/admin/integrations/public/amazon/authorization.html
 description: "Configure AWS connection and authorization for Deckhouse Kubernetes Platform. IAM roles, credentials setup, and AWS integration requirements for cloud deployment."
 ---
 

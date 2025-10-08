@@ -1,6 +1,6 @@
 ---
 title: Integration with Microsoft Azure services
-permalink: en/admin/integrations/public/azure/azure-services.html
+permalink: en/admin/integrations/public/azure/services.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) leverages Azure cloud features for full integration with Kubernetes.
@@ -12,7 +12,7 @@ When running a cluster on Azure, it automatically:
 - Updates node metadata to reflect the current configuration.
 - Provisions disks for nodes via CSI.
 - Connects the required CNI network (a simple bridge is used).
-- Makes [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) definitions available for virtual machines, which can be used later in [NodeGroup](/modules/node-manager/cr.html#nodegroup) configurations.
+- Makes [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) definitions available for virtual machines, which can be used later in [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) configurations.
 
 {% alert level="info" %}
 All outgoing traffic from the cluster comes through LoadBalancers.

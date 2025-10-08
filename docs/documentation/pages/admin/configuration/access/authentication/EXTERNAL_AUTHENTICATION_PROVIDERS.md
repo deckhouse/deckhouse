@@ -47,7 +47,7 @@ If the parameter is not specified, no group-based filtering will be applied.
 1. Enable the [`user-authn`](/modules/user-authn/) module (if it is currently disabled).
 
    This can be done either via the Deckhouse admin web interface or through the CLI.  
-   Below is an example using the CLI (requires [`kubectl`](https://kubernetes.io/docs/tasks/tools/#kubectl) configured to access the cluster):
+   Below is an example using the [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/) (requires kubectl context configured to access the cluster):
 
    Check the module status:
 

@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/yandex/yandex-layout.html
+permalink: en/admin/integrations/public/yandex/layout.html
 ---
 
 ## Layouts

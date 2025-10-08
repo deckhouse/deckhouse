@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-storage.html
+permalink: ru/admin/integrations/virtualization/zvirt/storage.html
 lang: ru
 ---
 
