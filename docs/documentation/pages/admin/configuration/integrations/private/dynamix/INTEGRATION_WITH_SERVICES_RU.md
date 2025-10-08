@@ -31,7 +31,7 @@ spec:
   externalNetwork: extnet_vlan_1700
 ```
 
-На ресурс DynamixInstanceClass ссылается [CloudInstanceClass](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference), используемый модулем управления узлами ([`node-manager`](/modules/node-manager/)).
+ На него ссылается [параметр cloudInstances.classReference](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup.
 
 ## Рекомендации
 

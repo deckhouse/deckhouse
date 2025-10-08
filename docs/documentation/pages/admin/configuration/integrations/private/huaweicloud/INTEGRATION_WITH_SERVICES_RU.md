@@ -8,11 +8,11 @@ Deckhouse Kubernetes Platform использует облачные возмож
 
 - управление ресурсами Huawei Cloud через `cloud-controller-manager`;
 - заказ дисков с использованием CSI-драйвера;
-- интеграция с модулем `node-manager`, позволяющая использовать [HuaweicloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) в [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- интеграция с модулем `node-manager`, позволяющая использовать [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) в [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
 
 ## Работа с InstanceClass
 
-Для описания параметров виртуальных машин используется [ресурс HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass). На него ссылаются [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [CloudInstanceClass](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference).
+Для описания параметров виртуальных машин используется [ресурс HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass). На него ссылается [параметр cloudInstances.classReference](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup.
 
 Пример ресурса:
 
