@@ -13,19 +13,15 @@
 {%- endfor %}
 {%- assign page_related_module_reference = page_related_module_reference | sort: "module" %}
 {%- assign page_related_global_reference = page.related_links | where_exp: "item", "item.type == 'global_conf' or item.type == 'global_crds'" %}
-{% if page_related_module_reference.size > 0 or page_related_global_reference.size > 0 %}
+{%- assign max_links = page.related_links_max | default: 999 %}
+{%- assign all_display_links = page_related_global_reference | concat: page_related_module_reference %}
+{%- assign display_links = all_display_links | slice: 0, max_links %}
+{% if display_links.size > 0 %}
   {%- alert level="info" %}
 {{ site.data.i18n.common['related_reference_and_documentation_links'][page.lang] }}:
-  {% if page_related_global_reference.size > 0 %}
-    {%- for link in page_related_global_reference %}
+  {%- for link in display_links %}
 - [{{ link.title }}]({{ link.url }})
-    {%- endfor %}
-  {%- endif %}
-  {% if page_related_module_reference.size > 0 %}
-   {%- for link in page_related_module_reference %}
-- [{{ link.title }}]({{ link.url }})
-    {%- endfor %}
-  {%- endif %}
+  {%- endfor %}
   {%- endalert %}
 {%- endif %}
 {%- endif %}
