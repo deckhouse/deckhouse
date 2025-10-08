@@ -40,7 +40,7 @@
 
 ### Обратите внимание
 
-- Prometheus заменён на Deckhouse Prom++. Если вы хотите продолжать использовать Prometheus, **до обновления платформы** явно выключите модуль `prompp` командой `d8 platform module disable prompp`.
+- Prometheus заменён на Deckhouse Prom++. Если вы хотите продолжать использовать Prometheus, **до обновления платформы** явно выключите модуль `prompp` командой `d8 system module disable prompp`.
 
 - Добавлена поддержка Kubernetes 1.33 и прекращена поддержка Kubernetes 1.28. В будущих релизах DKP поддержка Kubernetes 1.29 будет прекращена. Версия Kubernetes используемая по умолчанию (параметр [`kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/installing/configuration.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`) изменена на [1.31](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/supported_versions.html#kubernetes).
 
@@ -58,7 +58,7 @@
 
 - Добавлена поддержка GPU на узлах. Доступно управление тремя режимами разделения ресурсов GPU: `Exclusive` (без разделения), `TimeSlicing` (разделение по времени), `MIG` (разделение одного GPU на несколько экземпляров). Для управления режимом разделения ресурсов GPU используется секция параметров [spec.gpu](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) в NodeGroup. Использование GPU на узле возможно после установки NVIDIA Container Toolkit и драйвера GPU.
 
-- При включении модуля (`d8 platform module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
+- При включении модуля (`d8 system module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
 
 - Улучшена обработка ошибок конфигурации модулей. Теперь ошибки при работе модуля не блокируют работу DKP, а отображаются в статусах объектов Module и ModuleRelease.
 

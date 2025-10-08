@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
