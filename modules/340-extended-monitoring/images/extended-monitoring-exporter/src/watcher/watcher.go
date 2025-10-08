@@ -62,6 +62,7 @@ func (w *Watcher) updateNode(node *v1.Node) {
 		node.Name,
 	)
 	log.Printf("[NODE UPDATE] %s", node.Name)
+	met.UpdateIsPopulated()
 }
 
 func (w *Watcher) deleteNode(node *v1.Node) {
@@ -71,6 +72,7 @@ func (w *Watcher) deleteNode(node *v1.Node) {
 	}
 	log.Printf("[NODE DELETE] %s", node.Name)
 	met.UpdateLastObserved()
+	met.UpdateIsPopulated()
 }
 
 // ---------------- Namespace Watcher ----------------

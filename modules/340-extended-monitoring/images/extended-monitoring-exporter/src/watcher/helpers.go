@@ -15,9 +15,10 @@ package watcher
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	met "extended-monitoring/metrics"
 
@@ -50,11 +51,14 @@ func runInformer[T any](
 	delete func(*T),
 	name string,
 ) {
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { update(obj.(*T)) },
 		UpdateFunc: func(_, obj interface{}) { update(obj.(*T)) },
 		DeleteFunc: func(obj interface{}) { delete(obj.(*T)) },
-	})
+	}); err != nil {
+		log.Printf("[%s] AddEventHandler failed: %v", name, err)
+		return
+	}
 
 	go informer.Run(ctx.Done())
 	cache.WaitForCacheSync(ctx.Done(), informer.HasSynced)

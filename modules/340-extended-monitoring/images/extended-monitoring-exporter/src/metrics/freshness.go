@@ -20,8 +20,9 @@ import (
 
 var (
 	lastObservedTime time.Time
-	lastObservedMu   sync.RWMutex
+	mu               sync.RWMutex
 	timeOutHealthz   = 15 * time.Minute
+	isPopulated      = false
 )
 
 func init() {
@@ -29,13 +30,25 @@ func init() {
 }
 
 func UpdateLastObserved() {
-	lastObservedMu.Lock()
+	mu.Lock()
 	lastObservedTime = time.Now()
-	lastObservedMu.Unlock()
+	mu.Unlock()
 }
 
 func GetLastObserved() time.Time {
-	lastObservedMu.RLock()
-	defer lastObservedMu.RUnlock()
+	mu.RLock()
+	defer mu.RUnlock()
 	return lastObservedTime
+}
+
+func UpdateIsPopulated() {
+	mu.Lock()
+	isPopulated = true
+	mu.Unlock()
+}
+
+func GetIsPopulated() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return isPopulated
 }

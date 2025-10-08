@@ -179,10 +179,18 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
+		if !GetIsPopulated() {
+			http.Error(w, "metrics not populated", http.StatusBadRequest)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/startup", func(w http.ResponseWriter, _ *http.Request) {
+		if !GetIsPopulated() {
+			http.Error(w, "metrics not populated", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
