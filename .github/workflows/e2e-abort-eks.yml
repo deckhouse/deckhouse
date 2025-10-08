@@ -258,7 +258,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -276,7 +275,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -582,7 +585,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -600,7 +602,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -906,7 +912,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -924,7 +929,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -1230,7 +1239,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1248,7 +1256,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -1554,7 +1566,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1572,7 +1583,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -1878,7 +1893,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1896,7 +1910,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -2202,7 +2220,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2220,7 +2237,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -2526,7 +2547,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2544,7 +2564,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -2850,7 +2874,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2868,7 +2891,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -3174,7 +3201,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -3192,7 +3218,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -3498,7 +3528,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -3516,7 +3545,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then
@@ -3822,7 +3855,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -3840,7 +3872,11 @@ jobs:
           arrPath=(${INSTALL_IMAGE_PATH//:/ })
           DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+            BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          else
+            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          fi
           TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 
           if [ "${MULTIMASTER}" == true ] ; then

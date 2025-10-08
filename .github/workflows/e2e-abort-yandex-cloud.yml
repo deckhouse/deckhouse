@@ -258,7 +258,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -556,7 +555,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -854,7 +852,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1152,7 +1149,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1450,7 +1446,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -1748,7 +1743,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2046,7 +2040,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2344,7 +2337,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2642,7 +2634,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -2940,7 +2931,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -3238,7 +3228,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
@@ -3536,7 +3525,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          echo "INSTALL_IMAGE_PATH = $INSTALL_IMAGE_PATH"  # TODO debug
           if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
             DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
