@@ -365,8 +365,10 @@ function prepare_environment() {
         env VCD_ORG="$LAYOUT_VCD_ORG" \
         envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
-        cp $cwd/configuration.yaml /tmp/configuration.yaml #TODO debug
-        cp $cwd/resources.yaml /tmp/resources.yaml         #TODO debug
+    echo "configuration.yaml"
+    echo "$(cat $cwd/configuration.yaml | base64)" #TODO debug
+    echo "resources.yaml"
+    echo "$(cat $cwd/resources.yaml | base64)"     #TODO debug
 
     ssh_user="ubuntu"
     ;;
