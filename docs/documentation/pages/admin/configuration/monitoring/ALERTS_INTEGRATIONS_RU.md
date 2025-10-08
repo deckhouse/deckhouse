@@ -240,7 +240,7 @@ stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-Разверните кастомный ресурс `CustomAlertManager`:
+Разверните [кастомный ресурс CustomAlertManager](/modules/prometheus/cr.html#customalertmanager):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -348,7 +348,7 @@ data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
 
-Измените значения в примере ресурса CustomAlertManager в соответствии с актуальными для вашей инфраструктуры значениями и примените его:
+Измените значения в примере [ресурса CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) в соответствии с актуальными для вашей инфраструктуры значениями и примените его:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

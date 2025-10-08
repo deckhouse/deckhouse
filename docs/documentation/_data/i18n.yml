@@ -280,6 +280,9 @@ common:
   module_x_documentation:
     en: Module `XXXX` documentation
     ru: Документация модуля `XXXX`
+  module_x_cluster_configuration:
+    en: Module `XXXX` provider configuration
+    ru: Настройки провайдера модуля `XXXX`
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли

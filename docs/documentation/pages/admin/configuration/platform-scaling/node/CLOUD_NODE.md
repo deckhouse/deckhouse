@@ -104,7 +104,7 @@ In Deckhouse Kubernetes Platform (DKP), node group autoscaling is performed base
 
 Autoscaling is triggered only when there are Pending pods that cannot be scheduled on existing nodes due to insufficient resources (e.g., CPU or memory). In this case, `Cluster Autoscaler` attempts to add nodes based on the NodeGroup configuration.
 
-Key scaling parameters are defined in the `cloudInstances` section of the NodeGroup resource:
+Key scaling parameters are defined in the [`cloudInstances`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances) section of the NodeGroup resource:
 
 - `minPerZone`: The minimum number of virtual machines per zone. This number is always maintained, even with no workload.
 - `maxPerZone`: The maximum number of nodes that can be created per zone. This defines the upper scaling limit.

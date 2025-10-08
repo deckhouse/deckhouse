@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/azure/azure-layout.html
+permalink: en/admin/integrations/public/azure/layout.html
 ---
 
 This section describes the cluster deployment layout in Microsoft Azure infrastructure and the associated parameters.

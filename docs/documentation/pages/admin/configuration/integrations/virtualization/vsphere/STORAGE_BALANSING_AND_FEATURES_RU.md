@@ -1,6 +1,6 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-storage.html
+permalink: ru/admin/integrations/virtualization/vsphere/storage.html
 lang: ru
 ---
 
@@ -14,8 +14,8 @@ lang: ru
 Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, тегированных как `zone`.  
 Можно указать:
 
-- имя StorageClass по умолчанию (`default`);
-- исключения через `exclude` — список имен или шаблонов StorageClass, которые не нужно создавать.
+- имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
+- исключения через [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) — список имен или шаблонов StorageClass, которые не нужно создавать.
 
 Пример настройки через ModuleConfig:
 
@@ -66,7 +66,7 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 
 ## CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью параметра `compatibilityFlag`.
+Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью [параметра `compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
 
 ## Важная информация об увеличении размера PVC
 

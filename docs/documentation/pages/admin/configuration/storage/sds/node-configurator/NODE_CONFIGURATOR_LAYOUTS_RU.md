@@ -123,7 +123,7 @@ lvchange -an <VG_or_LV_NAME>
 
 1. Добавьте подготовленный узел в кластер Deckhouse.
 
-   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
+   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей [`sds-replicated-volume`](/modules/sds-replicated-volume/) или [`sds-local-volume`](/modules/sds-local-volume/), то [агент `sds‑node‑configurator`](/modules/sds-node-configurator/) обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Его можно использовать в модулях [`sds‑local‑volume`](/modules/sds-local-volume/) и [`sds‑replicated‑volume`](/modules/sds-replicated-volume/).
 
 #### Пример настройки модулей SDS (одинаковые диски, «Полное зеркало»)
 
@@ -147,7 +147,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
-Чтобы сконфигурировать `sds-local-volume` в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
+Чтобы сконфигурировать [`sds-local-volume`](/modules/sds-local-volume/) в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -169,10 +169,10 @@ EOF
 
 ##### Настройка модуля sds-replicated-volume (одинаковые диски, «Полное зеркало»)
 
-Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
+Чтобы настроить [модуль `sds-replicated-volume`](/modules/sds-replicated-volume/) по сценарию «Полное зеркало», выполните следующее:
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы VG `main` использовалась на всех узлах в модуле `sds-replicated-volume`:
+   чтобы VG `main` использовалась на всех узлах в [модуле `sds-replicated-volume`](/modules/sds-replicated-volume/):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -266,10 +266,10 @@ EOF
 
 1. Добавьте подготовленный узел в кластер Deckhouse.
 
-   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`,
-   то на этом узле запустится агент модуля `sds-node-configurator`,
+   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей [`sds-replicated-volume`](/modules/sds-replicated-volume/) или [`sds-local-volume`](/modules/sds-local-volume/),
+   то на этом узле запустится агент [модуля `sds-node-configurator`](/modules/sds-node-configurator/),
    который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) в кластер Deckhouse.
-   Дальше ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
+   Дальше ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях [`sds-replicated-volume`](/modules/sds-replicated-volume/) или [`sds-local-volume`](/modules/sds-local-volume/).
 
 #### Пример настройки модулей SDS (одинаковые диски, «Частичное зеркало»)
 
@@ -298,8 +298,8 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
-и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `main-safe`:
+Чтобы настроить [модуль `sds-local-volume`](/modules/sds-local-volume/) по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в [модуле `sds-local-volume`](/modules/sds-local-volume/) использовалась только VG `main-safe`:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -321,7 +321,7 @@ EOF
 
 ##### Настройка модуля sds-replicated-volume (одинаковые диски, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
+Чтобы настроить [модуль `sds-replicated-volume`](/modules/sds-replicated-volume/) по сценарию «Частичное зеркало», выполните следующее:
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`
@@ -343,7 +343,7 @@ EOF
    ```
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
+   чтобы на всех узлах в [модуле `sds-replicated-volume`](/modules/sds-replicated-volume/) в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `main-unsafe`:
 
    ```shell
@@ -476,7 +476,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Полное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+Чтобы настроить [модуль `sds-local-volume`](/modules/sds-local-volume/) по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
 и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-local-volume`:
 
 ```shell
@@ -509,7 +509,7 @@ EOF
 
 ##### Настройка модуля sds-replicated-volume (комбинированное хранилище, «Полное зеркало»)
 
-Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
+Чтобы настроить [модуль `sds-replicated-volume`](/modules/sds-replicated-volume/) по сценарию «Полное зеркало», выполните следующее:
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-replicated-volume`:
@@ -644,7 +644,7 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
+Чтобы настроить [модуль `sds-local-volume`](/modules/sds-local-volume/) по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
 и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `<vg-name>-safe`:
 
 ```shell
@@ -677,7 +677,7 @@ EOF
 
 ##### Настройка модуля sds-replicated-volume (комбинированное хранилище, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
+Чтобы настроить [модуль `sds-replicated-volume`](/modules/sds-replicated-volume/) по сценарию «Частичное зеркало», выполните следующее:
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`

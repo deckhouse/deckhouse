@@ -1,17 +1,17 @@
 ---
 title: Хранилище и балансировка
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-storage.html
+permalink: ru/admin/integrations/virtualization/zvirt/storage.html
 lang: ru
 ---
 
 ## Хранилище
 
-В кластере, размещённом в инфраструктуре zVirt, используются хранилища (Storage Domain), доступные в пределах заданного `clusterID`. Все диски виртуальных машин создаются внутри указанного хранилища.
+В кластере, размещённом в инфраструктуре zVirt, используются хранилища (Storage Domain), доступные в пределах заданного [`clusterID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-clusterid). Все диски виртуальных машин создаются внутри указанного хранилища.
 
 ### Требования
 
-- Указанный в конфигурации `storageDomainID` должен быть доступен для `clusterID`, заданного в ZvirtClusterConfiguration;
-- Диск будет создан на основе шаблона (`template`) и размещён в этом домене хранения;
+- Указанный в конфигурации [`storageDomainID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-masternodegroup-instanceclass-storagedomainid) должен быть доступен для `clusterID`, заданного в [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration);
+- Диск будет создан на основе шаблона ([`template`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-masternodegroup-instanceclass-template)) и размещён в этом домене хранения;
 - При заказе PersistentVolume используются root-диски машин — отдельные PVC в zVirt пока не поддерживаются.
 
 ### Конфигурация

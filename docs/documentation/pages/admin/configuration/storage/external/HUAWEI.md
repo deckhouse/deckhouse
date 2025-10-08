@@ -23,7 +23,7 @@ Note that all commands must be run on a machine that has administrator access to
 
 ### Enabling the module
 
-To support Huawei Dorado storage systems, enable the `csi-huawei` module. This will ensure that all cluster nodes have:
+To support Huawei Dorado storage systems, enable the [`csi-huawei`](/modules/csi-huawei/) module. This will ensure that all cluster nodes have:
 
 - Registration of the CSI driver.
 - Launch of service pods for the `csi-huawei` components.

@@ -19,7 +19,7 @@ Prometheus collects metrics and executes rules:
 
 ## How does Prometheus work?
 
-Prometheus is installed by the `prometheus-operator` module of DKP, which performs the following functions:
+Prometheus is installed by the [`prometheus`](/modules/prometheus/) module of DKP, which performs the following functions:
 - Defines the following custom resources:
   - `Prometheus`: Defines the *Prometheus* installation (cluster).
   - `ServiceMonitor`: Defines how to collect metrics from services.

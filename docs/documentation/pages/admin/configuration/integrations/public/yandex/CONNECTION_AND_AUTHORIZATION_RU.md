@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/yandex/yandex-authorization.html
+permalink: ru/admin/integrations/public/yandex/authorization.html
 lang: ru
 ---
 
@@ -90,7 +90,7 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 
 ## Резервирование публичного IP
 
-Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в `externalIPAddresses`, `natInstanceExternalAddress` или для bastion-хоста), выполните команду:
+Если используется схема размещения WithoutNAT или WithNATInstance, и требуется фиксированный внешний IP-адрес (например, для указания в [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress) или для bastion-хоста), выполните команду:
 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a

@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/virtualization/dvp/dvp-authorization.html
+permalink: ru/admin/integrations/virtualization/dvp/authorization.html
 lang: ru
 ---
 

@@ -11,9 +11,9 @@ lang: ru
 
 ## Режимы работы с внутренним registry
 
-Модуль `registry`, реализующий внутреннее хранилище, работает в следующих режимах:
+[Модуль `registry`](/modules/registry/), реализующий внутреннее хранилище, работает в следующих режимах:
 
-- `Direct` — работа с использованием внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/registry-direct-mode.html).
+- `Direct` — работа с использованием внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html). Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/registry-direct-mode.html).
 - `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется по адресу, который можно [задать при установке кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или [изменить в развернутом кластере](../registry/third-party.html).
 
 {% alert level="info" %}
@@ -22,7 +22,7 @@ lang: ru
 
 ## Ограничения по работе с внутренним registry
 
-Работа с внутренним registry с помощью модуля `registry` имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
+Работа с внутренним registry с помощью [модуля `registry`](/modules/registry/) имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
 
 ### Ограничения при установке кластера
 
@@ -30,9 +30,9 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
 
 ### Ограничения по условиям работы
 
-Модуль `registry`, реализующий возможность использования внутреннего container registry, работает при соблюдении следующих условий:
+[Модуль `registry`](/modules/registry/), реализующий возможность использования внутреннего container registry, работает при соблюдении следующих условий:
 
-- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - Кластер полностью управляется DKP. В Managed Kubernetes кластерах он работать не будет.
 
 ### Ограничения по переключению режимов
@@ -82,7 +82,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Убедитесь, что модуль `registry` включен и работает. Для этого выполните следующую команду:
+1. Убедитесь, что [модуль `registry`](/modules/registry/) включен и работает. Для этого выполните следующую команду:
 
    ```bash
    d8 k get module registry -o wide
@@ -95,7 +95,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
    registry   38     ...  Ready   True                         True
    ```
 
-1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
+1. Установите настройки режима `Direct` в [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html). Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
 
    Пример конфигурации:
 
@@ -169,7 +169,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Убедитесь, что модуль `registry` запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
+1. Убедитесь, что [модуль `registry`](/modules/registry/) запущен в режиме `Direct`, и статус переключения в режим `Direct` имеет значение `Ready`. Проверить состояние можно через секрет `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
    conditions:
@@ -184,7 +184,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
    target_mode: Direct
    ```
 
-1. Установите настройки режима `Unmanaged` в ModuleConfig `deckhouse`:
+1. Установите настройки режима `Unmanaged` в [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

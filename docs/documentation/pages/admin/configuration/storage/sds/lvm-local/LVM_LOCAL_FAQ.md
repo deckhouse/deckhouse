@@ -5,7 +5,7 @@ permalink: en/admin/configuration/storage/sds/lvm-local-faq.html
 
 ## Selecting specific nodes for module usage
 
-To restrict the module's usage to specific cluster nodes, you need to set labels in the `nodeSelector` field in the module settings.
+To restrict the module's usage to specific cluster nodes, you need to set labels in the [`nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) field in the module settings.
 
 To display and edit the module settings, execute the command:
 
@@ -68,7 +68,7 @@ If the Pod is absent, verify that all the labels specified in the module setting
 
 ## Removing a node from the module management
 
-To remove a node from module management, you need to delete the labels set in the `nodeSelector` field in the `sds-local-volume module settings`.
+To remove a node from module management, you need to delete the labels set in the [`nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) field in the `sds-local-volume` module settings.
 
 To check the current labels, execute the command:
 
@@ -182,7 +182,7 @@ If after removing the labels from the node the `sds-local-volume-csi-node` Pod c
 
 ## Absence of component service Pods on the desired node
 
-The issue may be related to incorrectly set labels. The nodes used by the module are determined by the labels specified in the module settings in the `nodeSelector` field. To view the current labels, run:
+The issue may be related to incorrectly set labels. The nodes used by the module are determined by the labels specified in the module settings in the [`nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) field. To view the current labels, run:
 
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -308,7 +308,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 
 You can read more about snapshots and associated resources in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
 
-1. Enable the `snapshot-controller` module:
+1. Enable the [`snapshot-controller`](/modules/snapshot-controller/) module:
 
    ```shell
    d8 k apply -f -<<EOF

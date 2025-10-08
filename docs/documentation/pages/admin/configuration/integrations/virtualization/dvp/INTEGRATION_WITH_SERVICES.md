@@ -1,6 +1,6 @@
 ---
 title: Integration with DVP
-permalink: en/admin/integrations/virtualization/dvp/dvp-services.html
+permalink: en/admin/integrations/virtualization/dvp/services.html
 ---
 
 Deckhouse Kubernetes Platform integrates with the DVP infrastructure and uses [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resources to define the characteristics of virtual machines created as part of the cluster.

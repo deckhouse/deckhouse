@@ -1,6 +1,6 @@
 ---
-title: Интеграция с службами Amazon Web Services
-permalink: ru/admin/integrations/public/amazon/amazon-services.html
+title: Интеграция со службами Amazon Web Services
+permalink: ru/admin/integrations/public/amazon/services.html
 lang: ru
 ---
 
@@ -39,7 +39,7 @@ lang: ru
 
 1. Настройте эту политику в AWS Console: Amazon ECR → Private registry → Repositories → требуемый репозиторий → Permissions.
 
-1. Добавьте `ecr:GetAuthorizationToken` в `additionalRolePolicies` в AWSClusterConfiguration, чтобы узлы могли автоматически получать токен доступа к образам:
+1. Добавьте `ecr:GetAuthorizationToken` в [`additionalRolePolicies`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) в AWSClusterConfiguration, чтобы узлы могли автоматически получать токен доступа к образам:
 
    ```yaml
    additionalRolePolicies:
@@ -48,7 +48,7 @@ lang: ru
      - ecr:DescribeRepositories
    ```
 
-Параметр `additionalRolePolicies` позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DKP. Это особенно полезно, если требуется доступ к:
+Параметр [additionalRolePolicies](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) позволяет расширить набор IAM-действий, назначаемых EC2-инстансам, управляемым DKP. Это особенно полезно, если требуется доступ к:
 
 - Amazon ECR;
 - Amazon S3;

@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/yandex/yandex-authorization.html
+permalink: en/admin/integrations/public/yandex/authorization.html
 ---
 
 To allow Deckhouse Kubernetes Platform (DKP) to manage resources in Yandex Cloud, you need to:
@@ -93,7 +93,7 @@ Increase quotas via the Yandex Cloud Console if necessary.
 ## Reserving a public IP
 
 If you are using the WithoutNAT or WithNATInstance deployment layout and need a fixed external IP address
-(for example, to use in `externalIPAddresses`, `natInstanceExternalAddress`, or a bastion host), run the following command:
+(for example, to use in [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalipaddresses), [`natInstanceExternalAddress`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-natinstanceexternaladdress), or a bastion host), run the following command:
 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a

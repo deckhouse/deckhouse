@@ -25,7 +25,7 @@ DKP administrators can configure log collection and delivery using three custom 
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination): Defines log storage parameters.
 
 Based on these resources, a *pipeline* is formed, which is used in DKP to read logs
-and further work with them using the `log-shipper` module.
+and further work with them using the [`log-shipper`](/modules/log-shipper/) module.
 A complete list of `log-shipper` module settings is available in the [separate documentation section](/modules/log-shipper/configuration.html).
 
 ## Configuring log collection and delivery
@@ -35,7 +35,7 @@ where logs from all cluster pods are sent to Elasticsearch-based storage.
 
 To configure, follow these steps:
 
-1. Enable the `log-shipper` module using the following command:
+1. Enable the [`log-shipper`](/modules/log-shipper/) module using the following command:
 
    ```shell
    d8 platform module enable log-shipper
@@ -195,7 +195,7 @@ spec:
 
 {% alert level="info" %}
 `destination` does not support pod labels for indexing.
-To add the required labels, use the `extraLabels` option:
+To add the required labels, use the [`extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels) option:
 
 ```yaml
 extraLabels:
@@ -673,7 +673,7 @@ spec:
 
 ### Enabling debug logs for the log-shipper agent
 
-To enable debug logs for the `log-shipper` agent on nodes with information about HTTP requests, connection reuse,
+To enable debug logs for the [`log-shipper`](/modules/log-shipper/) agent on nodes with information about HTTP requests, connection reuse,
 tracing, and other data, enable the [`debug` parameter](/modules/log-shipper/configuration.html#parameters-debug) in the `log-shipper` module configuration.
 
 Example module configuration:
@@ -780,7 +780,7 @@ del(.test2)
 
 ### Adding support for new source or sink
 
-The `log-shipper` module in DKP is built based on Vector with a limited set of [cargo features](https://doc.rust-lang.org/cargo/reference/features.html),
+The [`log-shipper`](/modules/log-shipper/) module in DKP is built based on Vector with a limited set of [cargo features](https://doc.rust-lang.org/cargo/reference/features.html),
 to minimize the size of the executable file and speed up the build.
 
 To view the complete list of supported features, run the `vector list` command.
