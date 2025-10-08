@@ -4,36 +4,36 @@ index 48d5dff..1f0012d 100644
 +++ b/go.mod
 @@ -1,8 +1,8 @@
  module github.com/aquasecurity/k8s-node-collector
- 
+
 -go 1.22.0
 +go 1.24.0
- 
+
 -toolchain go1.22.4
 +toolchain go1.24.5
- 
+
  require (
-        github.com/Masterminds/semver v1.5.0
+ 	github.com/Masterminds/semver v1.5.0
 @@ -53,14 +53,13 @@ require (
-        github.com/spf13/pflag v1.0.5 // indirect
-        github.com/xlab/treeprint v1.2.0 // indirect
-        go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
--       golang.org/x/net v0.23.0 // indirect
--       golang.org/x/oauth2 v0.10.0 // indirect
--       golang.org/x/sync v0.6.0 // indirect
--       golang.org/x/sys v0.18.0 // indirect
--       golang.org/x/term v0.18.0 // indirect
--       golang.org/x/text v0.14.0 // indirect
-+       golang.org/x/net v0.38.0 // indirect
-+       golang.org/x/oauth2 v0.31.0 // indirect
-+       golang.org/x/sync v0.12.0 // indirect
-+       golang.org/x/sys v0.31.0 // indirect
-+       golang.org/x/term v0.30.0 // indirect
-+       golang.org/x/text v0.23.0 // indirect
-        golang.org/x/time v0.3.0 // indirect
--       google.golang.org/appengine v1.6.7 // indirect
-        google.golang.org/protobuf v1.33.0 // indirect
-        gopkg.in/inf.v0 v0.9.1 // indirect
-        gopkg.in/yaml.v2 v2.4.0 // indirect
+ 	github.com/spf13/pflag v1.0.5 // indirect
+ 	github.com/xlab/treeprint v1.2.0 // indirect
+ 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
+-	golang.org/x/net v0.23.0 // indirect
+-	golang.org/x/oauth2 v0.10.0 // indirect
+-	golang.org/x/sync v0.6.0 // indirect
+-	golang.org/x/sys v0.18.0 // indirect
+-	golang.org/x/term v0.18.0 // indirect
+-	golang.org/x/text v0.14.0 // indirect
++	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/oauth2 v0.31.0 // indirect
++	golang.org/x/sync v0.12.0 // indirect
++	golang.org/x/sys v0.31.0 // indirect
++	golang.org/x/term v0.30.0 // indirect
++	golang.org/x/text v0.23.0 // indirect
+ 	golang.org/x/time v0.3.0 // indirect
+-	google.golang.org/appengine v1.6.7 // indirect
+ 	google.golang.org/protobuf v1.33.0 // indirect
+ 	gopkg.in/inf.v0 v0.9.1 // indirect
+ 	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/go.sum b/go.sum
 index b2e2125..ce2daab 100644
 --- a/go.sum
@@ -117,4 +117,3 @@ index b2e2125..ce2daab 100644
  google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
  google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
  google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013/go.mod h1:NbSheEEYHJ7i3ixzK3sjbqSGDJWnxyFXZblF3eUsNvo=
- 
