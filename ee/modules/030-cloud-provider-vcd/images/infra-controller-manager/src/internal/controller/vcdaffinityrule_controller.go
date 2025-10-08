@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -76,7 +78,12 @@ func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 
 		for _, item := range vcdAffinityRulesList.Items {
-			if satisfiesNodeSelector(node, item.Spec.NodeLabelSelector) {
+			nodeLabelSelector, err := metav1.LabelSelectorAsSelector(&item.Spec.NodeLabelSelector)
+			if err != nil {
+				continue
+			}
+
+			if satisfiesNodeSelector(node, nodeLabelSelector) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: client.ObjectKey{
 						Namespace: item.Namespace,
@@ -108,14 +115,9 @@ func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func satisfiesNodeSelector(node *corev1.Node, nodeSelector map[string]string) bool {
+func satisfiesNodeSelector(node *corev1.Node, nodeSelector labels.Selector) bool {
 	nodeLabels := node.GetLabels()
-	for key, value := range nodeSelector {
-		if nodeLabels[key] != value {
-			return false
-		}
-	}
-	return true
+	return nodeSelector.Matches(labels.Set(nodeLabels))
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -153,7 +155,12 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	var nodes corev1.NodeList
-	if err := r.Client.List(ctx, &nodes, client.MatchingLabels(vcdAffinityRule.Spec.NodeLabelSelector)); err != nil {
+	nodeLabelSelector, err := metav1.LabelSelectorAsSelector(&vcdAffinityRule.Spec.NodeLabelSelector)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to parse node label selector: %w", err)
+	}
+
+	if err := r.Client.List(ctx, &nodes, client.MatchingLabelsSelector{Selector: nodeLabelSelector}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list nodes: %w", err)
 	}
 

@@ -32,7 +32,7 @@ type VCDAffinityRuleSpec struct {
 	// NodeLabelSelector is a selector for the nodes that this rule applies to.
 	// Empty selector means that the rule applies to all nodes.
 	// +optional
-	NodeLabelSelector map[string]string `json:"nodeLabelSelector,omitempty"`
+	NodeLabelSelector metav1.LabelSelector `json:"nodeLabelSelector,omitempty"`
 }
 
 // VCDAffinityRuleStatus defines the observed state of VCDAffinityRule.
