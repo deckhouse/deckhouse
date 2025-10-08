@@ -60,7 +60,7 @@ module Jekyll
 
         # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
         final_url = url
-        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf' || link_type == 'module_doc'
           final_url = url.split('#')[0]
         end
 
