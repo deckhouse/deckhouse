@@ -17,9 +17,16 @@ module Jekyll
       /\{%.*?%}/m
     )
     STRIP_HTML_TAGS = /<.*?>/m
-    STRIP_MD_CODEBLOCKS = /```[\s\S]*?```/m
+    STRIP_MD_CODEBLOCKS = Regexp.union(
+      /```[\s\S]*?```/m,
+      /~~~[\s\S]*?~~~/m,
+      /^```[\s\S]*?^```/m,
+      /^~~~[\s\S]*?^~~~/m
+    )
+    STRIP_SHELL_BLOCKS = /<<\s*EOF[\s\S]*?^EOF/m
+    STRIP_YAML_BLOCKS = /^apiVersion:[\s\S]*?(?=^[a-zA-Z]|\Z)/m
     STRIP_INLINE_CODE = /`([^`]+)`/
-    STRIP_UNICODE_SYMBOLS = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA70}-\u{1FAFF}]|[\u{2000}-\u{206F}]|[\u{2070}-\u{209F}]|[\u{20A0}-\u{20CF}]|[\u{2100}-\u{214F}]|[\u{2190}-\u{21FF}]|[\u{2200}-\u{22FF}]|[\u{2300}-\u{23FF}]|[\u{2400}-\u{243F}]|[\u{2460}-\u{24FF}]|[\u{25A0}-\u{25FF}]|[\u{2B00}-\u{2BFF}]|[\u{FE00}-\u{FE0F}]|[\u{1F018}-\u{1F0F5}]|[\u{1F200}-\u{1F2FF}]/u
+    STRIP_UNICODE_SYMBOLS = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{2000}-\u{206F}\u{2070}-\u{209F}\u{20A0}-\u{20CF}\u{2100}-\u{214F}\u{2190}-\u{21FF}\u{2200}-\u{22FF}\u{2300}-\u{23FF}\u{2400}-\u{243F}\u{2460}-\u{24FF}\u{25A0}-\u{25FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F018}-\u{1F0F5}\u{1F200}-\u{1F2FF}]/u
 
     def true_relative_url(path)
         getTrueRelativeUrl(path)
@@ -41,6 +48,8 @@ module Jekyll
                        gsub(STRIP_MD_TABLES,' ').
                        gsub(STRIP_LIQUID_TAGS, ' ').
                        gsub(STRIP_MD_CODEBLOCKS, ' ').
+                       gsub(STRIP_SHELL_BLOCKS, ' ').
+                       gsub(STRIP_YAML_BLOCKS, ' ').
                        gsub(STRIP_INLINE_CODE, '\1').
                        gsub(STRIP_UNICODE_SYMBOLS, ' ').
                        gsub(/\n/,' ').
