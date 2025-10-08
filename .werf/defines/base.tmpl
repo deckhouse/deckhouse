@@ -95,6 +95,14 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: install
+- image: tools/bash-completion
+  add: /
+  to: /
+  includePaths:
+  - etc/bash_completion
+  - etc/bash_completion.d
+  - usr/share/bash-completion
+  before: install
 - image: tools/jq
   add: /usr/bin/jq
   before: install
