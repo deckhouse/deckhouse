@@ -62,8 +62,6 @@ When making changes to the complex Dashboards that use templates, try to edit th
 
 Do not try to generate Grafana Dashboard using Helm. A better approach is to create an Issue in Grafana requesting the required functionality.
 
-# Dashboard requirements
-
 ## Settings before adding the first graph
 
 ### Adding the `ds_prometheus` variable
@@ -84,6 +82,7 @@ Configure this in **Dashboard settings → Variables**.
 ### Time options
 
 #### Time zone
+
 In the **General** tab of the dashboard settings, find the **Time zone** parameter and set it to **Browser time**.
 
 ### Shared crosshair
@@ -103,6 +102,7 @@ This setting is available in:
 >️ Using the **Shared tooltip** mode is not recommended, as it clutters the interface with unnecessary information.
 
 ## Basic Rules for Graphs
+
 ### Title
 
 - Should be **short, clear, and unambiguous**, in **English**.
@@ -190,6 +190,7 @@ For metrics where it is important to see the summary value (e.g., number of pods
 - When designing a graph, it is important to choose whether to display **percentages** or **absolute values**.
 
 ##### CPU
+
 - **Percentage:** displays the load, clearly indicating how much the resource is being used, but it's difficult to compare different graphs.
 - Settings: **All → Standard options → Unit → percent**
 - **Absolute values:** cores or CPU seconds, ensure comparability.
@@ -198,32 +199,40 @@ For metrics where it is important to see the summary value (e.g., number of pods
 > You can add deficit/surplus indicators: throttling, free resource volume, etc.
 
 #### Multiple graph types
+
 - If possible, display different indicators simultaneously: usage, deficit, and surplus.
 
 ### Visualization Types
 
 #### Selecting a type
+
 - Selected based on the volatility and nature of the data.
 
 #### Highly volatile metrics (e.g., CPU)
+
 - Recommended display as **bars**
 
 #### Low-volatility metrics
+
 - Use **lines**
 
 #### Discrete or one-time values
+
 - Use the **step** line style
 
 ### Removing visual noise
+
 - Hide unnecessary lines that create clutter on the chart.
 
 ### Stacked Graphs
 
 #### General Rules
+
 - Stack only values that add up to the total
 - Do not stack dissimilar values with different units
 
 #### Hybrid Situations
+
 - In cases where a combination of different metrics is required (e.g., process sum and total limit), use combined solutions and explicitly indicate this on the graph.
 - Configuration is performed via Overrides: select the field with the desired name and apply the desired style.
 
@@ -451,20 +460,24 @@ Data sources previously created through the **GrafanaAdditionalDatasource** reso
 The choice of a type depends on the tasks and context of use.
 
 #### ObservabilityDashboard
+
 - **When to choose:** For monitoring resources within a specific namespace.
 - **Advantages:** Available only to users with access to this namespace, simplifying management and delimiting permissions.
 
 #### ClusterObservabilityDashboard
+
 - **When to choose:** For monitoring all cluster components with system-wide coverage.
 - **Advantages:** Suitable for operators and administrators who need global cluster visibility.
 
 #### ClusterObservabilityPropagatedDashboard
+
 - **When to choose:** For automatically distributing dashboards to all users with access to specific namespaces or system partitions.
 - **Advantages:** Convenient centralized distribution of shared dashboards useful to multiple users.
   Send feedback
   Translation results available
 
 ## Useful notes
+
 ### Before pushing new dashboards, you have to remove all references to the existing domains
 
 Before pushing changes to the repository, you have to make sure that there are no domains in the JSON file that may have been imported from Grafana.
