@@ -53,6 +53,37 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	require.Contains(t, err.Error(), "no version found")
 }
 
+func TestDownloadMetadataFromReleaseChannelInvalidVersion(t *testing.T) {
+	ms := &v1alpha1.ModuleSource{}
+
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "alpha").Then(&fake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				SchemaVersion: 2,
+				Layers:        []crv1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{
+				&utils.FakeLayer{},
+				&utils.FakeLayer{
+					FilesContent: map[string]string{
+						"version.json": `{"version": "not-a-valid-semver"}`,
+					}}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256"}, nil
+		},
+	}, nil)
+
+	md := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil)
+	_, err := md.DownloadMetadataFromReleaseChannel(context.Background(), "secrets-store-integration", "alpha")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "json decode failed for version.json")
+	require.Contains(t, err.Error(), `"version": "not-a-valid-semver"`)
+	require.Contains(t, err.Error(), "Invalid Semantic Version")
+}
+
 func TestDownloadMetadataByVersion(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 

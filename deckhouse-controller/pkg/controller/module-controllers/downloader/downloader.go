@@ -85,7 +85,6 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
-	// First, get only the digest to check if module is up-to-date
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return "", nil, fmt.Errorf("fetch module error: %v", err)
@@ -351,8 +350,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	return releaseImageInfo, nil
 }
 
-// FetchModuleReleaseDigestFromReleaseChannel gets only digest from release channel without downloading full image
-// This is optimized version that uses cr.Get instead of cr.Image
 func (md *ModuleDownloader) FetchModuleReleaseDigestFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (string, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseDigestFromReleaseChannel")
 	defer span.End()
@@ -517,9 +514,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
+		versionJSON := rr.versionReader.Bytes()
+		err = json.NewDecoder(bytes.NewReader(versionJSON)).Decode(&meta)
 		if err != nil {
-			return meta, fmt.Errorf("json decode: %w", err)
+			return meta, fmt.Errorf("json decode failed for version.json (content: %s): %w", string(versionJSON), err)
 		}
 	}
 
