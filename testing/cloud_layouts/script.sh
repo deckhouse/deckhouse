@@ -270,8 +270,6 @@ function prepare_environment() {
     echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
   fi
 
-  echo "DECKHOUSE_DOCKERCFG=$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d)" #TODO DELETE
-
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
@@ -366,6 +364,9 @@ function prepare_environment() {
     [ -f "$cwd/resources.tpl.yaml" ] && \
         env VCD_ORG="$LAYOUT_VCD_ORG" \
         envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
+
+        cp $cwd/configuration.yaml /tmp/configuration.yaml #TODO debug
+        cp $cwd/resources.yaml /tmp/resources.yaml         #TODO debug
 
     ssh_user="ubuntu"
     ;;
