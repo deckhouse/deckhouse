@@ -1,5 +1,5 @@
 ---
-title: Интеграция с службами Huawei Cloud
+title: Интеграция со службами Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/services.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: Интеграция с службами Amazon Web Services
+title: Интеграция со службами Amazon Web Services
 permalink: ru/admin/integrations/public/amazon/services.html
 lang: ru
 ---

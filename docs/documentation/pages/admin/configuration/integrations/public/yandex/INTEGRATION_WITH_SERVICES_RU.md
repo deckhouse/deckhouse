@@ -1,5 +1,5 @@
 ---
-title: Интеграция с службами Yandex Cloud
+title: Интеграция со службами Yandex Cloud
 permalink: ru/admin/integrations/public/yandex/services.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: Интеграция с службами Microsoft Azure
+title: Интеграция со службами Microsoft Azure
 permalink: ru/admin/integrations/public/azure/services.html
 lang: ru
 ---

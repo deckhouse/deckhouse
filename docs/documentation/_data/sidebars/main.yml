@@ -156,7 +156,7 @@ entries:
                           url: /admin/integrations/public/yandex/storage.html
                         - title:
                             en: Integration with Yandex Cloud services
-                            ru: Интеграция с службами Yandex Cloud
+                            ru: Интеграция со службами Yandex Cloud
                           url: /admin/integrations/public/yandex/services.html
                     - title:
                         en: Integration with VK Cloud
@@ -224,7 +224,7 @@ entries:
                           url: /admin/integrations/public/amazon/storage.html
                         - title:
                             en: Integration with Amazon Web Services
-                            ru: Интеграция с службами Amazon Web Services
+                            ru: Интеграция со службами Amazon Web Services
                           url: /admin/integrations/public/amazon/services.html
                     - title:
                         en: Integration with Microsoft Azure
@@ -244,7 +244,7 @@ entries:
                           url: /admin/integrations/public/azure/storage.html
                         - title:
                             en: Integration with Microsoft Azure services
-                            ru: Интеграция с службами Microsoft Azure
+                            ru: Интеграция со службами Microsoft Azure
                           url: /admin/integrations/public/azure/services.html
                     - title:
                         en: Integration with Google Cloud Platform (GCP)
@@ -308,7 +308,7 @@ entries:
                           url: /admin/integrations/private/huaweicloud/storage.html
                         - title:
                             en: Integration with Huawei Cloud services
-                            ru: Интеграция с службами Huawei Cloud
+                            ru: Интеграция со службами Huawei Cloud
                           url: /admin/integrations/private/huaweicloud/services.html
                     - title:
                         ru: Интеграция с Dynamix
@@ -323,7 +323,7 @@ entries:
                             ru: Хранилище и балансировка
                           url: /admin/integrations/private/dynamix/storage.html
                         - title:
-                            ru: Интеграция с службами Dynamix
+                            ru: Интеграция со службами Dynamix
                           url: /admin/integrations/private/dynamix/services.html
                 - title:
                     en: Virtualization systems
