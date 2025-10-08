@@ -25,13 +25,16 @@ module Jekyll
 
         # Determine title based on link type
         title = text.strip
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
           module_name = extract_module_name(url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
               template = site_data['i18n']['common']['module_x_parameters'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
+            when 'module_cluster_conf'
+              template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+              title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
             when 'module_crds'
               template = site_data['i18n']['common']['module_x_crds'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
@@ -55,9 +58,9 @@ module Jekyll
           end
         end
 
-        # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
+        # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
         final_url = url
-        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'global_crds' || link_type == 'global_conf'
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
           final_url = url.split('#')[0]
         end
 
@@ -68,7 +71,7 @@ module Jekyll
         }
 
         # Add module name for module links
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
           module_name = extract_module_name(url)
           link_data['module'] = module_name if module_name
         end
@@ -90,13 +93,16 @@ module Jekyll
         link_type = determine_link_type(url, url)
 
         # Determine title based on link type
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
           module_name = extract_module_name(url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
               template = site_data['i18n']['common']['module_x_parameters'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
+            when 'module_cluster_conf'
+              template = site_data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+              title = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
             when 'module_crds'
               template = site_data['i18n']['common']['module_x_crds'][page_lang]
               title = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
@@ -122,9 +128,9 @@ module Jekyll
           end
         end
 
-        # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
+        # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
         final_url = url
-        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'global_crds' || link_type == 'global_conf'
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
           final_url = url.split('#')[0]
         end
 
@@ -135,7 +141,7 @@ module Jekyll
         }
 
         # Add module property for module links
-        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds'
+        if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
           module_name = extract_module_name(url)
           link_data['module'] = module_name if module_name
         end
@@ -208,6 +214,11 @@ module Jekyll
       # Check for module configuration links
       if url_for_matching.match?(%r{/modules/[^/]+/configuration.*\.html.*$})
         return 'module_conf'
+      end
+
+      # Check for module cluster configuration links
+      if url_for_matching.match?(%r{/modules/[^/]+/cluster_configuration\.html.*$})
+        return 'module_cluster_conf'
       end
 
       # Check for module CR links
@@ -294,7 +305,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
             end
 
             # Add module property and standardized title for module links if missing
-            if processed_link['type'] == 'module_doc' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_crds'
+            if processed_link['type'] == 'module_doc' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_cluster_conf'
               module_name = Jekyll::LinksExtractor.extract_module_name(processed_link['url'])
               if module_name
                 # Add module property if missing
@@ -306,6 +317,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
                   when 'module_conf'
                     template = site.data['i18n']['common']['module_x_parameters'][page_lang]
                     processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} configuration"
+                  when 'module_cluster_conf'
+                    template = site.data['i18n']['common']['module_x_cluster_configuration'][page_lang]
+                    processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} provider configuration"
                   when 'module_crds'
                     template = site.data['i18n']['common']['module_x_crds'][page_lang]
                     processed_link['title'] = template&.gsub('XXXX', module_name) || "Module #{module_name} custom resources"
@@ -330,8 +344,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
               end
             end
 
-            # For module_crds, module_conf, global_crds, and global_conf links, remove anchors from URL
-            if processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
+            # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
+            if processed_link['type'] == 'module_crds' || processed_link['type'] == 'module_conf' || processed_link['type'] == 'module_cluster_conf' || processed_link['type'] == 'global_crds' || processed_link['type'] == 'global_conf'
               processed_link['url'] = processed_link['url'].split('#')[0]
             end
 
