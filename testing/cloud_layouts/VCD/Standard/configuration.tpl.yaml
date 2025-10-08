@@ -13,7 +13,7 @@ clusterDomain: "cluster.local"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: ${IMAGES_REPO}
+  imagesRepo: '${IMAGES_REPO}'
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
 ---
