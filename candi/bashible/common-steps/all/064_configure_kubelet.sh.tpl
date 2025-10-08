@@ -52,11 +52,6 @@ if [[ -z "${cri_socket_path}" ]]; then
 fi
 {{- end }}
 
-{{- if not (eq .cri "NotManaged") }}
-# Get CRI directory for eviction thresholds calculation
-criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
-{{- end }}
-
 # Calculate eviction thresholds.
 
 # We don't need more free space on partition.
@@ -98,7 +93,12 @@ if [ "$(($nodefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdNodefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-imagefsSize=$(df --output=size $criDir | tail -n1)
+{{- if not (eq .cri "NotManaged") }}
+# Get CRI directory for eviction thresholds calculation
+criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+imagefsSize=$(df --output=size "$criDir" | tail -n1)
+imagefsInodes=$(df --output=itotal "$criDir" | tail -n1)
+
 imagefsSizeGFivePercent=$((imagefsSize/(1000*1000)*5/100))
 if [ "$imagefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
   evictionHardThresholdImagefsAvailable="${maxAvailableReservedSpace}G"
@@ -107,7 +107,6 @@ if [ "$(($imagefsSizeGFivePercent*2))" -gt "$(($maxAvailableReservedSpace*2))" ]
   evictionSoftThresholdImagefsAvailable="$(($maxAvailableReservedSpace*2))G"
 fi
 
-imagefsInodes=$(df --output=itotal $criDir | tail -n1)
 imagefsInodesKFivePercent=$((imagefsInodes/1000*5/100))
 if [ "$imagefsInodesKFivePercent" -gt "$needInodesFree" ]; then
   evictionHardThresholdImagefsInodesFree="${needInodesFree}k"
@@ -115,6 +114,10 @@ fi
 if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
+{{- else }}
+# For NotManaged CRI, use default percentage-based imagefs thresholds
+# We don't calculate absolute values since CRI is managed externally
+{{- end }}
 
 shutdownGracePeriod="115"
 shutdownGracePeriodCriticalPods="15"
