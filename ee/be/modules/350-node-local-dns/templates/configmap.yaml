@@ -13,7 +13,7 @@ data:
         consolidate 10s ".* write: operation not permitted$"
       }
       cache {
-        success 39936 30 5 # <cache size> <TTL max> <TTL min>
+        success 120000 30 5 # <cache size> <TTL max> <TTL min>
         denial 65536 5 1    # <cache size> <TTL max> <TTL min>
         prefetch 10 1m 25%
         serve_stale 1h {{ include "helm_lib_is_ha_to_value" (list . "immediate" "verify") }}
