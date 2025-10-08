@@ -189,29 +189,46 @@ func handleL2LoadBalancers(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		patchStatusInformation := true
-		var mlbcForUse MetalLoadBalancerClassInfo
+		var (
+			mlbcForUse       MetalLoadBalancerClassInfo
+			desiredMLBCName  string
+			assignedMLBCName = service.AssignedLoadBalancerClass
+		)
+
 		if mlbcTemp, ok := mlbcMap[mlbcDefaultName]; ok {
 			// Use default MLBC (and add to status)
 			mlbcForUse = mlbcTemp
+			desiredMLBCName = mlbcTemp.Name
 		}
 		if mlbcTemp, ok := mlbcMap[service.AnnotationMLBC]; ok {
 			// Use MLBC from annotation (and add to status)
 			mlbcForUse = mlbcTemp
+			desiredMLBCName = mlbcTemp.Name
 		}
 		if mlbcTemp, ok := mlbcMap[service.LoadBalancerClass]; ok {
 			// Else use the MLBC that exists in the cluster (and add to status)
 			mlbcForUse = mlbcTemp
+			desiredMLBCName = mlbcTemp.Name
 		}
-		if service.AssignedLoadBalancerClass != "" {
-			if mlbcTemp, ok := mlbcMap[service.AssignedLoadBalancerClass]; ok {
-				// Else use the MLBC associated earlier
-				mlbcForUse = mlbcTemp
-				patchStatusInformation = false
-			} else {
+
+		if assignedMLBCName != "" {
+			assignedMLBC, ok := mlbcMap[assignedMLBCName]
+			if !ok {
 				// MLBC is not among clustered MLBCs, but it is associated (in status)
 				continue
 			}
+
+			if desiredMLBCName == "" {
+				// No better candidate was found, keep using the previously assigned MLBC.
+				mlbcForUse = assignedMLBC
+				desiredMLBCName = assignedMLBCName
+			}
+
+			if assignedMLBCName == desiredMLBCName {
+				patchStatusInformation = false
+			}
 		}
+
 		if mlbcForUse.Name == "" {
 			continue
 		}
