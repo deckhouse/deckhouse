@@ -517,9 +517,11 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
+		// Capture the raw JSON content for better error reporting
+		versionJSON := rr.versionReader.Bytes()
+		err = json.NewDecoder(bytes.NewReader(versionJSON)).Decode(&meta)
 		if err != nil {
-			return meta, fmt.Errorf("json decode: %w", err)
+			return meta, fmt.Errorf("json decode failed for version.json (content: %s): %w", string(versionJSON), err)
 		}
 	}
 
