@@ -8,7 +8,7 @@ properties:
     description: |
       Deckhouse logging level.
     default: "Info"
-
+  
   bundle:
     type: string
     enum: ["Default", "Minimal", "Managed"]
@@ -19,16 +19,17 @@ properties:
       - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
       - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
     default: "Default"
-
+  
   releaseChannel:
     type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
-    x-examples: ["Stable"]
+    enum: ["LTS"]
+    x-examples: ["LTS"]
+    default: "LTS"
     description: |
       Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
 
-      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
-
+      Only `LTS` is allowed.
+  
   update:
     type: object
     description: Settings of the Deckhouse update mode and windows.
@@ -66,7 +67,7 @@ properties:
 
             Confirmation is required for updating both minor and patch versions.
 
-          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](../../cr.html#deckhouserelease).
         enum:
           - 'AutoPatch'
           - 'Auto'
@@ -81,7 +82,7 @@ properties:
         description: |
           Update mode for disruptive Deckhouse releases:
           - `Auto` — a disruptive release is approved automatically.
-          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource to apply the update).
+          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](../../cr.html#deckhouserelease) resource to apply the update).
       windows:
         type: array
         description: |
@@ -142,7 +143,7 @@ properties:
             description: |
               URL for an external webhook handler.
 
-              The POST request will be sent to the webhook URL after a new minor version of Deckhouse appears on the release channel before it is applied to the cluster.
+              The POST request will be sent to the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
 
               > **Caution!**
               > If you specify an invalid webhook address, Deckhouse update will be blocked.
@@ -248,7 +249,7 @@ properties:
               - "All"
               - "Minor"
             default: "Minor"
-
+  
   nodeSelector:
     type: object
     additionalProperties:
@@ -259,7 +260,7 @@ properties:
       If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
       **Caution!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
-
+  
   tolerations:
     type: array
     description: |
@@ -295,7 +296,7 @@ properties:
     x-examples: [false]
     description: |
       Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
-
+       
       Experimental modules can be unstable and are not supported under the Deckhouse SLA. Use them with caution.
 
   license:
@@ -305,6 +306,7 @@ properties:
     properties:
       edition:
         type: string
+        enum: ["CE", "BE", "EE", "SE", "SE-plus"]
         x-examples: ["CE"]
         description: |
           Edition of the Deckhouse Kubernetes Platform:

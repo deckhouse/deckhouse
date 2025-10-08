@@ -1,0 +1,191 @@
+type: object
+properties:
+  auth:
+    type: object
+    description: |
+      Authentication configuration.
+    default: {}
+    properties:
+      externalAuthentication:
+        type: object
+        default: {}
+        description: |
+          Parameters to enable external authentication. Uses Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism which is based on the the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > Note! External authentication is enabled automatically if the [user-authn](../../../platform/modules/150-user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            description: |
+              URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            description: |
+              URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      password:
+        type: string
+        description: |
+          **This parameter is ignored and will be removed in future releases.**
+
+          It was used for http authorization of the `admin` user, if the [user-authn](../../../platform/modules/150-user-authn/) module was disabled or the `externalAuthentication` parameter was not set.
+
+          Now the external authentication is required for Deckhouse Commander to function properly.
+        x-doc-deprecated: true
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access the web UI.
+
+          This parameter is used if the [user-authn](../../../platform/modules/150-user-authn/) module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](../../../platform/modules/150-user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - ["1.1.1.1/32"]
+        description: An array if CIDRs that are allowed to authenticate.
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    x-examples: ["nginx"]
+    description: |
+      The class of the Ingress controller used for the web UI.
+
+      An optional parameter. By default, the `modules.ingressClass` global value is used.
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with the web UI.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        description: |
+          The HTTPS usage mode:
+          - `Disabled` — in this mode, the web UI can only be accessed over HTTP. **Caution! This mode is not supported.** HTTPS is required for the module to function properly. If HTTPS is disabled, the web UI will be unavailable.
+          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — the web UI is accessed over HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — the web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        default: {}
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for the web UI.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with the web UI.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  postgres:
+    type: object
+    default: {}
+    properties:
+      mode:
+        type: string
+        enum:
+          - External
+        default: External
+        description: |
+          The PostgreSQL usage mode:
+          - `External` - an external PostgreSQL installation managed by the user is used. This is the recommended way to use Deckhouse Commander in production environments.
+      external:
+        type: object
+        properties:
+          host:
+            type: string
+            description: |
+              Server address. You can specify multiple addresses separated by commas if your PostgreSQL cluster consists of multiple nodes. For example: `host1,host2,host3`. In this case, you will need to specify a separate port for each node.
+          port:
+            type: string
+            description: |
+              Server port. If your PostgreSQL cluster consists of multiple nodes and you have specified several nodes, you need to provide a port for each node, separated by commas. For example: `5432,5432,5433`
+          user:
+            type: string
+            description: User name
+          password:
+            type: string
+            description: User password
+          db:
+            type: string
+            description: Database name
+          ssl:
+            type: object
+            properties:
+              secretName:
+                type: string
+                description: |
+                  The name of the secret in the `d8-commander` namespace which contains client certificate for [certificate authentication](https://www.postgresql.org/docs/14/auth-cert.html) on the PostgreSQL server.
+
+                  Example of creating a secret: `kubectl -n d8-commander create secret generic postgres-ssl --from-file=tls.crt=client.crt --from-file=tls.key=client.key --from-file=ca.crt=ca.crt`
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../../platform/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      - - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).

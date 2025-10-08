@@ -1,0 +1,14 @@
+type: object
+default: {}
+properties:
+  envs:
+    type: object
+    default: {}
+    properties:
+      GOGC:
+        type: string
+        default: "30"
+      MALLOC_CONF:
+        type: string
+        default: "background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+
