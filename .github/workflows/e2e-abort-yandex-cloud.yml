@@ -184,6 +184,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -306,9 +309,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -473,6 +476,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -595,9 +601,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -762,6 +768,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -884,9 +893,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1051,6 +1060,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1173,9 +1185,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1340,6 +1352,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1462,9 +1477,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1629,6 +1644,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1751,9 +1769,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1918,6 +1936,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2040,9 +2061,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2207,6 +2228,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2329,9 +2353,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2496,6 +2520,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2618,9 +2645,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2785,6 +2812,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -2907,9 +2937,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3074,6 +3104,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -3196,9 +3229,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3363,6 +3396,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -3485,9 +3521,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3652,6 +3688,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -3774,9 +3813,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3941,6 +3980,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -4063,9 +4105,9 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}

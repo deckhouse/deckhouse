@@ -63,7 +63,9 @@ Provider specific environment variables:
 
   vSphere:
 
+\$LAYOUT_VSPHERE_USERNAME
 \$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_BASE_DOMAIN
 
   VCD:
 
@@ -136,8 +138,8 @@ function prepare_environment() {
 
   case "$PROVIDER" in
   "Yandex.Cloud")
-    CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
-    FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")"
+    CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
+    FOLDER_ID=$LAYOUT_YANDEX_FOLDER_ID
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
     cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
@@ -231,8 +233,14 @@ function prepare_environment() {
 
   "vSphere")
     # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+    env VSPHERE_PASSWORD="$LAYOUT_VSPHERE_PASSWORD" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
+        VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -240,7 +248,7 @@ function prepare_environment() {
 
   "VCD")
     # shellcheck disable=SC2016
-    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
+    env VCD_PASSWORD="$LAYOUT_VCD_PASSWORD" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
@@ -261,7 +269,7 @@ function prepare_environment() {
 
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
-    export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
+    export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
     # use different users for different OSs
@@ -424,7 +432,7 @@ CONF
 echo DAEMON_OPTS="-F 1 -f /etc/chrony/chrony.conf" > /etc/default/chrony
 systemctl daemon-reexec
 systemctl enable --now chronyd
-systemctl restart chronyd 
+systemctl restart chronyd
 chronyc tracking
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
@@ -1062,7 +1070,7 @@ function run-test() {
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
     echo http_code: $http_code
-    
+
     # Check for HTTP errors
     if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
       break
