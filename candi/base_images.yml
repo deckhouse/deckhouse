@@ -1,4 +1,4 @@
-# version=v0.5.31
+# version=v0.5.32
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:6181c0922d240f806ed69842e0c35b2881db7e28f936b00241969fbe39545cde" # fromImage: builder/scratch
@@ -16,6 +16,7 @@ base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0
 base/shell-operator: "sha256:dba9b1a2ecc093f46da18768d26ec69569697dacfab277fdf7ab0b1c31914930" # fromImage: builder/scratch
 base/shell-operator-v1.9.3: "sha256:dba9b1a2ecc093f46da18768d26ec69569697dacfab277fdf7ab0b1c31914930" # fromImage: builder/scratch
 builder/alpine: "sha256:590dc522ebb14efc901a9f232fa285d04808bfeb834b9dfeddcbec0a6e45a6bd" # from: alpine:3.22.1
+builder/alpine-3.20: "sha256:b55c3d5bf9ba4c245496a1f7b38ee0ae2174a90496b4fe6f8937d6f3feff6f26" # from: alpine:3.20.7
 builder/alpine-3.21: "sha256:3e3839bf9b487f8ce9cb9296be3f610707b56b2eef3caa66016f8dbb21d495e4" # from: alpine:3.21.4
 builder/alpine-3.22: "sha256:590dc522ebb14efc901a9f232fa285d04808bfeb834b9dfeddcbec0a6e45a6bd" # from: alpine:3.22.1
 builder/alt: "sha256:0062fa0400ce621ee65f7bbfcb314937068a218d0e744f6c6212e5d184df2d1d" # from: registry.altlinux.org/p11/alt:20250625
