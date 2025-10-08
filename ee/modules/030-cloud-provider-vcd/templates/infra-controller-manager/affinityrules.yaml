@@ -11,6 +11,7 @@ spec:
   polarity: {{ .polarity | toString | quote }}
   required: {{ .required | default false }}
   nodeLabelSelector:
-    node.deckhouse.io/group: {{ .nodeGroupName | toString | quote }}
+    matchLabels:
+      node.deckhouse.io/group: {{ .nodeGroupName | toString | quote }}
 {{- end }}
 {{- end }}
