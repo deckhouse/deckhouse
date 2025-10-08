@@ -1,5 +1,5 @@
 {%- if page.related_links and page.related_links.size > 0 %}
-{%- assign all_module_links = page.related_links | where_exp: "item", "item.type == 'module_conf' or item.type == 'module_crds' or item.type == 'module_doc'" %}
+{%- assign all_module_links = page.related_links | where_exp: "item", "item.type == 'module_conf' or item.type == 'module_cluster_conf' or item.type == 'module_crds' or item.type == 'module_doc'" %}
 {%- assign page_related_module_reference = "" | split: "" %}
 {%- for link in all_module_links %}
   {%- assign module_doc_exists = all_module_links | where_exp: "item", "item.module == link.module and item.type == 'module_doc'" | size %}
