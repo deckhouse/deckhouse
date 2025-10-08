@@ -242,10 +242,6 @@ entries:
                     ru: Настройка хранилищ
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
-                    en: Configuring volume snapshot creation
-                    ru: Настройка создания снимков томов
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
-                - title:
                     en: Software-defined storage (SDS)
                     ru: Программно-определяемые хранилища (SDS)
                   folders:
