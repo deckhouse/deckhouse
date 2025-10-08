@@ -90,6 +90,7 @@ securityContext:
 
 securityContext:
   readOnlyRootFilesystem: {{ $ro }}
+  privileged: false
   allowPrivilegeEscalation: false
   capabilities:
     drop:
