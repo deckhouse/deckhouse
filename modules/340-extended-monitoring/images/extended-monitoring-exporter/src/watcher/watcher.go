@@ -81,11 +81,14 @@ func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
 	factory := informers.NewSharedInformerFactory(w.clientSet, 0)
 	informer := factory.Core().V1().Namespaces().Informer()
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { w.addNamespace(ctx, obj.(*v1.Namespace)) },
 		UpdateFunc: func(_, obj interface{}) { w.updateNamespace(ctx, obj.(*v1.Namespace)) },
 		DeleteFunc: func(obj interface{}) { w.deleteNamespace(obj.(*v1.Namespace)) },
 	})
+	if err != nil {
+		log.Printf("[NS] AddEventHandler failed: %v", err)
+	}
 
 	go informer.Run(ctx.Done())
 	cache.WaitForCacheSync(ctx.Done(), informer.HasSynced)
