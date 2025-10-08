@@ -77,6 +77,7 @@ type DexUserLockReason string
 
 const (
 	PasswordPolicyLockout = DexUserLockReason("PasswordPolicyLockout")
+	LockedByAdministrator = DexUserLockReason("LockedByAdministrator")
 )
 
 type DexUserLock struct {
@@ -113,10 +114,18 @@ type DexGroupStatus struct {
 	} `json:"errors,omitempty"`
 }
 
+const (
+	PasswordAnnotationLockedByAdministrator = "deckhouse.io/locked-by-administrator"
+)
+
 type Password struct {
-	Username    string     `json:"username"`
-	Email       string     `json:"email"`
-	LockedUntil *time.Time `json:"lockedUntil"`
+	metav1.TypeMeta                 `json:",inline"`
+	metav1.ObjectMeta               `json:"metadata,omitempty"`
+	Username                        string     `json:"username"`
+	Email                           string     `json:"email"`
+	Hash                            string     `json:"hash"`
+	RequireResetHashOnNextSuccLogin bool       `json:"requireResetHashOnNextSuccLogin"`
+	LockedUntil                     *time.Time `json:"lockedUntil"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -210,6 +219,16 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 				Message: lo.ToPtr("Locked due to too many failed login attempts"),
 				Until:   lo.ToPtr(password.LockedUntil.Format(time.RFC3339)),
 			}
+
+			// If this annotation exists - we consider lock was set by administrator.
+			if _, ok := password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+				lock.Reason = lo.ToPtr(LockedByAdministrator)
+				lock.Message = lo.ToPtr("Locked by administrator")
+			}
+		} else if _, ok = password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+			// In this case we have expired or unexisted lock and saved from previous lock annotation.
+			// For sure we need to delete it.
+			delete(password.Annotations, PasswordAnnotationLockedByAdministrator)
 		}
 		dexUser.Status.Lock = lock
 
@@ -259,7 +278,7 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	password := &Password{}
+	var password = &Password{}
 	err := sdk.FromUnstructured(obj, password)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
