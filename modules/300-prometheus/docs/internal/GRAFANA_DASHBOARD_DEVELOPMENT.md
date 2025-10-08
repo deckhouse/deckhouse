@@ -134,6 +134,7 @@ This setting is available in:
     - `cluster`
 
 1. **Service labels** (e.g. `pod`, `container`) are rarely key and usually clutter the graph.
+
 #### Limiting the number of series
 
 - Use Prometheus aggregation functions:

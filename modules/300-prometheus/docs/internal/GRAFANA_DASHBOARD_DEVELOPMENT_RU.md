@@ -383,7 +383,7 @@ search: grafana разработка графиков
 
 - Для **Total Tooltip** необходимо выполнить дополнительные действия:
   - Сделать его **невидимым на графике** через **Edit panel → Overrides**
-      
+
   ![Скрыть total](/docs/documentation/images/prometheus/hide_total.png)
 
   - Также добавить для него transform (Edit panel->Transform data)
