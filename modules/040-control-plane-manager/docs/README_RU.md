@@ -93,11 +93,11 @@ description: Deckhouse управляет компонентами control plane
 - совершаются от имен сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
 - совершаются с ресурсами в системных пространствах имен `kube-system`, `d8-*`.
 
+Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
+
 При настройке OIDC-аутентификации в аудит-логах дополнительно включается информация о пользователе в поле `user.extra`:
 - `user-authn.deckhouse.io/name` — отображаемое имя пользователя
 - `user-authn.deckhouse.io/preferred_username` — предпочитаемое имя пользователя
 - `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
-
-Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
