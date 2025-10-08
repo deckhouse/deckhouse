@@ -1,0 +1,12 @@
+diff --git a/speaker/main.go b/speaker/main.go
+index ea8c1cf8..831ab70b 100644
+--- a/speaker/main.go
++++ b/speaker/main.go
+@@ -167,6 +167,7 @@ func main() {
+ 		SList:                  sList,
+ 		bgpType:                bgpImplementation(bgpType),
+ 		InterfaceExcludeRegexp: interfacesToExclude,
++		DisableLayer2:          true,
+ 		IgnoreExcludeLB:        *ignoreLBExclude,
+ 		Layer2StatusChange: func(namespacedName types.NamespacedName) {
+ 			statusNotifyChan <- controllers.NewL2StatusEvent(namespacedName.Namespace, namespacedName.Name)
