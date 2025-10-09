@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.28" "2.1.4" }}
 {{- $runc_versions := list "1.3.0" }}
 {{- $containerd2runc := dict "1.7.28" "1.3.0" "2.1.4" "1.3.0" }}
-{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "4" }} # may be redefine in CSE
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "5" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -118,7 +118,6 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromCacheVersion: "2025-08-19.1"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
