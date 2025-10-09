@@ -204,6 +204,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.15.4 h1:xjiaxm1+AIdVnSMI++VNxRjFm/VfxWeb1qv8WvV7RWY=
 github.com/flant/addon-operator v1.15.4/go.mod h1:W0QbKBOiMq8l7I6mbUjQrLAUsCeq5QdgDzGyWPeFTJM=
+github.com/flant/addon-operator v1.15.5-0.20251009133947-4050d773259c h1:a5GtX8OxmOxUtQ9xyBmx69QM9TevQtd45AH3/umqTTE=
+github.com/flant/addon-operator v1.15.5-0.20251009133947-4050d773259c/go.mod h1:oJgvCNfIiMqW0fKwciLIspwK4Zhv2d0CzvWCcNfme50=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.3.1 h1:1SdD799sujXNg2F6Z27le/+qkcKQaKf9Z492YGEhVhc=
@@ -809,6 +811,8 @@ github.com/werf/3p-helm v0.0.0-20250731134240-58a9eff8ec5b h1:l9R9CvJLk8uaLmJpyu
 github.com/werf/3p-helm v0.0.0-20250731134240-58a9eff8ec5b/go.mod h1:KDjmOsjFiOmj0fB0+q+0gGvlejPMjTgckLC59bX0BLg=
 github.com/werf/common-go v0.0.0-20250520111308-b0eda28dde0d h1:nVN0E4lQdToFiPty19uwj5TF+bCI/kAp5LLG4stWdO4=
 github.com/werf/common-go v0.0.0-20250520111308-b0eda28dde0d/go.mod h1:taKDUxKmGfqNOlVx1O0ad5vdV4duKexTLO7Rch9HfeA=
+github.com/werf/common-go v0.0.0-20251009090833-3d49886e7488 h1:pNFYma4z3BB9oTzj9s+eF+Fiw9nGE1c8woZmRh0V6+4=
+github.com/werf/common-go v0.0.0-20251009090833-3d49886e7488/go.mod h1:MXS0JR9zut+oR9oEM8PEkdXXoEbKDILTmWopt0z1eZs=
 github.com/werf/kubedog v0.13.1-0.20250813095923-12d70b6780b0 h1:E7odWm4YBrYee/g9UyDVJ++C6xrKq2orNrkLiNrrN9k=
 github.com/werf/kubedog v0.13.1-0.20250813095923-12d70b6780b0/go.mod h1:gu4EY4hxtiYVDy5o6WE2lRZS0YWqrOV0HS//GTYyrUE=
 github.com/werf/lockgate v0.1.1 h1:S400JFYjtWfE4i4LY9FA8zx0fMdfui9DPrBiTciCrx4=
@@ -817,6 +821,8 @@ github.com/werf/logboek v0.6.1 h1:oEe6FkmlKg0z0n80oZjLplj6sXcBeLleCkjfOOZEL2g=
 github.com/werf/logboek v0.6.1/go.mod h1:Gez5J4bxekyr6MxTmIJyId1F61rpO+0/V4vjCIEIZmk=
 github.com/werf/nelm v1.12.2 h1:ArbYYUlTvG+ntKE33ViwqWCMb+FeVIrw8LeRrQWPPnA=
 github.com/werf/nelm v1.12.2/go.mod h1:CHCZUBwe3hscVhT2kYxB6+ynsCR5NrlXg4zHHrnkQPs=
+github.com/werf/nelm v1.12.3 h1:RiF0kDjQhmHWcXHgPO+QHdvL8QgW61K8SuhCR0tNMqo=
+github.com/werf/nelm v1.12.3/go.mod h1:jsB+vAnwoSXvm3J3+mUsPBGH0XdCqumEsyDIJkcOzRE=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.0.2/go.mod h1:1WAq6h33pAW+iRreB34OORO2Nf7qel3VV3fjBj+hCSs=
 github.com/xdg-go/stringprep v1.0.2/go.mod h1:8F9zXuvzgwmyT5DUm4GUfZGDdT3W+LCvS6+da4O5kxM=
