@@ -7,9 +7,9 @@ module Jekyll
 
     def generate(site)
       puts "SearchIndexGenerator: Generating search index files..."
-      
+
       # Generate search.json files for all languages
-      search_indices = site.data['search_indices']
+      search_indices = site.data['search_indices'] if !site.config['embedded_modules']
       if search_indices
         search_indices.each do |lang, search_data|
           filename = lang == 'en' ? 'search.json' : "search-#{lang}.json"
@@ -25,9 +25,9 @@ module Jekyll
           site.pages << search_page
         end
       end
-      
+
       # Generate search-embedded-modules-index.json files for all languages
-      embedded_modules_indices = site.data['search_embedded_modules_indices']
+      embedded_modules_indices = site.data['search_embedded_modules_indices'] if site.config['embedded_modules']
       if embedded_modules_indices
         embedded_modules_indices.each do |lang, embedded_data|
           filename = lang == 'en' ? 'search-embedded-modules-index.json' : "search-embedded-modules-index-#{lang}.json"
@@ -43,8 +43,8 @@ module Jekyll
           site.pages << embedded_page
         end
       end
-      
-      puts "SearchIndexGenerator: Generated #{site.pages.select { |p| p.name && p.name.end_with?('.json') }.size} search index files"
+
+      puts "SearchIndexGenerator: SearchIndexGenerator: Finished generating search index files."
     end
   end
 end
