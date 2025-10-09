@@ -105,9 +105,9 @@ shell:
         rm -rf /app/_site/documentation/compare/
 {{ else }}
         {{- if eq .Mode "development" }}
-        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,_config-modules.yml,/tmp/_config_additional.yml --profile -t
         {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,_config-modules.yml,/tmp/_config_additional.yml
         {{- end }}
 {{ end }}
         echo "Moving images and presentations to be accessible as local from the module pages (like in Hugo)..."
