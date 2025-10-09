@@ -96,6 +96,7 @@ import:
   to: /
   includePaths:
   - containerd
+  - .containerd_fallback
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
@@ -176,6 +177,10 @@ shell:
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  {{- if and (eq $.Env "CSE") $is_v2 }}
+  - GOOS=linux GOARCH=amd64 make STATIC=1 all bin/containerd
+  - cp bin/containerd /out/.containerd_fallback
+  {{- end }}
   {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
   - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
   - |
