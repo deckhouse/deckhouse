@@ -14,6 +14,7 @@ Code simplifies the auditing process with **audit events**, which allow you to t
 ## Purpose and Scope
 
 The security event logging mechanism (Audit Events) is used to:
+
 - record user and administrator actions related to system configuration changes;
 - register information security incidents;
 - provide the ability to investigate incidents and reconstruct a complete picture of actions in the system.
@@ -24,6 +25,7 @@ Events are recorded regardless of user role (if they have the right to perform t
 ## Technical Measures for Event Logging
 
 The audit system implements the following measures:
+
 - **Centralized event logging** — all events are stored in a single audit log.
 - **Real-time collection** — events are logged instantly at the time of business operation execution. Examples: user login, email change, enabling force push on a protected branch.
 - **Integrity protection** — the audit log is read-only for administrators. Events cannot be deleted or modified.
@@ -38,14 +40,23 @@ The audit system implements the following measures:
 - Tracking changes to project and group visibility levels.
 
 Audit events help:
+
 - assess risks and strengthen security measures;
 - respond promptly to incidents.
 
 ## Accessing Audit Events
 
 To access audit events, go to the **Admin mode** and in the sidebar select **Audit Events**.
-![Example](/images/code/audit_events.png)
-# screenshot
+
+Author – The user who triggered the event.
+
+Event – A system message containing information about the event.
+
+Object – The scope (Instance, User, Group, Project) to which the event belongs.
+
+Target – The entity that was changed (Project, User, Protected branch, Token, CI variable, etc.).
+
+![Example](/images/code/audit_events1.png)
 
 ## Accessing Audit Events via API
 
@@ -86,11 +97,10 @@ curl --request POST "https://example.com/api/v4/admin/audit_events/search" \
      }'
 ```
 
+## Security Audit Events
 
-# Security Audit Events
 The table below shows example messages.  
 Real audit events contain full information either directly in the message or in an additional JSON field with data.  
-
 
 | Name                          | System Message                                        | Purpose                                                                                   | Audited Attributes |
 |-------------------------------|-------------------------------------------------------|-------------------------------------------------------------------------------------------|--------------------|
