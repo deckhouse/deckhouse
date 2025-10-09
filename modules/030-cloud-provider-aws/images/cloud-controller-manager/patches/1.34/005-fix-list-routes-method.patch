@@ -6,7 +6,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/providers/v1/aws_routes.go b/pkg/providers/v1/aws_routes.go
---- a/pkg/providers/v1/aws_routes.go	(revision 933cfdef070d214e85550b1d516457faf338a1e4)
+--- a/pkg/providers/v1/aws_routes.go	(revision 8ed070cd7501f6032ac056a4e79b9afc70fe522c)
 +++ b/pkg/providers/v1/aws_routes.go	(date 1746511538247)
 @@ -116,7 +116,8 @@
  			if found {

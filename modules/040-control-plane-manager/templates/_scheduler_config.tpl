@@ -1,9 +1,5 @@
 {{- define "schedulerConfig" }}
-  {{- if semverCompare ">= 1.29" .clusterConfiguration.kubernetesVersion }}
 apiVersion: kubescheduler.config.k8s.io/v1
-  {{- else }}
-apiVersion: kubescheduler.config.k8s.io/v1beta3
-  {{- end }}
 kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf

@@ -66,9 +66,9 @@ Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required 
 
 ## Version control
 
-**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.29.13` to `1.29.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.30.13` to `1.30.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.29.*` to `1.30.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Upgrading **minor versions** of control plane components (e.g. from `1.30.*` to `1.31.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
@@ -77,7 +77,7 @@ If the target version (set with the [kubernetesVersion](/products/kubernetes-pla
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:
-  - Upgrades are carried out sequentially, one minor version at a time: 1.29 -> 1.30, 1.30 -> 1.31, 1.31 -> 1.32.
+  - Upgrades are carried out sequentially, one minor version at a time: 1.30 -> 1.31, 1.31 -> 1.32, 1.32 -> 1.33.
   - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes.
 - When downgrading:
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.

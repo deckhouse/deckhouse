@@ -1,12 +1,6 @@
 {{- if gt (len .Values.deckhouse.internal.namespaces) 0 }}
 ---
-  {{- if semverCompare "> 1.29" .Values.global.discovery.kubernetesVersion }}
 apiVersion: flowcontrol.apiserver.k8s.io/v1
-  {{- else if semverCompare "> 1.26" .Values.global.discovery.kubernetesVersion }}
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
-  {{- else }}
-apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
-  {{- end }}
 kind: FlowSchema
 metadata:
   name: d8-serviceaccounts
