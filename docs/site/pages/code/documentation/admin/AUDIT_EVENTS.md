@@ -48,13 +48,13 @@ Audit events help:
 
 To access audit events, go to the **Admin mode** and in the sidebar select **Audit Events**.
 
-Author – The user who triggered the event.
+Table columns description:
 
-Event – A system message containing information about the event.
-
-Object – The scope (Instance, User, Group, Project) to which the event belongs.
-
-Target – The entity that was changed (Project, User, Protected branch, Token, CI variable, etc.).
+- Author – The user who triggered the event.
+- Event – A system message containing information about the event.
+- Object – The scope (Instance, User, Group, Project) to which the event belongs.
+- Target – The entity that was changed (Project, User, Protected branch, Token, CI variable, etc.).
+- Event time – Date and time when the event occurred
 
 ![Example](/images/code/audit_events1.png)
 
