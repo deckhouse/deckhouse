@@ -17,6 +17,7 @@ git:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: 2025-10-09
 final: false
 secrets:
 - id: SOURCE_REPO
