@@ -178,8 +178,8 @@ shell:
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   {{- if and (eq $.Env "CSE") $is_v2 }}
-  - GOOS=linux GOARCH=amd64 make STATIC=1 all bin/containerd
-  - cp bin/containerd /out/.containerd_fallback
+  - GOOS=linux GOARCH=amd64 make STATIC=1 INTEGRITY_IMAGE_SIGN_CHECK="false" INTEGRITY_DEV_MAPPER_CHECK="false" INTEGRITY_PERIODICAL_CHECK="false" INTEGRITY_STOP_CONTAINER_IF_FAIL="false" bin/containerd
+  - mv bin/containerd /out/.containerd_fallback
   {{- end }}
   {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
   - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
