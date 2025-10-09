@@ -85,24 +85,24 @@ To configure push rules at the group level, open the group page and go to "Setti
 
 To configure push rules at the instance level, go to "Admin → Settings → Repository → Push Rules". This option is available only to administrators.  
 
+When a rule is changed at the instance level, the new values are automatically applied to all groups and projects.  
+
+When a rule is changed at the group level, the new values are automatically applied to all subgroups and their projects.  
+
 Rules defined at the group or instance level are used as default settings for projects. When a project is created, it inherits the rules from its parent group or from the instance (if created in a personal namespace).  
 
 ## Restricting rule overrides
 
-You can prevent overriding of rules in child projects or groups. To do this, uncheck the option "Allow override at group/project level".  
-
-If a rule is enforced at the group or instance level and overriding is disabled:  
-- the rule is automatically applied to all child projects and subgroups;  
-- it cannot be enabled or disabled locally.  
+You can prevent overriding of rules in child projects or groups. To do this, uncheck the option "Allow override at group/project level". Such a rule cannot be modified in child groups or projects. At the instance level, this applies to all groups and projects.  
 
 **Examples:**  
 
-1. If you enable the *"Verify committer email"* rule at the group level and disable overriding, this rule will be active in all projects of that group and its subgroups, with no option to disable it.  
-1. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
-1. If overriding is allowed, the rule itself will not change in child groups or projects, but they will gain the ability to configure it.  
-   - For example, if the *"Verify committer email"* rule is enabled at the instance level with overriding disabled, all child groups and projects will have it enforced.  
-   - If overriding is later enabled at the instance level, the rule will remain active everywhere, but groups will now be able to adjust it.  
-   - If overriding is also enabled at the group level, then projects within that group will gain the ability to configure it individually.  
+1. If you enable the *"Verify committer email"* rule at the group level and disallow overriding, this rule will be enabled in all projects of that group and its subgroups, with no option to disable it.  
+
+2. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
+
+3. If overriding is allowed, the rule will still be automatically updated when it changes at the parent level, but child groups and projects will be able to modify it afterwards.  
 
 The inheritance hierarchy is as follows:  
 **Instance → Group → Subgroup → Project**
+
