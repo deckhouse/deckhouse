@@ -99,7 +99,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview

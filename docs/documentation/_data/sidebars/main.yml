@@ -448,7 +448,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /admin/configuration/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
