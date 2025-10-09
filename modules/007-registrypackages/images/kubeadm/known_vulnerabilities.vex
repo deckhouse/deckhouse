@@ -1,15 +1,13 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-e837687ca73b6d97b720c72228fa886b2d159aae2fc408b7d6125c2bc7a72d2f",
+  "@id": "merged-vex-db407e62697c7dd613890e7aa3ef289ea396a548f7106be0c7ddedadd94ba686",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-05-07T22:06:23.7823+03:00",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
         "name": "CVE-2023-45142"
       },
-      "timestamp": "2025-05-06T14:17:49.782779+03:00",
       "products": [
         {
           "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
@@ -17,13 +15,13 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "timestamp": "2025-05-06T11:17:49.782779Z"
     },
     {
       "vulnerability": {
         "name": "CVE-2023-45142"
       },
-      "timestamp": "2025-05-07T22:05:46.082802+03:00",
       "products": [
         {
           "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -31,13 +29,13 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "timestamp": "2025-05-07T19:05:46.082802Z"
     },
     {
       "vulnerability": {
         "name": "CVE-2023-47108"
       },
-      "timestamp": "2025-05-06T14:17:33.774559+03:00",
       "products": [
         {
           "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -45,7 +43,23 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "timestamp": "2025-05-06T11:17:33.774559Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В рамках платформы не передаются скомпрессированные данные, эксплуатация невозможна.",
+      "timestamp": "2025-10-09T11:56:33.857714Z"
     }
-  ]
+  ],
+  "timestamp": "2025-10-09T11:56:36Z"
 }
