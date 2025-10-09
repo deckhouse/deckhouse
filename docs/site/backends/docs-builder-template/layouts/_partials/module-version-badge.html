@@ -5,6 +5,8 @@
 {{- $channelsInfo := .ctx.Site.Data.channels.info }}
 {{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
 
+
+{{ warnf "Dump site.Params.mode: %s " site.Params.mode }}
 {{- if and $moduleChannelsData ( eq site.Params.mode "module" ) }}
   {{- $version := "" }}
   {{- range sort $channelsInfo "stability" "desc" }}
