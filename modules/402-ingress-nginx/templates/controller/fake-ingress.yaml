@@ -15,6 +15,8 @@ metadata:
   name: {{ $name }}-{{ $sourceName }}-reload
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context ) | nindent 2 }}
+  annotations:
+    ingress-nginx.kubernetes.io/skip-status-update: ""
 spec:
   ingressClassName: {{ $ingressClass }}
   rules:

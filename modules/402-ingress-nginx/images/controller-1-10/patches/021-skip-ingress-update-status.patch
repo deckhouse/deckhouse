@@ -1,0 +1,60 @@
+diff --git a/internal/ingress/status/status.go b/internal/ingress/status/status.go
+index ef01cdd24..46350b497 100644
+--- a/internal/ingress/status/status.go
++++ b/internal/ingress/status/status.go
+@@ -44,6 +44,9 @@ import (
+ // which the status should check if an update is required.
+ var UpdateInterval = 60
+ 
++// AnnotationSkipStatusUpdate indicates if an ingress status should be skipped during sync.
++const AnnotationSkipStatusUpdate = "ingress-nginx.kubernetes.io/skip-status-update"
++
+ // Syncer is an interface that implements syncer
+ type Syncer interface {
+ 	Run(chan struct{})
+@@ -273,6 +276,11 @@ func (s *statusSync) updateStatus(newIngressPoint []v1.IngressLoadBalancerIngres
+ 	sort.SliceStable(newIngressPoint, lessLoadBalancerIngress(newIngressPoint))
+ 
+ 	for _, ing := range ings {
++		if shouldSkipStatusUpdate(ing) {
++			klog.V(3).InfoS("skipping update of Ingress (annotation present)", "namespace", ing.Namespace, "ingress", ing.Name)
++			continue
++		}
++
+ 		curIPs := ing.Status.LoadBalancer.Ingress
+ 		sort.SliceStable(curIPs, lessLoadBalancerIngress(curIPs))
+ 		if ingressSliceEqual(curIPs, newIngressPoint) {
+@@ -341,6 +349,33 @@ func ingressSliceEqual(lhs, rhs []v1.IngressLoadBalancerIngress) bool {
+ 	return true
+ }
+ 
++func shouldSkipStatusUpdate(ing *ingress.Ingress) bool {
++	if ing == nil {
++		return false
++	}
++
++	annotations := ing.GetAnnotations()
++	if annotations == nil {
++		return false
++	}
++
++	val, ok := annotations[AnnotationSkipStatusUpdate]
++	if !ok {
++		return false
++	}
++
++	if val == "" {
++		return true
++	}
++
++	switch strings.ToLower(val) {
++	case "true", "1", "yes", "on":
++		return true
++	default:
++		return false
++	}
++}
++
+ func statusAddressFromService(service string, kubeClient clientset.Interface) ([]v1.IngressLoadBalancerIngress, error) {
+ 	ns, name, err := k8s.ParseNameNS(service)
+ 	if err != nil {
