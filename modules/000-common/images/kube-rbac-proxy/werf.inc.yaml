@@ -57,4 +57,4 @@ shell:
   - chown 64535:64535 /kube-rbac-proxy
   - chmod 0755 /kube-rbac-proxy
 ---
-{{- include "vex_mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
