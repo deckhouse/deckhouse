@@ -1,0 +1,66 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 4,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-9675"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containers/buildah@v1.37.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Buildah allows arbitrary directory mount - we do not use this functionality directly",
+      "timestamp": "2025-10-09T14:21:14.710165495Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-0495"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/buildx@v0.13.0-rc2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker Buildx build capabilities extension - we do not use this dependency directly",
+      "timestamp": "2025-10-09T14:21:14.78894747Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby's Firewalld reload removes bridge network isolation - we do not use this functionality directly",
+      "timestamp": "2025-10-09T14:21:14.86863865Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58058"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/ulikunitz/xz@v0.5.12"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Memory leak in xz library - we do not use this dependency directly",
+      "timestamp": "2025-10-09T14:21:14.944084391Z"
+    }
+  ],
+  "timestamp": "2025-10-09T14:21:14Z",
+  "last_updated": "2025-10-09T14:21:14Z"
+}
