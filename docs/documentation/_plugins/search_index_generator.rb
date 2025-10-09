@@ -3,7 +3,7 @@ require 'json'
 module Jekyll
   class SearchIndexGenerator < Generator
     safe true
-    priority :low
+    priority :lowest
 
     def generate(site)
       puts "SearchIndexGenerator: Generating search index files..."
