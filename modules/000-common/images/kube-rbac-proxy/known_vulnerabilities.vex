@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-f7b045ebd93e391d2d464b1811c692f023c458ff4e594292677543b370283875",
+  "author": "Unknown Author",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В рамках платформы не передаются скомпрессированные данные, эксплуатация невозможна.",
+      "timestamp": "2025-10-09T11:31:17.452121Z"
+    }
+  ],
+  "timestamp": "2025-10-09T11:31:17Z"
+}
