@@ -5,6 +5,7 @@ metadata:
   labels:
     app: controller
     deckhouse-service-type: provider-managed
+    ingress-nginx/ingress-class: ""
     heritage: deckhouse
     module: ingress-nginx
     name: wait-lb-non-default

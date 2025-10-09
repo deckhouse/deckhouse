@@ -38,7 +38,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps.kruise.io/v1alpha1"
@@ -127,6 +127,9 @@ spec:
   template:
     metadata:
       labels:
+      {{- if or (eq $crd.spec.inlet "HostWithFailover") (eq $crd.spec.inlet "HostPort") }}
+        ingress-nginx/ingress-class: {{ $crd.spec.ingressClass }}
+      {{- end }}
       {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
         ingress.deckhouse.io/block-deleting: "true"
       {{- end }}
@@ -333,6 +336,7 @@ spec:
         {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
         - --enable-ssl-passthrough
         {{- end }}
+        - --status-service-label=ingress-nginx/ingress-class={{ $crd.spec.ingressClass }}
         lifecycle:
           preStop:
             exec:
