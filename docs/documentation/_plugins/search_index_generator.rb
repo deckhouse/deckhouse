@@ -10,6 +10,7 @@ module Jekyll
       
       # Check if embedded_modules mode is enabled
       embedded_modules_mode = site.config['embedded_modules'] == true
+      puts "SearchIndexGenerator: Embedded modules mode enabled: #{embedded_modules_mode}"
       
       if embedded_modules_mode
         puts "Embedded modules mode enabled - generating only embedded modules search indices"
