@@ -4,13 +4,17 @@
 {
   "documents": [
     {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
+    {{ warnf "Generating search index for %d modules" (len $modulesStablestList) }}
     {{- $first := true -}}
     {{- range $modulesStablestList }}
       {{- $moduleName := index . "name" }}
       {{- $moduleChannel := index . "channel" }}
       {{- $moduleData := index $modulesData $moduleName -}}
       {{- $moduleSection := printf "modules/%s/%s" $moduleName $moduleChannel }}
+{{ warnf "Processing docs for module %s channel %s" $moduleName $moduleChannel }}
+{{ warnf "$moduleSection: %v" $moduleSection }}
       {{- range $.Site.Pages }}
+{{ warnf "Considering page: %s (Section: %s, Kind: %s, RelPermalink: %s)" .Title .Section .Kind .RelPermalink }}
         {{- if and (hasPrefix .RelPermalink (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix .RelPermalink "/configuration.html")) (not (hasSuffix .RelPermalink "/cr.html")) }}
           {{- if .File }}
             {{- if not $first -}},{{- end -}}
@@ -33,6 +37,8 @@
               "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
               "content": {{ .Content | plainify | jsonify }}
             }
+          {{- else }}
+             {{- warnf "no such file" }}
           {{- end }}
         {{- end }}
       {{- end }}
@@ -42,8 +48,8 @@
   {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
   {{- $allParameters := slice }}
   {{- range $modulesStablestList }}
-    {{- $moduleChannel := index . "channel" }}
     {{- $moduleName := index . "name" }}
+    {{- $moduleChannel := index . "channel" }}
     {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
     {{- if not $moduleData }}
       {{- continue -}}
