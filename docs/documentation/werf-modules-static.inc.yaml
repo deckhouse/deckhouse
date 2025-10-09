@@ -101,7 +101,7 @@ shell:
         cd ..
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "documentation" }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,_config-modules.yml,/tmp/_config_additional.yml
         rm -rf /app/_site/documentation/compare/
 {{ else }}
         {{- if eq .Mode "development" }}
