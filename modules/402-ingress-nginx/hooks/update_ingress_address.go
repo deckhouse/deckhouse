@@ -32,9 +32,8 @@ import (
 )
 
 type loadBalancerService struct {
-	Name     string
-	Hostname string
-	IP       string
+	Name    string
+	Ingress []corev1.LoadBalancerIngress
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -61,18 +60,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, updateIngressAddress)
 
 func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var svc corev1.Service
-
+	var svc = new(corev1.Service)
 	if err := sdk.FromUnstructured(obj, &svc); err != nil {
 		return nil, err
 	}
-	if len(svc.Status.LoadBalancer.Ingress) != 0 {
+
+	if len(svc.Status.LoadBalancer.Ingress) > 0 {
 		return loadBalancerService{
-			Name:     svc.Labels["name"],
-			IP:       svc.Status.LoadBalancer.Ingress[0].IP,
-			Hostname: svc.Status.LoadBalancer.Ingress[0].Hostname,
+			Name:    svc.GetLabels()["name"],
+			Ingress: svc.Status.LoadBalancer.Ingress,
 		}, nil
 	}
+
 	return nil, nil
 }
 
@@ -82,16 +81,44 @@ func updateIngressAddress(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ingress-loadbalancer-service' snapshots: %w", err)
 		}
-		patch := map[string]interface{}{
-			"status": map[string]interface{}{
-				"loadBalancer": map[string]interface{}{
-					"ip":       svc.IP,
-					"hostname": svc.Hostname,
-				},
-			},
-		}
+
+		patch := patchIngressnginxController(svc.Ingress[0].IP, svc.Ingress[0].Hostname)
 		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController",
 			"", svc.Name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
+
+		reloadIngresses := []string{
+			fmt.Sprintf("%s-custom-headers-reload", svc.Name),
+			fmt.Sprintf("%s-client-cert-reload", svc.Name),
+		}
+
+		ingressPatch := patchReloadIngresses(svc.Ingress)
+
+		for _, ingressName := range reloadIngresses {
+			input.PatchCollector.PatchWithMerge(ingressPatch, "networking.k8s.io/v1", "Ingress",
+				"d8-ingress-nginx", ingressName, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
+		}
 	}
+
 	return nil
+}
+
+var patchIngressnginxController = func(ip, hostname string) map[string]interface{} {
+	return map[string]interface{}{
+		"status": map[string]interface{}{
+			"loadBalancer": map[string]interface{}{
+				"ip":       ip,
+				"hostname": hostname,
+			},
+		},
+	}
+}
+
+var patchReloadIngresses = func(ingress []corev1.LoadBalancerIngress) map[string]interface{} {
+	return map[string]interface{}{
+		"status": map[string]interface{}{
+			"loadBalancer": map[string]interface{}{
+				"ingress": ingress,
+			},
+		},
+	}
 }
