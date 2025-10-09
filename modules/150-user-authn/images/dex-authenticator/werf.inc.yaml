@@ -57,6 +57,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    {{- $_ := set $ "ProjectName" (printf "%s/%s/oauth2-proxy" $.ModuleName $.ImageName ) }}
     - |
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o oauth2-proxy .`) | indent 6 }}
     - chown 64535:64535 oauth2-proxy
@@ -95,6 +96,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
+    {{- $_ := set $ "ProjectName" (printf "%s/%s/url-exec-prober" $.ModuleName $.ImageName ) }}
     - |
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o url-exec-prober main.go`) | indent 6 }}
     - chown 64535:64535 url-exec-prober
