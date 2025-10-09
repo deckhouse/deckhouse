@@ -1,6 +1,8 @@
 {{- $channelsInfo := .Site.Data.channels.info }}
 {{- $moduleTitle := "" }}
 
+{{ warnf "Dump channelsInfo: %s " ($channelsInfo | jsonify) }}
+
 {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
