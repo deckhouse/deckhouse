@@ -17,7 +17,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse."
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane."
     },
     {
       "vulnerability": {
@@ -31,7 +31,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse."
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane."
     },
     {
       "vulnerability": {
@@ -45,7 +45,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse."
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane."
     }
   ]
 }
