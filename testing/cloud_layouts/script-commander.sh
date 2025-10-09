@@ -978,6 +978,34 @@ END_SCRIPT
   return 1
 }
 
+function wait_prom_rules_mutating_ready() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get pods -l app=prom-rules-mutating
+[[ "$(kubectl get pods -l app=prom-rules-mutating -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+END_SCRIPT
+)
+
+  testRunAttempts=60
+  for ((i=1; i<=testRunAttempts; i++)); do
+    >&2 echo "Check prom-rules-mutating pod readiness..."
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  return 1
+}
+
 function update_comment() {
   echo "  Updating comment on pull request..."
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
@@ -1160,7 +1188,8 @@ function run-test() {
   wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
-  testScript="$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  wait_prom_rules_mutating_ready || return $?
+  testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   testRunAttempts=5
   $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
   for ((i=1; i<=testRunAttempts; i++)); do
@@ -1179,7 +1208,7 @@ function run-test() {
 
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
-    testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
+    testAutoscalerScript=$(cat "${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
     testRunAttempts=5
     for ((i=1; i<=$testRunAttempts; i++)); do
       if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAutoscalerScript}"; then
@@ -1207,7 +1236,7 @@ function run-test() {
     wait_upmeter_green || return $?
     wait_alerts_resolve || return $?
 
-    testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+    testScript=$(cat "${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       echo "Ingress and Istio test passed"
