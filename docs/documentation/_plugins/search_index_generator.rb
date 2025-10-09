@@ -44,7 +44,7 @@ module Jekyll
         end
       end
       
-      puts "SearchIndexGenerator: Generated #{site.pages.select { |p| p.name.end_with?('.json') }.size} search index files"
+      puts "SearchIndexGenerator: Generated #{site.pages.select { |p| p.name && p.name.end_with?('.json') }.size} search index files"
     end
   end
 end
