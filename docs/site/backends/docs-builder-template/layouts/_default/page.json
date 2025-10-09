@@ -4,18 +4,19 @@
 {
   "documents": [
     {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
-    {{ warnf "Generating search index for %d modules" (len $modulesStablestList) }}
+    {{- warnf "Generating search index for %d modules" (len $modulesStablestList) }}
     {{- $first := true -}}
     {{- range $modulesStablestList }}
       {{- $moduleName := index . "name" }}
       {{- $moduleChannel := index . "channel" }}
       {{- $moduleData := index $modulesData $moduleName -}}
       {{- $moduleSection := printf "modules/%s/%s" $moduleName $moduleChannel }}
-{{ warnf "Processing docs for module %s channel %s" $moduleName $moduleChannel }}
-{{ warnf "$moduleSection: %v" $moduleSection }}
+{{- warnf "Processing docs for module %s channel %s" $moduleName $moduleChannel }}
+{{- warnf "$moduleSection: %v" $moduleSection }}
       {{- range $.Site.Pages }}
-{{ warnf "Considering page: %s (Section: %s, Kind: %s, RelPermalink: %s)" .Title .Section .Kind .RelPermalink }}
-        {{- if and (hasPrefix .RelPermalink (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix .RelPermalink "/configuration.html")) (not (hasSuffix .RelPermalink "/cr.html")) }}
+        {{ $relPermalinkWithoutLang := replaceRE `/(ru/|en/)` "/" .RelPermalink }}
+{{- warnf "Considering page: %s (Section: %s, Kind: %s, RelPermalink: %s, RelPermalinkWithoutLang: %s)" .Title .Section .Kind .RelPermalink $relPermalinkWithoutLang }}
+        {{- if and (hasPrefix $relPermalinkWithoutLang (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix $relPermalinkWithoutLang "/configuration.html")) (not (hasSuffix $relPermalinkWithoutLang "/cr.html")) }}
           {{- if .File }}
             {{- if not $first -}},{{- end -}}
             {{- $first = false -}}
