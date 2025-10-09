@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane.",
       "timestamp": "2025-05-06T11:17:49.782779Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane.",
       "timestamp": "2025-05-07T19:05:46.082802Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Телеметрия не может быть включена в компонентах плоскости управления Deckhouse.",
+      "impact_statement": "Телеметрия не используется и не может быть включена в компонентах control-plane.",
       "timestamp": "2025-05-06T11:17:33.774559Z"
     },
     {
