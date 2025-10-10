@@ -339,6 +339,10 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/user-authn/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/user-authn/faq.html
         - title:
             en: user-authz
             ru: user-authz

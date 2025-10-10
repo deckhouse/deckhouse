@@ -29,4 +29,4 @@ properties:
           * StorageClass for `default StorageProfile`;
           * the first (in lexicographic order) StorageClass created by the module.
 
-          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/reference/api/global.html#parameters-defaultclusterstorageclass).

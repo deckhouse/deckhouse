@@ -24,7 +24,7 @@ Platform.
   HighAvailability
   в двух репликах требует 1 ядро и 1Гб памяти на 2 отдельных узлах (если используете [operator-postgres](#вариант-2-модуль-operator-postgres))
 * Сервер API в режиме
-  [HighAvailability](../../../platform/deckhouse-configure-global.html#parameters-highavailability)
+  [HighAvailability](/reference/api/global.html#parameters-highavailability)
   в двух репликах требует 1 ядро и 1Гб памяти на 2 отдельных узлах
 * Служебные компоненты для рендеринга конфигурации и подключения к прикладными кластерам, требуют
   0.5 ядра и 128 Мб памяти на кластер

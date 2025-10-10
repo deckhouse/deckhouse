@@ -1,9 +1,0 @@
-name: cloud-provider-yandex
-critical: true
-weight: 30
-subsystems:
-  - infrastructure
-namespace: d8-cloud-provider-yandex
-stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"

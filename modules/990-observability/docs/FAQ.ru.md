@@ -401,7 +401,7 @@ roleRef:
    ```
 
 5. Для записи метрик необходимо отправлять запросы по протоколам Prometheus Remote-Write [V1](https://prometheus.io/docs/specs/prw/remote_write_spec/) или [V2](https://prometheus.io/docs/specs/prw/remote_write_spec_2_0/).
-   - `URL`: `https://observability.%publicDomainTemplate%/api/v1/write`. [Подробнее про publicDomainTemplate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+   - `URL`: `https://observability.%publicDomainTemplate%/api/v1/write`. [Подробнее про publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate).
    - `HTTP Headers`:
      - `Header`: Authorization
      - `Value`: Bearer <TOKEN_VALUE>, где токен это токен полученный из `Secret`-а `metrics-access` на предыдущем шаге.

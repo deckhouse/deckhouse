@@ -4,7 +4,7 @@ title: "Руководство пользователя"
 
 ## Адрес
 
-Если [шаблон публичных доменов](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+Если [шаблон публичных доменов](/reference/api/global.html#parameters-modules-publicdomaintemplate)
 в кластере `%s.example.com`, то в веб-приложение можно зайти по адресу `https://commander.example.com`
 
 ## Рабочие пространства

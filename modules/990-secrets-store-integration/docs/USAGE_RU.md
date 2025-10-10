@@ -568,7 +568,7 @@ for {
 ### Субдомен вашей Deckhouse Kubernetes Platform
 
 Для скачивания мультитула:
-1. Перейдите на страницу `tools..<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
+1. Перейдите на страницу `tools..<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 1. Выберите Deckhouse CLI для вашей операционной системы.
 1. **Для Linux и MacOS:**
    - Добавьте права на выполнение `d8` через `chmod +x d8`.

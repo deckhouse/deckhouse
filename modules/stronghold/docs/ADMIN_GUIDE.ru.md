@@ -68,7 +68,7 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 Рисунок - 1. Интерфейс администратора Deckhouse Kubernetes Platform.
 
-Доступ к Deckhouse Stronghold осуществляется через инлеты. В данный момент доступен один инлет - `Ingress.` Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [publicDomainTemplate](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+Доступ к Deckhouse Stronghold осуществляется через инлеты. В данный момент доступен один инлет - `Ingress.` Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
 
 Например, если `publicDomainTemplate` установлен как `%s-kube.company.my`, веб-интерфейс Stronghold будет доступен по адресу `stronghold-kube.company.my`.
 
