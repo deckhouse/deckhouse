@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) This is a validation library, we don't want to wrap errors in it due to its architecture
+//
+//nolint:wrapcheck
 package checker
 
 import (
@@ -54,7 +57,7 @@ func checkRegistryItem(ctx context.Context, puller *gcr_remote.Puller, isHTTPS b
 	_, err = puller.Head(ctx, ref)
 	if err != nil {
 		if ctx.Err() == nil {
-			return fmt.Errorf("head: %w", err)
+			return err
 		}
 
 		return fmt.Errorf("Request timeout")

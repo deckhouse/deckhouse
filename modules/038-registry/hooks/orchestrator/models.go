@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) This is a validation library, we don't want to wrap errors in it due to its architecture
+//
+//nolint:wrapcheck
 package orchestrator
 
 import (
@@ -74,15 +77,12 @@ func (p Params) Validate() error {
 
 	switch p.Mode {
 	case registry_const.ModeDirect, registry_const.ModeUnmanaged:
-		if err := validation.ValidateStruct(&p,
+		return validation.ValidateStruct(&p,
 			validation.Field(&p.ImagesRepo, validation.Required),
 			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),
 			validation.Field(&p.UserName, validation.When(p.Password != "", validation.Required)),
 			validation.Field(&p.Password, validation.When(p.UserName != "", validation.Required)),
-		); err != nil {
-			return fmt.Errorf("validate struct: %w", err)
-		}
-		return nil
+		)
 	}
 	return fmt.Errorf("Unknown registry mode: %q", p.Mode)
 }

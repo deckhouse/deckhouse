@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) This is a validation library, we don't want to wrap errors in it due to its architecture
+//
+//nolint:wrapcheck
 package checker
 
 import (
@@ -51,13 +54,9 @@ type Params struct {
 }
 
 func (params Params) Validate() error {
-	err := validation.ValidateStruct(&params,
+	return validation.ValidateStruct(&params,
 		validation.Field(&params.Registries),
 	)
-	if err != nil {
-		return fmt.Errorf("validate: %w", err)
-	}
-	return nil
 }
 
 type RegistryParams struct {
@@ -69,32 +68,20 @@ type RegistryParams struct {
 }
 
 func (rp RegistryParams) Validate() error {
-	err := validation.ValidateStruct(&rp,
+	return validation.ValidateStruct(&rp,
 		validation.Field(&rp.Address, validation.Required),
 		validation.Field(&rp.Scheme, validation.In("HTTP", "HTTPS")),
 		validation.Field(&rp.Username, validation.When(rp.Password != "", validation.Required)),
 		validation.Field(&rp.Password, validation.When(rp.Username != "", validation.Required)),
 	)
-	if err != nil {
-		return fmt.Errorf("validate: %w", err)
-	}
-	return nil
 }
 
 func (rp *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
 	if rp.isHTTPS() {
-		repo, err := gcr_name.NewRepository(rp.Address)
-		if err != nil {
-			return gcr_name.Repository{}, fmt.Errorf("new repository: %w", err)
-		}
-		return repo, nil
+		return gcr_name.NewRepository(rp.Address)
 	}
 
-	repo, err := gcr_name.NewRepository(rp.Address, gcr_name.Insecure)
-	if err != nil {
-		return gcr_name.Repository{}, fmt.Errorf("new repository: %w", err)
-	}
-	return repo, nil
+	return gcr_name.NewRepository(rp.Address, gcr_name.Insecure)
 }
 
 func (rp *RegistryParams) isHTTPS() bool {

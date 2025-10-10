@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) We don't want to wrap errors in this package due to its architecture
+//
+//nolint:wrapcheck
 package orchestrator
 
 import (
@@ -641,7 +644,7 @@ func (state *State) processRegistrySwitcher(params registryswitcher.Params, inpu
 	// Update Deckhouse-registry secret and wait
 	result, err := state.RegistrySecret.Process(params, inputs.RegistrySwitcher)
 	if err != nil {
-		return false, fmt.Errorf("process: %w", err)
+		return false, err
 	}
 	if !result.Ready {
 		state.setCondition(metav1.Condition{
