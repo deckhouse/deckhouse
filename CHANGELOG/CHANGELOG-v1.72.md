@@ -52,6 +52,7 @@
 ## Fixes
 
 
+ - **[candi]** Switch node hostname in discover_node_ip.sh to locked hostname [#15799](https://github.com/deckhouse/deckhouse/pull/15799)
  - **[candi]** Fixed deletion of NodeUsers. [#13240](https://github.com/deckhouse/deckhouse/pull/13240)
  - **[candi]** Fixed default AWS subnets tags for LB controller autodiscovery. [#10138](https://github.com/deckhouse/deckhouse/pull/10138)
  - **[cloud-provider-aws]** Fixed incorrect template id for AWS e2e cluster. [#14605](https://github.com/deckhouse/deckhouse/pull/14605)
@@ -73,9 +74,11 @@
  - **[cni-cilium]** Enabled vlan-bpf-bypass feature to fix extra vlan interfaces issues. [#14606](https://github.com/deckhouse/deckhouse/pull/14606)
  - **[control-plane-manager]** Promoted etcd member if needed. [#14661](https://github.com/deckhouse/deckhouse/pull/14661)
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
+ - **[deckhouse]** Fixes bug when module`s config values unchanged after enabling. [#15887](https://github.com/deckhouse/deckhouse/pull/15887)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
  - **[deckhouse-controller]** Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook execution [#15724](https://github.com/deckhouse/deckhouse/pull/15724)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Change default ssh mode [#15773](https://github.com/deckhouse/deckhouse/pull/15773)
  - **[dhctl]** Fixing bashible steps when it does not respond to the limit on the number of attempts [#15633](https://github.com/deckhouse/deckhouse/pull/15633)
  - **[dhctl]** Fix start and keep-alive behavior, do not change host if any kube-proxies has been started. [#15566](https://github.com/deckhouse/deckhouse/pull/15566)
  - **[dhctl]** Add timeout to ssh client dial and fix stop. [#15539](https://github.com/deckhouse/deckhouse/pull/15539)
@@ -85,6 +88,9 @@
  - **[docs]** Added documentation for the new registry configuration in Containerd. [#14790](https://github.com/deckhouse/deckhouse/pull/14790)
  - **[extended-monitoring]** Exclude PVCs with block volume mode from space and inodes monitoring. [#14859](https://github.com/deckhouse/deckhouse/pull/14859)
     free space monitoring for the PVCs in the Block volumeMode is meaningless and will be disabled
+ - **[ingress-nginx]** The same order of limit_req_zone statements is maintained when generating new configuration. [#15852](https://github.com/deckhouse/deckhouse/pull/15852)
+    The pods of the ingress-nginx module will be restarted.
+ - **[ingress-nginx]** Enable ExecuteHookOnEvents on hook set_annotation_validation_suspended.go [#15839](https://github.com/deckhouse/deckhouse/pull/15839)
  - **[ingress-nginx]** Fixed nginx segfaults when opentelemetry is enabled. [#15466](https://github.com/deckhouse/deckhouse/pull/15466)
     The ingress-nginx pods of 1.10 will be restarted.
  - **[ingress-nginx]** Fixed the missing opentelemetry libraries issue. [#14965](https://github.com/deckhouse/deckhouse/pull/14965)
