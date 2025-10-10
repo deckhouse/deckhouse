@@ -3,13 +3,13 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cloud-data-discoverer
+  name: vcd-connection-info
   namespace: d8-cloud-provider-vcd
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-data-discoverer")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 type: Opaque
 data:
   host: {{ $providerClusterConfiguration.provider.server | toString | trimSuffix "/" | b64enc | quote }}
   org: {{ $providerClusterConfiguration.organization | toString | b64enc | quote }}
   vdc: {{ $providerClusterConfiguration.virtualDataCenter | toString | b64enc | quote }}
   vAppName: {{ $providerClusterConfiguration.virtualApplicationName | toString | b64enc | quote }}
-  insecure: {{ "true" | b64enc | quote }}
+  insecure: {{ $providerClusterConfiguration.provider.insecure | toString | b64enc | quote }}

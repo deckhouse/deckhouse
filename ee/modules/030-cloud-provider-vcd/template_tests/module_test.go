@@ -82,11 +82,33 @@ const moduleValuesA = `
         masterNodeGroup:
           replicas: 1
           instanceClass:
+            affinityRule:
+              polarity: AntiAffinity
             template: Templates/ubuntu-focal-20.04
             sizingPolicy: 4cpu8ram
             rootDiskSizeGb: 20
             etcdDiskSizeGb: 20
             storageProfile: nvme
+        nodeGroups:
+        - name: front
+          replicas: 3
+          instanceClass:
+            rootDiskSizeGb: 20
+            sizingPolicy: 16cpu32ram
+            template: Templates/ubuntu-focal-20.04
+            storageProfile: nvme
+            affinityRule:
+              polarity: AntiAffinity
+              required: false
+      affinityRules:
+      - nodeGroupName: master
+        polarity: AntiAffinity
+      - nodeGroupName: front
+        polarity: AntiAffinity
+        required: false
+      - nodeGroupName: ephemeral-node
+        polarity: Affinity
+        required: true
 `
 
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
@@ -119,6 +141,61 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(regSecret.Exists()).To(BeTrue())
 			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
+
+			masterAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-master")
+			Expect(masterAffinityRule.Exists()).To(BeTrue())
+			Expect(masterAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-master
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: master
+  polarity: "AntiAffinity"
+  required: false
+`))
+
+			frontAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-front")
+			Expect(frontAffinityRule.Exists()).To(BeTrue())
+			Expect(frontAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-front
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: front
+  polarity: "AntiAffinity"
+  required: false
+`))
+
+			ephemeralAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-ephemeral-node")
+			Expect(ephemeralAffinityRule.Exists()).To(BeTrue())
+			Expect(ephemeralAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-ephemeral-node
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: ephemeral-node
+  polarity: "Affinity"
+  required: true
+`))
+
 		})
 	})
 })
