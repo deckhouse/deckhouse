@@ -58,8 +58,8 @@ d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
     "storage_type":      "aws-s3",
     "aws_s3_bucket":         "my_bucket",
     "aws_s3_endpoint":       "minio.domain.ru",
-    "aws_access_key_id":     "oWdPcQ50zTuMjJI",
-    "aws_secret_access_key": "4NzZjboafWyfNTe7aUVgLUdrMurHjty43iUXHFBw"
+    "aws_access_key_id":     "<AWS_ACCESS_KEY_ID>",
+    "aws_secret_access_key": "<AWS_SECRET_ACCESS_KEY>"
 }
 EOF
 ```
@@ -79,8 +79,8 @@ d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
     "interval":          "3m",
     "retain":            "10",
-    "aws_access_key_id":     "vnR9Rfp0toPPgK3",
-    "aws_secret_access_key": "FuloGN1RZCtwINCLJtwHXTQ50zCL7s"
+    "aws_access_key_id":     "<AWS_ACCESS_KEY_ID>",
+    "aws_secret_access_key": "<AWS_SECRET_ACCESS_KEY>"
 }
 EOF
 ```

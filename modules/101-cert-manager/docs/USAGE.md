@@ -138,8 +138,8 @@ Read more in the [cert-manager documentation](https://cert-manager.io/docs/tutor
 
    ```yaml
    settings:
-     route53AccessKeyID: AKIABROTAITAJMPASA4A
-     route53SecretAccessKey: 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
+     route53AccessKeyID: <Route53_AccessKeyID>
+     route53SecretAccessKey: <Route53_SecretAccessKey>
    ```
 
    After that, Deckhouse will automatically create ClusterIssuer and Secret for route53 in the `d8-cert-manager` namespace.

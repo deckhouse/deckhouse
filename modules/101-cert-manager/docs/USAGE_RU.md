@@ -138,8 +138,8 @@ spec:
 
    ```yaml
    settings:
-     route53AccessKeyID: AKIABROTAITAJMPASA4A
-     route53SecretAccessKey: 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
+     route53AccessKeyID: <Route53_AccessKeyID>
+     route53SecretAccessKey: <Route53_SecretAccessKey>
    ```
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для route53 в namespace `d8-cert-manager`.
