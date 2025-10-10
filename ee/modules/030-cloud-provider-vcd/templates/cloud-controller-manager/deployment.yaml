@@ -91,7 +91,7 @@ spec:
           - --cloud-provider=vmware-cloud-director
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
-          - --controllers=cloud-node,cloud-node-lifecycle
+          - --controllers=cloud-node,cloud-node-lifecycle,service
           - --bind-address=127.0.0.1
           - --secure-port=10471
           - --v=4
