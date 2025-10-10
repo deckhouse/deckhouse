@@ -7,6 +7,7 @@
 #   - Commit.Hash - build commit hash, which is used to distinct artifacts on the analyze server and to add into import custom field
 #   - SvaceBuildOptions - optional parameter; might be used for javascript and python svacing
 #   - SvaceImportSettings - dict, which can contain ProjectName and Branch fields, to override default behavior of the futher analysis job
+#   - SvaceIgnore - list of regexps to exclude folders from analysis
 # Svace build uploads gathered artifacts to the analyze server
 
 {{- define "image-build.build" }}
@@ -23,6 +24,16 @@ cat > .svace-dir/import-settings <<EOF
 {{ trim $content }}
 EOF
 {{- end }}
+{{- if hasKey . "SvaceIgnore" }}
+  {{- $Root := . }}
+  {{- $content := "" }}
+  {{- range $value := .SvaceIgnore }}
+    {{- $content = (printf "%s%s\n" $content $value) }}
+  {{- end }}
+cat >> .svace-dir/svace.ignore <<EOF
+{{ trim $content }}
+EOF
+{{- end }}
 attempt=0
 retries=5
 success=0
@@ -35,6 +46,7 @@ while [[ $attempt -lt $retries ]]; do
 done
 set -e
 [[ $success == 1 ]] && rm -rf .svace-dir || exit 1
-{{-   end }}
+{{-   else }}
 {{ .BuildCommand }}
+{{-   end }}
 {{- end }}

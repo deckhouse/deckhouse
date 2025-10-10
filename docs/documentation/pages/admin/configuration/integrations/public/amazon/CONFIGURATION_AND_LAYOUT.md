@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/amazon/amazon-layout.html
+permalink: en/admin/integrations/public/amazon/layout.html
 ---
 
 This section describes cluster layouts in AWS infrastructure and their related parameters.
@@ -123,7 +123,7 @@ tags:
 
 ## Defining AWSClusterConfiguration
 
-The AWSClusterConfiguration resource describes the cluster settings and is used by Deckhouse Kubernetes Platform (DKP) to:
+The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Kubernetes Platform (DKP) to:
 
 - Define the layout and network CIDRs.
 - Configure master and worker nodes.
@@ -157,8 +157,8 @@ dhctl converge
 
 ## Internal addressing and subnets
 
-The `nodeNetworkCIDR` parameter defines the address range to be split among availability zones.
-This range must match or be a subset of `vpcNetworkCIDR`.
+The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter defines the address range to be split among availability zones.
+This range must match or be a subset of [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr).
 Subnets are automatically created based on the number of zones in the region.
 
 Example:
@@ -186,9 +186,9 @@ You can assign additional security groups in the following cases:
 
 | Node type              | Where to configure                                                                 |
 |------------------------|-------------------------------------------------------------------------------|
-| Master nodes            | In the `masterNodeGroup.instanceClass.additionalSecurityGroups` field of the AWSClusterConfiguration resource |
-| Static worker nodes | In the `nodeGroups[].instanceClass.additionalSecurityGroups` field of the same resource |
-| Ephemeral nodes         | In the `spec.additionalSecurityGroups` field of the AWSInstanceClass object         |
+| Master nodes            | In the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) field of the AWSClusterConfiguration resource |
+| Static worker nodes | In the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) field of the same resource |
+| Ephemeral nodes         | In the [`spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) field of the AWSInstanceClass object         |
 
 In all cases, the `additionalSecurityGroups` parameter must be an array of strings (AWS security group IDs or names).
 
@@ -196,9 +196,9 @@ If `disableDefaultSecurityGroup: true` is set, the default security groups will 
 
 When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
 
-- `additionalSecurityGroups` in the `masterNodeGroup` section of the AWSClusterConfiguration resource;
-- `additionalSecurityGroups` in the AWSInstanceClass resource;
-- `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) in the `masterNodeGroup` section of the AWSClusterConfiguration resource;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) in the AWSInstanceClass resource;
+- [`additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) in the `nodeGroups.instanceClass` section.
 
 To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
 
@@ -224,7 +224,7 @@ To configure peering, follow these steps:
 
 ## Configuring access via bastion host
 
-To access nodes in private subnets, use the `withNAT.bastionInstance` parameter in AWSClusterConfiguration.
+To access nodes in private subnets, use the [`withNAT.bastionInstance`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-withnat-bastioninstance) parameter in AWSClusterConfiguration.
 The bastion host is provisioned with the infrastructure according to the `instanceClass` settings.
 
 The following scenarios are supported:
@@ -273,7 +273,7 @@ The following scenarios are supported:
 
 ## Using an existing VPC (existingVPCID)
 
-The `existingVPCID` parameter in the AWSClusterConfiguration resource lets you use an existing VPC
+The [`existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) parameter in the AWSClusterConfiguration resource lets you use an existing VPC
 for DKP cluster deployment instead of automatically creating a new one.
 
 This may be useful when:
@@ -289,5 +289,5 @@ Reusing an existing Internet Gateway is not supported in the current DKP version
 
 Compatibility with other parameters:
 
-- If `existingVPCID` is specified, do not specify `vpcNetworkCIDR` as they are mutually exclusive.
-- The `nodeNetworkCIDR` parameter can (and should) be specified. It must be a subset of the existing VPC.
+- If `existingVPCID` is specified, do not specify [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) as they are mutually exclusive.
+- The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter can (and should) be specified. It must be a subset of the existing VPC.

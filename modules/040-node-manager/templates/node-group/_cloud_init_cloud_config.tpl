@@ -7,7 +7,8 @@
 mounts:
 - [ ephemeral0, /mnt/resource ]
   {{- end }}
-package_update: True
+package_update: false
+package_upgrade: false
 manage_etc_hosts: localhost
 write_files:
 
@@ -39,7 +40,8 @@ runcmd:
 
 ssh_authorized_keys:
 - {{ $context.Values.nodeManager.internal.cloudProvider.sshPublicKey| default "" | quote }}
-package_update: True
+package_update: false
+package_upgrade: false
 manage_etc_hosts: localhost
 write_files:
 

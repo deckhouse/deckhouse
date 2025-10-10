@@ -90,7 +90,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -432,7 +432,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -514,7 +514,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -720,7 +720,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -801,7 +801,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -991,7 +991,7 @@
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -1012,7 +1012,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1036,7 +1038,7 @@
           "target": ""
         }
       ],
-      "title": "Network",
+      "title": "Network read",
       "type": "timeseries"
     },
     {
@@ -1095,7 +1097,7 @@
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -1116,7 +1118,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1140,7 +1144,7 @@
           "target": ""
         }
       ],
-      "title": "Network",
+      "title": "Network written",
       "type": "timeseries"
     },
     {
@@ -1447,6 +1451,8 @@
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
+          "sortBy": "Last *",
+          "sortDesc": true,
           "width": 120
         },
         "tooltip": {

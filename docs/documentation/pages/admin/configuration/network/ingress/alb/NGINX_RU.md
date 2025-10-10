@@ -5,7 +5,7 @@ description: "Настройка балансировщика нагрузки �
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](../../../../../modules/ingress-nginx/).
+Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
 
@@ -36,7 +36,7 @@ lang: ru
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.
 
-Также модуль интегрирован с модулем [`cert-manager`](../../../../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
+Также модуль интегрирован с модулем [`cert-manager`](/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
 
 ## Мониторинг и статистика
 
@@ -235,7 +235,7 @@ metallb:
 
 {% alert level="info" %}Доступно только в Enterprise Edition.{% endalert %}
 
-1. Включите модуль `metallb`:
+1. Включите [модуль `metallb`](/modules/metallb/):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -247,7 +247,7 @@ metallb:
      version: 2
    ```
 
-1. Создайте ресурс MetalLoadBalancerClass:
+1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -263,7 +263,7 @@ metallb:
      type: L2
    ```
 
-1. Создайте ресурс IngressNginxController:
+1. Создайте [ресурс IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
 
    ```yaml
    apiVersion: deckhouse.io/v1

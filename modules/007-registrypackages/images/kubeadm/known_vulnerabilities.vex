@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-965feae7158c81b99d9011ec6c79e82c8b8b4a7ae9dc9ea04a3e07a5218773a2",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "в рамках платформы не передаются скомпрессированные данные, поэтому данная уязвимость не может быть эксплуатирована",
+      "timestamp": "2025-10-09T09:57:48.854272Z"
+    }
+  ],
+  "timestamp": "2025-10-09T09:57:48Z"
+}

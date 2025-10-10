@@ -37,3 +37,9 @@ for local user accounts. The following features are added:
 ### 006-fix-render-error.patch
 
 This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
+
+### 007-ipv6-host.patch
+
+In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
+
+Upstream PR: https://github.com/dexidp/dex/pull/4363

@@ -1,6 +1,6 @@
 ---
 title: "Registry Module"
-description: ""
+description: "Configuration management of DKP component registry and organization of an internal container registry."
 ---
 
 ## Description
@@ -15,7 +15,7 @@ The module can operate in the following modes:
 - `Unmanaged` — operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
   - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
-  - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry) using the (deprecated) `helper change registry` command.
+  - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) using the (deprecated) `helper change registry` command.
 
 ## Restrictions and features of using the module
 
@@ -23,7 +23,7 @@ The `registry` module has a number of limitations and features related to instal
 
 ### Cluster installation limitations
 
-DKP cluster bootstrap is only supported in non-configurable `Unmanaged` mode. Registry settings during bootstrap are specified through [initConfiguration](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo).
+DKP cluster bootstrap is only supported in non-configurable `Unmanaged` mode. Registry settings during bootstrap are specified through [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
 
@@ -31,7 +31,7 @@ Registry configuration via the `deckhouse` moduleConfig during DKP cluster boots
 
 The module works under the following conditions:
 
-- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](../../installing/configuration.html##clusterconfiguration-defaultcri) configuration.
+- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
 
 ### Mode switching restrictions

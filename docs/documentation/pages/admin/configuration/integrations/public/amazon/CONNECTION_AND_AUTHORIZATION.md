@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/amazon/amazon-authorization.html
+permalink: en/admin/integrations/public/amazon/authorization.html
 description: "Configure AWS connection and authorization for Deckhouse Kubernetes Platform. IAM roles, credentials setup, and AWS integration requirements for cloud deployment."
 ---
 
@@ -21,7 +21,7 @@ After booting up, make sure the following services are running:
 - `cloud-init.service`
 
 These services are required for correct EC2 instance initialization
-and for integration with DKP infrastructure modules such as `cloud-provider-aws` and `machine-controller-manager`.
+and for integration with DKP infrastructure modules such as [`cloud-provider-aws`](/modules/cloud-provider-aws/) and `machine-controller-manager`.
 
 ## Accessing the AWS API
 

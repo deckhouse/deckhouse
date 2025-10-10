@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/monitoring/configuring/longterm-storage.html
 lang: ru
 ---
 
-Prometheus поддерживает механизм remote_write для отправки данных из локального экземпляра Prometheus в отдельное долговременное хранилище (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В DKP поддержка этого механизма реализована с помощью кастомного ресурса PrometheusRemoteWrite.
+Prometheus поддерживает механизм remote_write для отправки данных из локального экземпляра Prometheus в отдельное долговременное хранилище (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В DKP поддержка этого механизма реализована с помощью [кастомного ресурса PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite).
 
 {% alert level="info" %}
 Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
@@ -12,7 +12,7 @@ Prometheus поддерживает механизм remote_write для отп�
 
 ## Пример минимального PrometheusRemoteWrite
 
-Ниже приведён пример минимальной конфигурации кастомного ресурса PrometheusRemoteWrite:
+Ниже приведён пример минимальной конфигурации [кастомного ресурса PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -25,7 +25,7 @@ spec:
 
 ## Пример расширенного PrometheusRemoteWrite
 
-Ниже приведён пример расширенной конфигурации кастомного ресурса PrometheusRemoteWrite:
+Ниже приведён пример расширенной конфигурации [кастомного ресурса PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite):
 
 ```yaml
 apiVersion: deckhouse.io/v1

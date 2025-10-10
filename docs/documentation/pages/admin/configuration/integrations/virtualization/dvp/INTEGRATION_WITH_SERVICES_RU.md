@@ -1,6 +1,6 @@
 ---
 title: Интеграция с облаком DVP
-permalink: ru/admin/integrations/virtualization/dvp/dvp-services.html
+permalink: ru/admin/integrations/virtualization/dvp/services.html
 lang: ru
 ---
 

@@ -39,7 +39,7 @@ Availability zones are defined by the following features:
 With most cloud providers, zone distribution happens automatically.
 In non-cloud environments, administrators must manually label nodes to indicate the target zone.
 
-For the node labeling process and how to add nodes to groups, refer to [Node management](../../admin/configuration/platform-scaling/node-management.html).
+For the node labeling process and how to add nodes to groups, refer to ["Node management"](../../admin/configuration/platform-scaling/node/node-management.html).
 
 ## Using multiple regions (Multi-Region)
 
@@ -79,7 +79,7 @@ Distributing nodes across regions requires the following:
 - Labeling each node to indicate the region it belongs to.
 - Providing stable communication channels between regions.
 
-For the node labeling process and how to add nodes to groups, refer to [Node management](../../admin/configuration/platform-scaling/node-management.html).
+For the node labeling process and how to add nodes to groups, refer to ["Node management"](../../admin/configuration/platform-scaling/node/node-management.html).
 
 ## Balancing incoming traffic
 

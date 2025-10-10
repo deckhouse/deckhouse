@@ -6,6 +6,8 @@ import:
     add: /trivy_provider
     to: /trivy_provider
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/trivy_provider" ]
@@ -21,7 +23,7 @@ git:
     - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -38,6 +40,8 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - ln -s ./trivy-db ./original-trivy-db
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /trivy_provider main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy_provider main.go`) | indent 4 }}
   - chown 64535:64535 /trivy_provider
   - chmod 0700 /trivy_provider

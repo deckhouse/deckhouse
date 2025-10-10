@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/virtualization/vsphere/vsphere-layout.html
+permalink: ru/admin/integrations/virtualization/vsphere/layout.html
 lang: ru
 ---
 
@@ -10,8 +10,8 @@ lang: ru
 
 Особенности:
 
-- Использование vSphere Datacenter в качестве региона (`region`);
-- Использование vSphere Cluster в качестве зоны (`zone`);
+- Использование vSphere Datacenter в качестве региона ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region));
+- Использование vSphere Cluster в качестве зоны ([`zone`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones));
 - Поддержка нескольких зон и размещения узлов по зонам;
 - Использование различных datastore для дисков и volume’ов;
 - Поддержка подключения сетей, включая дополнительную сетевую изоляцию (например, MetalLB + BGP).
@@ -63,7 +63,7 @@ zones:
   - ru-central1-b
 ```
 
-Обязательные параметры:
+Обязательные параметры [ресурса VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration):
 
 - `region` — тег, присвоенный объекту Datacenter;
 - `zoneTagCategory` и `regionTagCategory` — категории тегов, по которым распознаются регионы и зоны;
@@ -79,7 +79,7 @@ zones:
 ## Список необходимых привилегий
 
 {% alert level="info" %}
-О том, как создать и назначить роль пользователю, читайте [в документации](vsphere-authorization.html#создание-и-назначение-роли).
+О том, как создать и назначить роль пользователю, читайте [в документации](authorization.html#создание-и-назначение-роли).
 {% endalert %}
 
 **Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**

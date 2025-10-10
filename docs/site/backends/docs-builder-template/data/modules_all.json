@@ -132,9 +132,6 @@
   },
   "csi-netapp": {
     "editions": [
-      "ce",
-      "se",
-      "se-plus",
       "ee",
       "cse-pro"
     ],
@@ -176,10 +173,6 @@
   },
   "delivery-kit": {
     "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
       "cse-lite",
       "cse-pro"
     ],
@@ -187,7 +180,7 @@
       "delivery"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "managed-postgres": {
     "editions": [
@@ -414,10 +407,6 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [

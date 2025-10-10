@@ -1,43 +1,18 @@
 $(document).ready(function () {
   const articles = document.querySelectorAll('.button-tile');
-  const moreButton = document.querySelector('.tile__pagination');
   const filterCheckboxes = document.querySelector('.filter__checkboxes');
   const resetButton = document.querySelector('.reset-check');
-  const itemsPerPage = 12;
-  let filteredArticles = [];
-  let count = 0;
 
   function hideAllItems() {
     articles.forEach(article => article.style.display = 'none');
   }
 
-  function showItems() {
-    const end = Math.min(count + itemsPerPage, filteredArticles.length);
-
-    for(let i = count; i < end; i++) {
-        filteredArticles[i].style.display = 'flex';
-    }
-
-    count = end;
-
-    if(count >= filteredArticles.length) {
-      moreButton.style.display = 'none';
-    } else {
-      moreButton.style.display = 'flex';
-    }
-  }
-
-  function initializeArticlePagination(articlesToPagination) {
-    filteredArticles = articlesToPagination;
-    count = 0;
+  function initializeArticleFilter(articlesToFilter) {
     hideAllItems();
 
-    if(filteredArticles.length <= itemsPerPage) {
-      filteredArticles.forEach(list => list.style.display = 'flex');
-      moreButton.style.display = 'none';
-    } else {
-      showItems();
-    }
+    articlesToFilter.forEach(article => {
+      article.style.display = 'flex';
+    })
   }
 
   function filterArticles() {
@@ -49,7 +24,7 @@ $(document).ready(function () {
       return selectedTags.length === 0 || selectedTags.every(tag => tagElement.includes(tag));
     })
 
-    initializeArticlePagination(filtered);
+    initializeArticleFilter(filtered);
 
     if (checkboxesChecked.length > 0) {
       resetButton.classList.add('active');
@@ -93,8 +68,7 @@ $(document).ready(function () {
   }
 
   createFilters();
-  initializeArticlePagination(Array.from(articles));
-  moreButton.addEventListener('click', showItems);
+  initializeArticleFilter(Array.from(articles));
 
   resetButton.addEventListener('click', () => {
     const checkboxes = filterCheckboxes.querySelectorAll('input[type="checkbox"]');

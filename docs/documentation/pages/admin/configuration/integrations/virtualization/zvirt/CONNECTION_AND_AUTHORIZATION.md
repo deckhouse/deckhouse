@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/virtualization/zvirt/zvirt-authorization.html
+permalink: en/admin/integrations/virtualization/zvirt/authorization.html
 ---
 
 ## Requirements

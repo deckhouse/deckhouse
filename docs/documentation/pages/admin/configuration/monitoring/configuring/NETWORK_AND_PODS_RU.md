@@ -10,10 +10,10 @@ DKP может выполнять мониторинг сетевого взаи
 
 Анализ результатов мониторинга можно выполнять с помощью дашбордов мониторинга, подробнее о них читайте в разделе [Grafana](../../../../user/web/grafana.html).
 
-Модуль `monitoring-ping` отслеживает любые изменения поля `.status.addresses` узла. Если они обнаружены, срабатывает хук, который собирает полный список имен узлов и их адресов, и передает в DaemonSet, который заново создает поды. Таким образом, `ping` проверяет всегда актуальный список узлов.
+[Модуль `monitoring-ping`](/modules/monitoring-ping/) отслеживает любые изменения поля `.status.addresses` узла. Если они обнаружены, срабатывает хук, который собирает полный список имен узлов и их адресов, и передает в DaemonSet, который заново создает поды. Таким образом, `ping` проверяет всегда актуальный список узлов.
 
 {% alert level="warning" %}
-Модуль `monitoring-ping` должен быть включен.
+[Модуль `monitoring-ping`](/modules/monitoring-ping/) должен быть включен.
 {% endalert %}
 
 ### Добавление дополнительных IP-адресов для мониторинга
@@ -43,10 +43,10 @@ spec:
 
 ## Мониторинг узлов кластера
 
-Чтобы включить мониторинг узлов кластера, необходимо включить модуль `monitoring-kubernetes`, если он не включен. Включить мониторинг кластера можно в [веб-интерфейсе Deckhouse](/modules/console/stable/), или с помощью следующей команды:
+Чтобы включить мониторинг узлов кластера, необходимо включить [модуль `monitoring-kubernetes`](/modules/monitoring-kubernetes/), если он не включен. Включить мониторинг кластера можно в [веб-интерфейсе Deckhouse](/modules/console/), или с помощью следующей команды:
 
 ```shell
 d8 platform module enable monitoring-kubernetes
 ```
 
-Аналогично можно включить модули `monitoring-kubernetes-control-plane` и `extended-monitoring`.
+Аналогично можно включить модули [`monitoring-kubernetes-control-plane`](/monitoring-kubernetes-control-plane/) и [`extended-monitoring`](/modules/extended-monitoring/).

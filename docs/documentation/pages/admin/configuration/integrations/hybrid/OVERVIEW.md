@@ -4,7 +4,7 @@ permalink: en/admin/integrations/hybrid/overview.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) can use cloud provider resources to expand the capacity of static clusters.
-Currently, integration is supported with [OpenStack](../public/openstack/connection-and-authorization.html) and [vSphere](../virtualization/vsphere/vsphere-authorization.html)-based clouds.
+Currently, integration is supported with [OpenStack](../public/openstack/connection-and-authorization.html) and [vSphere](../virtualization/vsphere/authorization.html)-based clouds.
 
 A hybrid cluster is a Kubernetes cluster that combines bare-metal nodes with nodes running on vSphere or OpenStack.
 To create such a cluster, an L2 network must be available between all nodes.

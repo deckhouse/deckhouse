@@ -237,7 +237,7 @@ spec:
   weight: 31
 ```
 
-Add a NodeGroupConfiguration resource to install Nvidia drivers for the `gpu` NodeGroup.
+Add a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource to install Nvidia drivers for the `gpu` NodeGroup.
 
 ### Ubuntu
 

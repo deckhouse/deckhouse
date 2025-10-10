@@ -49,7 +49,6 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
@@ -185,6 +184,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -321,8 +322,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -499,6 +500,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -635,8 +638,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -813,6 +816,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -949,8 +954,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1127,6 +1132,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1263,8 +1270,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1441,6 +1448,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1577,8 +1586,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1755,6 +1764,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -1891,8 +1902,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2069,6 +2080,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2205,8 +2218,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2383,6 +2396,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2519,8 +2534,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2697,6 +2712,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2833,8 +2850,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3011,6 +3028,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3147,8 +3166,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3325,6 +3344,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3461,8 +3482,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3639,6 +3660,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -3775,8 +3798,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3953,6 +3976,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4089,8 +4114,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4267,6 +4292,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -4403,8 +4430,8 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}

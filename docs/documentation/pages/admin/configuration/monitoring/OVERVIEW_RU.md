@@ -53,12 +53,12 @@ Deckhouse Kubernetes Platform (DKP) предоставляет решение д
 
 ## Мониторинг Ingress
 
-Реализован сбор статистики для ingress-nginx в Prometheus с детальными метриками (время ответа, коды, география и др.), доступной в разных разрезах (namespace, vhost, ingress). Данные визуализированы в Grafana с интерактивными дашбордами.
+Реализован сбор статистики для [`ingress-nginx`](/modules/ingress-nginx/) в Prometheus с детальными метриками (время ответа, коды, география и др.), доступной в разных разрезах (namespace, vhost, ingress). Данные визуализированы в Grafana с интерактивными дашбордами.
 Подробное описание - в разделе [мониторинг Ingress](../network/ingress/alb/nginx.html#мониторинг-и-статистика).
 
 ## Мониторинг control plane
 
-Мониторинг control plane осуществляется с помощью модуля `monitoring-kubernetes-control-plane`, который организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга следующих компонентов кластера:
+Мониторинг control plane осуществляется с помощью [модуля `monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/), который организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга следующих компонентов кластера:
 * kube-apiserver;
 * kube-controller-manager;
 * kube-scheduler;
@@ -66,7 +66,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет решение д
 
 ## Мониторинг приложения
 
-Этот мониторинг предназначен для автоматического сбора метрик с пользовательских приложений в Kubernetes-кластере через Prometheus. Достаточно включить модуль `monitoring-custom`, добавить лейбл `prometheus.deckhouse.io/custom-target` на Service или Pod и указать порт (например, `http-metrics`), чтобы метрики начали собираться без ручной настройки Prometheus.
+Этот мониторинг предназначен для автоматического сбора метрик с пользовательских приложений в Kubernetes-кластере через Prometheus. Достаточно включить [модуль `monitoring-custom`](/modules/monitoring-custom/), добавить лейбл `prometheus.deckhouse.io/custom-target` на Service или Pod и указать порт (например, `http-metrics`), чтобы метрики начали собираться без ручной настройки Prometheus.
 
 Система поддерживает гибкие настройки: HTTPS, кастомные пути, параметры запроса, работу с Istio (mTLS) и защиту от перегрузки (лимит метрик).
 Это позволяет интегрировать приложения в общий мониторинг кластера, отслеживать их состояние и производительность.
@@ -85,11 +85,11 @@ DKP безопасно собирает метрики мониторинга и
 - мониторинг случаев продолжительного превышения CPU steal;
 - мониторинг состояния таблицы Conntrack на узлах;
 - мониторинг подов с некорректным состоянием (как возможное следствие проблем с kubelet);
-- мониторинг компонентов control plane (реализуется модулем `monitoring-kubernetes-control-plane`);
-- мониторинг секретов в Кластере (объекты Secret) и срока действия TLS-сертификатов в них (реализуется модулем `extended-monitoring`);
-- сбор событий в кластере Kubernetes в виде метрик (реализуется модулем `extended-monitoring`);
-- мониторинг доступности образов контейнеров в registry, используемых контроллерах (Deployments, StatefulSets, DaemonSets, CronJobs) (реализуется модулем `extended-monitoring`);
-- мониторинг объектов в пространствах имен, у которых есть лейбл `extended-monitoring.deckhouse.io/enabled=""` (реализуется модулем `extended-monitoring`).
+- мониторинг компонентов control plane (реализуется [модулем `monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/));
+- мониторинг секретов в Кластере (объекты Secret) и срока действия TLS-сертификатов в них (реализуется [модулем `extended-monitoring`](/modules/extended-monitoring/));
+- сбор событий в кластере Kubernetes в виде метрик (реализуется [модулем `extended-monitoring`](/modules/extended-monitoring/));
+- мониторинг доступности образов контейнеров в registry, используемых контроллерах (Deployments, StatefulSets, DaemonSets, CronJobs) (реализуется [модулем `extended-monitoring`](/modules/extended-monitoring/));
+- мониторинг объектов в пространствах имен, у которых есть лейбл `extended-monitoring.deckhouse.io/enabled=""` (реализуется [модулем `extended-monitoring`](/modules/extended-monitoring/)).
 
 ## Режим расширенного мониторинга
 
@@ -127,7 +127,7 @@ DKP поддерживает отправку алертов с помощью `
 
 ## Оценка доступности
 
-Оценка доступности в DKP осуществляется модулем `upmeter`.
+Оценка доступности в DKP осуществляется [модулем `upmeter`](/modules/upmeter/).
 
 Состав модуля `upmeter`:
 

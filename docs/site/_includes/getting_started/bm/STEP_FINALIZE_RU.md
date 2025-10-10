@@ -59,7 +59,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
 
 <ul>
   <li>

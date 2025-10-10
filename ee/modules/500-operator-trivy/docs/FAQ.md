@@ -67,5 +67,5 @@ The operator scans **all resources** located in any namespace labeled with `secu
 To view the scan results of your application, use the Grafana dashboard `Security / Trivy Image Vulnerability Overview`.  
 You can filter the results by the desired namespace and resource.
 
-You can also directly view the [resources](trivy-cr.html) that contain scan results created for each scanned object.  
-Details about naming structure and resource location are available in the [documentation](trivy-cr.html).
+You can also directly view the [resources](cr.html) that contain scan results created for each scanned object.  
+Details about naming structure and resource location are available in the [documentation](cr.html).

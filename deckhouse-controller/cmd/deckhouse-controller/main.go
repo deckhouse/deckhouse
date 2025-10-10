@@ -43,6 +43,15 @@ var (
 	ShellOperatorVersion = "dev"
 )
 
+// Variables to configure with build flags.
+var (
+	DefaultReleaseChannel = ""
+)
+
+const (
+	defaultReleaseChannel = "Stable"
+)
+
 func version() string {
 	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, runtime.Version())
 }

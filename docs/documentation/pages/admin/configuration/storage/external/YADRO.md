@@ -10,7 +10,7 @@ This page provides instructions on connecting TATLIN.UNIFIED (Yadro) to Deckhous
 
 ## Enabling the module
 
-To manage volumes based on the TATLIN.UNIFIED (Yadro) storage system in Deckhouse, the `csi-yadro-tatlin-unified` module is used. It allows the creation of StorageClass resources through custom resources like [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). To enable the module, run the following command:
+To manage volumes based on the TATLIN.UNIFIED (Yadro) storage system in Deckhouse, the [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) module is used. It allows the creation of StorageClass resources through custom resources like [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). To enable the module, run the following command:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -83,7 +83,7 @@ EOF
 
 ## Ensuring the module works
 
-To make sure the `csi-yadro-tatlin-unified` is working properly, check the pod status in the `d8-csi-yadro-tatlin-unified` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` pods must be running on all nodes.
+To make sure the [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) module is working properly, check the pod status in the `d8-csi-yadro-tatlin-unified` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` pods must be running on all nodes.
 
 To check that the module works, run the following command:
 

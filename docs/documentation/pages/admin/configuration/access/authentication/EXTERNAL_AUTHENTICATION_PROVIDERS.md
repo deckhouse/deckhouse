@@ -23,7 +23,7 @@ Deckhouse does not manage passwords or interfere with policy enforcement on the 
 ## General integration workflow
 
 {% alert level="info" %}
-The `allowedGroups` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource allows you to restrict login access to users who belong to specific groups.  
+The [`allowedGroups`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-allowedgroups) parameter in the DexProvider resource allows you to restrict login access to users who belong to specific groups.  
 If the `allowedGroups` list is specified, the user **must** be a member of at least one of these groups — otherwise, authentication will be considered unsuccessful.  
 If the parameter is not specified, no group-based filtering will be applied.
 {% endalert %}
@@ -42,12 +42,12 @@ If the parameter is not specified, no group-based filtering will be applied.
    > d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    > ```
 
-1. Create a DexProvider resource tailored to the specifics of your selected identity provider.
+1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource tailored to the specifics of your selected identity provider.
 
-1. Enable the `user-authn` module (if it is currently disabled).
+1. Enable the [`user-authn`](/modules/user-authn/) module (if it is currently disabled).
 
    This can be done either via the Deckhouse admin web interface or through the CLI.  
-   Below is an example using the CLI (requires [`kubectl`](https://kubernetes.io/docs/tasks/tools/#kubectl) configured to access the cluster):
+   Below is an example using the [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/) (requires kubectl context configured to access the cluster):
 
    Check the module status:
 
@@ -68,7 +68,7 @@ If the parameter is not specified, no group-based filtering will be applied.
    d8 platform module enable user-authn
    ```
 
-1. Configure the `user-authn` module.
+1. Configure the [`user-authn`](/modules/user-authn/) module.
 
    - Open the `user-authn` module settings (create a ModuleConfig resource named `user-authn` if it doesn't exist):
 
@@ -102,11 +102,11 @@ If the parameter is not specified, no group-based filtering will be applied.
 
 Authentication via an OIDC provider requires registering a client (or creating an application). Follow your provider's documentation to do this (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), or [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
 
-Specify the `clientID` and `clientSecret` obtained during setup in the DexProvider resource.
+Specify the `clientID` and `clientSecret` obtained during setup in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 {% alert level="info" %}
 When registering an application with any OIDC provider, you must specify a redirect URI.  
-For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where `publicDomainTemplate` is the DNS name template of your cluster as defined in the `global` module.
+For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
 {% endalert %}
 
 {% alert level="info" %}
@@ -165,7 +165,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
 
   After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
-  In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
+  In the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
   ```yaml
   scopes:
@@ -248,7 +248,7 @@ spec:
 To configure authentication, create a read-only account (service account) in your LDAP directory.  
 This account will be used to perform search queries in the LDAP catalog.
 
-In the DexProvider resource, specify the following parameters:
+In the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource, specify the following parameters:
 
 - `bindDN`: Full Distinguished Name (DN) of the created service account. For example: `cn=readonly,dc=example,dc=org`.
 - `bindPW`: Password for the specified `bindDN`.
@@ -303,7 +303,7 @@ You need to create a new application in your GitHub organization.
 To do this, follow these steps:
 
 1. Go to "Settings → Developer settings → OAuth Apps → New OAuth App", and set the "Authorization callback URL" to `https://dex.<publicDomainTemplate>/callback`.
-1. Use the generated `Client ID` and `Client Secret` in the DexProvider resource.
+1. Use the generated `Client ID` and `Client Secret` in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 If the GitHub organization is managed by a client:
 
@@ -333,7 +333,7 @@ To do this, follow these steps:
 
 1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
 1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
-1. Use the obtained `Application ID` and secret in the DexProvider resource.
+1. Use the obtained `Application ID` and secret in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 {% alert level="info" %}
 For GitLab version 16 and above, enable the "Trusted" option when creating the application.  
@@ -366,7 +366,7 @@ In the relevant Atlassian Crowd project, you need to create a new Generic applic
 To do this, follow these steps:
 
 1. Go to "Applications → Add application".
-1. Specify the obtained "Application Name" and "Password" in the DexProvider resource.
+1. Specify the obtained "Application Name" and "Password" in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 1. When specifying groups in the DexProvider resource, make sure their names are written in lowercase.  
    This is necessary for correct group matching between Crowd and Deckhouse.
 
@@ -400,7 +400,7 @@ Follow these steps:
 1. Grant access:  
    - "Account: Read" → allows retrieval of basic user information (e.g., email, username).
    - "Workspace membership: Read" → allows retrieval of user workspace membership information.
-1. Use the obtained `Key` and secret in the DexProvider resource.
+1. Use the obtained `Key` and secret in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 Example configuration for integrating with Bitbucket:
 

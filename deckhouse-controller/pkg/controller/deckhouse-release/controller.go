@@ -80,6 +80,10 @@ type ReleaseUpdateInfo struct {
 		IsLatest bool   `json:"isLatest"`
 	} `json:"taskCalculation"`
 
+	UpdatePolicy struct {
+		Mode string `json:"mode,omitempty"`
+	} `json:"updatePolicy"`
+
 	ForceRelease struct {
 		IsForced bool `json:"isForced"`
 	} `json:"forceRelease"`
@@ -401,6 +405,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	updateInfo.TaskCalculation.IsLatest = task.IsLatest
 	updateInfo.TaskCalculation.IsFromTo = task.IsFromTo
 	updateInfo.TaskCalculation.IsMajor = task.IsMajor
+
+	// Collect update policy information
+	updateInfo.UpdatePolicy.Mode = r.updateSettings.Get().Update.Mode
 
 	if dr.GetForce() {
 		// Collect force release information
@@ -1173,8 +1180,9 @@ func (r *deckhouseReleaseReconciler) recordReleaseUpdateEvent(release *v1alpha1.
 	}
 
 	r.eventRecorder.Eventf(release, corev1.EventTypeNormal, "ReleaseUpdateInitiated",
-		"Release update initiated: task=%s, force=%t, podReady=%t, requirementsMet=%t",
+		"Release update initiated: task=%s, updateMode=%s, force=%t, podReady=%t, requirementsMet=%t",
 		updateInfo.TaskCalculation.TaskType,
+		updateInfo.UpdatePolicy.Mode,
 		updateInfo.ForceRelease.IsForced,
 		updateInfo.PodReadiness.IsReady,
 		updateInfo.RequirementsCheck.RequirementsMet)

@@ -117,7 +117,8 @@
   },
   "csi-netapp": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/modules/csi-netapp/stable/"
@@ -147,17 +148,6 @@
     "external": "true",
     "path": "/modules/csi-nfs/stable/"
   },
-  "csi-netapp": {
-    "editions": [
-      "ce",
-      "se",
-      "se-plus",
-      "ee",
-      "cse-pro"
-    ],
-    "external": "true",
-    "path": "/modules/csi-netapp/stable/"
-  },
   "csi-s3": {
     "editions": [
       "ee"
@@ -181,15 +171,11 @@
   },
   "delivery-kit": {
     "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
       "cse-lite",
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "istio": {
     "editionMinimumAvailable": "ce",
@@ -221,38 +207,6 @@
       }
     },
     "path": "modules/metallb/"
-  },
-  "managed-memcached": {
-    "editions": [
-      "ee"
-    ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
-    "external": "true",
-    "path": "/modules/managed-memcached/stable/"
-  },
-  "managed-postgres": {
-    "editions": [
-      "ee"
-    ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
-    "external": "true",
-    "path": "/modules/managed-postgres/stable/"
   },
   "neuvector": {
     "editions": [
@@ -396,17 +350,6 @@
     "external": "true",
     "path": "/modules/snapshot-controller/stable/"
   },
-  "storage-volume-data-manager": {
-    "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/storage-volume-data-manager/stable/"
-  },
   "static-routing-manager": {
     "editions": [
       "ee"
@@ -416,10 +359,7 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "se",
-      "se-plus",
-      "ee",
-      "cse-pro"
+      "ee"
     ],
     "external": "true",
     "path": "/modules/storage-volume-data-manager/stable/"

@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "в crictl не используется уязвимый код, затрагивающий gitRepo volume в kubelet",
+      "timestamp": "2025-10-09T10:24:07.119115Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5187"
+      },
+      "products": [
+        {
+          "@id": "k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "в crictl не используется уязвимый код, затрагивающий права пользователя ноды и удаления ее через патч объекта с OwnerReference",
+      "timestamp": "2025-10-09T10:21:53.069107Z"
+    }
+  ],
+  "timestamp": "2025-10-09T10:25:02Z"
+}

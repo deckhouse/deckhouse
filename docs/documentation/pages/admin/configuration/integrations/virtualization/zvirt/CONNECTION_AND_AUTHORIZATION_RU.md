@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-authorization.html
+permalink: ru/admin/integrations/virtualization/zvirt/authorization.html
 lang: ru
 ---
 

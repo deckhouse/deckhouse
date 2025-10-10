@@ -5,7 +5,7 @@ description: "Настройка балансировки нагрузки Metal
 lang: ru
 ---
 
-Модуль [`metallb`](../../../../../modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
+Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
 Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->
@@ -35,7 +35,7 @@ lang: ru
 <div data-presentation="../../../../../presentations/metallb/basics_metallb_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1cs1uKeX53DB973EMtLFcc8UQ8BFCW6FY2vmEWua1tu8/ --->
 
-Модуль `metallb` устраняет эти ограничения. Он предоставляет ресурс MetalLoadBalancerClass, который позволяет:
+Модуль `metallb` устраняет эти ограничения. Он предоставляет [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass), который позволяет:
 
 - связать группу узлов с пулом IP-адресов с помощью `nodeSelector`;
 - создать стандартный объект Service с типом LoadBalancer и указать имя нужного MetalLoadBalancerClass;
@@ -64,7 +64,7 @@ lang: ru
 
 ### Пример использования MetalLB в режиме L2 LoadBalancer
 
-1. Включите модуль `metallb`:
+1. Включите [модуль `metallb`](/modules/metallb/):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -82,7 +82,7 @@ lang: ru
    d8 k create deploy nginx --image=nginx
    ```
 
-1. Создайте ресурс MetalLoadBalancerClass:
+1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -151,7 +151,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 Доступен только в DKP Enterprise Edition.
 {% endalert %}
 
-`metallb` в режиме BGP используется для предоставления сервисов типа LoadBalancer в кластерах Kubernetes, развёрнутых на физической инфраструктуре.
+[`metallb`](/modules/metallb/) в режиме BGP используется для предоставления сервисов типа LoadBalancer в кластерах Kubernetes, развёрнутых на физической инфраструктуре.
 IP-адреса сервисов анонсируются напрямую в маршрутизаторы (или Top-of-Rack-коммутаторы) с помощью протокола BGP.
 
 ### Принцип работы
@@ -198,7 +198,7 @@ IP-адреса сервисов анонсируются напрямую в м
 
 ### Пример использования MetalLB в режиме BGP LoadBalancer
 
-1. Включите модуль `metallb` и настройте все необходимые параметры:
+1. Включите [модуль `metallb`](/modules/metallb/) и настройте все необходимые параметры:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

@@ -27,7 +27,7 @@ In this section, you will find information on:
   - How to view scan results and manually trigger rescans.
 
 - Certificate management:
-  - Issuing, renewing, and managing TLS certificates using the built-in `cert-manager` tool.
+  - Issuing, renewing, and managing TLS certificates using the [`cert-manager`](/modules/cert-manager/) module.
   - Examples of using Let’s Encrypt, HashiCorp Vault, self-signed, and external CAs.
   - Support for `HTTP-01` and `DNS-01` validation types.
 

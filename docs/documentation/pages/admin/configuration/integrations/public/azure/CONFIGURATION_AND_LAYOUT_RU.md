@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/public/azure/azure-layout.html
+permalink: ru/admin/integrations/public/azure/layout.html
 lang: ru
 ---
 

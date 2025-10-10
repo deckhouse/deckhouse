@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/virtualization/dvp/dvp-authorization.html
+permalink: en/admin/integrations/virtualization/dvp/authorization.html
 ---
 
 To interact with DVP resources, Deckhouse Kubernetes Platform components use the DVP API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
