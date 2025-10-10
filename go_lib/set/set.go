@@ -18,6 +18,7 @@ package set
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
@@ -118,5 +119,9 @@ func (s Set) Size() int {
 }
 
 func (s Set) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.Slice())
+	b, err := json.Marshal(s.Slice())
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return b, nil
 }

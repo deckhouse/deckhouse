@@ -28,7 +28,7 @@ func KeyFromConfigMap(key string) func(obj *unstructured.Unstructured) (go_hook.
 		var cm v1core.ConfigMap
 		err := sdk.FromUnstructured(obj, &cm)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("from unstructured: %w", err)
 		}
 
 		val, ok := cm.Data[key]

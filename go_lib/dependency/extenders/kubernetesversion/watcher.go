@@ -17,6 +17,7 @@ limitations under the License.
 package kubernetesversion
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -37,10 +38,10 @@ func (w *versionWatcher) watch(path string) error {
 	var err error
 	w.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		return fmt.Errorf("new watcher: %w", err)
 	}
 	if err = w.watcher.Add(path); err != nil {
-		return err
+		return fmt.Errorf("add: %w", err)
 	}
 	for {
 		select {
@@ -63,7 +64,7 @@ func (w *versionWatcher) watch(path string) error {
 func (w *versionWatcher) handler(path string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("read file: %w", err)
 	}
 	if len(content) == 0 {
 		return nil
@@ -71,7 +72,7 @@ func (w *versionWatcher) handler(path string) error {
 	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
 	if err != nil {
 		w.logger.Error("failed to parse version", "path", path, "content", string(content), log.Err(err))
-		return err
+		return fmt.Errorf("new version: %w", err)
 	}
 	if w.lastVersion == nil || !w.lastVersion.Equal(parsed) {
 		w.lastVersion = parsed

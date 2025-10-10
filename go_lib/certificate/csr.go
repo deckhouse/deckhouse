@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -44,11 +45,14 @@ func GenerateCSR(logger go_hook.Logger, cn string, options ...Option) ([]byte, [
 	defer log.SetOutput(logWriter)
 
 	csrPEM, key, err := g.ProcessRequest(request)
-	if err != nil && logger != nil {
-		logger.Error(buf.String())
+	if err != nil {
+		if logger != nil {
+			logger.Error(buf.String())
+		}
+		return csrPEM, key, fmt.Errorf("process request: %w", err)
 	}
 
-	return csrPEM, key, err
+	return csrPEM, key, nil
 }
 
 // Validator does nothing and will never return an error. It exists because creating a

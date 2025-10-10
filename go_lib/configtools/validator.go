@@ -182,7 +182,11 @@ func (v *Validator) validateSettings(configName string, configSettings map[strin
 		utils.Values{valuesKey: configSettings},
 	)
 
-	return schemaStorage.ValidateConfigValues(valuesKey, values)
+	err := schemaStorage.ValidateConfigValues(valuesKey, values)
+	if err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+	return nil
 }
 
 func valuesKeyFromObjectName(name string) string {

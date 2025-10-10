@@ -99,7 +99,7 @@ func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
 		e.logger.Warn("adding installed constraint for module failed", slog.String("name", name), slog.String("constraint", rawConstraint), log.Err(err))
 
-		return err
+		return fmt.Errorf("add constraint: %w", err)
 	}
 
 	e.logger.Debug("installed constraint for module is added", slog.String("name", name))
@@ -185,7 +185,7 @@ func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, erro
 	if len(version.Prerelease()) > 0 {
 		woPrerelease, err := version.SetPrerelease("")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("set prerelease: %w", err)
 		}
 
 		version = &woPrerelease
@@ -194,7 +194,7 @@ func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, erro
 	if len(version.Metadata()) > 0 {
 		woMetadata, err := version.SetMetadata("")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("set metadata: %w", err)
 		}
 
 		version = &woMetadata

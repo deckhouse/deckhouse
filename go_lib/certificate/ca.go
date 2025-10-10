@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -56,7 +57,7 @@ func GenerateCA(logger go_hook.Logger, cn string, options ...Option) (Authority,
 	ca, _, key, err := initca.New(request)
 	if err != nil {
 		logger.Error(buf.String())
+		return Authority{}, fmt.Errorf("new: %w", err)
 	}
-
-	return Authority{Cert: string(ca), Key: string(key)}, err
+	return Authority{Cert: string(ca), Key: string(key)}, nil
 }

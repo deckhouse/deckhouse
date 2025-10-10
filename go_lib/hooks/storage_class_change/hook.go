@@ -253,7 +253,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Container, args Args) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.Snapshots, "pvcs")

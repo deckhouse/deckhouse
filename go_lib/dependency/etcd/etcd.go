@@ -23,6 +23,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"net"
 	"os"
 	"time"
@@ -69,7 +70,11 @@ func New(endpoints []string, options ...Option) (Client, error) {
 		cfg.TLS.InsecureSkipVerify = true
 	}
 
-	return clientv3.New(cfg)
+	client, err := clientv3.New(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("new: %w", err)
+	}
+	return client, nil
 }
 
 type etcdOptions struct {

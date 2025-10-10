@@ -142,7 +142,7 @@ func GetKubeToken() (string, error) {
 
 	content, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read file: %w", err)
 	}
 
 	return string(content), nil
