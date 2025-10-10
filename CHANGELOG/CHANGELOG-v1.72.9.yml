@@ -20,9 +20,6 @@ ingress-nginx:
   fixes:
     - summary: The https://github.com/deckhouse/deckhouse/pull/15789 is reverted.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15912
-    - summary: The same order of limit_req_zone statements is maintained when generating new configuration.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/15852
-      impact: The pods of the ingress-nginx module will be restarted.
     - summary: Enable ExecuteHookOnEvents on hook set_annotation_validation_suspended.go
       pull_request: https://github.com/deckhouse/deckhouse/pull/15839
 
