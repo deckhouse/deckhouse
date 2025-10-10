@@ -132,9 +132,6 @@
   },
   "csi-netapp": {
     "editions": [
-      "ce",
-      "se",
-      "se-plus",
       "ee",
       "cse-pro"
     ],
@@ -414,10 +411,6 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [
