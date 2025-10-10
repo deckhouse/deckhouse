@@ -65,7 +65,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, devicePath string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(templateController *Controller, nodeIP, devicePath string, metaConfig *config.MetaConfig, commanderMode bool) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -76,6 +76,7 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	if err != nil {
 		return err
 	}
+	bashibleData["commanderMode"] = commanderMode
 	logTemplatesData("bashible", bashibleData)
 
 	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath); err != nil {
