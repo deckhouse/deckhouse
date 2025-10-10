@@ -88,8 +88,6 @@
  - **[docs]** Added documentation for the new registry configuration in Containerd. [#14790](https://github.com/deckhouse/deckhouse/pull/14790)
  - **[extended-monitoring]** Exclude PVCs with block volume mode from space and inodes monitoring. [#14859](https://github.com/deckhouse/deckhouse/pull/14859)
     free space monitoring for the PVCs in the Block volumeMode is meaningless and will be disabled
- - **[ingress-nginx]** The same order of limit_req_zone statements is maintained when generating new configuration. [#15852](https://github.com/deckhouse/deckhouse/pull/15852)
-    The pods of the ingress-nginx module will be restarted.
  - **[ingress-nginx]** Enable ExecuteHookOnEvents on hook set_annotation_validation_suspended.go [#15839](https://github.com/deckhouse/deckhouse/pull/15839)
  - **[ingress-nginx]** Fixed nginx segfaults when opentelemetry is enabled. [#15466](https://github.com/deckhouse/deckhouse/pull/15466)
     The ingress-nginx pods of 1.10 will be restarted.
