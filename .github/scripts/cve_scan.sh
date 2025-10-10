@@ -55,7 +55,7 @@ send_report() {
     --retry 5 \
     --retry-delay 10 \
     --retry-all-errors \
-    https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
+    https://${DEFECTDOJO_HOST}/api/v2/import-scan/ \
     -H "accept: application/json" \
     -H "Content-Type: multipart/form-data" \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
@@ -193,7 +193,7 @@ for d8_tag in "${d8_tags[@]}"; do
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
     # if it is deckhouse-oss - add it as deckhouse-controller module
-    if [ "${additional_image_name}" == "deckhous-oss" ]; then
+    if [ "${additional_image_name}" == "deckhouse-oss" ]; then
       digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse-controller += { ($i): ($s) }')
     elif [ "${additional_image_name}" == "install" ]; then
       digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.dhctl += { ($i): ($s) }')
