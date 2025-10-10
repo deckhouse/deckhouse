@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Docker Buildx build capabilities extension - мы не используем эту зависимость напрямую",
+      "impact_statement": "Эта уязвимость не может быть эксплуатирована при использовании Delivery Kit, так как он не использует сборочный бекенд Docker BuildKit, в котором проявляется уязвимость. Delivery Kit форсирует Docker использовать бекенд по умолчанию. Уязвимость актуальна только при использовании бекенда Docker Buildkit, который включается установкой переменной окружения DOCKER_BUILDKIT=1.",
       "timestamp": "2025-10-09T14:21:14.78894747Z"
     },
     {
