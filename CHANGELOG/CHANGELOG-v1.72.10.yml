@@ -1,0 +1,9 @@
+ci:
+  fixes:
+    - summary: Delete an extra entry from the changelog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15941
+istio:
+  fixes:
+    - summary: Reduce RAM for regenerate multicluster JWT token
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15328
+
