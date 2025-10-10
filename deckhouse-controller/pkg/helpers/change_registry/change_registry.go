@@ -65,7 +65,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	kubeCl, err := newKubeClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("new kube client: %w", err)
 	}
 
 	logEntry.Info("Checking registry module")
@@ -83,7 +83,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 
 	caContent, err := getCAContent(caFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("get ca content: %w", err)
 	}
 
 	// !! Convert scheme to lowercase to avoid case-sensitive issues
@@ -97,34 +97,34 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	caTransport := cr.GetHTTPTransport(caContent)
 
 	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
-		return err
+		return fmt.Errorf("check auth support: %w", err)
 	}
 
 	logEntry.Info("Retrieving deckhouse deployment...")
 	deckhouseDeploy, err := deckhouseDeployment(ctx, kubeCl)
 	if err != nil {
-		return err
+		return fmt.Errorf("deckhouse deployment: %w", err)
 	}
 
 	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caTransport)
 	if err != nil {
-		return err
+		return fmt.Errorf("new remote options: %w", err)
 	}
 
 	// Check that all images for deckhouse deploy exist in the new repo before
 	// updating image pull secret and prepare deployment with updated images.
 	if err := updateDeployContainersImagesToNewRepo(deckhouseDeploy, newRepo, nameOpts, remoteOpts, newDeckhouseImageTag); err != nil {
-		return err
+		return fmt.Errorf("update deploy containers images to new repo: %w", err)
 	}
 
 	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent, scheme)
 	if err != nil {
-		return err
+		return fmt.Errorf("new image pull secret data: %w", err)
 	}
 
 	deckhouseSecret, err := modifyPullSecret(ctx, kubeCl, imagePullSecretData)
 	if err != nil {
-		return err
+		return fmt.Errorf("modify pull secret: %w", err)
 	}
 
 	if dryRun {
@@ -138,12 +138,12 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	} else {
 		logEntry.Info("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
-			return err
+			return fmt.Errorf("update image pull secret: %w", err)
 		}
 
 		logEntry.Info("Updating deckhouse deployment...")
 		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
-			return err
+			return fmt.Errorf("update deployment: %w", err)
 		}
 	}
 
