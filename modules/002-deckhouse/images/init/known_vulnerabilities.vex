@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Imaging panic vulnerability - we do not use this functionality directly",
+      "impact_statement": "Imaging panic vulnerability - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:31.437468469Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm Chart Code Execution - we do not use this functionality directly",
+      "impact_statement": "Helm Chart Code Execution - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:31.738219428Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm specially crafted chart archive causing out of memory - we do not use this functionality directly",
+      "impact_statement": "Helm specially crafted chart archive causing out of memory - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:31.836821664Z"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm specially crafted JSON schema causing stack overflow - we do not use this functionality directly",
+      "impact_statement": "Helm specially crafted JSON schema causing stack overflow - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:31.920821604Z"
     },
     {
@@ -71,7 +71,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm YAML parsing panic vulnerability - we do not use this functionality directly",
+      "impact_statement": "Helm YAML parsing panic vulnerability - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:31.994443362Z"
     },
     {
@@ -85,7 +85,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm Chart JSON Schema denial of service - we do not use this functionality directly",
+      "impact_statement": "Helm Chart JSON Schema denial of service - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:31:32.069712443Z"
     }
   ],

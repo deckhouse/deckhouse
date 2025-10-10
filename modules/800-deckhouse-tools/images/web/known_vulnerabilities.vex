@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Buildah allows arbitrary directory mount - we do not use this functionality directly",
+      "impact_statement": "Buildah allows arbitrary directory mount - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:21:14.710165495Z"
     },
     {
@@ -29,7 +29,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Docker Buildx build capabilities extension - we do not use this dependency directly",
+      "impact_statement": "Docker Buildx build capabilities extension - мы не используем эту зависимость напрямую",
       "timestamp": "2025-10-09T14:21:14.78894747Z"
     },
     {
@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Moby's Firewalld reload removes bridge network isolation - we do not use this functionality directly",
+      "impact_statement": "Moby's Firewalld reload removes bridge network isolation - мы не используем этот функционал напрямую",
       "timestamp": "2025-10-09T14:21:14.86863865Z"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Memory leak in xz library - we do not use this dependency directly",
+      "impact_statement": "Memory leak in xz library - мы не используем эту зависимость напрямую",
       "timestamp": "2025-10-09T14:21:14.944084391Z"
     }
   ],
