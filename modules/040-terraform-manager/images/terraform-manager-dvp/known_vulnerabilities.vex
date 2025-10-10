@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2025-1767 связана с поведением kubelet при работе с GitRepo volume, terraform-provider-kubernetes не запускает kubelet и не инициирует монтирование gitRepo как исполнение кода — библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере",
+      "impact_statement": "Уязвимость CVE-2025-1767 связана с поведением kubelet при работе с GitRepo volume, terraform-provider-kubernetes не запускает kubelet и не инициирует монтирование gitRepo как исполнение кода - библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере",
       "timestamp": "2025-10-10T07:23:24.447174Z"
     },
     {
