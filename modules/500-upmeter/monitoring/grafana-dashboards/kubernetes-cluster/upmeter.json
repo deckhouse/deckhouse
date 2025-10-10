@@ -216,7 +216,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "(\n  sum by (group) (\n    sum_over_time(statustime{probe=\"__total__\", status=~\"up|unknown\"}[$__range])\n  )\n  /\n  sum by (group) (\n    sum_over_time(statustime{probe=\"__total__\", status=~\"up|unknown|down\"}[$__range])\n  )\n) * 100",
@@ -313,7 +313,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -399,7 +399,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -485,7 +485,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -571,7 +571,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -657,7 +657,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -743,7 +743,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -829,7 +829,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -915,7 +915,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1001,7 +1001,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1087,7 +1087,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1173,7 +1173,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1259,7 +1259,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1345,7 +1345,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1431,7 +1431,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1517,7 +1517,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1603,7 +1603,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1689,7 +1689,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1775,7 +1775,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1861,7 +1861,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -1947,7 +1947,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -2033,7 +2033,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -2119,7 +2119,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -2205,7 +2205,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "victoria"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "exemplar": false,
