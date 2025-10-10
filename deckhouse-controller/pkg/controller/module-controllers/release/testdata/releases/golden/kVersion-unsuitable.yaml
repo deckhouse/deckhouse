@@ -55,8 +55,9 @@ spec:
   weight: 900
 status:
   approved: false
-  message: 'requirements are not satisfied: current kubernetes version is not suitable:
-    1.28.0 is less than or equal to 1.28.0'
+  message: 'check module release requirements: validate release: requirements are
+    not satisfied: current kubernetes version is not suitable: 1.28.0 is less than
+    or equal to 1.28.0'
   phase: Pending
   pullDuration: 0s
   size: 0

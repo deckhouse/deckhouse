@@ -54,8 +54,9 @@ spec:
   weight: 900
 status:
   approved: false
-  message: 'requirements are not satisfied: current deckhouse version is not suitable:
-    1.0.0 is less than or equal to v1.63.0'
+  message: 'check module release requirements: validate release: requirements are
+    not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or
+    equal to v1.63.0'
   phase: Pending
   pullDuration: 0s
   size: 0

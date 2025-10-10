@@ -405,12 +405,12 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec.Schema, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getwd: %w", err)
 	}
 
 	crdPath, err := filepath.Abs(cwd + "/../crds/")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("abs: %w", err)
 	}
 
 	crdFilesPaths := make([]string, 0)
@@ -428,7 +428,7 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 			return nil
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("walk: %w", err)
 	}
 
 	schemas := make(map[string]map[string]*spec.Schema, 0)
@@ -438,7 +438,7 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 	for _, crdFile := range crdFilesPaths {
 		bytes, err := os.ReadFile(crdFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read file: %w", err)
 		}
 		yamlDocs := manifestDelimiter.Split(string(bytes), -1)
 
@@ -497,7 +497,7 @@ func (hec *HookExecutionConfig) ApplyCRDefaults(definition string) string {
 func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, error) {
 	yamls, err := kio.FromBytes([]byte(newKubeState))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from bytes: %w", err)
 	}
 
 	defaultedKubeState := new(strings.Builder)
@@ -511,12 +511,12 @@ func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, erro
 			if sc, ok := versions[version]; ok {
 				doc, err := yamlDoc.Map()
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("map: %w", err)
 				}
 				if defaulted = validation.ApplyDefaults(doc, sc); defaulted {
 					defaultedDoc, err := yaml.Marshal(doc)
 					if err != nil {
-						return "", err
+						return "", fmt.Errorf("marshal: %w", err)
 					}
 					defaultedKubeState.WriteString("---\n" + string(defaultedDoc))
 				}
@@ -525,7 +525,7 @@ func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, erro
 		if !defaulted {
 			originalDoc, err := yamlDoc.String()
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("string: %w", err)
 			}
 			defaultedKubeState.WriteString("---\n" + originalDoc)
 		}

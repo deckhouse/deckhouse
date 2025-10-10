@@ -13,7 +13,7 @@ status:
   conditions:
   - address: http://10-222-222-22.d8-system.pod.cluster.local:8081
     checksum: abc
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T16:33:00Z"
     message: 'Error occurred while fetching the documentation: stat: stat /testdir/absentmodule/v1.0.0/:
       no such file or directory. Please fix the module''s docs or restart the Deckhouse
       to restore the module'
