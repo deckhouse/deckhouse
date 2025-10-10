@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -246,6 +247,15 @@ func prepareCerts(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
+
+	log.Info("run kubeadm",
+		slog.String("phase", "prepare-certs"),
+		slog.String("component", componentName),
+		slog.String("path", kubeadmPath),
+		slog.Any("args", args),
+		slog.Bool("temp_rootfs", isTemp),
+	)
+
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
