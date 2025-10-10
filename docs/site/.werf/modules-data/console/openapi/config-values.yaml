@@ -3,20 +3,8 @@ required: []
 properties:
   allowAnyoneToRuleTheCluster:
     type: boolean
-    description: |
-      **This parameter is ignored. It will be removed in future releases.**
-      It was used to skip user permissions, so any user would have highest possible privileges in the UI.
+    description: Turn off token authentication in HTTP requests
     default: false
-    x-doc-deprecated: true
-  externalWebsocketPort:
-    type: integer
-    description: |
-      External port for WebSocket protocol requests.
-      If WebSocket traffic goes through a proxy server before reaching the backend,
-      the frontend application will use this to connect to the proxy server.
-    minimum: 1
-    maximum: 65535
-    x-example: 8443
   auth:
     type: object
     description: |

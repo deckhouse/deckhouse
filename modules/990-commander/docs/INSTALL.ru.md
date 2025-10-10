@@ -6,11 +6,10 @@ title: "Установка"
 ## Системные требования
 
 Чтобы начать пользоваться Deckhouse Commander, необходим кластер на базе Deckhouse Kubernetes
-Platform. Если у вас еще нет кластера, обратитесь к инструкции
-[по установке](https://deckhouse.ru/products/kubernetes-platform/gs/).
+Platform.
 
 Мы рекомендуем создать отказоустойчивый управляющий кластер, в котором будут следующие наборы узлов
-([NodeGroup](../../../platform/modules/040-node-manager/cr.html#nodegroup)):
+([NodeGroup](/modules/node-manager/cr.html#nodegroup)):
 
 | Группа узлов | Кол-во узлов | ЦП, ядер | Память, Гб | Диск, Гб |
 | ------------ | -----------: | -------: | ---------: | -------: |

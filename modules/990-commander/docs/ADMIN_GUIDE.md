@@ -93,7 +93,7 @@ type: Opaque
 
 ## Collecting logs of the history of changes
 
-In Deckhouse Commander version 1.9 and later, events related to the history of changes are printed to the standard output and are tagged with the `["audit"]` label. These logs can be collected and sent using the [log-shipper](../../../platform/modules/log-shipper/) module.
+In Deckhouse Commander version 1.9 and later, events related to the history of changes are printed to the standard output and are tagged with the `["audit"]` label. These logs can be collected and sent using the [log-shipper](/modules/log-shipper/) module.
 
 Logs example:
 
@@ -142,5 +142,5 @@ spec:
     endpoint: http://loki-example.loki.svc:3100
 ```
 
-For more detailed configuration information, see the documentation of the [log-shipper](../../../platform/modules/log-shipper/) module.
+For more detailed configuration information, see the documentation of the [log-shipper](/modules/log-shipper/) module.
 {% endraw %}

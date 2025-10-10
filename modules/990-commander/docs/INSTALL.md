@@ -5,10 +5,9 @@ title: "Installation"
 ## System requirements
 
 To start using Deckhouse Commander, you need a cluster based on Deckhouse Kubernetes Platform.
-If you don't have a cluster yet, refer to the [installation instructions](https://deckhouse.io/products/kubernetes-platform/gs/).
 
 We recommend creating a fault-tolerant management cluster that will
-include the following node sets ([NodeGroup](../../../platform/modules/040-node-manager/cr.html#nodegroup)):
+include the following node sets ([NodeGroup](/modules/node-manager/cr.html#nodegroup)):
 
 | Node Group | Number of nodes | CPU, cores | Memory, GB | Disk, GB |
 | ---------- | --------------: | ---------: | ---------: | -------: |
