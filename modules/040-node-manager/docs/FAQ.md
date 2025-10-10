@@ -590,17 +590,18 @@ node updates or requires manual confirmation.
 
 ## Why might the CRI change not apply?
 
-One of the main reasons for such behavior might be the presence of the labels `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
+When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
 
-The label `node.deckhouse.io/containerd-v2-unsupported` is set if the node does not meet the following criteria:
-1. Kernel version must be at least 5.8.
-2. Systemd version must be at least 244.
-3. Cgroup v2 must be enabled.
-4. EROFS must be available.
+The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
 
-The label `node.deckhouse.io/containerd-config=custom` is set if there is a file with a `.toml` extension in the `conf.d` or `conf2.d` directory on the node. In this case, you should try to remove them if it will not lead to critical consequences for the containers' operation and remove the NGC that might have added them.
+- Kernel version is at least 5.8;
+- systemd version is at least 244;
+- cgroup v2 is enabled;
+- The EROFS filesystem is available.
 
-If you are using the Deckhouse Virtualization Platform module, one reason why switching the CRI is not possible may be the NGC `containerd-dvcr-config.sh`. If the virtualization platform is already installed and running, this NGC can be removed.
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+
+If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
 
 ## How to change CRI for the whole cluster?
 
