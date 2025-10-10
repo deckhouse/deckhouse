@@ -1,0 +1,10 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        Validate CONNECT requests for pods/exec and pods/attach in the
+        ValidatingWebhookConfiguration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15872
+      impact: >-
+        Enables Gatekeeper constraints to act on CONNECT (kubectl exec) events; default behavior
+        unchanged unless such constraints are created.
+
