@@ -60,7 +60,7 @@ Description of the table columns:
 - **Target**: Entity that was changed (project, user, protected branch, token, or CI variable name, etc.).
 - **Event time**: Date and time when the event occurred.
 
-![Audit event table](/images/code/audit_events_table.png)
+![Audit event table](/images/code/audit_events_table_en.png)
 
 ### Accessing via API
 
