@@ -65,7 +65,7 @@ send_report() {
     -F "verified=true" \
     -F "scan_type=Trivy Scan" \
     -F "close_old_findings=true" \
-    -F "do_not_reactivate=false" \
+    -F "do_not_reactivate=true" \
     -F "push_to_jira=false" \
     -F "file=@${2}" \
     -F "product_type_name=DKP" \
