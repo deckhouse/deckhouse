@@ -1,5 +1,5 @@
 diff --git a/pkg/apis/ingress/types_equals.go b/pkg/apis/ingress/types_equals.go
-index eeed9a06e..b1961d06b 100644
+index eeed9a06e..15a131c1f 100644
 --- a/pkg/apis/ingress/types_equals.go
 +++ b/pkg/apis/ingress/types_equals.go
 @@ -17,49 +17,60 @@ limitations under the License.
@@ -77,3 +77,78 @@ index eeed9a06e..b1961d06b 100644
  	return c1.BackendConfigChecksum == c2.BackendConfigChecksum
  }
  
+@@ -269,19 +283,24 @@ func (s1 *Server) Equal(s2 *Server) bool {
+ 		return true
+ 	}
+ 	if s1 == nil || s2 == nil {
++		fmt.Println("CONFIG SERVER: nil")
+ 		return false
+ 	}
+ 	if s1.Hostname != s2.Hostname {
++		fmt.Println("CONFIG SERVER: hostame")
+ 		return false
+ 	}
+ 	if s1.SSLPassthrough != s2.SSLPassthrough {
++		fmt.Println("CONFIG SERVER: ssl passtrough")
+ 		return false
+ 	}
+ 	if !s1.SSLCert.Equal(s2.SSLCert) {
++		fmt.Println("CONFIG SERVER: ssl cert")
+ 		return false
+ 	}
+ 
+ 	if len(s1.Aliases) != len(s2.Aliases) {
++		fmt.Println("CONFIG SERVER: len aliases")
+ 		return false
+ 	}
+ 
+@@ -294,39 +313,49 @@ func (s1 *Server) Equal(s2 *Server) bool {
+ 			}
+ 		}
+ 		if !found {
++		fmt.Println("CONFIG SERVER: aliases")
+ 			return false
+ 		}
+ 	}
+ 
+ 	if s1.RedirectFromToWWW != s2.RedirectFromToWWW {
++		fmt.Println("CONFIG SERVER: redirect from to www")
+ 		return false
+ 	}
+ 	if !(&s1.CertificateAuth).Equal(&s2.CertificateAuth) {
++		fmt.Println("CONFIG SERVER: auth cert")
+ 		return false
+ 	}
+ 	if s1.ServerSnippet != s2.ServerSnippet {
++		fmt.Println("CONFIG SERVER: serv snippet")
+ 		return false
+ 	}
+ 	if s1.SSLCiphers != s2.SSLCiphers {
++		fmt.Println("CONFIG SERVER: ssl cipher")
+ 		return false
+ 	}
+ 	if s1.SSLPreferServerCiphers != s2.SSLPreferServerCiphers {
++		fmt.Println("CONFIG SERVER: prefer ssl cipher")
+ 		return false
+ 	}
+ 	if s1.AuthTLSError != s2.AuthTLSError {
++		fmt.Println("CONFIG SERVER: auth tls error")
+ 		return false
+ 	}
+ 	if !(&s1.ProxySSL).Equal(&s2.ProxySSL) {
++		fmt.Println("CONFIG SERVER: proxy ssl")
+ 		return false
+ 	}
+ 
+ 	if len(s1.Locations) != len(s2.Locations) {
++		fmt.Println("CONFIG SERVER: len locations")
+ 		return false
+ 	}
+ 
+ 	// Location are sorted
+ 	for idx, s1l := range s1.Locations {
+ 		if !s1l.Equal(s2.Locations[idx]) {
++			fmt.Printf("CONFIG SERVER: location %s doesn't match location %s\n", s1l.Path, s2.Locations[idx].Path)
+ 			return false
+ 		}
+ 	}
