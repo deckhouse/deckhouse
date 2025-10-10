@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Buildah allows arbitrary directory mount - мы не используем этот функционал напрямую",
+      "impact_statement": "Эта уязвимость не может быть эксплуатирована при использовании бекенда Docker, который включён по умолчанию в Delivery Kit. В этом режиме Docker-демон запрещает произвольное монтирование директорий, исключая возможность эксплуатации уязвимости. Уязвимость актуальна только при использовании бекенда Buildah, который включается установкой переменной окружения WERF_BUILDAH_MODE=on.",
       "timestamp": "2025-10-09T14:21:14.710165495Z"
     },
     {
