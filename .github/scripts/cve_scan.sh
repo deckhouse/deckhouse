@@ -189,11 +189,14 @@ for d8_tag in "${d8_tags[@]}"; do
   # Additional images to scan
   declare -a additional_images=("${d8_image}"
                 "${d8_image}/install"
-                "${d8_image}/install-standalone"
                 )
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
-    digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse += { ($i): ($s) }')
+    # if it is deckhouse-oss - add it as deckhouse-controller module
+    if [ "${additional_image_name}" == "${d8_image}" ]; then
+      digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse-controller += { ($i): ($s) }')
+    elif [ "${additional_image_name}" == "${d8_image}/install" ]; then
+      digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.dhctl += { ($i): ($s) }')
   done
 
   echo "=============================================="
@@ -242,7 +245,6 @@ for d8_tag in "${d8_tags[@]}"; do
     for module_image in $(jq -rc '.value | to_entries[]' <<<"${module}"); do
       IMAGE_NAME="$(jq -rc '.key' <<< ${module_image})"
       IMAGE_HASH="$(jq -rc '.value' <<< ${module_image})"
-      echo "IMAGE_NAME: ${IMAGE_NAME}"
       # Set flag if additional image to use tag instead of hash
       additional_image_detected=false
       for image_item in "${additional_images[@]}"; do
