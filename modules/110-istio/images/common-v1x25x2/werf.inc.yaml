@@ -4,7 +4,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
-cacheVersion: "2025-10-06"
 final: false
 secrets:
 - id: SOURCE_REPO

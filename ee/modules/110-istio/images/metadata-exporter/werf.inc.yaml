@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-cacheVersion: "2025-10-06"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/metadata-exporter
