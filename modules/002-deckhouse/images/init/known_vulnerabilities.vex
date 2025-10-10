@@ -15,7 +15,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Imaging panic vulnerability - мы не отдаем функцию из пакета scanner.go наружу, для пользовательского доступа, в нее невозможно ничего передать извне.",
+      "impact_statement": "Imaging panic vulnerability - мы не отдаем функцию из пакета scanner.go наружу, для пользовательского доступа, в нее невозможно ничего передать извне. Мы используем библиотеку graphviz, которая использует под капотом imaging. У нее также нет функций, которые проксируют параметры в функции пакета scanner.go",
       "timestamp": "2025-10-09T14:31:31.437468469Z"
     },
     {
