@@ -36,12 +36,22 @@ import:
     add: /src
     to: /src
     before: install
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - "**/*"
 mount:
   {{ include "mount points for golang builds" . }}
 secrets:
   - id: GOPROXY
     value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache python3 py3-pip || true
+  - if [ -f /patches/001-fix-python-cves.patch ]; then chmod +x /patches/001-fix-python-cves.patch && /patches/001-fix-python-cves.patch; fi
   install:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
