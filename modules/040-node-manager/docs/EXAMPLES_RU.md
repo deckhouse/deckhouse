@@ -534,27 +534,6 @@ spec:
 
 ## Пример описания `NodeGroupConfiguration`
 
-### Установка плагина cert-manager для kubectl на master-узлах
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: add-cert-manager-plugin.sh
-spec:
-  weight: 100
-  bundles:
-  - "*"
-  nodeGroups:
-  - "master"
-  content: |
-    if [ -x /usr/local/bin/kubectl-cert_manager ]; then
-      exit 0
-    fi
-    curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
-    mv kubectl-cert_manager /usr/local/bin
-```
-
 ### Задание параметра sysctl
 
 ```yaml

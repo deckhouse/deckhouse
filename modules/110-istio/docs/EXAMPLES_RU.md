@@ -258,7 +258,6 @@ spec:
       tls:
         mode: SIMPLE
         # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имён d8-ingress-istio.
-        # Поддерживаемые форматы ресурсов Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com

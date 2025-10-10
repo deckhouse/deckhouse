@@ -5,7 +5,7 @@ description: "Установка и управление системой мон
 
 Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator), который позволяет создавать и автоматизированно управлять инсталляциями [Prometheus](https://prometheus.io/).
 
-<!-- Исходник картинок: https://docs.google.com/drawings/d/1KMgawZD4q7jEYP-_g6FvUeJUaT3edro_u6_RsI3ZVvQ/edit -->
+
 
 Функции устанавливаемого оператора:
 

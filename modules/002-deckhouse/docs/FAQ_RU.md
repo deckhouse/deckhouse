@@ -2,38 +2,6 @@
 title: "Модуль deckhouse: FAQ"
 ---
 
-## Как запустить kube-bench в кластере?
-
-1. Зайдите внутрь пода Deckhouse:
-
-   ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
-   ```
-
-1. Выберите, на каком узле запустить kube-bench.
-
-   * Запуск на случайном узле:
-
-     ```shell
-     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k create -f -
-     ```
-
-   * Запуск на конкретном узле, например на control-plane:
-
-     ```shell
-     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | d8 k create -f -
-     ```
-
-1. Проверьте результат выполнения:
-
-   ```shell
-   d8 k logs job.batch/kube-bench
-   ```
-
-{% alert level="warning" %}
-В Deckhouse установлен срок хранения логов — 7 дней. Однако, в соответствии с требованиями безопасности указанными в kube-bench, логи должны храниться не менее 30 дней. Используйте отдельное хранилище для логов, если вам необходимо хранить логи более 7 дней.
-{% endalert %}
-
 ## Как собрать информацию для отладки?
 
 Мы всегда рады помочь пользователям с расследованием сложных проблем. Пожалуйста, выполните следующие шаги, чтобы мы смогли вам помочь:

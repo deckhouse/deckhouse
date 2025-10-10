@@ -44,59 +44,6 @@ title: "Модуль cert-manager: FAQ"
 1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/)
 2. Через Let's Encrypt с помощью метода `DNS-01` через сторонний провайдер.
 
-### Как добавить дополнительный `ClusterIssuer`, использующий Let's Encrypt и метод подтверждения `DNS-01`?
-
-Для подтверждения владения доменом через Let's Encrypt с помощью метода `DNS-01` требуется настроить возможность создания TXT-записей в публичном DNS.
-
-У `cert-manager` есть поддержка механизмов для создания TXT-записей в некоторых популярных DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS` и т.д.  
-Полный перечень доступен [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
-
-Модуль автоматически создает `ClusterIssuer` поддерживаемых cloud-провайдеров, при заполнении настроек модуля связанных с используемым облаком.  
-При необходимости можно создать такие `ClusterIssuer` самостоятельно.  
-
-Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
-Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
-
-Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
-Когда `cert-manager` выполняет вызов `ACME` `DNS-01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  
-При использовании данного метода требуется разместить сервис, который будет обрабатывать хук и осуществлять создание TXT-записи в DNS-провайдере.
-
-В качестве примера рассмотрим использование сервиса `Yandex Cloud DNS`.
-
-1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
-
-1. Затем создайте ресурс `ClusterIssuer`:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # Вы должны заменить этот адрес электронной почты на свой собственный.
-       # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
-       # сертификатов и вопросов, связанных с вашей учетной записью.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # Идентификатор папки, в которой расположена DNS-зона
-                 folder: <your folder ID>
-                 # Это секрет, используемый для доступа к учетной записи сервиса
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
-
 ### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiCorp Vault для выпуска сертификатов?
 
 Для выпуска сертификатов с помощью HashiCorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
@@ -339,44 +286,6 @@ spec:
     - www.example.com                        # Дополнительный домен.
     - admin.example.com                      # Еще один дополнительный домен.
     secretName: example-com-tls              # Имя для Certificate и Secret.
-```
-
-## Как посмотреть состояние сертификата?
-
-```shell
-d8 k -n default describe certificate example-com
-...
-Status:
-  Acme:
-    Authorizations:
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/qJA9MGCZnUnVjAgxhoxONvDnKAsPatRILJ4n0lJ7MMY/4062050823
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   admin.example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/pW2tFKLBDTll2Gx8UBqmEl846x5W-YpBs8a4HqstJK8/4062050808
-      Account:  https://acme-v01.api.letsencrypt.org/acme/reg/22442061
-      Domain:   www.example.com
-      Uri:      https://acme-v01.api.letsencrypt.org/acme/challenge/LaZJMM9_OKcTYbEThjT3oLtwgpkNfbHVdl8Dz-yypx8/4062050792
-  Conditions:
-    Last Transition Time:  2018-04-02T18:01:04Z
-    Message:               Certificate issued successfully
-    Reason:                CertIssueSuccess
-    Status:                True
-    Type:                  Ready
-Events:
-  Type     Reason                 Age                 From                     Message
-  ----     ------                 ----                ----                     -------
-  Normal   PrepareCertificate     1m                cert-manager-controller  Preparing certificate with issuer
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain example.com
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain www.example.com
-  Normal   PresentChallenge       1m                cert-manager-controller  Presenting http-01 challenge for domain admin.example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain admin.example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain example.com
-  Normal   SelfCheck              1m                cert-manager-controller  Performing self-check for domain www.example.com
-  Normal   ObtainAuthorization    55s               cert-manager-controller  Obtained authorization for domain example.com
-  Normal   ObtainAuthorization    54s               cert-manager-controller  Obtained authorization for domain admin.example.com
-  Normal   ObtainAuthorization    53s               cert-manager-controller  Obtained authorization for domain www.example.com
 ```
 
 ## Как получить список сертификатов?

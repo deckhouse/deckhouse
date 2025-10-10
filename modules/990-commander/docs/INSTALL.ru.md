@@ -21,7 +21,7 @@ Platform.
 Расчет узлов в группе `commander` основан на минимальных требованиях компонентов Deckhouse Commander:
 
 * PostgreSQL в режиме
-  [HighAvailability](../../../platform/deckhouse-configure-global.html#parameters-highavailability)
+  HighAvailability
   в двух репликах требует 1 ядро и 1Гб памяти на 2 отдельных узлах (если используете [operator-postgres](#вариант-2-модуль-operator-postgres))
 * Сервер API в режиме
   [HighAvailability](../../../platform/deckhouse-configure-global.html#parameters-highavailability)

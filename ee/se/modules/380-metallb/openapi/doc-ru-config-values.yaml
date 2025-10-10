@@ -7,12 +7,12 @@ properties:
     description: |
       Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться автоматика.
   tolerations:
     description: |
       Структура, аналогичная параметру `spec.tolerations` пода Kubernetes для главного контроллера.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться автоматика.
   speaker:
     description: |
       Настройки для компонента `speaker`, который реализует протокол публикации IP-адресов LoadBalancer'а для внешней инфраструктуры.
@@ -21,12 +21,12 @@ properties:
         description: |
           Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться автоматика.
       tolerations:
         description: |
           Структура для DaemonSet speaker'а, аналогичная параметру `spec.tolerations` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться автоматика.
   bgpPeers:
     description: |
       Список внешних BGP-роутеров, которые будут работать с этим модулем.

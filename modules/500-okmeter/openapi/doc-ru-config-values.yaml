@@ -12,12 +12,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `nodeSelector` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `nodeSelector` автоматически.
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `tolerations` [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, то Deckhouse попытается вычислить значение `tolerations` автоматически.
   image:
     repository:
       description: Репозиторий с образом для okmeter agent.

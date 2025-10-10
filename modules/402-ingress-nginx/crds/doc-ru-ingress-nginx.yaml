@@ -69,14 +69,14 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться автоматика.
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться автоматика.
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
@@ -447,14 +447,14 @@ spec:
                   description: |
                     Аналогично параметру `spec.nodeSelector` у подов.
 
-                    Если значение не указано или указано `false`, Deckhouse попытается определить значение [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, Deckhouse попытается определить значение автоматически.
 
                     Используйте формат стандартного списка `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Аналогично параметру `spec.tolerations` у подов.
 
-                    Если значение не указано или указано `false`, подам модуля [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки) устанавливаются все возможные tolerations.
+                    Если значение не указано или указано `false`, подам модуля автоматически устанавливаются все возможные tolerations.
 
                     Используйте формат стандартного списка [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:

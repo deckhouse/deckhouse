@@ -136,7 +136,7 @@ properties:
     description: |
       Node selector for frontend and backend pods. The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
   tolerations:
     type: array
     items:
@@ -161,4 +161,4 @@ properties:
     description: |
       Node tolerations for frontend and backend pods. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.

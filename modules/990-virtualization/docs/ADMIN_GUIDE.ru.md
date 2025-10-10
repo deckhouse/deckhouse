@@ -174,19 +174,6 @@ spec:
 - **ISO-образ** — установочный образ, используемый для начальной установки операционной системы (ОС). Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
 - **Образ диска с предустановленной системой** — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Готовые образы можно получить на ресурсах разработчиков дистрибутива, либо создать самостоятельно.
 
-Примеры ресурсов для получения образов виртуальной машины:
-
-| Дистрибутив                                                                       | Пользователь по умолчанию |
-| --------------------------------------------------------------------------------- | ------------------------- |
-| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
-| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
-| [AltLinux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/)                   | `altlinux`                |
-| [AstraLinux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit/) | `astra`                   |
-| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
-| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
-| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
-| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
-
 Поддерживаются следующие форматы образов с предустановленной системой:
 
 - `qcow2`;
@@ -221,7 +208,7 @@ spec:
      dataSource:
        type: HTTP
        http:
-         url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+         url: https://<host>/noble-server-cloudimg-amd64.img
    EOF
    ```
 
@@ -296,7 +283,7 @@ d8 k describe cvi ubuntu-22-04
 1. Для начала загрузите образ локально:
 
    ```bash
-   curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+   curl -L https://<host>/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
    ```
 
 1. Далее создайте `Dockerfile` со следующим содержимым:

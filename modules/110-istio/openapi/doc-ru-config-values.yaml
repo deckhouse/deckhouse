@@ -181,14 +181,14 @@ properties:
         description: |
           Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться автоматика.
       tolerations:
         description: |
           Опциональные tolerations для компонента istiod.
 
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться автоматика.
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.
@@ -416,14 +416,14 @@ properties:
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться автоматика.
   tolerations:
     description: |
       Опциональные tolerations для компонентов istio-operator, metadata-exporter и Kiali.
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться автоматика.
   https:
     description: |
       Тип сертификата, используемого для публичных веб-интерфейсов модуля.
