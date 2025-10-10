@@ -197,6 +197,7 @@ for d8_tag in "${d8_tags[@]}"; do
       digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse-controller += { ($i): ($s) }')
     elif [ "${additional_image_name}" == "${d8_image}/install" ]; then
       digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.dhctl += { ($i): ($s) }')
+    fi
   done
 
   echo "=============================================="
