@@ -269,7 +269,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator.com"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator-two.com"))
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid profile offline_access audience:server:client_id:kubernetes"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid profile offline_access federated:id audience:server:client_id:kubernetes"))
 
 			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
 			Expect(deploymentTest3.Exists()).To(BeTrue())

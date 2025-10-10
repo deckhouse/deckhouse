@@ -163,7 +163,7 @@ spec:
         - --set-authorization-header=true
     {{- end }}
         - --set-xauthrequest
-        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} audience:server:client_id:kubernetes{{- end }}
+        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} federated:id audience:server:client_id:kubernetes{{- end }}
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
