@@ -15,6 +15,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
