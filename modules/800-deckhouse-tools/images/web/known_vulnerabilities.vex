@@ -43,7 +43,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Moby's Firewalld reload removes bridge network isolation - мы не используем этот функционал напрямую",
+      "impact_statement": "Эта уязвимость не эксплуатируется в Delivery Kit. Она проявляется только в работе демона Docker (dockerd), который является внешней зависимостью и не входит в состав Delivery Kit. Delivery Kit взаимодействует с Docker через его API и использует пакет github.com/docker/docker исключительно как клиентскую библиотеку. Внутренние компоненты Delivery Kit не управляют сетевыми правилами и не выполняют операций, связанных с Firewalld, в котором и проявляется уязвимость.",
       "timestamp": "2025-10-09T14:21:14.86863865Z"
     },
     {
