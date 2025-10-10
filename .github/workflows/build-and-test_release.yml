@@ -2421,17 +2421,41 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_SSH_USER | SVACE_ANALYZE_SSH_USER ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_URL | SVACER_URL ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_IMPORT_USER | SVACER_IMPORT_USER ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_IMPORT_PASSWORD | SVACER_IMPORT_PASSWORD ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+
+      # </template: import_secrets>
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: "DKP"
           ci_commit_ref_name: ${{ github.ref_name }}
           ci_commit_hash: ${{ github.sha }}
-          svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
-          svace_analyze_ssh_user: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-          svacer_url: "${{ secrets.SVACER_URL }}"
-          svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
-          svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
-          svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+          svace_analyze_host: "${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}"
+          svace_analyze_ssh_user: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_USER }}"
+          svacer_url: "${{ steps.secrets.outputs.SVACER_URL }}"
+          svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
+          svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
+          svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
   compare_internal_modules:
     name: Compare internal modules
