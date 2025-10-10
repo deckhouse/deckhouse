@@ -24,7 +24,7 @@ System container integrity control includes:
 
 Signature verification is performed for system containers running in the `d8-*` and `kube-system` namespaces.
 
-Signing DKP system container images is based on the `delivery-kit` module, which uses the principle of an attached signature. The signature is added to the image manifest in the `io.deckhouse.delivery-kit.signature` annotation.
+Signing DKP system container images uses the principle of an attached signature. The signature is added to the image manifest in the `io.deckhouse.delivery-kit.signature` annotation.
 
 When loading the image and starting the container, the signature is verified using a set of public certificates built into containerd. If there is no signature on the locally downloaded image, the image is considered corrupted and must be re-downloaded from the registry.
 
