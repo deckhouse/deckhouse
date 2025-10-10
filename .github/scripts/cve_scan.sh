@@ -196,6 +196,10 @@ for d8_tag in "${d8_tags[@]}"; do
     digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse += { ($i): ($s) }')
   done
 
+  echo "=============================================="
+  echo "The following images will be scanned:"
+  echo "${digests}"
+
   for module in $(jq -rc 'to_entries[]' <<< "${digests}"); do
     MODULE_NAME=$(jq -rc '.key' <<< "${module}")
     echo "=============================================="
