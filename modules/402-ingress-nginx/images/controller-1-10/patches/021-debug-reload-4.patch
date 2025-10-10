@@ -1,3 +1,39 @@
+diff --git a/internal/ingress/annotations/auth/main.go b/internal/ingress/annotations/auth/main.go
+index 7c7fde7b8..8bcff93a4 100644
+--- a/internal/ingress/annotations/auth/main.go
++++ b/internal/ingress/annotations/auth/main.go
+@@ -104,24 +104,31 @@ func (bd1 *Config) Equal(bd2 *Config) bool {
+ 		return true
+ 	}
+ 	if bd1 == nil || bd2 == nil {
++		fmt.Println("CONFIG AUTH: nil")
+ 		return false
+ 	}
+ 	if bd1.Type != bd2.Type {
++		fmt.Printf("CONFIG AUTH: type %s vs %s\n", bd1.Type, bd2.Type)
+ 		return false
+ 	}
+ 	if bd1.Realm != bd2.Realm {
++		fmt.Printf("CONFIG AUTH: realm %s vs %s\n", bd1.Realm, bd2.Realm)
+ 		return false
+ 	}
+ 	if bd1.File != bd2.File {
++		fmt.Printf("CONFIG AUTH: file %s vs %s\n", bd1.File, bd2.File)
+ 		return false
+ 	}
+ 	if bd1.Secured != bd2.Secured {
++		fmt.Printf("CONFIG AUTH: secured %s vs %s\n", bd1.Secured, bd2.Secured)
+ 		return false
+ 	}
+ 	if bd1.FileSHA != bd2.FileSHA {
++		fmt.Printf("CONFIG AUTH: sha %s vs %s\n", bd1.FileSHA, bd2.FileSHA)
+ 		return false
+ 	}
+ 	if bd1.Secret != bd2.Secret {
++		fmt.Printf("CONFIG AUTH: secret %s vs %s\n", bd1.Secret, bd2.Secret)
+ 		return false
+ 	}
+ 	return true
 diff --git a/pkg/apis/ingress/types_equals.go b/pkg/apis/ingress/types_equals.go
 index eeed9a06e..fb588ae4b 100644
 --- a/pkg/apis/ingress/types_equals.go
