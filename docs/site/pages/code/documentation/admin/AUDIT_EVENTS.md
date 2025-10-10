@@ -1,7 +1,7 @@
 ---
 title: "Audit events"
 menuTitle: Audit events
-force_searchable: true
+searchable: true
 description: Audit events
 permalink: en/code/documentation/admin/audit-events.html
 lang: en
