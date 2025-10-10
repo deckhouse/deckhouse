@@ -1,0 +1,19 @@
+#!/bin/bash
+# Fix Python CVE vulnerabilities in the build environment
+# CVE-2025-8869: pip missing checks on symbolic link extraction
+# CVE-2024-47081: requests vulnerable to .netrc credentials leak via malicious URLs  
+# CVE-2025-50181: urllib3 redirects are not disabled when retries are disabled on PoolManager
+# CVE-2025-50182: urllib3 does not control redirects in browsers and Node.js
+
+# Update Python packages to fixed versions during build
+if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --upgrade --no-cache-dir \
+        'pip>=25.1.0' \
+        'requests>=2.32.4' \
+        'urllib3>=2.5.0' || true
+elif command -v pip >/dev/null 2>&1; then
+    pip install --upgrade --no-cache-dir \
+        'pip>=25.1.0' \
+        'requests>=2.32.4' \
+        'urllib3>=2.5.0' || true
+fi
