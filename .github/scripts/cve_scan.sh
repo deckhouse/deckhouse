@@ -242,9 +242,7 @@ for d8_tag in "${d8_tags[@]}"; do
     for module_image in $(jq -rc '.value | to_entries[]' <<<"${module}"); do
       IMAGE_NAME="$(jq -rc '.key' <<< ${module_image})"
       IMAGE_HASH="$(jq -rc '.value' <<< ${module_image})"
-      #if [[ "${IMAGE_NAME}" == "trivy" ]]; then
-      #  continue
-      #fi
+      echo "IMAGE_NAME: ${IMAGE_NAME}"
       # Set flag if additional image to use tag instead of hash
       additional_image_detected=false
       for image_item in "${additional_images[@]}"; do
