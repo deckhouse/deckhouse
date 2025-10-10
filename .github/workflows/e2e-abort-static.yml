@@ -290,15 +290,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -588,15 +579,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -888,15 +870,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -1186,15 +1159,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -1486,15 +1450,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -1784,15 +1739,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -2084,15 +2030,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -2382,15 +2319,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -2682,15 +2610,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -2980,15 +2899,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -3280,15 +3190,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -3578,15 +3479,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
@@ -3878,15 +3770,6 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
-
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}
         id: cleanup_cluster
@@ -4176,15 +4059,6 @@ jobs:
           echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
           echo '::echo::off'
-
-      - name: "Download state"
-        id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
-        with:
-          github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          run_id: ${{github.event.inputs.run_id}}
-          name: ${{github.event.inputs.state_artifact_name}}
-          path: ${{ steps.setup.outputs.tmp-dir-path}}
 
       - name: Cleanup bootstrapped cluster
         if: ${{ success() || cancelled() }}

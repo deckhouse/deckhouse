@@ -46,25 +46,9 @@ entries:
                     ru: Переключение редакций
                   url: /admin/configuration/registry/switching-editions.html
             - title:
-                en: Access
-                ru: Доступ
+                en: IAM
+                ru: IAM
               folders:
-                - title:
-                    en: Connection
-                    ru: Подключение
-                  folders:
-                    - title:
-                        en: OpenVPN
-                        ru: OpenVPN
-                      folders:
-                        - title:
-                            en: Overview
-                            ru: Обзор
-                          url: /admin/configuration/access/connection/openvpn/overview.html
-                        - title:
-                            en: Configuration
-                            ru: Настройка
-                          url: /admin/configuration/access/connection/openvpn/configuration.html
                 - title:
                     en: Access to API
                     ru: TODO Доступ к API
@@ -123,8 +107,8 @@ entries:
                         ru: Доступ для CI/CD
                       url: /admin/configuration/access/authorization/ci_cd.html
             - title:
-                en: Platform integration with infrastructure
-                ru: Интеграция платформы с инфраструктурой
+                en: Integration with IaaS
+                ru: Интеграция с IaaS
               folders:
                 - title:
                     en: Overview
@@ -448,7 +432,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /admin/configuration/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
@@ -650,6 +633,18 @@ entries:
                         en: Synchronizing time on nodes
                         ru: Синхронизация времени на узлах
                       url: /admin/configuration/network/other/ntp.html
+                - title:
+                    en: Access via OpenVPN
+                    ru: Доступ через OpenVPN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/connection/openvpn/overview.html
+                    - title:
+                        en: Configuration
+                        ru: Настройка
+                      url: /admin/configuration/access/connection/openvpn/configuration.html
             - title:
                 en: Storage
                 ru: Хранилища

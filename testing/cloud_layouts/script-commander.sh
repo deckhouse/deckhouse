@@ -232,18 +232,31 @@ function prepare_environment() {
     ;;
 
   "vSphere")
-    # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$LAYOUT_VSPHERE_PASSWORD" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
-        CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" \
-        PREFIX="$PREFIX" \
-        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
-        MASTERS_COUNT="$MASTERS_COUNT" \
-        VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="redos"
+    bastion_user="ubuntu"
+    bastion_host="31.128.54.168"
+    bastion_port="53359"
+    # ssh_bastion="ProxyJump=${bastion_user}@${bastion_host}:${bastion_port}"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"vSphereUsername\": \"${LAYOUT_VSPHERE_USERNAME}\",
+      \"vSpherePassword\": \"${LAYOUT_VSPHERE_PASSWORD}\",
+      \"vSphereBaseDomain\": \"${LAYOUT_VSPHERE_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+
     ;;
 
   "VCD")
@@ -752,12 +765,13 @@ StrictHostKeyChecking no
 ServerAliveInterval 5
 ServerAliveCountMax 5
 ConnectTimeout 10
-LogLevel quiet
 EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
   chmod 600 id_rsa
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
+  eval "$(ssh-agent -s)"
+  ssh-add "id_rsa"
 }
 
 function wait_alerts_resolve() {
@@ -985,7 +999,7 @@ function update_comment() {
     return 1
   fi
 
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_connection} ${master_connection}\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${ssh_bastion} ${master_connection}\`"
   local result_body
 
   if ! result_body="$(echo "$comment" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
@@ -1070,7 +1084,7 @@ function run-test() {
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
     echo http_code: $http_code
-
+    
     # Check for HTTP errors
     if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
       break
@@ -1086,7 +1100,6 @@ function run-test() {
      echo "$response" >&2
     return 1
   fi
-
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
@@ -1106,10 +1119,9 @@ function run-test() {
         master_connection="${master_user}@${master_ip}"
         master_ip_find=true
         echo "  SSH connection string:"
-        echo "      ssh $master_connection"
+        echo "      ssh ${ssh_bastion} ${master_connection}"
         update_comment
         echo "$master_connection" > ssh-connect_str-"${PREFIX}"
-        # TODO add workflow template
       fi
     fi
 
@@ -1148,30 +1160,23 @@ function run-test() {
   wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
-
-  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
-
-  if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-    echo "Ingress and Istio test passed"
-  else
-    echo "Ingress and Istio test failure"
-    return 1
-  fi
-
-  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
-
-  test_failed="true"
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
-      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
-      test_failed=""
-    else
-      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
-      sleep 30
+  testScript="$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  testRunAttempts=5
+  $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
+  for ((i=1; i<=testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
+      echo "Ingress and Istio test passed"
+      break
     fi
-
-    if [[ $test_failed == "true" ]]; then
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n " Ingress and Istio test. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Ingress and Istio test. Attempt $i/$testRunAttempts failed."
       return 1
     fi
+  done
+
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
     testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
