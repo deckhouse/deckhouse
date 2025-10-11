@@ -197,9 +197,9 @@ spec:
     taints: []
 ---
 # [<en>] stronghold module settings.
-# [<en>] https://deckhouse.io/products/stronghold/reference/mc.html#stronghold
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
 # [<ru>] Настройки модуля stronghold.
-# [<ru>] https://deckhouse.ru/products/stronghold/reference/mc.html#stronghold
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

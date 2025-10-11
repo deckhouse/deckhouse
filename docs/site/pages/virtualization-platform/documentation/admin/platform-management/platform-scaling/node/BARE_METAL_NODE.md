@@ -9,7 +9,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/pl
 
 1. Enable the [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html) module.
 
-1. Create a [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) object with the type `Static`:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the type `Static`:
 
    ```yaml
    apiVersion: deckhouse.io/v1

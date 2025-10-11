@@ -97,9 +97,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#cni-cilium
+# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#cni-cilium
+# [<ru>] https://deckhouse.io/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -113,9 +113,9 @@ spec:
     tunnelMode: VXLAN
 ---
 # [<en>] admission-policy-engine module settings
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#admission-policy-engine
+# [<en>] https://deckhouse.io/modules/admission-policy-engine/configuration.html
 # [<ru>] Настройки модуля admission-policy-engine
-# [<ru>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#admission-policy-engine
+# [<ru>] https://deckhouse.io/modules/admission-policy-engine/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -125,9 +125,9 @@ spec:
   version: 1
 ---
 # [<en>] multitenancy-manager module settings
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#multitenancy-manager
+# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
 # [<ru>] Настройки модуля multitenancy-manager
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#multitenancy-manager
+# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

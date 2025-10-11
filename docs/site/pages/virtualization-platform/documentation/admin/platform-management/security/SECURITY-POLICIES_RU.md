@@ -148,7 +148,7 @@ spec:
 
 ## Операционные политики
 
-DVP предоставляет механизм создания операционных политик с помощью [ресурса OperationPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#operationpolicy).
+DVP предоставляет механизм создания операционных политик с помощью [ресурса OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
 В операционных политиках задаются требования к объектам в кластере:
 допустимые репозитории, требуемые ресурсы, наличие проб и т. д.
 
@@ -202,7 +202,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 ## Политики безопасности
 
-Используя [ресурс SecurityPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy),
+Используя [ресурс SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy),
 вы можете создавать политики безопасности, задающие ограничения на поведение контейнеров в кластере:
 доступ к host-сетям, привилегии, использование AppArmor и т. д.
 
@@ -279,7 +279,7 @@ spec:
 
 1. Добавьте в необходимое пространство имён лейбл `security.deckhouse.io/pod-policy: privileged`,
    чтобы отключить встроенный набор политик.
-1. Создайте [ресурс SecurityPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy), соответствующий уровню `baseline` или `restricted`.
+1. Создайте [ресурс SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), соответствующий уровню `baseline` или `restricted`.
    В секции `policies` укажите только необходимые вам настройки безопасности.
 1. Добавьте в пространство имён дополнительный лейбл, соответствующий селектору `namespaceSelector` в SecurityPolicy.
 

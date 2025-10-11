@@ -10,7 +10,7 @@ lang: ru
 
 1. Включите модуль [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html).
 
-1. Создайте объект [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) с типом `Static`:
+1. Создайте объект [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `Static`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -43,7 +43,7 @@ lang: ru
    - создать системного пользователя (например, `ubuntu`), от имени которого будет выполняться подключение по SSH;
    - убедиться, что пользователь может выполнять команды через `sudo`.
 
-1. Создать объект [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials) с доступом к серверу. DVP использует объект SSHCredentials для подключения к серверам по SSH. В нём указывается:
+1. Создать объект [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) с доступом к серверу. DVP использует объект SSHCredentials для подключения к серверам по SSH. В нём указывается:
    - приватный ключ;
    - пользователь ОС;
    - порт SSH;
@@ -68,7 +68,7 @@ lang: ru
 
      > **Важно**. Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
 
-1. Создать объект [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) для каждого сервера:
+1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -85,7 +85,7 @@ lang: ru
        name: static-nodes
    ```
 
-   Под каждый сервер необходимо создавать отдельный ресурс [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance), но можно использовать одни и те же SSHCredentials для доступа на разные серверы.
+   Под каждый сервер необходимо создавать отдельный ресурс [StaticInstance](/modules/node-manager/cr.html#staticinstance), но можно использовать одни и те же SSHCredentials для доступа на разные серверы.
 
    Возможные состояния ресурсов StaticInstance:
 
@@ -96,7 +96,7 @@ lang: ru
 
    Эти состояния отображают текущий этап управления узлом. CAPS автоматически переводит StaticInstance между этими состояниями в зависимости от необходимости добавить или удалить узел из группы.
 
-1. Создать [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) с описанием, как DVP будет использовать эти серверы:
+1. Создать [NodeGroup](/modules/node-manager/cr.html#nodegroup) с описанием, как DVP будет использовать эти серверы:
 
    ```yaml
    apiVersion: deckhouse.io/v1

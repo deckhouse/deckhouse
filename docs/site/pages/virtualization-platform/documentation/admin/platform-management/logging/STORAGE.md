@@ -6,7 +6,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/lo
 Deckhouse provides a built-in solution for short-term log storage based on the [Grafana Loki](https://grafana.com/oss/loki/) project.
 
 The storage is deployed in the cluster and integrated with the log collection system.
-After configuring the resources [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) and [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination),
+After configuring the resources [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination),
 logs are automatically collected from all system components.
 The configured storage is added to Grafana as a data source for visualization and analysis.
 
@@ -33,7 +33,7 @@ To configure Deckhouse to work with the Grafana Cloud platform, follow these ste
    echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
    ```
 
-1. Create a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource, following the example:
+1. Create a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource, following the example:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

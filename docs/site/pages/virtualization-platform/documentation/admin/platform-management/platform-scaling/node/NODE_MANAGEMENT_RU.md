@@ -11,7 +11,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 - Централизованное управление конфигурацией групп узлов через CRD NodeGroup;
 - Использование различных типов узлов: постоянные, временные или bare-metal.
 
-Группы узлов позволяют логически сегментировать инфраструктуру кластера. В DVP часто используются следующие типы [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) по назначению:
+Группы узлов позволяют логически сегментировать инфраструктуру кластера. В DVP часто используются следующие типы [NodeGroup](/modules/node-manager/cr.html#nodegroup) по назначению:
 
 - `master` — управляющие узлы (control plane);
 - `front` — узлы для маршрутизации HTTP(S)-трафика;

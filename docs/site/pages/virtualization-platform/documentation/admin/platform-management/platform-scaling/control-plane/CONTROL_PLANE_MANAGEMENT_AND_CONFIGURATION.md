@@ -219,7 +219,7 @@ The shorter the timeouts, the more frequently system components check node statu
 
 Internal communication between Deckhouse cluster components is performed via IPv4 protocol. However, at the operating system level of the cluster nodes, IPv6 is usually active by default. This leads to automatic assignment of IPv6 addresses to all network interfaces, including Pod interfaces. This results in unwanted network traffic - for example, redundant DNS queries like `AAAAA` - which can affect performance and make debugging network communications more difficult.
 
-To correctly disable IPv6 at the node level in a Deckhouse-managed cluster, it is sufficient to set the necessary parameters via the [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource:
+To correctly disable IPv6 at the node level in a Deckhouse-managed cluster, it is sufficient to set the necessary parameters via the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

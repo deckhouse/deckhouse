@@ -18,10 +18,10 @@ d8 s module enable virtualization
 
 В конфигурации модуля укажите:
 
-- [settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
-- [settings.dvcr.storage.persistentVolumeClaim.size](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
-- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
-- [settings.dvcr.storage.type](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
 
 Пример базовой настройки модуля виртуализации:
 

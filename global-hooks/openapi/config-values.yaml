@@ -67,7 +67,7 @@ properties:
           - If this parameter is not specified, Ingress resources will not be created.
           - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
           - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
-          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.  
+          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
           For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
@@ -114,7 +114,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/modules/user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
@@ -134,7 +134,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false

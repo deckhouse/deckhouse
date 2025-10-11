@@ -20,9 +20,9 @@ clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -64,9 +64,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -78,9 +78,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -89,9 +89,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+# [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -103,9 +103,9 @@ spec:
   enabled: true
   settings:
     # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
     # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html
+    # [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
     tunnelMode: VXLAN
 ---
 # [<en>] Static cluster settings.

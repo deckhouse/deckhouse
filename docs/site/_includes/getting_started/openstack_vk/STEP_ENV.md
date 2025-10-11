@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You need to create a service account so that Deckhouse Kubernetes Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/environment.html).
+You need to create a service account so that Deckhouse Kubernetes Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/modules/cloud-provider-openstack/environment.html).
 
 A brief sequence of actions (run them on the **personal computer**) necessary to obtain authorization data:
 - Follow this [link](https://mcs.mail.ru/app/project/keys/);

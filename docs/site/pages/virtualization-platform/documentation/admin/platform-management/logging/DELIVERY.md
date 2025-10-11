@@ -36,7 +36,7 @@ To configure, follow these steps:
    d8 platform module enable log-shipper
    ```
 
-1. Create a [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) resource that defines log collection rules.
+1. Create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) resource that defines log collection rules.
    This resource allows you to configure log collection from pods in a specific namespace and with a specific label,
    flexibly configure multi-line log parsing, and set other rules.
 
@@ -53,7 +53,7 @@ To configure, follow these steps:
      - es-storage
    ```
 
-1. Create a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource
+1. Create a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource
    that describes the parameters for sending logs to storage.
    This resource allows you to specify one or more storage systems and describe connection parameters, buffering, and additional labels that will be applied to logs before sending.
 
@@ -83,7 +83,7 @@ using the [`type` parameter](/products/kubernetes-platform/documentation/v1/modu
 
 ### Elasticsearch
 
-To send logs to Elasticsearch, create a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource following this example:
+To send logs to Elasticsearch, create a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource following this example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -170,7 +170,7 @@ To configure sending events to Splunk, follow these steps:
    add a new **HTTP Event Collector** and copy the generated token.
    - Specify the Splunk index for storing logs, for example, `logs`.
 
-1. Configure Deckhouse by adding a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource to send logs to Splunk:
+1. Configure Deckhouse by adding a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource to send logs to Splunk:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -219,7 +219,7 @@ To configure sending logs to Logstash, do the following:
    }
    ```
 
-1. Add a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource:
+1. Add a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -237,7 +237,7 @@ To configure sending logs to Logstash, do the following:
 To configure sending logs to Graylog, do the following:
 
 1. Ensure that Graylog has an incoming stream configured to receive messages via TCP protocol on the specified port.
-1. Create a [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) resource following the example:
+1. Create a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource following the example:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -491,7 +491,7 @@ Deckhouse provides filters to exclude unnecessary messages for optimizing the lo
 ### Collecting Logs from a Specific Container
 
 To configure filtering using `labelFilter`,
-create a [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) resource,
+create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) resource,
 using the configuration below as an example.
 
 In this case, the filter selects logs from containers named `nginx`,

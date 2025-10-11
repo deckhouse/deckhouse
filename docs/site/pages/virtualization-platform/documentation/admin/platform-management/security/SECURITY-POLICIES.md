@@ -148,7 +148,7 @@ Helpful resources for creating extended policies:
 
 ## Operational policies
 
-DVP provides a mechanism for creating operational policies using the [OperationPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#operationpolicy) resource.
+DVP provides a mechanism for creating operational policies using the [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) resource.
 Operational policies define requirements for cluster objects such as allowed repositories, required resources, probes, and more.
 
 The DVP development team recommends applying the following minimal operational policy:
@@ -200,7 +200,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 ## Security policies
 
-Using the [SecurityPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy) resource,
+Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy) resource,
 you can create security policies that define container behavior restrictions in the cluster,
 such as host network access, privileges, AppArmor usage, and more.
 
@@ -274,7 +274,7 @@ To assign this security policy, add the `enforce: "mypolicy"` label to the targe
 To enforce specific security policies without disabling the entire predefined set, follow these steps:
 
 1. Add the `security.deckhouse.io/pod-policy: privileged` label to the target namespace to disable the built-in policy set.
-1. Create a [SecurityPolicy](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy) resource
+1. Create a [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy) resource
    that matches the `baseline` or `restricted` level.
    In the `policies` section, specify only the security settings you need.
 1. Add an extra label to the namespace matching the `namespaceSelector` in the SecurityPolicy.

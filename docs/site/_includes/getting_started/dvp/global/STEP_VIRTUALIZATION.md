@@ -1,4 +1,4 @@
-Enable the virtualization module. In the parameter [.spec.settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#virtualization) of the module, specify the subnets, IP addresses from which virtual machines will be assigned:
+Enable the virtualization module. In the parameter [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) of the module, specify the subnets, IP addresses from which virtual machines will be assigned:
 
 ```shell
 sudo -i d8 k create -f - <<EOF

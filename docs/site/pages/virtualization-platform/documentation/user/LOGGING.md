@@ -17,14 +17,14 @@ DKP allows you to:
 
 The general mechanism for log collection, delivery, and filtering is described in detail [in the "Architecture" section](/products/virtualization-platform/documentation/architecture/logging/delivery.html).
 
-DVP users can configure log collection parameters from applications using the [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) resource, which describes the log source within a given namespace, including collection, filtering, and parsing rules.
+DVP users can configure log collection parameters from applications using the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource, which describes the log source within a given namespace, including collection, filtering, and parsing rules.
 
 ## Configuring Log Collection from Applications
 
 1. Check with the DKP administrator whether log collection and storage are configured in your cluster.
-   Also ask them to provide you with the storage name that you will specify in the [`clusterDestinationRefs`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs) parameter.
+   Also ask them to provide you with the storage name that you will specify in the [`clusterDestinationRefs`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs) parameter.
 
-1. Create a [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) resource in your namespace.
+1. Create a [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in your namespace.
 
    In this example, logs are collected from all pods in the specified namespace
    and sent to short-term storage [based on Grafana Loki](/products/virtualization-platform/documentation/admin/platform-management/logging/storage.html):

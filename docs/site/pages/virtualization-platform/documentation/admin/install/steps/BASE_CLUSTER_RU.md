@@ -212,7 +212,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 Список проверок, выполняемых инсталлятором перед началом установки платформы:
 
 1. Общие проверки:
-   - Значения параметров [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;
