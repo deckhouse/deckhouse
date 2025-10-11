@@ -99,6 +99,8 @@ type ClusterDestroyer struct {
 	isDebug bool
 }
 
+// NewClusterDestroyer
+// params.SSHClient should not START!
 func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 

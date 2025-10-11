@@ -86,10 +86,6 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		sshClient.Session().BastionHost = bastionHost
 	}
 
-	if err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
-	}
-
 	return nil
 }
 
@@ -177,8 +173,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				}
 
 				sshClientProvider := func() (node.SSHClient, error) {
-					// client initialized above
-					return wrapper.Client(), nil
+					client := wrapper.Client()
+					if err := client.Start(); err != nil {
+						return nil, err
+					}
+					return client, nil
 				}
 
 				destroyer = destroy.NewStaticMastersDestroyer(sshClientProvider, []destroy.NodeIP{})
@@ -192,10 +191,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			log.InfoLn(logMsg)
 
 			return nil
-		}
-
-		if err := b.initSSHClient(); err != nil {
-			return err
 		}
 
 		if !b.CommanderMode {
