@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
@@ -174,7 +175,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				if err := b.initSSHClient(); err != nil {
 					return err
 				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client(), []destroy.NodeIP{}, nil)
+
+				sshClientProvider := func() (node.SSHClient, error) {
+					// client initialized above
+					return wrapper.Client(), nil
+				}
+
+				destroyer = destroy.NewStaticMastersDestroyer(sshClientProvider, []destroy.NodeIP{})
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
