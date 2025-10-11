@@ -6021,7 +6021,7 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: |4-
+      description: |-
         OpenVPN CA certificate renews automatically 1 days before expiration.
         Automatic rotation did not work.
         Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).

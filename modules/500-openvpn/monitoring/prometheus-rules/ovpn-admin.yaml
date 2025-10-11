@@ -160,7 +160,6 @@
         plk_protocol_version: "1"
         summary: OpenVPN CA certificate will expire tomorrow
         description: |-
-
           OpenVPN CA certificate renews automatically 1 days before expiration.
           Automatic rotation did not work.
           Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
