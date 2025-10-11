@@ -8,6 +8,7 @@ class ModuleSearch {
     this.fuseIndex = null;
     this.searchDictionary = [];
     this.lastQuery = '';
+    this.pendingQuery = ''; // Store user input while index is loading
     this.currentResults = {
       isResourceNameMatch: [],
       nameMatch: [],
@@ -46,7 +47,7 @@ class ModuleSearch {
         api: 'API',
         documentation: 'Documentation',
         showMore: 'Show more',
-        loading: 'Loading search index...',
+        loading: 'Loading search index... (you can formulate query, while index is loading)',
         ready: 'What are we looking for?',
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
@@ -56,7 +57,7 @@ class ModuleSearch {
         api: 'API',
         documentation: 'Документация',
         showMore: 'Показать еще',
-        loading: 'Загрузка поискового индекса...',
+        loading: 'Загрузка поискового индекса... (можно формулировать запрос, пока идет загрузка индекса)',
         ready: 'Что ищем?',
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
@@ -130,7 +131,6 @@ class ModuleSearch {
       // Show loading state when user first focuses on search
       if (!this.isDataLoaded) {
         this.showLoading();
-        this.searchInput.disabled = true;
         this.searchInput.placeholder = this.t('loading');
         this.loadSearchIndex();
       }
@@ -165,12 +165,21 @@ class ModuleSearch {
     });
 
     this.searchInput.addEventListener('input', (e) => {
-      // Don't allow searching until index is loaded
+      const query = e.target.value.trim();
+      
+      // Store user input while index is loading
       if (!this.isDataLoaded) {
+        this.pendingQuery = e.target.value; // Store the full value including spaces
+        // Show search results container to indicate typing is being captured
+        this.searchResults.style.display = 'flex';
+        if (query.length > 0) {
+          this.showMessage(`${this.t('loading')} (typing: "${query}")`);
+        } else {
+          this.showMessage(this.t('loading'));
+        }
         return;
       }
 
-      const query = e.target.value.trim();
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
@@ -185,12 +194,14 @@ class ModuleSearch {
     this.searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Don't allow searching until index is loaded
+        const query = e.target.value.trim();
+        
+        // Store user input while index is loading
         if (!this.isDataLoaded) {
+          this.pendingQuery = e.target.value; // Store the full value including spaces
           return;
         }
 
-        const query = e.target.value.trim();
         if (query.length > 0) {
           this.searchResults.style.display = 'flex';
           this.handleSearch(query);
@@ -325,19 +336,26 @@ class ModuleSearch {
       this.isDataLoaded = true;
       this.hideLoading();
 
-      // Re-enable search input
-      this.searchInput.disabled = false;
+      // Update placeholder to indicate search is ready
       this.searchInput.placeholder = this.t('ready');
 
       // Keep focus on search input after loading
       this.searchInput.focus();
 
-      // Show message that search index is loaded and ready
-      this.showMessage(this.t('ready'));
+      // Execute search with pending query if user was typing while loading
+      if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+        // Update the input value to match what the user typed
+        this.searchInput.value = this.pendingQuery;
+        this.searchResults.style.display = 'flex';
+        this.handleSearch(this.pendingQuery.trim());
+        this.pendingQuery = ''; // Clear pending query
+      } else {
+        // Show message that search index is loaded and ready
+        this.showMessage(this.t('ready'));
+      }
     } catch (error) {
       console.error('Error loading search index:', error);
-      // Re-enable search input even on error
-      this.searchInput.disabled = false;
+      // Update placeholder to indicate search is ready (even with error)
       this.searchInput.placeholder = this.t('ready');
 
       // Keep focus on search input after error
