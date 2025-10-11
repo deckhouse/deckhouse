@@ -167,19 +167,6 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		},
 	)
 
-	resourcesDestroyed, err := state.IsResourcesDestroyed()
-	if err != nil {
-		return nil, err
-	}
-
-	sshClient := wrapper.Client()
-
-	if !params.SkipResources && !resourcesDestroyed {
-		if err := sshClient.Start(); err != nil {
-			return nil, err
-		}
-	}
-
 	staticDestroyer := NewStaticMastersDestroyer(sshClientProvider, []NodeIP{})
 
 	return &ClusterDestroyer{
