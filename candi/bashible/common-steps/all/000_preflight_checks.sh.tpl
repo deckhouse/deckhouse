@@ -14,9 +14,12 @@
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
-  if command -v containerd >/dev/null 2>&1; then
+  CONTAINERD_PATH="$(command -v containerd 2>/dev/null || true)"
+  if [[ -n "$CONTAINERD_PATH" ]]; then
+    if [[ "$CONTAINERD_PATH" != "/opt/deckhouse/bin/containerd" ]]; then
     bb-log-error "containerd is detected on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations. Please uninstall containerd and try again."
     exit 1
+    fi
   fi
 else
   if systemctl list-unit-files containerd.service >/dev/null 2>&1; then
