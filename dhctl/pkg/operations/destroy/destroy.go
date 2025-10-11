@@ -383,7 +383,6 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 		for _, host := range additionalMastersHosts {
 			settings.SetAvailableHosts([]session.Host{host})
-			var err error
 			sshClient, err = d.switchToNodeUser(sshClient, settings)
 			if err != nil {
 				return err
