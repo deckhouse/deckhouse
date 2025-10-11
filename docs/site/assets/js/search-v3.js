@@ -2,6 +2,16 @@ class ModuleSearch {
   constructor(options = {}) {
     this.searchInput = document.getElementById('search-input');
     this.searchResults = document.getElementById('search-results');
+
+    // Check if required DOM elements exist
+    if (!this.searchInput) {
+      console.error('Search input element not found');
+      return;
+    }
+    if (!this.searchResults) {
+      console.error('Search results element not found');
+      return;
+    }
     this.searchIndex = null;
     this.searchData = null;
     this.lunrIndex = null;
@@ -24,10 +34,12 @@ class ModuleSearch {
       document: 5
     };
     this.isDataLoaded = false;
+    this.searchTimeout = null; // For debouncing search input
 
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
+      searchDebounceMs: 300, // Debounce search input by 300ms
       ...options
     };
 
@@ -37,7 +49,7 @@ class ModuleSearch {
     this.init();
   }
 
-    initI18n() {
+  initI18n() {
     // Get current page language from HTML lang attribute
     this.currentLang = document.documentElement.lang || 'en';
 
@@ -71,7 +83,7 @@ class ModuleSearch {
     }
   }
 
-    // Get translated text
+  // Get translated text
   t(key, params = {}) {
     let text = this.i18n[this.currentLang][key] || this.i18n.en[key] || key;
 
@@ -125,7 +137,7 @@ class ModuleSearch {
     this.searchResults.style.display = 'none';
   }
 
-    setupEventListeners() {
+  setupEventListeners() {
     // Load search index on focus (only if not already loaded)
     this.searchInput.addEventListener('focus', () => {
       // Show loading state when user first focuses on search
@@ -176,10 +188,18 @@ class ModuleSearch {
         return;
       }
 
+      // Clear existing timeout
+      if (this.searchTimeout) {
+        clearTimeout(this.searchTimeout);
+      }
+
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
-        this.handleSearch(query);
+        // Debounce the search to prevent excessive calls
+        this.searchTimeout = setTimeout(() => {
+          this.handleSearch(query);
+        }, this.options.searchDebounceMs);
       } else {
         // Show "What are we looking for?" message when search is cleared
         this.searchResults.style.display = 'flex';
@@ -363,108 +383,73 @@ class ModuleSearch {
 
   buildLunrIndex() {
     const searchData = this.searchData;
+    const useRussianSupport = this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined';
 
     // Use multilingual support for Russian, default for English
-    if (this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined') {
-      // Use Russian language support with lunr.multiLanguage
-      this.lunrIndex = lunr(function() {
+    this.lunrIndex = lunr(function() {
+      // Configure language support
+      if (useRussianSupport) {
         this.use(lunr.multiLanguage('en', 'ru'));
-        this.field('title', { boost: 10 });
-        this.field('keywords', { boost: 8 });
-        this.field('module', { boost: 6 });
-        this.field('summary', { boost: 3 });
-        this.field('content', { boost: 1 });
-        this.ref('id');
+      }
 
-        // Add documents from the documents array
-        let docCounter = 0;
-        if (searchData.documents) {
-          searchData.documents.forEach((doc) => {
-            this.add({
-              id: `doc_${docCounter}`,
-              title: doc.title || '',
-              keywords: doc.keywords || '',
-              module: doc.module || '',
-              summary: doc.summary || '',
-              content: doc.content || '',
-              url: doc.url || '',
-              moduletype: doc.moduletype || '',
-              type: 'document'
-            });
-            docCounter++;
-          });
-        }
+      // Configure fields
+      this.field('title', { boost: 10 });
+      this.field('keywords', { boost: 8 });
+      this.field('module', { boost: 6 });
+      this.field('summary', { boost: 3 });
+      this.field('content', { boost: 1 });
+      this.ref('id');
 
-        // Add parameters from the parameters array
-        let paramCounter = 0;
-        if (searchData.parameters) {
-          searchData.parameters.forEach((param) => {
-            this.add({
-              id: `param_${paramCounter}`,
-              title: param.name || '',
-              keywords: param.keywords || '',
-              module: param.module || '',
-              resName: param.resName || '',
-              content: param.content || '',
-              url: param.url || '',
-              moduletype: param.moduletype || '',
-              type: 'parameter'
-            });
-            paramCounter++;
-          });
-        }
-      });
+      // Add documents from the documents array
+      let docCounter = 0;
+      if (searchData.documents) {
+        searchData.documents.forEach((doc) => {
+          const docData = {
+            id: `doc_${docCounter}`,
+            title: doc.title || '',
+            keywords: doc.keywords || '',
+            module: doc.module || '',
+            summary: doc.summary || '',
+            content: doc.content || '',
+            url: doc.url || '',
+            type: 'document'
+          };
 
-      // console.log('Built search index with Russian multilingual support');
-    } else {
-      // Use default English language support
-      this.lunrIndex = lunr(function() {
-        this.field('title', { boost: 10 });
-        this.field('keywords', { boost: 8 });
-        this.field('module', { boost: 6 });
-        this.field('summary', { boost: 3 });
-        this.field('content', { boost: 1 });
-        this.ref('id');
+          // Add moduletype only for Russian support (backward compatibility)
+          if (useRussianSupport && doc.moduletype) {
+            docData.moduletype = doc.moduletype;
+          }
 
-        // Add documents from the documents array
-        let docCounter = 0;
-        if (searchData.documents) {
-          searchData.documents.forEach((doc) => {
-            this.add({
-              id: `doc_${docCounter}`,
-              title: doc.title || '',
-              keywords: doc.keywords || '',
-              module: doc.module || '',
-              summary: doc.summary || '',
-              content: doc.content || '',
-              url: doc.url || '',
-              type: 'document'
-            });
-            docCounter++;
-          });
-        }
+          this.add(docData);
+          docCounter++;
+        });
+      }
 
-        // Add parameters from the parameters array
-        let paramCounter = 0;
-        if (searchData.parameters) {
-          searchData.parameters.forEach((param) => {
-            this.add({
-              id: `param_${paramCounter}`,
-              title: param.name || '',
-              keywords: param.keywords || '',
-              module: param.module || '',
-              resName: param.resName || '',
-              content: param.content || '',
-              url: param.url || '',
-              type: 'parameter'
-            });
-            paramCounter++;
-          });
-        }
-      });
+      // Add parameters from the parameters array
+      let paramCounter = 0;
+      if (searchData.parameters) {
+        searchData.parameters.forEach((param) => {
+          const paramData = {
+            id: `param_${paramCounter}`,
+            title: param.name || '',
+            keywords: param.keywords || '',
+            module: param.module || '',
+            resName: param.resName || '',
+            content: param.content || '',
+            url: param.url || '',
+            type: 'parameter'
+          };
 
-      // console.log('Built search index with default English support');
-    }
+          // Add moduletype only for Russian support (backward compatibility)
+          if (useRussianSupport && param.moduletype) {
+            paramData.moduletype = param.moduletype;
+          }
+
+          this.add(paramData);
+          paramCounter++;
+        });
+      }
+    });
   }
 
   buildSearchDictionary() {
@@ -1189,7 +1174,7 @@ class ModuleSearch {
 
       // Calculate base URL by subtracting page:url:relative from current page URL
       const currentPageUrl = window.location.pathname;
-      const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-accces|stable|rock-solid|latest)\//);
+      const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-access|stable|rock-solid|latest)\//);
       const currentPageVersion = match ? match[1] : null;
       const currentPageUrlWithoutVersion = currentPageUrl.replace('/' + currentPageVersion + '/', '/');
 
@@ -1273,7 +1258,7 @@ class ModuleSearch {
 
   showError(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="no-results">${this.t('error')}</div>`;
+    this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
   }
 }
 
