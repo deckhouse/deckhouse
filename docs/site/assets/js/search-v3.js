@@ -8,7 +8,7 @@ class ModuleSearch {
     this.fuseIndex = null;
     this.searchDictionary = [];
     this.lastQuery = '';
-    this.pendingQuery = ''; // Store user input while index is loading
+    this.pendingQuery = ''; // For storing user input while index is loading
     this.currentResults = {
       isResourceNameMatch: [],
       nameMatch: [],
@@ -166,17 +166,13 @@ class ModuleSearch {
 
     this.searchInput.addEventListener('input', (e) => {
       const query = e.target.value.trim();
-      
+
       // Store user input while index is loading
       if (!this.isDataLoaded) {
         this.pendingQuery = e.target.value; // Store the full value including spaces
         // Show search results container to indicate typing is being captured
         this.searchResults.style.display = 'flex';
-        if (query.length > 0) {
-          this.showMessage(`${this.t('loading')} (typing: "${query}")`);
-        } else {
-          this.showMessage(this.t('loading'));
-        }
+        this.showMessage(this.t('loading'));
         return;
       }
 
@@ -195,7 +191,7 @@ class ModuleSearch {
       if (e.key === 'Enter') {
         e.preventDefault();
         const query = e.target.value.trim();
-        
+
         // Store user input while index is loading
         if (!this.isDataLoaded) {
           this.pendingQuery = e.target.value; // Store the full value including spaces
