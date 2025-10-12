@@ -42,6 +42,7 @@ class ModuleSearch {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
       searchDebounceMs: 300, // Debounce search input by 300ms
       backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
+      searchContext: '', // Search context message to display above ready message
       ...options
     };
 
@@ -1324,7 +1325,18 @@ class ModuleSearch {
 
   showMessage(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+    
+    // If this is the ready message and we have a search context, show it above the message
+    if (message === this.t('ready') && this.options.searchContext) {
+      this.searchResults.innerHTML = `
+        <div class="loading">
+          <div class="search-context">${this.options.searchContext}</div>
+          <div class="search-ready-message">${message}</div>
+        </div>
+      `;
+    } else {
+      this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+    }
   }
 
   showNoResults(query) {
@@ -1364,11 +1376,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if there's a data attribute on the search input for custom search index path
   const searchInput = document.getElementById('search-input');
   const searchIndexPath = searchInput?.dataset.searchIndexPath;
+  const searchContext = searchInput?.dataset.searchContext;
 
   // Create search instance with custom options if specified
   const options = {};
   if (searchIndexPath) {
     options.searchIndexPath = searchIndexPath;
+  }
+  if (searchContext) {
+    options.searchContext = searchContext;
   }
 
   window.moduleSearch = new ModuleSearch(options);

@@ -374,3 +374,37 @@
 .searchV3 .results {
   z-index: 1001;
 }
+
+/* Search Context Message Styles */
+.searchV3 .search-context {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #4075FF;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.searchV3 .search-ready-message {
+  font-size: 16px;
+  color: #333;
+  text-align: center;
+  padding: 12px;
+}
+
+/* Responsive design for search context */
+@media (max-width: 768px) {
+  .searchV3 .search-context {
+    font-size: 13px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+  }
+
+  .searchV3 .search-ready-message {
+    font-size: 14px;
+    padding: 10px;
+  }
+}
