@@ -116,7 +116,7 @@ type SSHLoopHandler func(s SSHClient) error
 
 type SSHClient interface {
 	// 	BeforeStart safe starting without create session. Should safe for next Start call
-	BeforeStart() error
+	OnlyPreparePrivateKeys() error
 
 	Start() error
 
