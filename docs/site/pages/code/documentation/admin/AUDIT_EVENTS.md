@@ -108,7 +108,8 @@ Each audit event contains a date, time, IP address and user account details, as 
 The table below shows example system messages.  
 Audit events in a production environment contain full information either directly in the message or in an additional JSON field with data.  
 
-<table class="code_audit_events fixed-header-table table__small" markdown="0" style="table-layout: fixed">
+<div class="table-wrapper" markdown="0">
+<table class="supported_versions" markdown="0" style="table-layout: fixed">
 <thead>
 <tr>
 <th>Name</th>
@@ -119,205 +120,205 @@ Audit events in a production environment contain full information either directl
 </thead>
 <tbody>
 <tr>
-<td><code>2fa_login_failed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">2fa_login_failed</code></td>
 <td>User 2fa login failed</td>
 <td>A failed attempt to log in with two-factor authentication was detected.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>access_approved</code></td>
+<td><code style="word-break: break-all; white-space: normal;">access_approved</code></td>
 <td>User access was approved</td>
 <td>User's access request to the instance was approved.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>access_token_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">access_token_created</code></td>
 <td>Project/Group access token created</td>
 <td>An access token for a project or group was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>access_token_revoked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">access_token_revoked</code></td>
 <td>Project/Group access token revoked</td>
 <td>An access token was revoked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>added_gpg_key</code></td>
+<td><code style="word-break: break-all; white-space: normal;">added_gpg_key</code></td>
 <td>Added new gpg key to user</td>
 <td>A user added a new GPG key.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>added_ssh_key</code></td>
+<td><code style="word-break: break-all; white-space: normal;">added_ssh_key</code></td>
 <td>User added new ssh key</td>
 <td>A user added a new SSH key.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>application_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">application_created</code></td>
 <td>Application was created</td>
 <td>A new application (OAuth or integration) was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>application_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">application_deleted</code></td>
 <td>Application deleted</td>
 <td>An application was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>application_secret_renew</code></td>
+<td><code style="word-break: break-all; white-space: normal;">application_secret_renew</code></td>
 <td>Application secret renew</td>
 <td>The application secret was renewed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>application_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">application_updated</code></td>
 <td>Application Updated</td>
 <td>Application parameters were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_cd_job_token_removed_from_allowlist</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_cd_job_token_removed_from_allowlist</code></td>
 <td>Disallow group to use job token</td>
 <td>A project restricted a specific group from using CI/CD Job Token.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_cd_job_token_added_to_allowlist</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_cd_job_token_added_to_allowlist</code></td>
 <td>Allow group to use job token</td>
 <td>A project allowed a specific group to use CI/CD Job Token.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_variable_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_variable_created</code></td>
 <td>Ci variable <code>#{key}</code> created</td>
 <td>A new CI/CD variable was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_variable_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_variable_deleted</code></td>
 <td>Ci variable <code>#{key}</code> deleted</td>
 <td>A CI/CD variable was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_variable_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_variable_updated</code></td>
 <td>Ci variable updated (Value, Protected)</td>
 <td>The value or protection status of a CI/CD variable was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_key_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_key_created</code></td>
 <td>Deploy key added</td>
 <td>A new deploy key was added for a project or instance.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_key_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_key_deleted</code></td>
 <td>Deploy key was deleted</td>
 <td>A deploy key was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_key_disabled</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_key_disabled</code></td>
 <td>Deploy key disabled</td>
 <td>A deploy key was disabled.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_key_enabled</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_key_enabled</code></td>
 <td>Deploy key enabled</td>
 <td>A deploy key was re-enabled.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_token_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_token_created</code></td>
 <td>Deploy token created</td>
 <td>A deploy token was created for data access.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_token_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_token_deleted</code></td>
 <td>Deploy token deleted</td>
 <td>A deploy token was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>deploy_token_revoked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">deploy_token_revoked</code></td>
 <td>Deploy token revoked</td>
 <td>A deploy token was revoked by a user or the system.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>feature_flag_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">feature_flag_created</code></td>
 <td>Created feature flag with description</td>
 <td>A new feature flag was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>feature_flag_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">feature_flag_deleted</code></td>
 <td>Feature flag was deleted</td>
 <td>A feature flag was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>feature_flag_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">feature_flag_updated</code></td>
 <td>Feature flag was updated</td>
 <td>A feature flag was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_created</code></td>
 <td>Group was created</td>
 <td>A new group was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_export_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_export_created</code></td>
 <td>Group file export was created</td>
 <td>A group export file was generated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_group_link_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_group_link_created</code></td>
 <td>Invited group to group</td>
 <td>Another group was invited to the group using a group link.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_group_link_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_group_link_deleted</code></td>
 <td>Revoked group from group</td>
 <td>Group access through a group link was revoked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_group_link_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_group_link_updated</code></td>
 <td>Group access changed</td>
 <td>Group access parameters through a group link were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_project_group_link_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_project_group_link_created</code></td>
 <td>Invited group to project</td>
 <td>A group was invited to a project using a group link.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_project_group_link_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_project_group_link_deleted</code></td>
 <td>Revoked group from project</td>
 <td>Group access to a project was revoked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_invite_via_project_group_link_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_invite_via_project_group_link_updated</code></td>
 <td>Group access for project changed</td>
 <td>Group access parameters to a project were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_updated</code></td>
 <td>Group updated (visibility, 2FA grace period)</td>
 <td>Changes in group settings (visibility, security, limits, access policy).</td>
 <td><ul>
@@ -360,157 +361,157 @@ Audit events in a production environment contain full information either directl
 </ul></td>
 </tr>
 <tr>
-<td><code>impersonation_initiated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">impersonation_initiated</code></td>
 <td>User root impersonated another user</td>
 <td>An administrator started a session impersonating another user.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>impersonation_stopped</code></td>
+<td><code style="word-break: break-all; white-space: normal;">impersonation_stopped</code></td>
 <td>User root stopped impersonation</td>
 <td>An administrator stopped impersonating another user.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>instance_settings_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">instance_settings_updated</code></td>
 <td>Instance settings updated: Signup enabled turned on</td>
 <td>Global instance settings were updated.</td>
 <td>All instance settings except encrypted fields.</td>
 </tr>
 <tr>
-<td><code>login_failed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">login_failed</code></td>
 <td>Attempt to login failed</td>
 <td>A login attempt failed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>manually_trigger_housekeeping</code></td>
+<td><code style="word-break: break-all; white-space: normal;">manually_trigger_housekeeping</code></td>
 <td>Housekeeping task</td>
 <td>A housekeeping task for a repository was triggered manually.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>member_permissions_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">member_permissions_created</code></td>
 <td>New member access granted</td>
 <td>A user was granted membership (role) in a group or project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>member_permissions_destroyed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">member_permissions_destroyed</code></td>
 <td>Member access revoked</td>
 <td>A user's membership was revoked from a group or project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>member_permissions_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">member_permissions_updated</code></td>
 <td>Member access updated</td>
 <td>A user's role or membership expiration date was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>merge_request_closed_by_project_bot</code></td>
+<td><code style="word-break: break-all; white-space: normal;">merge_request_closed_by_project_bot</code></td>
 <td>Merge request <code>#{merge_request.title}</code> closed by project bot</td>
 <td>A merge request was closed by a project bot.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>merge_request_created_by_project_bot</code></td>
+<td><code style="word-break: break-all; white-space: normal;">merge_request_created_by_project_bot</code></td>
 <td>Merge request <code>#{merge_request.title}</code> created by project bot</td>
 <td>A merge request was created by a project bot.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>merge_request_merged_by_project_bot</code></td>
+<td><code style="word-break: break-all; white-space: normal;">merge_request_merged_by_project_bot</code></td>
 <td>Merge request <code>#{merge_request.title}</code> merged by project bot</td>
 <td>A merge request was merged by a project bot.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>merge_request_reopened_by_project_bot</code></td>
+<td><code style="word-break: break-all; white-space: normal;">merge_request_reopened_by_project_bot</code></td>
 <td>Merge request <code>#{merge_request.title}</code> reopened by project bot</td>
 <td>A merge request was reopened by a project bot.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>omniauth_login_failed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">omniauth_login_failed</code></td>
 <td>Omniauth login failed for <code>#{user}</code> <code>#{provider}</code></td>
 <td>Failed login attempt via external OAuth/Omniauth provider.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>password_reset_failed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">password_reset_failed</code></td>
 <td>Password reset failed</td>
 <td>Failed password reset attempt by a user.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>personal_access_token_issued</code></td>
+<td><code style="word-break: break-all; white-space: normal;">personal_access_token_issued</code></td>
 <td>Personal access token issued</td>
 <td>A new personal access token was issued.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>personal_access_token_revoked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">personal_access_token_revoked</code></td>
 <td>Personal access token revoked</td>
 <td>A personal access token was revoked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>pipeline_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">pipeline_deleted</code></td>
 <td>Pipeline deleted</td>
 <td>A CI/CD pipeline was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_blobs_removal</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_blobs_removal</code></td>
 <td>Project blobs removed</td>
 <td>Bulk removal of repository blobs in a project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_created</code></td>
 <td>Project was created</td>
 <td>A new project was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_default_branch_changed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_default_branch_changed</code></td>
 <td>Project default branch updated</td>
 <td>The default branch of a project was changed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_export_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_export_created</code></td>
 <td>Project export created</td>
 <td>A project export file was generated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_feature_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_feature_updated</code></td>
 <td>Project features updated</td>
 <td>Feature access levels for a project were updated (issues, wiki, etc.).</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_setting_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_setting_updated</code></td>
 <td>Project settings updated</td>
 <td>Project merge commit and squash commit templates were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_text_replacement</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_text_replacement</code></td>
 <td>Project text replaced</td>
 <td>Bulk text replacement in a project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_topic_changed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_topic_changed</code></td>
 <td>Project topic changed</td>
 <td>Project topic was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_updated</code></td>
 <td>Project updated (name, namespace)</td>
 <td>Project settings were updated (name, namespace, policies).</td>
 <td><ul>
@@ -561,157 +562,157 @@ Audit events in a production environment contain full information either directl
 </ul></td>
 </tr>
 <tr>
-<td><code>protected_branch_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_branch_created</code></td>
 <td>Protected branch created</td>
 <td>A protected branch was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>protected_branch_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_branch_deleted</code></td>
 <td>Protected branch was deleted</td>
 <td>A protected branch was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>protected_branch_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_branch_updated</code></td>
 <td>Protected branch was updated</td>
 <td>Protected branch rules were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>protected_tag_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_tag_created</code></td>
 <td>Protected tag created</td>
 <td>A protected tag was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>protected_tag_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_tag_deleted</code></td>
 <td>Protected tag was deleted</td>
 <td>A protected tag was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>protected_tag_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">protected_tag_updated</code></td>
 <td>Protected tag updated</td>
 <td>Protected tag rules were updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>removed_gpg_key</code></td>
+<td><code style="word-break: break-all; white-space: normal;">removed_gpg_key</code></td>
 <td>Removed gpg key from user</td>
 <td>A user's GPG key was removed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>removed_ssh_key</code></td>
+<td><code style="word-break: break-all; white-space: normal;">removed_ssh_key</code></td>
 <td>User removed ssh key</td>
 <td>A user's SSH key was removed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>requested_password_reset</code></td>
+<td><code style="word-break: break-all; white-space: normal;">requested_password_reset</code></td>
 <td>User requested password change</td>
 <td>A user requested a password reset.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>revoked_gpg_key</code></td>
+<td><code style="word-break: break-all; white-space: normal;">revoked_gpg_key</code></td>
 <td>Revoked gpg key from user</td>
 <td>A user's GPG key was revoked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>unban_user</code></td>
+<td><code style="word-break: break-all; white-space: normal;">unban_user</code></td>
 <td>User was unban</td>
 <td>A user was unbanned.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>unblock_user</code></td>
+<td><code style="word-break: break-all; white-space: normal;">unblock_user</code></td>
 <td>User was unblocked</td>
 <td>A user was unblocked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_access_locked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_access_locked</code></td>
 <td>User access locked</td>
 <td>A user account was locked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_access_unlocked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_access_unlocked</code></td>
 <td>User access unlocked</td>
 <td>A user account was unlocked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_activated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_activated</code></td>
 <td>User was activated</td>
 <td>A user account was activated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_banned</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_banned</code></td>
 <td>User was banned</td>
 <td>A user account was banned.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_blocked</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_blocked</code></td>
 <td>User was blocked</td>
 <td>A user account was blocked.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_created</code></td>
 <td>User was created</td>
 <td>A new user account was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_deactivated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_deactivated</code></td>
 <td>User was deactivated</td>
 <td>A user account was deactivated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_destroyed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_destroyed</code></td>
 <td>User was destroyed</td>
 <td>A user account was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_email_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_email_updated</code></td>
 <td>User email updated</td>
 <td>A user's email address was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_logged_in</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_logged_in</code></td>
 <td>User logged in</td>
 <td>A user logged in successfully.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_password_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_password_updated</code></td>
 <td>Password updated</td>
 <td>A user's password was changed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_rejected</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_rejected</code></td>
 <td>User was rejected</td>
 <td>A user account was rejected (for example, during a registration).</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_removed_two_factor</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_removed_two_factor</code></td>
 <td>Two factor disabled</td>
 <td>A user disabled two-factor authentication.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_settings_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_settings_updated</code></td>
 <td>User settings updated</td>
 <td>A user updated their profile settings.</td>
 <td><ul>
@@ -724,112 +725,113 @@ Audit events in a production environment contain full information either directl
 </ul></td>
 </tr>
 <tr>
-<td><code>user_signup</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_signup</code></td>
 <td>User was registered</td>
 <td>A new user registered.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_switched_to_admin_mode</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_switched_to_admin_mode</code></td>
 <td>User switched to admin mode</td>
 <td>A user switched to admin mode.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>user_username_updated</code></td>
+<td><code style="word-break: break-all; white-space: normal;">user_username_updated</code></td>
 <td>Username updated</td>
 <td>A user's username was updated.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>webhook_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">webhook_created</code></td>
 <td>Webhook was created</td>
 <td>A webhook for a project, group, or instance was created.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>webhook_destroyed</code></td>
+<td><code style="word-break: break-all; white-space: normal;">webhook_destroyed</code></td>
 <td>System hook removed</td>
 <td>A webhook was removed.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>group_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">group_deleted</code></td>
 <td>Group was deleted</td>
 <td>A group was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>project_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">project_deleted</code></td>
 <td>Project was deleted</td>
 <td>A project was deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>logout</code></td>
+<td><code style="word-break: break-all; white-space: normal;">logout</code></td>
 <td>User logged out</td>
 <td>A user logged out of the system.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>unauthenticated_session</code></td>
+<td><code style="word-break: break-all; white-space: normal;">unauthenticated_session</code></td>
 <td>Redirected to login</td>
 <td>An unauthenticated user was redirected to the login page.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runners_bulk_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runners_bulk_deleted</code></td>
 <td>CI runner bulk deleted: Errors:</td>
 <td>Multiple CI runners were deleted.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_registered</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_registered</code></td>
 <td>CI runner created via API</td>
 <td>A CI runner was registered via API.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_unregistered</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_unregistered</code></td>
 <td>CI runner unregistered</td>
 <td>A CI runner was unregistered.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_token_reset</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_token_reset</code></td>
 <td>CI runner registration token reset</td>
 <td>A CI runner's registration token was reset.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_assigned_to_project</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_assigned_to_project</code></td>
 <td>CI runner assigned to project</td>
 <td>A CI runner was assigned to a project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_unassigned_from_project</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_unassigned_from_project</code></td>
 <td>CI runner unassigned from project</td>
 <td>A CI runner was unassigned from a project.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>ci_runner_created</code></td>
+<td><code style="word-break: break-all; white-space: normal;">ci_runner_created</code></td>
 <td>CI runner created via UI</td>
 <td>A CI runner was created via the user interface.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>package_registry_package_published</code></td>
-<td><code>#{name}</code> package version <code>#{version}</code> has been published</td>
+<td><code style="word-break: break-all; white-space: normal;">package_registry_package_published</code></td>
+<td><code style="word-break: break-all; white-space: normal;">#{name}</code> package version <code>#{version}</code> has been published</td>
 <td>A new package was published to the package registry.</td>
 <td></td>
 </tr>
 <tr>
-<td><code>package_registry_package_deleted</code></td>
+<td><code style="word-break: break-all; white-space: normal;">package_registry_package_deleted</code></td>
 <td>package version <code>#{package.version}</code> has been deleted</td>
 <td>A package was deleted from the package registry.</td>
 <td></td>
 </tr>
 </tbody>
 </table>
+</div>
