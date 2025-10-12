@@ -424,17 +424,28 @@ class ModuleSearch {
           this.searchInput.value = this.pendingQuery;
           this.searchResults.style.display = 'flex';
           this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after on-demand loading:', this.pendingQuery);
           this.pendingQuery = ''; // Clear pending query
         } else {
           // Show message that search index is loaded and ready
           this.showMessage(this.t('ready'));
         }
       } else {
-        // Background loading completed, clear any pending query
-        this.pendingQuery = '';
-        
+        // Background loading completed
         // Update UI to reflect that data is now loaded
         this.updateUIState();
+        
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after background loading:', this.pendingQuery);
+        }
+        
+        // Clear pending query after processing
+        this.pendingQuery = '';
       }
     } catch (error) {
       console.error('Error loading search index:', error);
