@@ -151,14 +151,25 @@ class ModuleSearch {
     this.searchInput.addEventListener('focus', () => {
       // Show search results container when focused (even if empty)
       this.searchResults.style.display = 'flex';
-      
+
       // If data is not loaded and not currently loading, trigger loading
       if (!this.isDataLoaded && !this.isLoadingInBackground) {
         this.showLoading();
         this.searchInput.placeholder = this.t('loading');
         this.loadSearchIndex();
+      } else if (this.isDataLoaded) {
+        // Data is loaded, check if there's a query in the input
+        const query = this.searchInput.value.trim();
+        if (query.length > 0) {
+          // There's a query, execute the search
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(query);
+        } else {
+          // No query, show ready message
+          this.updateUIState();
+        }
       } else {
-        // Update UI to reflect current state
+        // Data is loading in background, show loading state
         this.updateUIState();
       }
     });
@@ -308,7 +319,7 @@ class ModuleSearch {
     }
 
     this.isLoadingInBackground = true;
-    
+
     try {
       await this.loadSearchIndex();
     } catch (error) {
@@ -405,7 +416,7 @@ class ModuleSearch {
       this.buildSearchDictionary();
       this.buildFuseIndex();
       this.isDataLoaded = true;
-      
+
       // Only hide loading UI if not loading in background
       if (!this.isLoadingInBackground) {
         this.hideLoading();
@@ -435,7 +446,7 @@ class ModuleSearch {
         // Background loading completed
         // Update UI to reflect that data is now loaded
         this.updateUIState();
-        
+
         // Execute search with pending query if user was typing while loading
         if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
           // Update the input value to match what the user typed
@@ -444,7 +455,7 @@ class ModuleSearch {
           this.handleSearch(this.pendingQuery.trim());
           console.log('Executed search with pending query after background loading:', this.pendingQuery);
         }
-        
+
         // Clear pending query after processing
         this.pendingQuery = '';
       }
@@ -1325,15 +1336,16 @@ class ModuleSearch {
 
   showMessage(message) {
     this.searchResults.style.display = 'flex';
-    
+
     // If this is the ready message and we have a search context, show it above the message
     if (message === this.t('ready') && this.options.searchContext) {
-      this.searchResults.innerHTML = `
-        <div class="loading">
-          <div class="search-context">${this.options.searchContext}</div>
-          <div class="search-ready-message">${message}</div>
-        </div>
-      `;
+      this.searchResults.innerHTML = `<div class="loading">${this.options.searchContext}</div>`;
+      // this.searchResults.innerHTML = `
+      //   <div class="loading loading-with-context">
+      //     <div class="search-context">${this.options.searchContext}</div>
+      //     <div class="search-ready-message">${message}</div>
+      //   </div>
+      // `;
     } else {
       this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
     }

@@ -386,6 +386,7 @@
   border-left: 3px solid #4075FF;
   font-weight: 500;
   line-height: 1.4;
+  width: 100%;
 }
 
 .searchV3 .search-ready-message {
@@ -393,6 +394,22 @@
   color: #333;
   text-align: center;
   padding: 12px;
+  width: 100%;
+}
+
+/* Ensure loading container with search context uses column layout */
+.searchV3 .loading-with-context {
+  flex-direction: column !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+/* Ensure search context and ready message stack properly */
+.searchV3 .loading-with-context .search-context,
+.searchV3 .loading-with-context .search-ready-message {
+  flex-shrink: 0;
+  display: block;
 }
 
 /* Responsive design for search context */
