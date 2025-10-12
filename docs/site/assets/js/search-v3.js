@@ -138,6 +138,9 @@ class ModuleSearch {
     // Hide search results by default
     this.searchResults.style.display = 'none';
 
+    // Initialize UI state
+    this.updateUIState();
+
     // Start background loading of search indexes after page is fully loaded
     this.startBackgroundLoading();
   }
@@ -145,22 +148,18 @@ class ModuleSearch {
   setupEventListeners() {
     // Show search results container when focused
     this.searchInput.addEventListener('focus', () => {
+      // Show search results container when focused (even if empty)
+      this.searchResults.style.display = 'flex';
+      
       // If data is not loaded and not currently loading, trigger loading
       if (!this.isDataLoaded && !this.isLoadingInBackground) {
         this.showLoading();
         this.searchInput.placeholder = this.t('loading');
         this.loadSearchIndex();
-      } else if (!this.isDataLoaded && this.isLoadingInBackground) {
-        // Show loading message if background loading is in progress
-        this.showLoading();
-        this.searchInput.placeholder = this.t('loading');
       } else {
-        // Data is loaded, show ready message
-        this.searchInput.placeholder = this.t('ready');
-        this.showMessage(this.t('ready'));
+        // Update UI to reflect current state
+        this.updateUIState();
       }
-      // Show search results container when focused (even if empty)
-      this.searchResults.style.display = 'flex';
     });
 
     // Hide results when input loses focus (unless clicking on results)
@@ -433,6 +432,9 @@ class ModuleSearch {
       } else {
         // Background loading completed, clear any pending query
         this.pendingQuery = '';
+        
+        // Update UI to reflect that data is now loaded
+        this.updateUIState();
       }
     } catch (error) {
       console.error('Error loading search index:', error);
@@ -1326,6 +1328,23 @@ class ModuleSearch {
   showError(message) {
     this.searchResults.style.display = 'flex';
     this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
+  }
+
+  // Check current state and update UI accordingly
+  updateUIState() {
+    if (this.isDataLoaded) {
+      this.searchInput.placeholder = this.t('ready');
+      if (this.searchResults.style.display === 'flex') {
+        this.showMessage(this.t('ready'));
+      }
+    } else if (this.isLoadingInBackground) {
+      this.searchInput.placeholder = this.t('loading');
+      if (this.searchResults.style.display === 'flex') {
+        this.showLoading();
+      }
+    } else {
+      this.searchInput.placeholder = this.t('ready');
+    }
   }
 }
 
