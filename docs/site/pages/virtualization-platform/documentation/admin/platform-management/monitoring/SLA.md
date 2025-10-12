@@ -28,7 +28,7 @@ spec:
   settings:
 ```
 
-The complete list of settings is available [in the module documentation](/products/kubernetes-platform/documentation/v1/modules/upmeter/configuration.html).
+The complete list of settings is available [in the module documentation](/modules/upmeter/configuration.html).
 
 ## Interface
 
@@ -84,7 +84,7 @@ spec:
 
 ## Authentication
 
-By default, the [`user-authn`](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is used for authentication. You can also configure authentication via `externalAuthentication` (see below).
+By default, the [`user-authn`](/modules/user-authn/) module is used for authentication. You can also configure authentication via `externalAuthentication` (see below).
 If these options are disabled, the module will enable basic authentication with a generated password.
 
 You can view the generated password with the command:

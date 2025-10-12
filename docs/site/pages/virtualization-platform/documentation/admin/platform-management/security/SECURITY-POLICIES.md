@@ -33,7 +33,7 @@ When upgrading DVP to v1.55 or later, the default policy will not change automat
 
 You can assign a policy in the following ways:
 
-- Globally, using the [`settings.podSecurityStandards.defaultPolicy`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter of the `admission-policy-engine` module.
+- Globally, using the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter of the `admission-policy-engine` module.
 - Per namespace, using the `security.deckhouse.io/pod-policy=<POLICY_NAME>` label.
 
   Example command to assign the `restricted` policy to all Pods in the `my-namespace` namespace:
@@ -56,7 +56,7 @@ In this mode, application Pods that do not comply with the policies cannot be ru
 
 As with policy assignment, enforcement mode can be set:
 
-- Globally, using the [`settings.podSecurityStandards.enforcementAction`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) parameter of the `admission-policy-engine` module.
+- Globally, using the [`settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) parameter of the `admission-policy-engine` module.
 - Per namespace, using the `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>` label.
 
   Example command to set the `warn` mode for all Pods in the `my-namespace` namespace:
@@ -421,11 +421,11 @@ spec:
 Gatekeeper offers advanced capabilities for modifying Kubernetes resources using mutation policies.
 These policies are defined through the following custom resources:
 
-- [AssignMetadata](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata): Modifies the `metadata` section of a resource.
-- [Assign](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assign): Modifies fields other than `metadata`.
-- [ModifySet](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#modifyset): Adds or removes values from a list,
+- [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata): Modifies the `metadata` section of a resource.
+- [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign): Modifies fields other than `metadata`.
+- [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset): Adds or removes values from a list,
   such as container run arguments.
-- [AssignImage](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assignimage): Modifies the `image` field of a resource.
+- [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage): Modifies the `image` field of a resource.
 
 For more on modifying Kubernetes resources using mutation policies, refer to the [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).
 
@@ -453,7 +453,7 @@ To sign an image with Cosign, do the following:
    ```
 
 To enable container image signature verification in a DVP cluster,
-use the [`policies.verifyImageSignatures`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
+use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
 of the SecurityPolicy resource.
 
 Example SecurityPolicy configuration for verifying container image signatures:

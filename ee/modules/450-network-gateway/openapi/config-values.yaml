@@ -72,7 +72,7 @@ properties:
     description: |-
       The name of the StorageClass to use for storing the DHCP lease.
 
-      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
+      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
 
       The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 

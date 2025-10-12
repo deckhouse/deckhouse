@@ -29,7 +29,7 @@ spec:
   settings:
 ```
 
-Перечень всех настроек доступен [в документации модуля](/products/kubernetes-platform/documentation/v1/modules/upmeter/configuration.html).
+Перечень всех настроек доступен [в документации модуля](/modules/upmeter/configuration.html).
 
 ## Интерфейс
 
@@ -84,7 +84,7 @@ spec:
 
 ## Аутентификация
 
-По умолчанию для аутентификации используется модуль [`user-authn`](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+По умолчанию для аутентификации используется модуль [`user-authn`](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
 Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:

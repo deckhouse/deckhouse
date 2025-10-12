@@ -8,7 +8,7 @@ lang: ru
 
 ## Механизм сбора и доставки логов
 
-Для сбора и доставки логов в DVP используется [модуль `log-shipper`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/).
+Для сбора и доставки логов в DVP используется [модуль `log-shipper`](/modules/log-shipper/).
 На каждом узле кластера запускается отдельный экземпляр `log-shipper`, который настраивается на основе ресурсов Deckhouse.
 Модуль `log-shipper` использует [Vector](https://vector.dev/) в качестве агента логирования.
 Комбинация настроек для сбора и доставки логов образует *pipeline*.
@@ -104,13 +104,13 @@ lang: ru
 
 Фильтры запускаются сразу после объединения строк с помощью multiline-парсинга.
 
-- [`labelFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter):
+- [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter):
   - правила применяются к метаданным сообщений;
   - поля для метаданных (или лейблов) наполняются на основании источника логов,
     поэтому для разных источников будет разный набор полей;
   - правила используются, например, чтобы исключить сообщения из определенного контейнера или пода,
     соответствующих заданной метке.
-- [`logFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter):
+- [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter):
   - правила применяются к исходному сообщению;
   - позволяет исключить сообщение на основании значения JSON-поля;
   - если сообщение не в формате JSON, можно использовать регулярное выражение для поиска по строке.

@@ -977,7 +977,7 @@ alerts:
            d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
       summary: |
         Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
@@ -1520,7 +1520,7 @@ alerts:
 
         Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
 
-        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         The installed Istio version has been deprecated.
       severity: undefined
@@ -2389,9 +2389,9 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/modules/node-manager/) module.
 
-        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
+        To resolve this issue, follow the [instructions](https://deckhouse.io/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -2700,7 +2700,7 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"

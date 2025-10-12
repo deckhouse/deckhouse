@@ -196,7 +196,7 @@ properties:
           mode:
             description: |
               Режим работы с репликами:
-              - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability));
+              - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability));
               - `Static` — режим, где количество реплик указывается явно (параметр [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas));
               - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
           static:
@@ -456,7 +456,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   auth:
     description: Опции, связанные с аутентификацией или авторизацией в приложении.
     properties:

@@ -49,7 +49,7 @@ spec:
 
 ## Настройка сетевых политик на уровне всего кластера с помощью CiliumClusterwideNetworkPolicy
 
-Для определения сетевых политик на уровне всего кластера в Deckhouse Virtualization Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/).
+Для определения сетевых политик на уровне всего кластера в Deckhouse Virtualization Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](/modules/cni-cilium/).
 
 <!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-ciliumclusterwidenetworkpolicies -->
 
@@ -59,7 +59,7 @@ spec:
 
 Для использования объектов CiliumClusterwideNetworkPolicy выполните следующие шаги:
 
-1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
 
    Опция `policyAuditMode` может быть удалена после применения всех объектов CiliumClusterwideNetworkPolicy и проверки корректности их работы в Hubble UI.
 

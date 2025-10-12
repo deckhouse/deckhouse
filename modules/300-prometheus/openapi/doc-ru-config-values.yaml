@@ -5,7 +5,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -18,7 +18,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использован для Longterm Prometheus.
 
-      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -159,7 +159,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   scrapeInterval:
     description: |
       Как часто Prometheus должен собирать метрики с target'ов.

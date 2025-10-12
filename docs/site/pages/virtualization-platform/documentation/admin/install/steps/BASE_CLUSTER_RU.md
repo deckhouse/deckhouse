@@ -77,7 +77,7 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # Включение доступа к Kubernetes API через Ingress.
-    # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
