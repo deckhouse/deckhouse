@@ -65,7 +65,7 @@ After creation, `VirtualDiskSnapshot` can be in the following states (phases):
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
 
-A full description of the `VirtualDiskSnapshot` resource configuration parameters for machines can be found at [link](/products/virtualization-platform/reference/cr/virtualdisksnapshot.html).
+A full description of the `VirtualDiskSnapshot` resource configuration parameters for machines can be found at [link](/modules/virtualization/cr.html#virtualdisksnapshot).
 
 How to create a disk image in the web interface:
 

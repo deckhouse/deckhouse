@@ -19,7 +19,7 @@ The YAML installation configuration file includes parameters for several resourc
 
   > Similar to ClusterConfiguration, the StaticClusterConfiguration resource is not required if the platform is being installed in an existing Kubernetes cluster.
 
-- [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) — a set of resources containing configuration parameters for the platform's built-in modules.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for the platform's modules.
 
 For example, when planning the cluster parameters, the following values were chosen:
 

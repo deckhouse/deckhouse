@@ -8,7 +8,7 @@ After adding worker nodes, it is necessary to configure the storage that will be
 Next, we will consider using software-defined replicated block storage based on DRBD, which allows creating replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
 
 {% alert level=“info” %}
-To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
 {% endalert %}
 
 ## Enabling the use of replicated storage
@@ -76,7 +76,7 @@ Configuring the storage involves combining the available block devices on the no
 
 1. Create a VolumeGroup on each node.
 
-   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
+   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource.
 
    To create the LVMVolumeGroup resource, use the following commands on each node (specify the node name and block device name):
 
@@ -162,7 +162,7 @@ Configuring the storage involves combining the available block devices on the no
    - `replication`: Replication parameters, for 2 replicas, the value `Availability` will be used.
    - `storagePool`: The name of the pool created earlier, in this example, it is `sds-pool`.
 
-   Other parameters are described in the [ReplicatedStorageClass resource documentation](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Other parameters are described in the [ReplicatedStorageClass resource documentation](/modules/sds-replicated-volume/cr.html#replicatedstorageclassreplicatedstorageclass.html).
 
    ```shell
    d8 k apply -f - <<EOF
