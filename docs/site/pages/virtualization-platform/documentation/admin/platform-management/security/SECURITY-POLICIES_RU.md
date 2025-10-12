@@ -34,7 +34,7 @@ Deckhouse Virtualization Platform (DVP) позволяет управлять б
 
 Варианты назначения политики:
 
-- глобально — с помощью [параметра `settings.podSecurityStandards.defaultPolicy`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`;
+- глобально — с помощью [параметра `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`;
 - для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy=<POLICY_NAME>`.
 
   Пример команды для назначения политики `restricted` на все поды в пространстве имён `my-namespace`:
@@ -58,7 +58,7 @@ Deckhouse Virtualization Platform (DVP) позволяет управлять б
 
 Как и в случае с назначением политик, режим их применения можно задать:
 
-- глобально — с помощью [параметра `settings.podSecurityStandards.enforcementAction`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) модуля `admission-policy-engine`;
+- глобально — с помощью [параметра `settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) модуля `admission-policy-engine`;
 - для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>`.
 
   Пример команды для установки режима `warn` на все поды в пространстве имён `my-namespace`:
@@ -426,10 +426,10 @@ Gatekeeper предоставляет расширенные возможнос�
 с помощью настраиваемых политик (mutation policies).
 Эти политики описываются через следующие кастомные ресурсы:
 
-- [AssignMetadata](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata) — для изменения секции `metadata` в ресурсе;
-- [Assign](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assign) — для изменения других полей, кроме `metadata`;
-- [ModifySet](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#modifyset) — для добавления или удаления значений из списка, например, аргументов для запуска контейнера;
-- [AssignImage](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) — для изменения параметра `image` ресурса.
+- [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata) — для изменения секции `metadata` в ресурсе;
+- [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign) — для изменения других полей, кроме `metadata`;
+- [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset) — для добавления или удаления значений из списка, например, аргументов для запуска контейнера;
+- [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) — для изменения параметра `image` ресурса.
 
 Подробнее о возможности изменения ресурсов Kubernetes с помощью настраиваемых политик
 можно прочитать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).
@@ -458,7 +458,7 @@ DVP поддерживает проверку подписей образов к
    ```
 
 Чтобы включить проверку подписи образов контейнеров в кластере DVP,
-используйте [параметр `policies.verifyImageSignatures`](/products/kubernetes-platform/documentation/v1/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
 
 Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров:
 

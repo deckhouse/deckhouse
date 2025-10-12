@@ -69,7 +69,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется [автоматически](../../deckhouse-configure-global.html#параметры).
+      По умолчанию режим отказоустойчивости определяется [автоматически](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры).
   nodeSelector:
     description: |
       Аналогично параметру Kubernetes `spec.nodeSelector` у подов.

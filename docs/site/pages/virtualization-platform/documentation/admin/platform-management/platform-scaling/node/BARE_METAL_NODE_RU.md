@@ -8,7 +8,7 @@ lang: ru
 
 ### Ручной способ
 
-1. Включите модуль [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html).
+1. Включите модуль [`node-manager`](/modules/node-manager/cr.html).
 
 1. Создайте объект [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `Static`:
 
@@ -142,7 +142,7 @@ d8 platform edit static-cluster-configuration
 ## Перемещение статического узла между NodeGroup
 
 {% alert level="warning" %}
-В процессе переноса статических узлов между [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) выполняется очистка и повторный bootstrap узла, объект `Node` пересоздаётся.
+В процессе переноса статических узлов между [NodeGroup](/modules/node-manager/cr.html#nodegroup) выполняется очистка и повторный bootstrap узла, объект `Node` пересоздаётся.
 {% endalert %}
 
 1. Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`:
@@ -162,7 +162,7 @@ d8 platform edit static-cluster-configuration
            role: front
    ```
 
-1. Измените лейбл `role` у существующего [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
+1. Измените лейбл `role` у существующего [StaticInstance](/modules/node-manager/cr.html#staticinstance) с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
 
    ```shell
    d8 k label staticinstance static-worker-1 role=front --overwrite
@@ -192,7 +192,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Пример описания NodeGroup для статических узлов
 
-Для виртуальных машин на гипервизорах или физических серверов используйте статические узлы, указав `nodeType: Static` в [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup).
+Для виртуальных машин на гипервизорах или физических серверов используйте статические узлы, указав `nodeType: Static` в [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Пример:
 
@@ -215,7 +215,7 @@ CRI (Container Runtime Interface) — стандартный интерфейс 
 Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр `cri.type`).
 {% endalert %}
 
-Для изменения CRI для [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), установите параметр `cri.type` в `Containerd` или в `NotManaged`.
+Для изменения CRI для [NodeGroup](/modules/node-manager/cr.html#nodegroup), установите параметр `cri.type` в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -254,7 +254,7 @@ spec:
 
 Если узел находится под управлением [CAPS](#автоматический-способ), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#удаление-staticinstance) и создать новый.
 
-Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
+Чтобы перенести существующий статический узел созданный [вручную](#ручной-способ) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -265,11 +265,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Изменение IP-адреса в StaticInstance
 
-Изменить IP-адрес в ресурсе [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#удаление-staticinstance) и создать новый.
+Изменить IP-адрес в ресурсе [StaticInstance](/modules/node-manager/cr.html#staticinstance) нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#удаление-staticinstance) и создать новый.
 
 ## Удаление StaticInstance
 
-[StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance), находящийся в состоянии `Pending` можно удалять без ограничений.
+[StaticInstance](/modules/node-manager/cr.html#staticinstance), находящийся в состоянии `Pending` можно удалять без ограничений.
 
 Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 

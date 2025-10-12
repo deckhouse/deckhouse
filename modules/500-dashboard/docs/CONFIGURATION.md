@@ -4,7 +4,7 @@ title: "The dashboard module: configuration"
 
 ## Authentication
 
-By default, the [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is used. Alternatively, authentication can be configured using [`externalAuthentication`](examples.html).
+By default, the [user-authn](/modules/user-authn/) module is used. Alternatively, authentication can be configured using [`externalAuthentication`](examples.html).
 
 If neither of these methods is enabled, the `dashboard` module will be disabled.
 

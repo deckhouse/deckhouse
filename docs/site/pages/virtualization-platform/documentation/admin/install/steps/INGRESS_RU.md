@@ -10,7 +10,7 @@ lang: ru
 
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`:
 
 ```shell
 d8 k -n d8-ingress-nginx get po -l app=kruise

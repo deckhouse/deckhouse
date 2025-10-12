@@ -3,7 +3,7 @@ title: "BpfLB operation modes for external traffic processing"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/other/bpflb.html
 ---
 
-You can use the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) module
+You can use the [`cni-cilium`](/modules/cni-cilium/) module
 to configure the BPF Load Balancer (bpfLB) mode of operation in Deckhouse Virtualization Platform.
 
 In Kubernetes, traffic typically comes through a load balancer
@@ -14,7 +14,7 @@ To optimize traffic and unload the balancer, the `DSR` mechanism is used,
 in which incoming packets go through the load balancer, and outgoing ones go directly from the terminating servers.
 Since responses are usually much larger in size than requests, this approach can significantly increase the overall throughput.
 
-The module allows selecting the mode of operation via the [`bpfLBMode`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html#parameters-bpflbmode) parameter,
+The module allows selecting the mode of operation via the [`bpfLBMode`](/modules/cni-cilium/configuration.html#parameters-bpflbmode) parameter,
 which affects the behavior of Services of the `NodePort` and `LoadBalancer` types:
 
 * `SNAT` (Source Network Address Translation): A subtype of NAT in which, for each outgoing packet,

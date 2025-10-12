@@ -28,12 +28,12 @@ The [update windows](/modules/deckhouse/configuration.html#parameters-update-win
 ## Kubernetes version
 
 {% alert %}
-Use the automatic [Kubernetes version selection](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
+Use the automatic [Kubernetes version selection](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) or set the version explicitly.
 {% endalert %}
 
-In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
+In most cases, we recommend opting for the automatic selection of the Kubernetes version. In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
 
-If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
+If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
@@ -57,7 +57,7 @@ The following resource minimums are recommended for infrastructure nodes, depend
 Estimates of the resources required for the clusters to run:
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 26 CPUs and 52GB RAM** along with fast 400+ IOPS disks for the master nodes.
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 28 CPUs and 64GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
-- We recommend setting up a dedicated [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass) on the fast disks for Deckhouse components.
+- We recommend setting up a dedicated [storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) on the fast disks for Deckhouse components.
 - Add worker nodes to this, taking into account the nature of the workloads.
 
 Also read [the instructions](./hardware-requirements.html) on the hardware requirements for cluster resources, which describes in detail how to select the necessary resources depending on the expected load.
@@ -116,7 +116,7 @@ Monitoring nodes are used to run Grafana, Prometheus, and other monitoring compo
 
 In high-load clusters, where many alerts are generated and many metrics are collected, we recommend allocating dedicated nodes for monitoring. If not, monitoring components will be deployed to [system nodes](#system-nodes).
 
-When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module.
+When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module.
 
 If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
 
@@ -130,7 +130,7 @@ System nodes are used to run Deckhouse modules. Their [NodeGroup](/modules/node
 
 Set two nodes to be system nodes. This way, Deckhouse modules will run on them without interfering with user applications in the cluster. Read more about [allocating nodes to specific load types...](/#advanced-scheduling).
 
-It is recommended to provide the Deckhouse components with fast disks (the [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass) global parameter).
+It is recommended to provide the Deckhouse components with fast disks (the [storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) global parameter).
 
 ## Configuring alerts
 

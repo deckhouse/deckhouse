@@ -2,13 +2,13 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
-- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 *Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом модуля внутренней документации закреплено имя `deckhouse`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `deckhouse.kube.company.my`, и т.д.
 
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
-Выполните следующую команду, чтобы настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io* (укажите публичный IP-адрес узла, где запущен Ingress-контролллер):
+Выполните следующую команду, чтобы настроить [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io* (укажите публичный IP-адрес узла, где запущен Ingress-контролллер):
 <div markdown="1">
 {% raw %}
 ```shell

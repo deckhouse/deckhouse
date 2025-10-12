@@ -161,7 +161,7 @@ After completing these steps, the node will no longer be considered a master nod
    --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-1. Make sure that [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) is running on the node:
+1. Make sure that [`control-plane-manager`](/modules/control-plane-manager/) is running on the node:
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \

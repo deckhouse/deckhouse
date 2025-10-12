@@ -846,7 +846,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления выполните следующие шаги:
 
-1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
+1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
 
 1. Переведите кластер в режим с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров, или самостоятельно выведите статические master-узлы из кластера.
 

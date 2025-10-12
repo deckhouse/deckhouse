@@ -11,7 +11,7 @@ Egress Gateway enables centralized management and control of outgoing traffic
 and provides features such as encryption, routing, and monitoring.
 
 {% alert level="warning"%}
-To use the Egress Gateway, enable the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html) module in the cluster.
+To use the Egress Gateway, enable the [`cni-cilium`](/modules/cni-cilium/configuration.html) module in the cluster.
 {% endalert %}
 
 ## Egress Gateway usage modes

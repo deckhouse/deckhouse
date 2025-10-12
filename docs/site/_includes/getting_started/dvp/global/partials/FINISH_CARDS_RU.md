@@ -26,7 +26,7 @@
 <p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>Для доступа к Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<p><a href="/products/kubernetes-platform/documentation/v1/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
+<p><a href="/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
 </div>
 </div>
 {% endif %}

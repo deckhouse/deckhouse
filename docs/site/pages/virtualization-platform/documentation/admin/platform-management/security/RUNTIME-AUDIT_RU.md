@@ -68,7 +68,7 @@ DVP использует два основных источника событи
 1. (**Опционально**) Если control plane в кластере не управляется DVP при помощи `control-plane-manager`,
    настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
 
-Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html).
+Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
 
 ### Настройка вебхука API Kubernetes вручную
 
@@ -120,7 +120,7 @@ DVP использует два основных источника событи
     (`fstec`, в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules));
 
   Чтобы настроить список встроенных правил,
-  используйте [параметр `settings.builtInRulesList`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
+  используйте [параметр `settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) модуля `runtime-audit-engine`.
 
 - **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
@@ -299,7 +299,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 В Falco по умолчанию используется отладочный уровень логирования `debug`.
 
 В Falcosidekick по умолчанию отладочное логирование отключено.
-Для включения установите [параметр `spec.settings.debugLogging`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) в `true`, следуя примеру
+Для включения установите [параметр `spec.settings.debugLogging`](/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) в `true`, следуя примеру
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

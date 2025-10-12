@@ -652,7 +652,7 @@ username = {{ nova_service_user_name }}
 
 {% if page.cloud_type != 'selectel' %}
 
-> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
 
 {% endif %}
 

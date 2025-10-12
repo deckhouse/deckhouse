@@ -15,7 +15,7 @@ The `monitoring-ping` module must be enabled.
 
 ### Adding Additional IP Addresses for Monitoring
 
-To add additional monitoring IP addresses, use the [`externalTargets`](/products/kubernetes-platform/documentation/v1/modules/monitoring-ping/configuration.html#parameters-externaltargets) parameter of the `monitoring-ping` module.
+To add additional monitoring IP addresses, use the [`externalTargets`](/modules/monitoring-ping/configuration.html#parameters-externaltargets) parameter of the `monitoring-ping` module.
 
 Example module configuration:
 

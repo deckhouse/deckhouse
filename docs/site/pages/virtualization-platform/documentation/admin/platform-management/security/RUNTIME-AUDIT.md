@@ -66,7 +66,7 @@ On some systems, eBPF probes may not work.
 1. (**Optional**) If the cluster control plane is not managed by DVP with `control-plane-manager`,
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
-All available security audit parameters are listed in the [`runtime-audit-engine`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html) module documentation.
+All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
 
 ### Manually configuring the Kubernetes API audit webhook
 
@@ -113,7 +113,7 @@ DVP includes:
   - Kubernetes audit rules (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
   
   To configure the list of built-in rules,
-  use the [`settings.builtInRulesList`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
+  use the [`settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
   of the `runtime-audit-engine` module.
 
 - **Custom rules**, defined via the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
@@ -297,7 +297,7 @@ Falco uses the `debug` logging level by default.
 
 In Falcosidekick, debug logging is disabled by default.
 To enable it,
-set the [`spec.settings.debugLogging`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) parameter to `true`,
+set the [`spec.settings.debugLogging`](/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) parameter to `true`,
 for example:
 
 ```yaml
