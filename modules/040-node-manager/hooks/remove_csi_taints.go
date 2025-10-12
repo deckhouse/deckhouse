@@ -59,7 +59,7 @@ func csiFilterCSINode(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	err := sdk.FromUnstructured(obj, &csiNode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if len(csiNode.Spec.Drivers) == 0 {
@@ -73,7 +73,7 @@ func csiFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var needPatch bool
@@ -131,7 +131,7 @@ func removeCSIFilterNode(obj *unstructured.Unstructured) (*unstructured.Unstruct
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	taints := make([]v1.Taint, 0)
@@ -144,5 +144,9 @@ func removeCSIFilterNode(obj *unstructured.Unstructured) (*unstructured.Unstruct
 
 	node.Spec.Taints = taints
 
-	return sdk.ToUnstructured(node)
+	unstructuredNode, err := sdk.ToUnstructured(node)
+	if err != nil {
+		return nil, fmt.Errorf("to unstructured: %w", err)
+	}
+	return unstructuredNode, nil
 }

@@ -91,7 +91,7 @@ func updateCloudConditionsFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	cm := new(v1.ConfigMap)
 	err := sdk.FromUnstructured(obj, cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var conditions []CloudCondition

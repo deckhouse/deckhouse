@@ -18,6 +18,7 @@ package vrl
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -40,12 +41,12 @@ func (r Rule) Render(args Args) (string, error) {
 		Funcs(sprig.TxtFuncMap()).
 		Parse(string(r))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse template: %w", err)
 	}
 
 	err = tpl.Execute(&res, args)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("execute template: %w", err)
 	}
 
 	return strings.TrimSpace(res.String()), nil

@@ -86,7 +86,7 @@ func applyNodesForClearFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return node.Name, nil
@@ -97,7 +97,7 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	err := sdk.FromUnstructured(obj, &nodeUser)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return nodeUsersForClear{

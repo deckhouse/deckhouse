@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterIngressName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ingress v1.Ingress
 	if err := sdk.FromUnstructured(obj, &ingress); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return ingress.Name, nil
 }

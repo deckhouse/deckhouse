@@ -54,7 +54,7 @@ func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hoo
 	}
 	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested map: %w", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("couldn't find CAR spec")

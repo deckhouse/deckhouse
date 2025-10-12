@@ -95,7 +95,7 @@ func (c *Composer) Do() ([]byte, error) {
 			LogFilter:             s.Spec.LogFilters,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create log source transforms: %w", err)
 		}
 
 		src := PipelineSource{
@@ -135,7 +135,7 @@ func (c *Composer) composeDestinations() (map[string]PipelineDestination, error)
 
 		transforms, err := transform.CreateLogDestinationTransforms(d.Name, d)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create log destination transforms: %w", err)
 		}
 
 		destinationByName[dest.GetName()] = PipelineDestination{

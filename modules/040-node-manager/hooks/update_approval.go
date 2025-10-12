@@ -476,7 +476,7 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ung := updateNodeGroup{
@@ -523,7 +523,7 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var isApproved, isWaitingForApproval, isDisruptionRequired, isDraining, isReady, isDrained, isDisruptionApproved, isRollingUpdate bool

@@ -29,7 +29,7 @@ func getAllowedApplications() (set.Set, error) {
 
 	res, err := filepath.Glob(applicationPaths)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("glob: %w", err)
 	}
 
 	apps := set.New()
@@ -44,7 +44,7 @@ func nameFromService(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	service := &v1.Service{}
 	err := sdk.FromUnstructured(obj, service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if label, ok := service.Labels["prometheus-target"]; ok {

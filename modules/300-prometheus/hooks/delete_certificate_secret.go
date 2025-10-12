@@ -59,7 +59,7 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	var secret corev1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &Secret{

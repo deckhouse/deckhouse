@@ -108,7 +108,7 @@ func deploymentFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	var dep v1.Deployment
 	err := sdk.FromUnstructured(obj, &dep)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	// This is because in current image can be either tag, either digest

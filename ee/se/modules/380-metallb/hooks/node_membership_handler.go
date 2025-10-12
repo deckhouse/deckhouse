@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -45,7 +46,7 @@ func applyNodeLabelFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	_, isLabeled := node.Labels[memberLabelKey]
@@ -62,7 +63,7 @@ func applyMetalLoadBalancerClassLabelFilter(obj *unstructured.Unstructured) (go_
 
 	err := sdk.FromUnstructured(obj, &metalLoadBalancerClass)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return MetalLoadBalancerClassInfo{

@@ -74,7 +74,7 @@ func staticInstancesNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ng.Spec.StaticInstances != nil, nil
@@ -85,7 +85,7 @@ func capsConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &configMap)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	enable, ok := configMap.Data["enable"]

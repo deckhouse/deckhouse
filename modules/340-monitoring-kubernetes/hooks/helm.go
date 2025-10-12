@@ -605,7 +605,7 @@ func helm3DecodeRelease(data string) (*Release, error) {
 	var rls Release
 	// unmarshal release object bytes
 	if err := json.Unmarshal(b, &rls); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return &rls, nil
 }

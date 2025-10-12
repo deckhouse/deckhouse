@@ -57,7 +57,7 @@ func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, &ds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return DeschedulerSnapshotItem{

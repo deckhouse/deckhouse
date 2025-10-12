@@ -55,7 +55,7 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	_, isLabeled := node.Labels[memberLabelKey]
@@ -72,7 +72,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
@@ -146,7 +146,7 @@ func applyMetalLoadBalancerClassFilter(obj *unstructured.Unstructured) (go_hook.
 
 	err := sdk.FromUnstructured(obj, &metalLoadBalancerClass)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	interfaces := metalLoadBalancerClass.Spec.L2.Interfaces

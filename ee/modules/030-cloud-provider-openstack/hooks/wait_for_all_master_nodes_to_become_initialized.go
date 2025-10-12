@@ -71,7 +71,7 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var uninitialized bool

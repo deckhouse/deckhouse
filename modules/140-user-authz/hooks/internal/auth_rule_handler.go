@@ -40,7 +40,7 @@ func ApplyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf(`".spec is not a map[string]interface{} or contains non-string values in the map: %s`, spew.Sdump(obj.Object))
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested map: %w", err)
 	}
 
 	car := &authorizationRule{

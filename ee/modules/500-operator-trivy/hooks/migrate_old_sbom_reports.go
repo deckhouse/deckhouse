@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -65,7 +66,7 @@ func handleReports(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 
 	list, err := k8sClient.Dynamic().Resource(sbomGVR).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("list: %w", err)
 	}
 
 	// DeleteCollection does not work here, it gives an error:
@@ -73,7 +74,7 @@ func handleReports(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 	for _, item := range list.Items {
 		err = k8sClient.Dynamic().Resource(sbomGVR).Namespace(item.GetNamespace()).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
 		if err != nil {
-			return err
+			return fmt.Errorf("delete: %w", err)
 		}
 	}
 

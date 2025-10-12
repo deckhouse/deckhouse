@@ -71,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	binding := new(rbacv1.RoleBinding)
 	if err := sdk.FromUnstructured(obj, binding); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if !strings.HasPrefix(binding.RoleRef.Name, "d8:use:role:") {

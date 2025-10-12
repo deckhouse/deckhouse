@@ -142,7 +142,7 @@ func calcMachineClassChecksum(checksumTemplate []byte, ng *nodeGroupValue) (stri
 func renderMachineClassChecksum(templateContent []byte, ng *nodeGroupValue) (string, error) {
 	rendered, err := template.RenderTemplate("", templateContent, map[string]interface{}{"nodeGroup": ng.Raw})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("render template: %w", err)
 	}
 	checksum := rendered.Content.String()
 	return checksum, nil
@@ -164,7 +164,7 @@ func readChecksumTemplate(cloudType string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read checksum template: %v", err)
 	}
-	return content, err
+	return content, nil
 }
 
 func getChecksumTemplatePath(cloudType string) string {

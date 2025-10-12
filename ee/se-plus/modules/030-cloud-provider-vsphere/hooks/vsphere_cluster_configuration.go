@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -36,7 +37,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	var moduleConfiguration v1.VsphereModuleConfiguration
 	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderVsphere").String()), &moduleConfiguration)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
@@ -49,7 +50,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {
-			return err
+			return fmt.Errorf("from unstructured: %w", err)
 		}
 	}
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
@@ -60,11 +61,11 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 	err = json.Unmarshal(b, out)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 	return nil
 }

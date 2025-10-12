@@ -99,7 +99,7 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &endpoints)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	addresses := make([]string, 0)

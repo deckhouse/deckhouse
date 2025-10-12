@@ -89,7 +89,7 @@ func instanceMachineFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &machineForInstance{
@@ -109,7 +109,7 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var nodeName string
@@ -151,7 +151,7 @@ func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &nodeGroupForInstance{
@@ -166,7 +166,7 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 
 	err := sdk.FromUnstructured(obj, &ic)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &instance{

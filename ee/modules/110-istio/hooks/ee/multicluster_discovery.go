@@ -74,7 +74,7 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	err := sdk.FromUnstructured(obj, &multicluster)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	clusterUUID := ""

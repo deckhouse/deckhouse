@@ -81,7 +81,7 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 	err := sdk.FromUnstructured(obj, &ing)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	name := ing.Annotations["web.deckhouse.io/export-name"]

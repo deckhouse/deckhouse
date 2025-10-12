@@ -195,7 +195,7 @@ func chaosFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	isMonkeyVictim := false
@@ -215,7 +215,7 @@ func chaosFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return chaosNode{
@@ -229,7 +229,7 @@ func chaosFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	isReadyForChaos := false

@@ -156,7 +156,7 @@ func updStatusFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var frozen bool
@@ -181,7 +181,7 @@ func updStatusFilterCapiMD(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return statusCapiMachineDeployment{
@@ -196,7 +196,7 @@ func updStatusFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	cloudInstanceGroup := node.Labels["node.deckhouse.io/group"]
 	configurationChecksum := node.Annotations["node.deckhouse.io/configuration-checksum"]
@@ -223,7 +223,7 @@ func updStatusFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var minPerZone, maxPerZone int32
@@ -255,7 +255,7 @@ func updStatusFilterMachine(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	nodeGroup := machine.Spec.NodeTemplateSpec.Labels["node.deckhouse.io/group"]
@@ -267,7 +267,7 @@ func updStatusFilterCapiMachine(obj *unstructured.Unstructured) (go_hook.FilterR
 	machine := capiv1beta1.Machine{}
 	err := sdk.FromUnstructured(obj, &machine)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	nodeGroup := machine.Labels["node-group"]
@@ -281,7 +281,7 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var res []string
@@ -290,7 +290,7 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err = json.Unmarshal(zonesDataBytes, &res)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	return int32(len(res)), nil

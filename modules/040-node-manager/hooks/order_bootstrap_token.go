@@ -81,7 +81,7 @@ func bootstrapTokenFilterSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ng := sec.Labels["node-manager.deckhouse.io/node-group"]
@@ -92,7 +92,7 @@ func bootstrapTokenFilterSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 		if ok {
 			expire, err := time.Parse(time.RFC3339, string(expireRaw))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("parse: %w", err)
 			}
 
 			validFor = time.Until(expire)
@@ -119,11 +119,14 @@ func bootstrapTokenFilterNodeGroup(obj *unstructured.Unstructured) (go_hook.Filt
 	var ng ngv1.NodeGroup
 
 	err := sdk.FromUnstructured(obj, &ng)
+	if err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
 	// TODO  maybe need to revert?
 	return bootstrapTokenNG{
 		Name:      ng.Name,
 		NeedToken: true,
-	}, err
+	}, nil
 }
 
 type bootstrapTokenNG struct {

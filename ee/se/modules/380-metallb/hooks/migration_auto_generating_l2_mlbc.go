@@ -72,7 +72,7 @@ func applyL2AdvertisementFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	l2Advertisement := &L2Advertisement{}
 	err := sdk.FromUnstructured(obj, l2Advertisement)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if len(l2Advertisement.Spec.IPAddressPools) == 0 {
@@ -97,7 +97,7 @@ func applyIPAddressPoolFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	ipAddressPool := &IPAddressPool{}
 	err := sdk.FromUnstructured(obj, ipAddressPool)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if ipAddressPool.Labels != nil {
@@ -109,7 +109,7 @@ func applyIPAddressPoolFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return IPAddressPoolInfo{
 		Name:      ipAddressPool.Name,
 		Addresses: ipAddressPool.Spec.Addresses,
-	}, err
+	}, fmt.Errorf("from unstructured: %w", err)
 }
 
 func applyMLBCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -117,7 +117,7 @@ func applyMLBCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, &mlbc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	for k, v := range mlbc.Labels {

@@ -94,13 +94,13 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 
 	labelFilterTransforms, err := CreateLabelFilterTransforms(cfg.LabelFilter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create label filter transforms: %w", err)
 	}
 	transforms = append(transforms, labelFilterTransforms...)
 
 	logFilterTransforms, err := CreateLogFilterTransforms(cfg.LogFilter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create log filter transforms: %w", err)
 	}
 	transforms = append(transforms, logFilterTransforms...)
 

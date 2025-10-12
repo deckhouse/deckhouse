@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -72,7 +73,7 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ngi := nodeGroupInfo{
@@ -91,7 +92,7 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	var node v1.Node
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return NodeInfo{
@@ -108,7 +109,7 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 		var ng nodeGroupInfo
 		err := ngSnapshot.UnmarshalTo(&ng)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal to: %w", err)
 		}
 		if ng.GpuSharing == "" {
 			continue
@@ -119,7 +120,7 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 			var node NodeInfo
 			err := nodeSnapshot.UnmarshalTo(&node)
 			if err != nil {
-				return err
+				return fmt.Errorf("unmarshal to: %w", err)
 			}
 			if _, ok := node.Labels[ngLabel]; ok {
 				if node.Labels[ngLabel] != ng.Name {

@@ -79,7 +79,7 @@ func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return secret{Crt: sec.Data["client.crt"], Key: sec.Data["client.key"]}, nil
@@ -116,7 +116,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 
 	err := json.Unmarshal([]byte(providersJSON), &providers)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	var config *provider
@@ -151,7 +151,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 		// if cert is valid more than two days - skip renewal
 		expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)
 		if err != nil {
-			return err
+			return fmt.Errorf("is certificate expiring soon: %w", err)
 		}
 
 		if !expiring {
@@ -164,12 +164,12 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	// create CSR
 	gcsr, pkey, err := certificate.GenerateCSR(input.Logger, "front-proxy-client", certificate.WithCSRKeyRequest(&csr.KeyRequest{A: "rsa", S: 2048}))
 	if err != nil {
-		return err
+		return fmt.Errorf("generate csr: %w", err)
 	}
 
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
@@ -180,7 +180,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	_ = kubeClient.BatchV1().Jobs(proxyJobNS).Delete(context.Background(), proxyJobName, v1.DeleteOptions{PropagationPolicy: &foreground})
 	createdJob, err := kubeClient.BatchV1().Jobs(proxyJobNS).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("create: %w", err)
 	}
 
 	// Postpone job deletion after hook execution.
@@ -198,7 +198,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	// get logs from completed pod
 	pods, err := kubeClient.CoreV1().Pods(proxyJobNS).List(context.Background(), v1.ListOptions{LabelSelector: "job-name=" + proxyJobName})
 	if err != nil {
-		return err
+		return fmt.Errorf("list: %w", err)
 	}
 	if len(pods.Items) == 0 {
 		return errors.New("no job pods found")
@@ -207,7 +207,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	logReq := kubeClient.CoreV1().Pods(proxyJobNS).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{})
 	stream, err := logReq.Stream(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("stream: %w", err)
 	}
 	defer stream.Close()
 

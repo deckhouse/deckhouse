@@ -84,7 +84,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var (
@@ -130,7 +130,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 func handleDraining(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 	drainTimeoutCache := make(map[string]time.Duration)
 	wg := &sync.WaitGroup{}

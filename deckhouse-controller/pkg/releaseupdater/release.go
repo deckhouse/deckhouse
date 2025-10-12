@@ -31,11 +31,11 @@ func (sp StatusPatch) MarshalJSON() ([]byte, error) {
 		"status": v1alpha1.DeckhouseReleaseStatus(sp),
 	}
 
-	if result, err := json.Marshal(m); err != nil {
+	result, err := json.Marshal(m)
+	if err != nil {
 		return nil, fmt.Errorf("marshal: %w", err)
-	} else {
-		return result, nil
 	}
+	return result, nil
 }
 
 type ByVersion[R v1alpha1.Release] []R

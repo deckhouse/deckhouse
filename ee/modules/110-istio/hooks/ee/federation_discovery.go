@@ -75,7 +75,7 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	err := sdk.FromUnstructured(obj, &federation)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	clusterUUID := ""

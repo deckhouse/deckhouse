@@ -65,7 +65,10 @@ const (
 
 func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	version, _, err := unstructured.NestedString(obj.Object, "status", "nodeInfo", "osImage")
-	return version, err
+	if err != nil {
+		return "", fmt.Errorf("nested string: %w", err)
+	}
+	return version, nil
 }
 
 // normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
@@ -117,7 +120,7 @@ func discoverMinimalNodesOSVersion(_ context.Context, input *go_hook.HookInput) 
 			normalizedVersion := normalizeUbuntuVersionForSemver(rawVersion)
 			ctrlUbuntuVersion, err := semver.NewVersion(normalizedVersion)
 			if err != nil {
-				return err
+				return fmt.Errorf("new version: %w", err)
 			}
 			if minUbuntuVersion == nil || ctrlUbuntuVersion.LessThan(minUbuntuVersion) {
 				minUbuntuVersion = ctrlUbuntuVersion
@@ -125,7 +128,7 @@ func discoverMinimalNodesOSVersion(_ context.Context, input *go_hook.HookInput) 
 		case osImageDebianRegex.MatchString(version):
 			ctrlDebianVersion, err := semver.NewVersion(osImageDebianRegex.FindStringSubmatch(version)[1])
 			if err != nil {
-				return err
+				return fmt.Errorf("new version: %w", err)
 			}
 			if minDebianVersion == nil || ctrlDebianVersion.LessThan(minDebianVersion) {
 				minDebianVersion = ctrlDebianVersion

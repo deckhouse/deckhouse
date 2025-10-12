@@ -36,7 +36,7 @@ func decodeDataFromSecret(obj *unstructured.Unstructured) (map[string]interface{
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	res := map[string]interface{}{}

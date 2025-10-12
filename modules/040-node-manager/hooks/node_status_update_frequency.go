@@ -82,7 +82,7 @@ func updateFreqFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	argData := secret.Data["arguments.json"]
@@ -90,6 +90,9 @@ func updateFreqFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	var args nodeArguments
 
 	err = json.Unmarshal(argData, &args)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
 
-	return args, err
+	return args, nil
 }

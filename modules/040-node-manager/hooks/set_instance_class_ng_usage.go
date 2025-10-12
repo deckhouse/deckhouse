@@ -86,7 +86,7 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if ng.Spec.NodeType != ngv1.NodeTypeCloudEphemeral {
@@ -194,7 +194,7 @@ type ngUsedInstanceClass struct {
 func applyUsedInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	nodeGroupConsumers, ok, err := unstructured.NestedStringSlice(obj.Object, "status", "nodeGroupConsumers")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string slice: %w", err)
 	}
 
 	if !ok {

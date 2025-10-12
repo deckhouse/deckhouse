@@ -80,7 +80,7 @@ type filteredUseBinding struct {
 func filterAutomaticUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var binding rbacv1.RoleBinding
 	if err := sdk.FromUnstructured(obj, &binding); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return &filteredUseBinding{
 		Name:      binding.Name,
@@ -99,7 +99,7 @@ type filteredManageBinding struct {
 func filterManageBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var binding rbacv1.ClusterRoleBinding
 	if err := sdk.FromUnstructured(obj, &binding); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return &filteredManageBinding{
 		Name:     binding.Name,
@@ -117,7 +117,7 @@ type filteredManageRole struct {
 func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var role rbacv1.ClusterRole
 	if err := sdk.FromUnstructured(obj, &role); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return &filteredManageRole{
 		Name:   role.Name,

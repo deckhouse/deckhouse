@@ -52,7 +52,7 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	var federation eeCrd.IstioFederation
 	err := sdk.FromUnstructured(obj, &federation)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	me := federation.Spec.MetadataEndpoint
@@ -91,7 +91,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	err := sdk.FromUnstructured(obj, &multicluster)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	me := multicluster.Spec.MetadataEndpoint

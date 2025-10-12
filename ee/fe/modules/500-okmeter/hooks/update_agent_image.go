@@ -38,12 +38,12 @@ func checkRelease(_ context.Context, input *go_hook.HookInput, dc dependency.Con
 	}
 	regCli, err := dc.GetRegistryClient(repo, cr.WithAuth(""))
 	if err != nil {
-		return err
+		return fmt.Errorf("get registry client: %w", err)
 	}
 
 	imageHash, err := regCli.Digest(context.TODO(), tag)
 	if err != nil {
-		return err
+		return fmt.Errorf("digest: %w", err)
 	}
 
 	previousHash := input.Values.Get("okmeter.internal.currentReleaseImageHash").String()

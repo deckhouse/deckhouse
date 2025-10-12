@@ -87,7 +87,7 @@ func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return NodeGroupCrdInfo{
@@ -126,7 +126,7 @@ func applyInstanceTypesCatalog(obj *unstructured.Unstructured) (go_hook.FilterRe
 
 	err := sdk.FromUnstructured(obj, &c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return capacity.NewInstanceTypesCatalog(c.InstanceTypes), nil

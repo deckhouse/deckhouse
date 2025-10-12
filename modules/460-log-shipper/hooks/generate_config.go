@@ -75,7 +75,7 @@ func filterNamespaceName(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return namespace.GetName(), nil
 }
@@ -85,7 +85,7 @@ func filterLogShipperTokenSecret(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return string(secret.Data["token"]), nil
@@ -95,7 +95,7 @@ func filterLogShipperTLSSecrets(obj *unstructured.Unstructured) (go_hook.FilterR
 	secret := new(corev1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return secret, nil
 }
