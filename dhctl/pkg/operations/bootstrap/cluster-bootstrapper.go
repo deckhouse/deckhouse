@@ -234,6 +234,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	log.DebugLn("MetaConfig was loaded")
+
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
@@ -251,6 +253,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		} else {
 			sshClient, err := sshclient.NewClientFromFlags()
 			if err != nil {
+				return err
+			}
+
+			// do it for get ssh
+			if err := sshClient.BeforeStart(); err != nil {
 				return err
 			}
 
@@ -272,8 +279,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
-
-	log.DebugLn("MetaConfig was loaded")
 
 	// next init cache
 	cachePath := metaConfig.CachePath()

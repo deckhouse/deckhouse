@@ -73,7 +73,9 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Session().SetAvailableHosts(mastersIPs)
+		if len(mastersIPs) > 0 {
+			sshClient.Session().SetAvailableHosts(mastersIPs)
+		}
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -143,6 +145,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	// init ssh client is safe if master hosts not found (error in base infra)
+	if err := b.initSSHClient(); err != nil {
+		return err
+	}
+
 	var destroyer destroy.Destroyer
 
 	err = log.Process("common", "Choice abort type", func() error {
@@ -167,9 +174,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 				if !ok {
 					return fmt.Errorf("destroy operations are not supported for local execution contexts")
-				}
-				if err := b.initSSHClient(); err != nil {
-					return err
 				}
 
 				sshClientProvider := func() (node.SSHClient, error) {

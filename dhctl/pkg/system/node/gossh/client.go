@@ -59,14 +59,15 @@ type Client struct {
 
 	kubeProxies []*KubeProxy
 	sessionList []*ssh.Session
+
+	signers []ssh.Signer
 }
 
-func (s *Client) Start() error {
-	if s.Settings == nil {
-		return fmt.Errorf("possible bug in ssh client: session should be created before start")
+func (s *Client) initSigners() error {
+	if len(s.signers) > 0 {
+		log.DebugF("Signers already initialized\n")
+		return nil
 	}
-
-	log.DebugLn("Starting go ssh client....")
 
 	signers := make([]ssh.Signer, 0, len(s.privateKeys))
 	for _, keypath := range s.privateKeys {
@@ -79,6 +80,25 @@ func (s *Client) Start() error {
 			return fmt.Errorf("unable to parse private key: %v", err)
 		}
 		signers = append(signers, signer)
+	}
+
+	s.signers = signers
+	return nil
+}
+
+func (s *Client) BeforeStart() error {
+	return s.initSigners()
+}
+
+func (s *Client) Start() error {
+	if s.Settings == nil {
+		return fmt.Errorf("possible bug in ssh client: session should be created before start")
+	}
+
+	log.DebugLn("Starting go ssh client....")
+
+	if err := s.initSigners(); err != nil {
+		return err
 	}
 
 	var agentClient agent.ExtendedAgent
@@ -102,7 +122,7 @@ func (s *Client) Start() error {
 			return fmt.Errorf("No credentials present to connect to bastion host")
 		}
 
-		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(s.signers...)}
 
 		if len(app.SSHBastionPass) > 0 {
 			log.DebugF("Initial password auth to bastion host\n")
@@ -147,7 +167,7 @@ func (s *Client) Start() error {
 
 	log.DebugF("Initial ssh privater keys auth to master host\n")
 
-	AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+	AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(s.signers...)}
 
 	if socket != "" {
 		log.DebugF("Adding agent socket to auth methods\n")
