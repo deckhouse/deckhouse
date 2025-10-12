@@ -11,7 +11,7 @@ lang: ru
 Egress Gateway позволяет централизованно управлять исходящим трафиком и контролировать его, а также обеспечивает такие функции, как шифрование, маршрутизация и мониторинг.
 
 {% alert level="warning"%}
-Чтобы использовать Egress Gateway, включите в кластере модуль [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html).
+Чтобы использовать Egress Gateway, включите в кластере модуль [`cni-cilium`](/modules/cni-cilium/configuration.html).
 {% endalert %}
 
 <!-- Перенесено с небольшими доработками из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-egress-gateway -->

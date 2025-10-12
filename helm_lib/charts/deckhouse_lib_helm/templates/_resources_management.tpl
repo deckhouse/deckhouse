@@ -1,7 +1,7 @@
 {{- /* Usage: {{ include "helm_lib_resources_management_pod_resources" (list <resources configuration> [ephemeral storage requests]) }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is */ -}}
 {{- define "helm_lib_resources_management_pod_resources" -}}
-  {{- $configuration     := index . 0 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+  {{- $configuration     := index . 0 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
   {{- /* Ephemeral storage requests */ -}}
 
   {{- $ephemeral_storage := "50Mi" -}}
@@ -22,7 +22,7 @@
 {{- /* Usage: {{ include "helm_lib_resources_management_original_pod_resources" <resources configuration> }} */ -}}
 {{- /* returns rendered resources section based on configuration if it is present */ -}}
 {{- define "helm_lib_resources_management_original_pod_resources" -}}
-  {{- $configuration := . -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+  {{- $configuration := . -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
 
   {{- if $configuration -}}
     {{- if eq $configuration.mode "Static" -}}
@@ -66,7 +66,7 @@
   {{- $targetKind       := index . 1 -}}  {{- /* Target Kind */ -}}
   {{- $targetName       := index . 2 -}}  {{- /* Target Name */ -}}
   {{- $targetContainer  := index . 3 -}}  {{- /* Target container name */ -}}
-  {{- $configuration    := index . 4 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+  {{- $configuration    := index . 4 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
 
 targetRef:
   apiVersion: {{ $targetAPIVersion }}

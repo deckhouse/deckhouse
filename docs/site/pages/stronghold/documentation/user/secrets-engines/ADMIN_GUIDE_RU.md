@@ -85,12 +85,12 @@ d8 p module enable stronghold
 
 - Токен доступа с полными правами через UI Deckhouse Admin.
 
-  - Создайте [статического пользователя](/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user) и [группу](/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/products/kubernetes-platform/documentation/v1/modules/user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь в веб-интерфейсе и получите токен. Для этого в навигационном меню нажмите [Кнопку авторизации](images/image1.ru.png) и в открывшемся меню нажмите на *Копировать токен*.
 
 - Токен доступа с полными правами через CLI.
-  - Создайте [статического пользователя](/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user) и [группу](/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/products/kubernetes-platform/documentation/v1/modules/user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь с помощью `d8 stronghold login`, выполнив следующие команды (укажите актуальный адрес в `VAULT_ADDR`):
 

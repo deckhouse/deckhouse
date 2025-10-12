@@ -43,7 +43,7 @@ DVP users can configure log collection parameters from applications using the [P
 1. (**Optional**) Limit log collection by label.
 
    If you need to collect logs only from specific pods,
-   for example, only from applications with the `app=backend` label, add the [`labelSelector` parameter](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelselector):
+   for example, only from applications with the `app=backend` label, add the [`labelSelector` parameter](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelselector):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -61,7 +61,7 @@ DVP users can configure log collection parameters from applications using the [P
 
 1. (**Optional**) Configure log filtering.
 
-   Using [`labelFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelfilter) and [`logFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-logfilter) filters, you can set up filtering by metadata or message fields.
+   Using [`labelFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelfilter) and [`logFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-logfilter) filters, you can set up filtering by metadata or message fields.
    For example, in this case, only those logs that do not contain fields with the string `.*GET /status" 200$` will be sent to storage:
 
    ```yaml

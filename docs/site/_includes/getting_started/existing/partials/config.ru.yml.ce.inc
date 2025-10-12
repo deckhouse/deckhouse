@@ -1,7 +1,7 @@
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -21,9 +21,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -66,9 +66,9 @@ spec:
         - SystemLoad
 ---
 # [<en>] cert-manager module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html
+# [<en>] https://deckhouse.io/modules/cert-manager/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html
+# [<ru>] https://deckhouse.ru/modules/cert-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -78,9 +78,9 @@ spec:
   enabled: true
 ---
 # [<en>] documentation module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/documentation/configuration.html
+# [<en>] https://deckhouse.io/modules/documentation/configuration.html
 # [<ru>] Настройки модуля documentation.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/documentation/configuration.html
+# [<ru>] https://deckhouse.ru/modules/documentation/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

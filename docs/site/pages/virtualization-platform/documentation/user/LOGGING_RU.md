@@ -43,7 +43,7 @@ DKP позволяет:
 1. (**Опционально**) Ограничьте сбор логов по лейблу.
 
    Если вам нужно собирать логи только с определённых подов,
-   например, только от приложений с лейблом `app=backend`, добавьте [параметр `labelSelector`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelselector):
+   например, только от приложений с лейблом `app=backend`, добавьте [параметр `labelSelector`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelselector):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -61,7 +61,7 @@ DKP позволяет:
 
 1. (**Опционально**) Настройте фильтрацию логов.
 
-   Используя фильтры [`labelFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelfilter) и [`logFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-logfilter), вы можете установить фильтрацию по метаданным или полям сообщений.
+   Используя фильтры [`labelFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-labelfilter) и [`logFilter`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-logfilter), вы можете установить фильтрацию по метаданным или полям сообщений.
    Например, в данном случае в хранилище отправятся лишь те логи, в которых нет полей со строкой `.*GET /status" 200$`:
 
    ```yaml

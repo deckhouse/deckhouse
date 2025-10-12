@@ -10,7 +10,7 @@ Alternatively, you can connect to the master node via SSH and run the command as
 
 ## Ingress Setup
 
-Ensure that the Kruise controller manager for the [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module has started and is in the `Running` status.
+Ensure that the Kruise controller manager for the [ingress-nginx](/modules/ingress-nginx/) module has started and is in the `Running` status.
 
 ```shell
 d8 k -n d8-ingress-nginx get po -l app=kruise

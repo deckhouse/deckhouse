@@ -1520,7 +1520,7 @@ alerts:
 
         Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
 
-        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         The installed Istio version has been deprecated.
       severity: undefined
@@ -1701,7 +1701,7 @@ alerts:
       description: |
         The installed Istio version `{{$labels.istio_version}}` may not work properly with the current Kubernetes version `{{$labels.k8s_version}}` because it's not supported officially.
 
-        To resolve the issue, upgrade Istio following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        To resolve the issue, upgrade Istio following the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         The installed Istio version is incompatible with the Kubernetes version.
       severity: "3"
@@ -2389,9 +2389,9 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/modules/node-manager/) module.
 
-        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
+        To resolve this issue, follow the [instructions](https://deckhouse.io/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -2700,7 +2700,7 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
@@ -3909,7 +3909,7 @@ alerts:
       description: |-
         An IngressNginxController and/or Ingress object in the cluster is using variables from the deprecated NGINX GeoIPv1 module. Support for this module has been discontinued in Ingress NGINX Controller version 1.10 and higher.
 
-        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
 
         To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
 
@@ -3944,7 +3944,7 @@ alerts:
 
         - Upgrade the Linux kernel to version 4.20 or higher.
         - Enable the [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
-        - [Disable early OOM](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/configuration.html#parameters-earlyoomenabled).
+        - [Disable early OOM](https://deckhouse.io/modules/node-manager/configuration.html#parameters-earlyoomenabled).
       summary: |
         Pod {{$labels.pod}} has detected an unavailable PSI subsystem.
       severity: "8"

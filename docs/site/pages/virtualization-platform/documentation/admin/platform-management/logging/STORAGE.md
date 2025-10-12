@@ -12,7 +12,7 @@ The configured storage is added to Grafana as a data source for visualization an
 
 Log collection from user applications is configured separately.
 
-Short-term storage parameters are set in the [`loki`](/products/kubernetes-platform/documentation/v1/modules/loki/configuration.html) module settings.
+Short-term storage parameters are set in the [`loki`](/modules/loki/configuration.html) module settings.
 It is possible to configure disk size and retention period, set the StorageClass to use and resources.
 
 {% alert level="warning" %}

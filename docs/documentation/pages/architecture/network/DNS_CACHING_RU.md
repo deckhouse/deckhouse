@@ -5,7 +5,7 @@ lang: ru
 search: DNS caching, cluster DNS, DNS performance, DNS optimization, кэширование DNS, DNS в кластере, оптимизация DNS
 ---
 
-<!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-local-dns/ -->
+<!-- перенесено с некоторыми изменениями из https://deckhouse.ru/modules/node-local-dns/ -->
 
 В стандартной работе DNS в Kubernetes существует ряд проблем, которые могут привести к неоправданному снижению ключевых показателей работы сервиса:
 
