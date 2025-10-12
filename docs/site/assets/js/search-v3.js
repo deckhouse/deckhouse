@@ -34,12 +34,14 @@ class ModuleSearch {
       document: 5
     };
     this.isDataLoaded = false;
+    this.isLoadingInBackground = false;
     this.searchTimeout = null; // For debouncing search input
 
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
       searchDebounceMs: 300, // Debounce search input by 300ms
+      backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
       ...options
     };
 
@@ -135,16 +137,27 @@ class ModuleSearch {
 
     // Hide search results by default
     this.searchResults.style.display = 'none';
+
+    // Start background loading of search indexes after page is fully loaded
+    this.startBackgroundLoading();
   }
 
   setupEventListeners() {
-    // Load search index on focus (only if not already loaded)
+    // Show search results container when focused
     this.searchInput.addEventListener('focus', () => {
-      // Show loading state when user first focuses on search
-      if (!this.isDataLoaded) {
+      // If data is not loaded and not currently loading, trigger loading
+      if (!this.isDataLoaded && !this.isLoadingInBackground) {
         this.showLoading();
         this.searchInput.placeholder = this.t('loading');
         this.loadSearchIndex();
+      } else if (!this.isDataLoaded && this.isLoadingInBackground) {
+        // Show loading message if background loading is in progress
+        this.showLoading();
+        this.searchInput.placeholder = this.t('loading');
+      } else {
+        // Data is loaded, show ready message
+        this.searchInput.placeholder = this.t('ready');
+        this.showMessage(this.t('ready'));
       }
       // Show search results container when focused (even if empty)
       this.searchResults.style.display = 'flex';
@@ -266,13 +279,55 @@ class ModuleSearch {
     });
   }
 
+  startBackgroundLoading() {
+    // Don't start if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    // Wait for page to be fully loaded before starting background loading
+    if (document.readyState === 'complete') {
+      // Page is already loaded, start background loading after a delay
+      setTimeout(() => {
+        this.loadSearchIndexInBackground();
+      }, this.options.backgroundLoadDelay);
+    } else {
+      // Wait for page to finish loading
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          this.loadSearchIndexInBackground();
+        }, this.options.backgroundLoadDelay);
+      });
+    }
+  }
+
+  async loadSearchIndexInBackground() {
+    // Don't load if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    this.isLoadingInBackground = true;
+    
+    try {
+      await this.loadSearchIndex();
+    } catch (error) {
+      console.warn('Background loading of search index failed:', error);
+    } finally {
+      this.isLoadingInBackground = false;
+    }
+  }
+
   async loadSearchIndex() {
     if (this.isDataLoaded) {
       return; // Already loaded
     }
 
     try {
-      this.showLoading();
+      // Only show loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.showLoading();
+      }
 
       // Parse search index paths with boost levels
       const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
@@ -350,34 +405,46 @@ class ModuleSearch {
       this.buildSearchDictionary();
       this.buildFuseIndex();
       this.isDataLoaded = true;
-      this.hideLoading();
+      
+      // Only hide loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.hideLoading();
+      }
 
       // Update placeholder to indicate search is ready
       this.searchInput.placeholder = this.t('ready');
 
-      // Keep focus on search input after loading
-      this.searchInput.focus();
+      // Only focus and show UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after loading
+        this.searchInput.focus();
 
-      // Execute search with pending query if user was typing while loading
-      if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
-        // Update the input value to match what the user typed
-        this.searchInput.value = this.pendingQuery;
-        this.searchResults.style.display = 'flex';
-        this.handleSearch(this.pendingQuery.trim());
-        this.pendingQuery = ''; // Clear pending query
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          this.pendingQuery = ''; // Clear pending query
+        } else {
+          // Show message that search index is loaded and ready
+          this.showMessage(this.t('ready'));
+        }
       } else {
-        // Show message that search index is loaded and ready
-        this.showMessage(this.t('ready'));
+        // Background loading completed, clear any pending query
+        this.pendingQuery = '';
       }
     } catch (error) {
       console.error('Error loading search index:', error);
       // Update placeholder to indicate search is ready (even with error)
       this.searchInput.placeholder = this.t('ready');
 
-      // Keep focus on search input after error
-      this.searchInput.focus();
-
-      this.showError('Failed to load search index. Please try again later.');
+      // Only show error UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after error
+        this.searchInput.focus();
+        this.showError('Failed to load search index. Please try again later.');
+      }
     }
   }
 
