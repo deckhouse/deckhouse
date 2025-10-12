@@ -12,6 +12,10 @@ class ModuleSearch {
       console.error('Search results element not found');
       return;
     }
+
+    // Store the original placeholder from HTML for later restoration
+    this.originalPlaceholder = this.searchInput.placeholder;
+
     this.searchIndex = null;
     this.searchData = null;
     this.lunrIndex = null;
@@ -196,6 +200,11 @@ class ModuleSearch {
         const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
         if (!isClickingOnSearch && !isBlurToSearch && !hasLoadingOrError) {
           this.searchResults.style.display = 'none';
+          // Restore original HTML placeholder when search is closed
+          this.searchInput.placeholder = this.originalPlaceholder;
+        } else if (!isClickingOnSearch && !isBlurToSearch) {
+          // Even if there are loading/error messages, we should restore the placeholder when closing
+          this.searchInput.placeholder = this.originalPlaceholder;
         }
       }, 150);
     });
@@ -220,14 +229,18 @@ class ModuleSearch {
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
+        // Set placeholder to "ready" when actively searching
+        if (this.isDataLoaded) {
+          this.searchInput.placeholder = this.t('ready');
+        }
         // Debounce the search to prevent excessive calls
         this.searchTimeout = setTimeout(() => {
           this.handleSearch(query);
         }, this.options.searchDebounceMs);
       } else {
-        // Show "What are we looking for?" message when search is cleared
-        this.searchResults.style.display = 'flex';
-        this.showMessage(this.t('ready'));
+        // Input is cleared - hide search results and restore HTML placeholder
+        this.searchResults.style.display = 'none';
+        this.searchInput.placeholder = this.originalPlaceholder;
       }
     });
 
@@ -422,8 +435,8 @@ class ModuleSearch {
         this.hideLoading();
       }
 
-      // Update placeholder to indicate search is ready
-      this.searchInput.placeholder = this.t('ready');
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
       // Only focus and show UI if not loading in background
       if (!this.isLoadingInBackground) {
@@ -461,8 +474,8 @@ class ModuleSearch {
       }
     } catch (error) {
       console.error('Error loading search index:', error);
-      // Update placeholder to indicate search is ready (even with error)
-      this.searchInput.placeholder = this.t('ready');
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
       // Only show error UI if not loading in background
       if (!this.isLoadingInBackground) {
@@ -1362,18 +1375,19 @@ class ModuleSearch {
   // Check current state and update UI accordingly
   updateUIState() {
     if (this.isDataLoaded) {
-      this.searchInput.placeholder = this.t('ready');
+      // Only set placeholder to "ready" when search results are visible (user is actively searching)
       if (this.searchResults.style.display === 'flex') {
+        this.searchInput.placeholder = this.t('ready');
         this.showMessage(this.t('ready'));
       }
+      // Don't change placeholder when search results are hidden (let HTML placeholder show)
     } else if (this.isLoadingInBackground) {
       this.searchInput.placeholder = this.t('loading');
       if (this.searchResults.style.display === 'flex') {
         this.showLoading();
       }
-    } else {
-      this.searchInput.placeholder = this.t('ready');
     }
+    // Don't set placeholder when data is not loaded and not loading (let HTML placeholder show)
   }
 }
 
