@@ -12,7 +12,7 @@ To install the platform, you need to prepare a YAML configuration file for insta
 The YAML installation configuration file includes parameters for several resources (manifests):
 
 - [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) — initial parameters for the platform configuration.
-  The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to start and operate correctly, such as [component placement parameters](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the used [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) access settings, the [template for DNS names](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and others.
+  The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to start and operate correctly, such as [component placement parameters](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the used [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) access settings, the [template for DNS names](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), and others.
 
 - [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
 
@@ -413,10 +413,3 @@ Balancer IP is '1.2.3.4'.
 moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
-
-## Storage Systems Installation
-
-To ensure the proper functioning of the platform, one or more storage systems need to be installed for:
-
-- The permanent storage of platform system data (metrics, logs, images)
-- The storage of virtual machine disks

@@ -14,7 +14,7 @@ Deckhouse Virtualization Platform (DVP) supports the full lifecycle of node mana
 DVP can operate on bare-metal clusters, providing flexibility and scalability.
 {% endalert %}
 
-Node groups allow logical segmentation of the cluster infrastructure. In DVP, the following [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) roles are commonly used:
+Node groups allow logical segmentation of the cluster infrastructure. In DVP, the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) roles are commonly used:
 
 - `master`: Control plane nodes.
 - `front`: Nodes for routing HTTP(S) traffic.
@@ -59,7 +59,7 @@ Node management is implemented via the [`node-manager`](/products/kubernetes-pla
 
 ## Automatic deployment and updates
 
-Deckhouse Virtualization Platform (DVP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) resources. DVP supports both initial node provisioning and updates when configuration changes, for bare-metal clusters (if the `node-manager` module is enabled).
+Deckhouse Virtualization Platform (DVP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. DVP supports both initial node provisioning and updates when configuration changes, for bare-metal clusters (if the `node-manager` module is enabled).
 
 How it works:
 

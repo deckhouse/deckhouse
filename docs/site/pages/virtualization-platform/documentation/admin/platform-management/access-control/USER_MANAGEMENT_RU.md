@@ -307,7 +307,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 

@@ -19,11 +19,11 @@ lang: ru
 
 1. Deckhouse отслеживает ресурсы ClusterLoggingConfig, ClusterLogDestination и PodLoggingConfig:
 
-   - [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
+   - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
      включая правила сбора, фильтрации и парсинга;
-   - [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
+   - [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
      в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
-   - [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
+   - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
 1. На основе заданных параметров Deckhouse автоматически создаёт конфигурационный файл и сохраняет его в Secret в Kubernetes.
 1. Secret монтируется на все поды агентов `log-shipper`.

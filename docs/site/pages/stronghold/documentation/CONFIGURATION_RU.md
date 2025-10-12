@@ -33,9 +33,9 @@ d8 p module disable stronghold
 
 ## Получение доступа к сервису
 
-Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`
-Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`.
 
+Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
 Например, если `publicDomainTemplate` установлен как `%s-kube.mycompany.tld`, веб-интерфейс Stronghold будет доступен по адресу `stronghold-kube.cmycompany.tld`.
 
 ## Использование хранилища данных. Режимы работы

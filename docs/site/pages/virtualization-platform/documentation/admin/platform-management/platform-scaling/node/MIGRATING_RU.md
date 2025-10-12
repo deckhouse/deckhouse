@@ -36,7 +36,7 @@ ls -l /etc/containerd/conf.d
 
 Включение containerd v2 возможно двумя способами:
 
-1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 
    Пример:
 

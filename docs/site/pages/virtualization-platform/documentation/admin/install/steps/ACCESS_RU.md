@@ -25,4 +25,4 @@ sudo -i d8 k get nodes
 
 ## Удаленное подключение к платформе
 
-Для настройки удаленного подключения к кластеру, выполните действия согласно [инструкции](../../platform-management/access-control/user-management.html) и установите утилиту [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI).
+Для настройки удаленного подключения к кластеру, выполните действия согласно [инструкции](../../platform-management/access-control/user-management.html) и установите утилиту [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI).
