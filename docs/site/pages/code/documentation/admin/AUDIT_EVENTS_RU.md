@@ -106,109 +106,728 @@ curl --request POST "https://example.com/api/v4/admin/audit_events/search" \
 
 В таблице приведены примеры системных сообщений. В production-среде события аудита содержат полную информацию в самом сообщении или в дополнительном JSON-поле с данными.
 
-| Название                          | Системное сообщение                                        | Назначение                                                                                   | Отслеживаемые атрибуты |
-|-------------------------------|---------------------------------------------------|----------------------------------------------------------------------------------------------|------------|
-| `2fa_login_failed`              | User 2fa login failed                             | Обнаружена неудачная попытка входа с двухфакторной аутентификацией.                         |            |
-| `access_approved`               | User access was approved                          | Пользователю одобрен запрос на доступ в инстанс.                                                      |            |
-| `access_token_created`          | Project/Group access token created                | Создан токен доступа для проекта или группы.                                                 |            |
-| `access_token_revoked`          | Project/Group access token revoked                | Токен доступа был отозван.                                                                   |            |
-| `added_gpg_key`                 | Added new gpg key to user                         | Пользователь добавил новый GPG-ключ.                                                         |            |
-| `added_ssh_key`                 | User added new ssh key                            | Пользователь добавил новый SSH-ключ.                                                         |            |
-| `application_created`           | Application was created                           | Создано приложение (OAuth или интеграция).                                                   |            |
-| `application_deleted`           | Application deleted                               | Приложение было удалено.                                                                      |            |
-| `application_secret_renew`      | Application secret renew                          | Обновлён секрет приложения.                                                         |            |
-| `application_updated`           | Application Updated                               | Изменены параметры приложения.                                                               |            |
-| `ci_cd_job_token_removed_from_allowlist`     | Disallow group to use job token             | В проекте ограничено использование CI/CD Job Token определённой группой.                     |            |
-| `ci_cd_job_token_added_to_allowlist` | Allow group to use job token               | В проекте разрешено использование CI/CD Job Token определённой группой.                      |            |
-| `ci_variable_created`           | Ci variable `#{key}` created                        | Создана новая переменная CI/CD.                                                              |            |
-| `ci_variable_deleted`           | Ci variable `#{key}` deleted                        | Удалена переменная CI/CD.                                                                    |            |
-| `ci_variable_updated`           | Ci variable updated (Value, Protected)            | Изменено значение или параметры защиты переменной CI/CD.                                      |            |
-| `deploy_key_created`            | Deploy key added                                  | Создан новый ключ развёртывания (deploy key) для проекта/инстанса.                                                |            |
-| `deploy_key_deleted`            | Deploy key was deleted                            | Удалён ключ развертывания.                                                                           |            |
-| `deploy_key_disabled`           | Deploy key disabled                               | Ключ развёртывания отключён.                                                                         |            |
-| `deploy_key_enabled`            | Deploy key enabled                                | Ключ развёртывания включён.                                                                          |            |
-| `deploy_token_created`          | Deploy token created                              | Создан токен развёртывания (deploy token) для доступа к данным.                                                    |            |
-| `deploy_token_deleted`          | Deploy token deleted                              | Удалён токен развёртывания.                                                                         |            |
-| `deploy_token_revoked`          | Deploy token revoked                              | Токен развёртывания был отозван пользователем или системой.                                          |            |
-| `feature_flag_created`          |Created feature flag with description                                                 | Создан новый флаг функций (feature flag).                                                       |            |
-| `feature_flag_deleted`          | Feature flag was deleted                                                 | Флаг функций был удалён.                                                                     |            |
-| `feature_flag_updated`          | Feature flag was updated                                                 | Обновлены параметры флага функций.                                                            |            |
-| `group_created`                 | Group was created                                 | Создана новая группа.                                                                        |            |
-| `group_export_created`          | Group file export was created                     | Создан файл экспорта группы.                                                              |            |
-| `group_invite_via_group_link_created`  | Invited group to group                      | В группу приглашена другая группа через групповую ссылку.                                    |            |
-| `group_invite_via_group_link_deleted`  | Revoked group from group                     | Доступ группы, приглашенной по ссылке, был отозван.                                                  |            |
-| `group_invite_via_group_link_updated`  | Group access changed                        | Изменены параметры доступа группы через групповую ссылку.                                    |            |
-| `group_invite_via_project_group_link_created` | Invited group to project                | В проект приглашена группа через групповую ссылку.                                           |            |
-| `group_invite_via_project_group_link_deleted` | Revoked group from project               | Доступ группы к проекту был отозван.                                                         |            |
-| `group_invite_via_project_group_link_updated` | Group access for project changed         | Изменены параметры доступа группы к проекту.                                                 |            |
-| `group_updated`                 | Group updated (visibility, 2FA grace period)      | Изменения в настройках группы (видимость, безопасность, лимиты, политика доступа).            | `repository_size_limit`, `two_factor_grace_period`, `lfs_enabled`, `membership_lock`, `path`, `require_two_factor_authentication`, `request_access_enabled`, `shared_runners_minutes_limit`, `share_with_group_lock`, `mentions_disabled`, `max_personal_access_token_lifetime`, `visibility_level`, `name`, `description`, `project_creation_level`, `default_branch_protected`, `seat_control`, `duo_features_enabled`, `prevent_forking_outside_group`, `allow_mfa_for_subgroups`, `default_branch_name`, `resource_access_token_creation_allowed`, `new_user_signups_cap`, `show_diff_preview_in_email`, `enabled_git_access_protocol`, `runner_registration_enabled`, `allow_runner_registration_token`, `emails_enabled`, `service_access_tokens_expiration_enforced`, `enforce_ssh_certificates`, `disable_personal_access_tokens`, `remove_dormant_members`, `remove_dormant_members_period`, `prevent_sharing_groups_outside_hierarchy`, `default_branch_protection_defaults`, `wiki_access_level` |
-| `impersonation_initiated`       | User root impersonated another user               | Администратор начал сессию от имени другого пользователя.                                    |            |
-| `impersonation_stopped`         | User root stopped impersonation                   | Администратор завершил сессию от имени другого пользователя.                                 |            |
-| `instance_settings_updated`     | Instance settings updated: Signup enabled turned on                         | Изменены глобальные настройки инстанса.                                                      |   Все поля с настройками инстанса, кроме зашифрованных.         |
-| `login_failed`                  | Attempt to login failed                           | Неудачная попытка входа в систему.                                                           |            |
-| `manually_trigger_housekeeping` | Housekeeping task                                 | Запущена задача обслуживания репозитория вручную.                                            |            |
-| `member_permissions_created`    | New member access granted                         | Пользователю предоставлен доступ (роль) к группе или проекту.                                |            |
-| `member_permissions_destroyed`  | Member access revoked                             | Доступ пользователя к проекту или группе отозван.                                           |            |
-| `member_permissions_updated`    | Member access updated                             | Изменены права или срок действия доступа пользователя.                                       |            |
-| `merge_request_closed_by_project_bot` | Merge request `#{merge_request.title}` closed by project bot                                           | Запрос на merge закрыт системным ботом проекта.                                                |            |
-| `merge_request_created_by_project_bot` | Merge request `#{merge_request.title}` created by project bot                                          | Запрос на merge создан системным ботом проекта.                                                |            |
-| `merge_request_merged_by_project_bot` | Merge request `#{merge_request.title}` merged by project bot                                           | Запрос на merge обработан системным ботом проекта.                                               |            |
-| `merge_request_reopened_by_project_bot` | Merge request `#{merge_request.title}` reopened by project bot                                         | Запрос на merge переоткрыт системным ботом проекта.                                            |            |
-| `omniauth_login_failed`         | Omniauth login failed for `#{user}` `#{provider}`                                                 | Ошибка входа через внешний OAuth/Omniauth-провайдер.                                         |            |
-| `password_reset_failed`         | Password reset failed                                                 | Неудачная попытка сброса пароля пользователем.                                               |            |
-| `personal_access_token_issued`  | Personal access token issued                      | Выпущен новый токен доступа (personal access token).                                                         |            |
-| `personal_access_token_revoked` | Personal access token revoked                     | Токен доступа был отозван.                                                           |            |
-| `pipeline_deleted`              | Pipeline deleted                                                 | Конвейер CI/CD был удалён.                                                                   |            |
-| `project_blobs_removal`         | Project blobs removed                             | Массовое удаление объектов (blobs) из проекта.                                               |            |
-| `project_created`               | Project was created                               | Создан новый проект.                                                                         |            |
-| `project_default_branch_changed` | Project default branch updated                     | Изменена ветка по умолчанию в проекте.                                                       |            |
-| `project_export_created`        | Project export created                            | Создан файл экспорта проекта.                                                                    |            |
-| `project_feature_updated`       | Project features updated                          | Изменены уровни доступа к функциям проекта (issues, wiki и т. д.).                            |            |
-| `project_setting_updated`       | Project settings updated                          | Изменены шаблоны merge commit и squash commit.                                               |            |
-| `project_text_replacement`      | Project text replaced                             | В проекте выполнена массовая замена текста.                                                  |            |
-| `project_topic_changed`         | Project topic changed                             | Изменена тема проекта.                                                                       |            |
-| `project_updated`               | Project updated (name, namespace)                 | Изменены настройки проекта (имя, неймспейс, политики).                                       | `name`, `packages_enabled`, `reset_approvals_on_push`, `path`, `merge_requests_author_approval`, `merge_requests_disable_committers_approval`, `only_allow_merge_if_all_discussions_are_resolved`, `only_allow_merge_if_pipeline_succeeds`, `require_password_to_approve`, `disable_overriding_approvers_per_merge_request`, `repository_size_limit`, `project_namespace_id`, `namespace_id`, `printing_merge_request_link_enabled`, `resolve_outdated_diff_discussions`, `merge_requests_ff_only_enabled`, `merge_requests_rebase_enabled`, `remove_source_branch_after_merge`, `merge_requests_template`, `visibility_level`, `builds_access_level`, `container_registry_access_level`, `environments_access_level`, `feature_flags_access_level`, `forking_access_level`, `infrastructure_access_level`, `issues_access_level`, `merge_requests_access_level`, `metrics_dashboard_access_level`, `monitor_access_level`, `operations_access_level`, `package_registry_access_level`, `pages_access_level`, `releases_access_level`, `repository_access_level`, `requirements_access_level`, `security_and_compliance_access_level`, `snippets_access_level`, `wiki_access_level`, `merge_commit_template`, `squash_commit_template`, `runner_registration_enabled`, `show_diff_preview_in_email`, `selective_code_owner_removals` |
-| `protected_branch_created`      | Protected branch created                                                 | Создана защищённая ветка.                                                                    |            |
-| `protected_branch_deleted`      | Protected branch was deleted                                                 | Удалена защищённая ветка.                                                                    |            |
-| `protected_branch_updated`      | Protected branch was updated:                                                 | Обновлены правила защищённой ветки.                                                          |            |
-| `protected_tag_created`         | Protected tag created                                                 | Создан защищённый тег.                                                                       |            |
-| `protected_tag_deleted`         | Protected tag was deleted                                                 | Удалён защищённый тег.                                                                       |            |
-| `protected_tag_updated`         | Protected tag updated:                                                  | Обновлены правила защищённого тега.                                                          |            |
-| `removed_gpg_key`               | Removed gpg key from user                         | Удалён GPG-ключ пользователя.                                                                |            |
-| `removed_ssh_key`               | User removed ssh key                              | Удалён SSH-ключ пользователя.                                                                |            |
-| `requested_password_reset`      | User requested password change                    | Пользователь запросил сброс пароля.                                                          |            |
-| `revoked_gpg_key`               | Revoked gpg key from user                         | GPG-ключ пользователя был отозван.                                                           |            |
-| `unban_user`                    | User was unban                                    | Пользователь разблокирован (unban).                                                          |            |
-| `unblock_user`                  | User was unblocked                                | С пользователя снята блокировка (unblock).                                                   |            |
-| `user_access_locked`            | User access locked                                | Учётная запись пользователя заблокирована.                                                   |            |
-| `user_access_unlocked`          | User access unlocked                              | Учётная запись пользователя разблокирована.                                                  |            |
-| `user_activated`                | User was activated                                | Учётная запись пользователя активирована.                                                    |            |
-| `user_banned`                   | User was banned                                   | Пользователь забанен.                                                                        |            |
-| `user_blocked`                  | User was blocked                                  | Учётная запись пользователя заблокирована.                                                   |            |
-| `user_created`                  | User was created                                  | Создан новый пользователь.                                                                   |            |
-| `user_deactivated`              | User was deactivated                              | Учётная запись пользователя деактивирована.                                                  |            |
-| `user_destroyed`                | User was destroyed                                | Учётная запись пользователя удалена.                                                         |            |
-| `user_email_updated`            | User email updated                                | Изменён адрес электронной почты пользователя.                                                |            |
-| `user_logged_in`                | User logged in                                    | Успешный вход пользователя.                                                                  |            |
-| `user_password_updated`         | Password updated                                                 | Пароль пользователя изменён.                                                                 |            |
-| `user_rejected`                 | User was rejected                                 | Учётная запись пользователя отклонена (например, при регистрации).                           |            |
-| `user_removed_two_factor`       | Two factor disabled                               | Пользователь отключил двухфакторную аутентификацию.                                          |            |
-| `user_settings_updated`         | User settings updated                             | Обновлены настройки профиля пользователя.                                                    | `name`, `public_email`, `otp_secret`, `otp_required_for_login`, `admin`, `private_profile` |
-| `user_signup`                   | User was registered                               | Пользователь зарегистрирован.                                                                |            |
-| `user_switched_to_admin_mode`   | User switched to admin mode                       | Пользователь включил режим администратора.                                                   |            |
-| `user_username_updated`         | Username updated                                  | Изменено имя пользователя (username).                                                        |            |
-| `webhook_created`               | Webhook was created                               | Создан вебхук для проекта, группы или инстанса.                                                  |            |
-| `webhook_destroyed`              | System hook removed                              | Вебхук удалён.                                                                              |            |
-| `group_deleted`                 | Group was deleted                                                 | Группа удалена.                                                                              |            |
-| `project_deleted`               | Project was deleted                                                | Проект удалён.                                                                               |            |
-| `logout`                        | User logged out                                   | Пользователь вышел из системы.                                                               |            |
-| `unauthenticated_session`       | Redirected to login                               | Система перенаправила неаутентифицированного пользователя на страницу входа.                 |            |
-| `ci_runners_bulk_deleted`       | CI runner bulk deleted: Errors:                                                 | Массовое удаление CI runners.                                                                |            |
-| `ci_runner_registered`          | CI runner created via API                                                 | Регистрация CI runner через API.                                                                       |            |
-| `ci_runner_unregistered`        | CI runner unregistered                                                 | Отмена регистрации CI runner.                                                                |            |
-| `ci_runner_token_reset`         | CI runner registration token reset                                                 | Сброшен токен CI runner.                                                                     |            |
-| `ci_runner_assigned_to_project` | CI runner assigned to project                                                 | Runner был привязан к проекту.                                                               |            |
-| `ci_runner_unassigned_from_project` | CI runner unassigned from project                                             | Runner был отвязан от проекта.                                                               |            |
-| `ci_runner_created`             | CI runner created via UI                                                 | Runner был создан через графический интерфейс.                                                                           |            |
-| `package_registry_package_published` | `#{name}` package version `#{version}` has been published                                            | В реестре пакетов опубликован новый пакет.                                                    |            |
-| `package_registry_package_deleted`   | package version `#{package.version}` has been deleted                                            | Пакет удалён из реестра пакетов.                                                             |            |
+<table>
+<thead>
+<tr>
+<th>Название</th>
+<th>Системное сообщение</th>
+<th>Назначение</th>
+<th>Отслеживаемые атрибуты</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>2fa_login_failed</code></td>
+<td>User 2fa login failed</td>
+<td>Обнаружена неудачная попытка входа с двухфакторной аутентификацией.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>access_approved</code></td>
+<td>User access was approved</td>
+<td>Пользователю одобрен запрос на доступ в инстанс.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>access_token_created</code></td>
+<td>Project/Group access token created</td>
+<td>Создан токен доступа для проекта или группы.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>access_token_revoked</code></td>
+<td>Project/Group access token revoked</td>
+<td>Токен доступа был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>added_gpg_key</code></td>
+<td>Added new gpg key to user</td>
+<td>Пользователь добавил новый GPG-ключ.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>added_ssh_key</code></td>
+<td>User added new ssh key</td>
+<td>Пользователь добавил новый SSH-ключ.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>application_created</code></td>
+<td>Application was created</td>
+<td>Создано приложение (OAuth или интеграция).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>application_deleted</code></td>
+<td>Application deleted</td>
+<td>Приложение было удалено.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>application_secret_renew</code></td>
+<td>Application secret renew</td>
+<td>Обновлён секрет приложения.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>application_updated</code></td>
+<td>Application Updated</td>
+<td>Изменены параметры приложения.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_cd_job_token_removed_from_allowlist</code></td>
+<td>Disallow group to use job token</td>
+<td>В проекте ограничено использование CI/CD Job Token определённой группой.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_cd_job_token_added_to_allowlist</code></td>
+<td>Allow group to use job token</td>
+<td>В проекте разрешено использование CI/CD Job Token определённой группой.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_variable_created</code></td>
+<td>Ci variable <code>#{key}</code> created</td>
+<td>Создана новая переменная CI/CD.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_variable_deleted</code></td>
+<td>Ci variable <code>#{key}</code> deleted</td>
+<td>Удалена переменная CI/CD.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_variable_updated</code></td>
+<td>Ci variable updated (Value, Protected)</td>
+<td>Изменено значение или параметры защиты переменной CI/CD.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_key_created</code></td>
+<td>Deploy key added</td>
+<td>Создан новый ключ развёртывания (deploy key) для проекта/инстанса.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_key_deleted</code></td>
+<td>Deploy key was deleted</td>
+<td>Удалён ключ развертывания.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_key_disabled</code></td>
+<td>Deploy key disabled</td>
+<td>Ключ развёртывания отключён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_key_enabled</code></td>
+<td>Deploy key enabled</td>
+<td>Ключ развёртывания включён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_token_created</code></td>
+<td>Deploy token created</td>
+<td>Создан токен развёртывания (deploy token) для доступа к данным.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_token_deleted</code></td>
+<td>Deploy token deleted</td>
+<td>Удалён токен развёртывания.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>deploy_token_revoked</code></td>
+<td>Deploy token revoked</td>
+<td>Токен развёртывания был отозван пользователем или системой.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>feature_flag_created</code></td>
+<td>Created feature flag with description</td>
+<td>Создан новый флаг функций (feature flag).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>feature_flag_deleted</code></td>
+<td>Feature flag was deleted</td>
+<td>Флаг функций был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>feature_flag_updated</code></td>
+<td>Feature flag was updated</td>
+<td>Обновлены параметры флага функций.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_created</code></td>
+<td>Group was created</td>
+<td>Создана новая группа.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_export_created</code></td>
+<td>Group file export was created</td>
+<td>Создан файл экспорта группы.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_group_link_created</code></td>
+<td>Invited group to group</td>
+<td>В группу приглашена другая группа через групповую ссылку.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_group_link_deleted</code></td>
+<td>Revoked group from group</td>
+<td>Доступ группы, приглашенной по ссылке, был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_group_link_updated</code></td>
+<td>Group access changed</td>
+<td>Изменены параметры доступа группы через групповую ссылку.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_project_group_link_created</code></td>
+<td>Invited group to project</td>
+<td>В проект приглашена группа через групповую ссылку.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_project_group_link_deleted</code></td>
+<td>Revoked group from project</td>
+<td>Доступ группы к проекту был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_invite_via_project_group_link_updated</code></td>
+<td>Group access for project changed</td>
+<td>Изменены параметры доступа группы к проекту.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_updated</code></td>
+<td>Group updated (visibility, 2FA grace period)</td>
+<td>Изменения в настройках группы (видимость, безопасность, лимиты, политика доступа).</td>
+<td><ul>
+<li><code>repository_size_limit</code></li>
+<li><code>two_factor_grace_period</code></li>
+<li><code>lfs_enabled</code></li>
+<li><code>membership_lock</code></li>
+<li><code>path</code></li>
+<li><code>require_two_factor_authentication</code></li>
+<li><code>request_access_enabled</code></li>
+<li><code>shared_runners_minutes_limit</code></li>
+<li><code>share_with_group_lock</code></li>
+<li><code>mentions_disabled</code></li>
+<li><code>max_personal_access_token_lifetime</code></li>
+<li><code>visibility_level</code></li>
+<li><code>name</code></li>
+<li><code>description</code></li>
+<li><code>project_creation_level</code></li>
+<li><code>default_branch_protected</code></li>
+<li><code>seat_control</code></li>
+<li><code>duo_features_enabled</code></li>
+<li><code>prevent_forking_outside_group</code></li>
+<li><code>allow_mfa_for_subgroups</code></li>
+<li><code>default_branch_name</code></li>
+<li><code>resource_access_token_creation_allowed</code></li>
+<li><code>new_user_signups_cap</code></li>
+<li><code>show_diff_preview_in_email</code></li>
+<li><code>enabled_git_access_protocol</code></li>
+<li><code>runner_registration_enabled</code></li>
+<li><code>allow_runner_registration_token</code></li>
+<li><code>emails_enabled</code></li>
+<li><code>service_access_tokens_expiration_enforced</code></li>
+<li><code>enforce_ssh_certificates</code></li>
+<li><code>disable_personal_access_tokens</code></li>
+<li><code>remove_dormant_members</code></li>
+<li><code>remove_dormant_members_period</code></li>
+<li><code>prevent_sharing_groups_outside_hierarchy</code></li>
+<li><code>default_branch_protection_defaults</code></li>
+<li><code>wiki_access_level</code></li>
+</ul></td>
+</tr>
+<tr>
+<td><code>impersonation_initiated</code></td>
+<td>User root impersonated another user</td>
+<td>Администратор начал сессию от имени другого пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>impersonation_stopped</code></td>
+<td>User root stopped impersonation</td>
+<td>Администратор завершил сессию от имени другого пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>instance_settings_updated</code></td>
+<td>Instance settings updated: Signup enabled turned on</td>
+<td>Изменены глобальные настройки инстанса.</td>
+<td>Все поля с настройками инстанса, кроме зашифрованных.</td>
+</tr>
+<tr>
+<td><code>login_failed</code></td>
+<td>Attempt to login failed</td>
+<td>Неудачная попытка входа в систему.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>manually_trigger_housekeeping</code></td>
+<td>Housekeeping task</td>
+<td>Запущена задача обслуживания репозитория вручную.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>member_permissions_created</code></td>
+<td>New member access granted</td>
+<td>Пользователю предоставлен доступ (роль) к группе или проекту.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>member_permissions_destroyed</code></td>
+<td>Member access revoked</td>
+<td>Доступ пользователя к проекту или группе отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>member_permissions_updated</code></td>
+<td>Member access updated</td>
+<td>Изменены права или срок действия доступа пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>merge_request_closed_by_project_bot</code></td>
+<td>Merge request <code>#{merge_request.title}</code> closed by project bot</td>
+<td>Запрос на merge закрыт системным ботом проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>merge_request_created_by_project_bot</code></td>
+<td>Merge request <code>#{merge_request.title}</code> created by project bot</td>
+<td>Запрос на merge создан системным ботом проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>merge_request_merged_by_project_bot</code></td>
+<td>Merge request <code>#{merge_request.title}</code> merged by project bot</td>
+<td>Запрос на merge обработан системным ботом проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>merge_request_reopened_by_project_bot</code></td>
+<td>Merge request <code>#{merge_request.title}</code> reopened by project bot</td>
+<td>Запрос на merge переоткрыт системным ботом проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>omniauth_login_failed</code></td>
+<td>Omniauth login failed for <code>#{user}</code> <code>#{provider}</code></td>
+<td>Ошибка входа через внешний OAuth/Omniauth-провайдер.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>password_reset_failed</code></td>
+<td>Password reset failed</td>
+<td>Неудачная попытка сброса пароля пользователем.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>personal_access_token_issued</code></td>
+<td>Personal access token issued</td>
+<td>Выпущен новый токен доступа (personal access token).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>personal_access_token_revoked</code></td>
+<td>Personal access token revoked</td>
+<td>Токен доступа был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pipeline_deleted</code></td>
+<td>Pipeline deleted</td>
+<td>Конвейер CI/CD был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_blobs_removal</code></td>
+<td>Project blobs removed</td>
+<td>Массовое удаление объектов (blobs) из проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_created</code></td>
+<td>Project was created</td>
+<td>Создан новый проект.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_default_branch_changed</code></td>
+<td>Project default branch updated</td>
+<td>Изменена ветка по умолчанию в проекте.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_export_created</code></td>
+<td>Project export created</td>
+<td>Создан файл экспорта проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_feature_updated</code></td>
+<td>Project features updated</td>
+<td>Изменены уровни доступа к функциям проекта (issues, wiki и т. д.).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_setting_updated</code></td>
+<td>Project settings updated</td>
+<td>Изменены шаблоны merge commit и squash commit.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_text_replacement</code></td>
+<td>Project text replaced</td>
+<td>В проекте выполнена массовая замена текста.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_topic_changed</code></td>
+<td>Project topic changed</td>
+<td>Изменена тема проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_updated</code></td>
+<td>Project updated (name, namespace)</td>
+<td>Изменены настройки проекта (имя, неймспейс, политики).</td>
+<td><ul>
+<li><code>name</code></li>
+<li><code>packages_enabled</code></li>
+<li><code>reset_approvals_on_push</code></li>
+<li><code>path</code></li>
+<li><code>merge_requests_author_approval</code></li>
+<li><code>merge_requests_disable_committers_approval</code></li>
+<li><code>only_allow_merge_if_all_discussions_are_resolved</code></li>
+<li><code>only_allow_merge_if_pipeline_succeeds</code></li>
+<li><code>require_password_to_approve</code></li>
+<li><code>disable_overriding_approvers_per_merge_request</code></li>
+<li><code>repository_size_limit</code></li>
+<li><code>project_namespace_id</code></li>
+<li><code>namespace_id</code></li>
+<li><code>printing_merge_request_link_enabled</code></li>
+<li><code>resolve_outdated_diff_discussions</code></li>
+<li><code>merge_requests_ff_only_enabled</code></li>
+<li><code>merge_requests_rebase_enabled</code></li>
+<li><code>remove_source_branch_after_merge</code></li>
+<li><code>merge_requests_template</code></li>
+<li><code>visibility_level</code></li>
+<li><code>builds_access_level</code></li>
+<li><code>container_registry_access_level</code></li>
+<li><code>environments_access_level</code></li>
+<li><code>feature_flags_access_level</code></li>
+<li><code>forking_access_level</code></li>
+<li><code>infrastructure_access_level</code></li>
+<li><code>issues_access_level</code></li>
+<li><code>merge_requests_access_level</code></li>
+<li><code>metrics_dashboard_access_level</code></li>
+<li><code>monitor_access_level</code></li>
+<li><code>operations_access_level</code></li>
+<li><code>package_registry_access_level</code></li>
+<li><code>pages_access_level</code></li>
+<li><code>releases_access_level</code></li>
+<li><code>repository_access_level</code></li>
+<li><code>requirements_access_level</code></li>
+<li><code>security_and_compliance_access_level</code></li>
+<li><code>snippets_access_level</code></li>
+<li><code>wiki_access_level</code></li>
+<li><code>merge_commit_template</code></li>
+<li><code>squash_commit_template</code></li>
+<li><code>runner_registration_enabled</code></li>
+<li><code>show_diff_preview_in_email</code></li>
+<li><code>selective_code_owner_removals</code></li>
+</ul></td>
+</tr>
+<tr>
+<td><code>protected_branch_created</code></td>
+<td>Protected branch created</td>
+<td>Создана защищённая ветка.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protected_branch_deleted</code></td>
+<td>Protected branch was deleted</td>
+<td>Удалена защищённая ветка.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protected_branch_updated</code></td>
+<td>Protected branch was updated:</td>
+<td>Обновлены правила защищённой ветки.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protected_tag_created</code></td>
+<td>Protected tag created</td>
+<td>Создан защищённый тег.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protected_tag_deleted</code></td>
+<td>Protected tag was deleted</td>
+<td>Удалён защищённый тег.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>protected_tag_updated</code></td>
+<td>Protected tag updated:</td>
+<td>Обновлены правила защищённого тега.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>removed_gpg_key</code></td>
+<td>Removed gpg key from user</td>
+<td>Удалён GPG-ключ пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>removed_ssh_key</code></td>
+<td>User removed ssh key</td>
+<td>Удалён SSH-ключ пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>requested_password_reset</code></td>
+<td>User requested password change</td>
+<td>Пользователь запросил сброс пароля.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>revoked_gpg_key</code></td>
+<td>Revoked gpg key from user</td>
+<td>GPG-ключ пользователя был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>unban_user</code></td>
+<td>User was unban</td>
+<td>Пользователь разблокирован (unban).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>unblock_user</code></td>
+<td>User was unblocked</td>
+<td>С пользователя снята блокировка (unblock).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_access_locked</code></td>
+<td>User access locked</td>
+<td>Учётная запись пользователя заблокирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_access_unlocked</code></td>
+<td>User access unlocked</td>
+<td>Учётная запись пользователя разблокирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_activated</code></td>
+<td>User was activated</td>
+<td>Учётная запись пользователя активирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_banned</code></td>
+<td>User was banned</td>
+<td>Пользователь забанен.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_blocked</code></td>
+<td>User was blocked</td>
+<td>Учётная запись пользователя заблокирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_created</code></td>
+<td>User was created</td>
+<td>Создан новый пользователь.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_deactivated</code></td>
+<td>User was deactivated</td>
+<td>Учётная запись пользователя деактивирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_destroyed</code></td>
+<td>User was destroyed</td>
+<td>Учётная запись пользователя удалена.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_email_updated</code></td>
+<td>User email updated</td>
+<td>Изменён адрес электронной почты пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_logged_in</code></td>
+<td>User logged in</td>
+<td>Успешный вход пользователя.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_password_updated</code></td>
+<td>Password updated</td>
+<td>Пароль пользователя изменён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_rejected</code></td>
+<td>User was rejected</td>
+<td>Учётная запись пользователя отклонена (например, при регистрации).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_removed_two_factor</code></td>
+<td>Two factor disabled</td>
+<td>Пользователь отключил двухфакторную аутентификацию.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_settings_updated</code></td>
+<td>User settings updated</td>
+<td>Обновлены настройки профиля пользователя.</td>
+<td><ul>
+<li><code>name</code></li>
+<li><code>public_email</code></li>
+<li><code>otp_secret</code></li>
+<li><code>otp_required_for_login</code></li>
+<li><code>admin</code></li>
+<li><code>private_profile</code></li>
+</ul></td>
+</tr>
+<tr>
+<td><code>user_signup</code></td>
+<td>User was registered</td>
+<td>Пользователь зарегистрирован.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_switched_to_admin_mode</code></td>
+<td>User switched to admin mode</td>
+<td>Пользователь включил режим администратора.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>user_username_updated</code></td>
+<td>Username updated</td>
+<td>Изменено имя пользователя (username).</td>
+<td></td>
+</tr>
+<tr>
+<td><code>webhook_created</code></td>
+<td>Webhook was created</td>
+<td>Создан вебхук для проекта, группы или инстанса.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>webhook_destroyed</code></td>
+<td>System hook removed</td>
+<td>Вебхук удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>group_deleted</code></td>
+<td>Group was deleted</td>
+<td>Группа удалена.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>project_deleted</code></td>
+<td>Project was deleted</td>
+<td>Проект удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>logout</code></td>
+<td>User logged out</td>
+<td>Пользователь вышел из системы.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>unauthenticated_session</code></td>
+<td>Redirected to login</td>
+<td>Система перенаправила неаутентифицированного пользователя на страницу входа.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runners_bulk_deleted</code></td>
+<td>CI runner bulk deleted: Errors:</td>
+<td>Массовое удаление CI runners.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_registered</code></td>
+<td>CI runner created via API</td>
+<td>Регистрация CI runner через API.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_unregistered</code></td>
+<td>CI runner unregistered</td>
+<td>Отмена регистрации CI runner.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_token_reset</code></td>
+<td>CI runner registration token reset</td>
+<td>Сброшен токен CI runner.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_assigned_to_project</code></td>
+<td>CI runner assigned to project</td>
+<td>Runner был привязан к проекту.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_unassigned_from_project</code></td>
+<td>CI runner unassigned from project</td>
+<td>Runner был отвязан от проекта.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ci_runner_created</code></td>
+<td>CI runner created via UI</td>
+<td>Runner был создан через графический интерфейс.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>package_registry_package_published</code></td>
+<td><code>#{name}</code> package version <code>#{version}</code> has been published</td>
+<td>В реестре пакетов опубликован новый пакет.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>package_registry_package_deleted</code></td>
+<td>package version <code>#{package.version}</code> has been deleted</td>
+<td>Пакет удалён из реестра пакетов.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
