@@ -413,10 +413,3 @@ Balancer IP is '1.2.3.4'.
 moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
-
-## Storage Systems Installation
-
-To ensure the proper functioning of the platform, one or more storage systems need to be installed for:
-
-- The permanent storage of platform system data (metrics, logs, images)
-- The storage of virtual machine disks
