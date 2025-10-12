@@ -1337,15 +1337,9 @@ class ModuleSearch {
   showMessage(message) {
     this.searchResults.style.display = 'flex';
 
-    // If this is the ready message and we have a search context, show it above the message
+    // If this is the ready message and we have a search context, show the context message
     if (message === this.t('ready') && this.options.searchContext) {
       this.searchResults.innerHTML = `<div class="loading">${this.options.searchContext}</div>`;
-      // this.searchResults.innerHTML = `
-      //   <div class="loading loading-with-context">
-      //     <div class="search-context">${this.options.searchContext}</div>
-      //     <div class="search-ready-message">${message}</div>
-      //   </div>
-      // `;
     } else {
       this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
     }
