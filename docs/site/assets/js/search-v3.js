@@ -787,8 +787,8 @@ class ModuleSearch {
     let sanitized = query;
     let hasChanges = false;
 
-    // Handle field patterns like "field:value"
-    if (/^[a-zA-Z]+:/.test(sanitized)) {
+    // Handle field patterns like "field:value" or queries starting with colon like ":version"
+    if (/^[a-zA-Z]*:/.test(sanitized)) {
       sanitized = sanitized.replace(/:/g, ' ');
       hasChanges = true;
     }
