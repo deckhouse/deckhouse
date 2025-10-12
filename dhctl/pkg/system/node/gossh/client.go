@@ -86,7 +86,7 @@ func (s *Client) initSigners() error {
 	return nil
 }
 
-func (s *Client) BeforeStart() error {
+func (s *Client) OnlyPreparePrivateKeys() error {
 	return s.initSigners()
 }
 

@@ -257,7 +257,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			// do it for get ssh
-			if err := sshClient.BeforeStart(); err != nil {
+			if err := sshClient.OnlyPreparePrivateKeys(); err != nil {
 				return err
 			}
 

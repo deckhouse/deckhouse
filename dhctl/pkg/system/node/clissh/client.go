@@ -94,7 +94,7 @@ type Client struct {
 	kubeProxies []*frontend.KubeProxy
 }
 
-func (s *Client) BeforeStart() error {
+func (s *Client) OnlyPreparePrivateKeys() error {
 	// Double start is safe here because for initializing private keys we are using sync.Once
 	return s.Start()
 }
