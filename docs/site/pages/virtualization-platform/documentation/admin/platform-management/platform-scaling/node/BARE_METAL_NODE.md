@@ -256,7 +256,7 @@ Node updates involve disruption. Depending on the `disruption` settings for the 
 If a node is managed by [CAPS](#automatic-method), you can't change its associated NodeGroup.  
 The only option is to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
-To move an existing manually added static node from one NodeGroup to another, you need to update the group label on the node:
+To move an existing [manually](#manual-method) added static node from one NodeGroup to another, you need to update the group label on the node:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>

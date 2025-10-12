@@ -53,7 +53,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     additionalProperties:

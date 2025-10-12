@@ -180,7 +180,7 @@ list:
 ### helm_lib_envs_for_proxy
 
  Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-proxy) 
 
 #### Usage
 
@@ -348,7 +348,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage

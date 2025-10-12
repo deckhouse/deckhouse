@@ -459,7 +459,7 @@ properties:
             type: string
             description: |
               Replicas management mode:
-              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter);
               - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
               - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
             enum: ['Standard', 'Static', 'HPA']
@@ -944,7 +944,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   auth:
     type: object
     default: {}

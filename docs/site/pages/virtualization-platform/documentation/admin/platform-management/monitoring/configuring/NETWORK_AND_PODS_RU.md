@@ -47,4 +47,4 @@ spec:
 d8 platform module enable monitoring-kubernetes
 ```
 
-Аналогично можно включить модули `monitoring-kubernetes-control-plane` и `extended-monitoring`.
+Аналогично можно включить модули [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) и [`extended-monitoring`](/modules/extended-monitoring/).
