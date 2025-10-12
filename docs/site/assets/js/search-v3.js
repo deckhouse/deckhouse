@@ -783,19 +783,33 @@ class ModuleSearch {
       }
     }
 
-    // Check for other problematic patterns that might cause Lunr parsing errors
-    // Remove or escape special characters that might be interpreted as field names
-    const problematicPatterns = [
-      /^[a-zA-Z]+:/, // Pattern like "field:value" that might be interpreted as field query
-    ];
+    // Apply comprehensive sanitization for all Lunr special operators and patterns
+    let sanitized = query;
+    let hasChanges = false;
 
-    for (const pattern of problematicPatterns) {
-      if (pattern.test(query)) {
-        // Replace colons with spaces to prevent field interpretation
-        const sanitized = query.replace(/:/g, ' ').trim();
-        console.log(`Problematic pattern detected, sanitized: "${query}" -> "${sanitized}"`);
-        return sanitized;
-      }
+    // Handle field patterns like "field:value"
+    if (/^[a-zA-Z]+:/.test(sanitized)) {
+      sanitized = sanitized.replace(/:/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle Lunr PRESENCE operator (--)
+    if (sanitized.includes('--')) {
+      sanitized = sanitized.replace(/--/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle other Lunr operators (+ and - at the beginning of words)
+    const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
+    if (lunrOperatorPattern.test(sanitized)) {
+      sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      sanitized = sanitized.trim();
+      // console.log(`Lunr operators detected, sanitized: "${query}" -> "${sanitized}"`);
+      return sanitized;
     }
 
     return query;
