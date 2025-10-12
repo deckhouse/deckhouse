@@ -109,7 +109,7 @@ func applyIPAddressPoolFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return IPAddressPoolInfo{
 		Name:      ipAddressPool.Name,
 		Addresses: ipAddressPool.Spec.Addresses,
-	}, fmt.Errorf("from unstructured: %w", err)
+	}, nil
 }
 
 func applyMLBCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
