@@ -53,7 +53,7 @@ To disable the built-in time synchronization mechanism and use your own NTP daem
    Module chrony disabled
    ```
 
-1. Create a [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource
    to enable the NTP daemons on the nodes.
 
    Example for `systemd-timesyncd`:

@@ -18,11 +18,11 @@ DVP позволяет:
 
 Администраторам DVP доступна настройка сбора и отправки логов с помощью трёх кастомных ресурсов:
 
-- [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
+- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
   включая правила сбора, фильтрации и парсинга;
-- [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
+- [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
   в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
-- [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
+- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
 На основе этих ресурсов формируется *pipeline*, который используется в DVP для чтения логов
 и дальнейшей работы с ними c помощью модуля `log-shipper`.
@@ -41,7 +41,7 @@ DVP позволяет:
    d8 platform module enable log-shipper
    ```
 
-1. Создайте ресурс [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
+1. Создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
    Данный ресурс позволяет вам настроить сбор логов с подов в определенном пространстве имён и с определенным лейблом,
    гибко настраивать парсинг многострочных логов и задавать другие правила.
 
@@ -58,7 +58,7 @@ DVP позволяет:
      - es-storage
    ```
 
-1. Создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination),
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination),
    который описывает параметры отправки логов в хранилище.
    Данный ресурс позволяет вам указать одно или несколько хранилищ и описать параметры подключения, буферизации и дополнительные лейблы, которые будут применяться к логам перед отправкой.
 
@@ -88,7 +88,7 @@ DVP позволяет:
 
 ### Elasticsearch
 
-Чтобы отправлять логи в Elasticsearch, создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination), следуя этому примеру:
+Чтобы отправлять логи в Elasticsearch, создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination), следуя этому примеру:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -175,7 +175,7 @@ spec:
    добавьте новый **HTTP Event Collector** и скопируйте сгенерированный токен.
    - Укажите индекс Splunk для хранения логов, например, `logs`.
 
-1. Настройте Deckhouse, добавив ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) для отправки логов в Splunk:
+1. Настройте Deckhouse, добавив ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) для отправки логов в Splunk:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -224,7 +224,7 @@ extraLabels:
    }
    ```
 
-1. Добавьте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination):
+1. Добавьте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -242,7 +242,7 @@ extraLabels:
 Чтобы настроить отправку логов в Graylog, выполните следующее:
 
 1. Убедитесь, что в Graylog настроен входящий поток для приема сообщений по протоколу TCP на указанном порте.
-1. Создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination), следуя примеру:
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination), следуя примеру:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -496,7 +496,7 @@ spec:
 ### Сборка логов из определенного контейнера
 
 Чтобы настроить фильтрацию с помощью `labelFilter`,
-создайте ресурс [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig),
+создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig),
 используя конфигурацию ниже в качестве примера.
 
 В этом случае фильтр отбирает логи из контейнеров с именем `nginx`,

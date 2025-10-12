@@ -131,7 +131,7 @@ properties:
         description: |
           Optional authentication parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module ConfigMap.
+          By default, they are taken from [user-authn](https://deckhouse.io/modules/user-authn/) module ConfigMap.
         properties:
           oidcIssuerURL:
             type: string
@@ -175,7 +175,7 @@ properties:
         description: |
           Optional authorization parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/) module ConfigMap.
+          By default, they are taken from [user-authz](https://deckhouse.io/modules/user-authz/) module ConfigMap.
         properties:
           webhookURL:
             type: string

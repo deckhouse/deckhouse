@@ -48,7 +48,7 @@ Combine the available block devices on the nodes into LVM volume groups. To obta
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 
-To combine block devices on one node, it is necessary to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
+To combine block devices on one node, it is necessary to create an LVM volume group using the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource.
 To create the LVMVolumeGroup resource on the node, run the following command, replacing the names of the node and block devices with your own:
 
 ```shell

@@ -18,13 +18,13 @@ DKP позволяет:
 
 Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](/products/virtualization-platform/documentation/architecture/logging/delivery.html).
 
-Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
+Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
 
 ## Настройка сбора логов из приложения
 
 1. Уточните у администратора DKP, настроен ли сбор логов и хранилище в вашем кластере.
-   Также попросите сообщить вам название хранилища, которое вы укажете в параметре [`clusterDestinationRefs`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs).
-1. Создайте ресурс [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) в своём пространстве имён.
+   Также попросите сообщить вам название хранилища, которое вы укажете в параметре [`clusterDestinationRefs`](/modules/log-shipper/cr.html#podloggingconfig-v1alpha1-spec-clusterdestinationrefs).
+1. Создайте ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в своём пространстве имён.
 
    В данном примере логи собираются со всех подов указанного пространства имён
    и отправляются в кратковременное хранилище [на базе Grafana Loki](/products/virtualization-platform/documentation/admin/platform-management/logging/storage.html):

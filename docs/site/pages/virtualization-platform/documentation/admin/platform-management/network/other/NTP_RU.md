@@ -50,7 +50,7 @@ spec:
    Module chrony disabled
    ```
 
-2. Создайте ресурс [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration), чтобы включить NTP-демоны на узлах.
+2. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), чтобы включить NTP-демоны на узлах.
 
    Пример для `systemd-timesyncd`:
 

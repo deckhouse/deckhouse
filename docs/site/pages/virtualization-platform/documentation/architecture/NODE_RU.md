@@ -149,7 +149,7 @@ DVP имеет набор встроенных метрик мониторинг
 | static                                | -                          | -                 | +               |
 | update.maxConcurrent                  | -                          | -                 | -               |
 
-Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup).
+Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 В случае изменения параметров InstanceClass или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые MachineDeployment, а старые удалит. Количество заказываемых одновременно MachineDeployment определяется параметром `cloudInstances.maxSurgePerZone`.
 

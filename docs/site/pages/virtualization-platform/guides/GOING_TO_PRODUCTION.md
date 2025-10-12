@@ -179,7 +179,7 @@ You can configure alerts using the [internal Alertmanager](/products/kubernetes-
 Monitoring will work out of the box once Deckhouse is installed, but it's not enough for production clusters.
 To receive alerts about incidents, configure the [built-in](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse Alertmanager or [connect your own](/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager.
 
-Using the [CustomAlertmanager](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+Using the [CustomAlertmanager](/modules/prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 
 <!-- ## Logging
 
@@ -189,8 +189,8 @@ Configure centralized logging using the [log-shipper](/products/kubernetes-platf
 
 Configure centralized logging from system and user applications using the [log-shipper](/products/kubernetes-platform/documentation/v1/modules/log-shipper/) module.
 
-All you have to do is to create a custom resource specifying *what to collect* ([ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig))
-and another custom resource specifying *where to send* the collected logs: [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination).
+All you have to do is to create a custom resource specifying *what to collect* ([ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) or [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig))
+and another custom resource specifying *where to send* the collected logs: [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination).
 
 Related guides:
 

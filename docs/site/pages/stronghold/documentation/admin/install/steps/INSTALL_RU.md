@@ -14,7 +14,7 @@ YAML-файл конфигурации установки содержит па�
 
 - [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) — начальные параметры конфигурации платформы. С этой конфигурацией платформа запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.
+  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и другие.
 
 - [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
 
@@ -290,15 +290,6 @@ moduleconfig.deckhouse.io/global patched
 
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
-
-## Установка систем хранения
-
-Для корректного функционирования платформы необходимо установить одну или несколько систем хранения. Они предоставляют возможности:
-
-- постоянного хранения системных данных платформы (метрики, логи, образы);
-- хранения дисков и образов виртуальных машин.
-
-Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [Настройка хранилищ](../../platform-management/storage/supported-storage.html).
 
 ## Установка модуля cilium
 
