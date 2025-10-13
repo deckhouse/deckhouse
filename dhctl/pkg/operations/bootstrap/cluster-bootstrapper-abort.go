@@ -17,6 +17,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/name212/govalue"
 
@@ -150,6 +151,19 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	staticSSHClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+		wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+		if !ok {
+			return nil, fmt.Errorf("destroy operations are not supported for local execution contexts")
+		}
+
+		client := wrapper.Client()
+		if err := client.Start(); err != nil {
+			return nil, err
+		}
+		return client, nil
+	})
+
 	var destroyer destroy.Destroyer
 
 	err = log.Process("common", "Choice abort type", func() error {
@@ -171,20 +185,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					},
 				)
 			} else {
-				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-				if !ok {
-					return fmt.Errorf("destroy operations are not supported for local execution contexts")
-				}
-
-				sshClientProvider := func() (node.SSHClient, error) {
-					client := wrapper.Client()
-					if err := client.Start(); err != nil {
-						return nil, err
-					}
-					return client, nil
-				}
-
-				destroyer = destroy.NewStaticMastersDestroyer(sshClientProvider, []destroy.NodeIP{})
+				destroyer = destroy.NewStaticMastersDestroyer(staticSSHClientProvider, []destroy.NodeIP{})
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -254,6 +255,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
 		}
 		bootstrapState := NewBootstrapState(stateCache)
+		// start client todo refactor it
+		if _, err = staticSSHClientProvider(); err != nil {
+			return err
+		}
+
 		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
 		if err := preflightChecker.StaticSudo(ctx); err != nil {
 			return err
