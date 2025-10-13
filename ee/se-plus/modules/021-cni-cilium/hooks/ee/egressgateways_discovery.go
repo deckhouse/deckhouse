@@ -104,7 +104,7 @@ func applyEgressGatewayFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &eg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return EgressGatewayInfo{
@@ -131,7 +131,7 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 
 	err := sdk.FromUnstructured(obj, &egi)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	for i := range egi.Status.Conditions {
@@ -153,7 +153,7 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var isMemberLabeled bool
@@ -501,7 +501,7 @@ func appendLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 
 		err := sdk.FromUnstructured(obj, &node)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("from unstructured: %w", err)
 		}
 		nodeLabels := node.GetLabels()
 

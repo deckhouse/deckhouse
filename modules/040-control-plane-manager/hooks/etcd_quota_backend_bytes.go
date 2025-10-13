@@ -105,7 +105,7 @@ func etcdQuotaFilterNode(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	err := sdk.FromUnstructured(unstructured, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	memory := node.Status.Capacity.Memory().Value()
@@ -129,7 +129,7 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var ip string

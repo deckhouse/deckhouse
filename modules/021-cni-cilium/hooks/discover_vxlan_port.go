@@ -146,7 +146,7 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	err := sdk.FromUnstructured(obj, cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if port, ok := cm.Data["tunnel-port"]; ok {

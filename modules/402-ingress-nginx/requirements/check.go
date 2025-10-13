@@ -43,7 +43,7 @@ func init() {
 
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 
 		configuredDefaultVersionStr, exists := getter.Get(configuredDefaultVersionKey)
@@ -61,7 +61,7 @@ func init() {
 		currentVersionStr := currentVersionRaw.(string)
 		currentVersion, err := semver.NewVersion(currentVersionStr)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 
 		if currentVersion.LessThan(desiredVersion) {

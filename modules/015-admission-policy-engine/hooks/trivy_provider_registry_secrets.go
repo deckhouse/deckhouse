@@ -91,7 +91,7 @@ func (a *authConfig) MarshalJSON() ([]byte, error) {
 func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := new(corev1.Secret)
 	if err := sdk.FromUnstructured(obj, secret); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return dockerConfigBySecret(secret)

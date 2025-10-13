@@ -64,14 +64,14 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	var secret v1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert secret to structured object: %v", err)
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	_, labelExist := secret.Labels[serverCertNameLabel]
 	_, indexExist := secret.Labels[serverCertIndexLabel]
 	return serverCert{
 		NameLabelExists:  labelExist,
 		IndexLabelExists: indexExist,
-	}, err
+	}, nil
 }
 
 func addMissingLabels(_ context.Context, input *go_hook.HookInput) error {

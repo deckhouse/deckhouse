@@ -85,7 +85,7 @@ func filterLogoCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	logo, ok := cm.Data["dexLogo"]

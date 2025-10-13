@@ -56,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterYandexDeprecatedZoneNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := &v1.Node{}
 	if err := sdk.FromUnstructured(obj, node); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	providerID, err := url.Parse(node.Spec.ProviderID)

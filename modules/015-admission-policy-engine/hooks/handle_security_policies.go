@@ -104,7 +104,7 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sp *securityPolicy
 	err := sdk.FromUnstructured(obj, &sp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return sp, nil

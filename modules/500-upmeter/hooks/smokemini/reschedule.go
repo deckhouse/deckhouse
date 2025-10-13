@@ -131,7 +131,7 @@ func reschedule(_ context.Context, input *go_hook.HookInput) error {
 	// Parse the state from values
 	statefulSets, err := snapshot.ParseStatefulSetSlice(input.Snapshots.Get("statefulsets"))
 	if err != nil {
-		return err
+		return fmt.Errorf("parse stateful set slice: %w", err)
 	}
 
 	state, err := parseState(input.Values.Get(statePath))
@@ -154,17 +154,17 @@ func reschedule(_ context.Context, input *go_hook.HookInput) error {
 
 	nodes, err := snapshot.ParseNodeSlice(input.Snapshots.Get("nodes"))
 	if err != nil {
-		return err
+		return fmt.Errorf("parse node slice: %w", err)
 	}
 
 	pods, err := snapshot.ParsePodSlice(input.Snapshots.Get("pods"))
 	if err != nil {
-		return err
+		return fmt.Errorf("parse pod slice: %w", err)
 	}
 
 	pvcs, err := snapshot.ParsePvcTerminationSlice(input.Snapshots.Get("pvc"))
 	if err != nil {
-		return err
+		return fmt.Errorf("parse pvc termination slice: %w", err)
 	}
 
 	disruptionAllowed, err := parseAllowedDisruption(input.Snapshots.Get("pdb"))
@@ -185,7 +185,7 @@ func reschedule(_ context.Context, input *go_hook.HookInput) error {
 			logger.Info("scheduler skip", log.Err(err))
 			return nil
 		}
-		return err
+		return fmt.Errorf("schedule: %w", err)
 	}
 
 	// Update values
@@ -199,7 +199,7 @@ func parseState(stateValues gjson.Result) (scheduler.State, error) {
 	var state scheduler.State
 	err := json.Unmarshal([]byte(stateValues.Raw), &state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return state, nil
 }
@@ -207,7 +207,7 @@ func parseState(stateValues gjson.Result) (scheduler.State, error) {
 func getK8sDefaultStorageClass(rs []sdkpkg.Snapshot) (string, error) {
 	parsed, err := snapshot.ParseStorageClassSlice(rs)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse storage class slice: %w", err)
 	}
 	for _, sc := range parsed {
 		if sc.Default {

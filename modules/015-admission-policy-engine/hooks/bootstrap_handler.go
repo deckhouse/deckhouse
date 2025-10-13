@@ -91,7 +91,7 @@ func handleGatekeeperBootstrap(_ context.Context, input *go_hook.HookInput) erro
 
 		requiredTemplates, err := getRequiredTemplates()
 		if err != nil {
-			return err
+			return fmt.Errorf("get required templates: %w", err)
 		}
 
 		for _, name := range requiredTemplates {
@@ -159,7 +159,7 @@ func getRequiredTemplates() ([]string, error) {
 	var requiredTemplates = make([]string, 0)
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("walk dir: %w", err)
 		}
 		if d.IsDir() {
 			return nil

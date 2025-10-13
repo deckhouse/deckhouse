@@ -132,7 +132,7 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 	cm := new(v1.ConfigMap)
 	err := sdk.FromUnstructured(obj, cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	namesRaw, ok := cm.Data["names"]
@@ -142,7 +142,7 @@ func filterNamesFromConfigmap(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	var names []string
 	if err := yaml.Unmarshal([]byte(namesRaw), &names); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return names, nil
 }
@@ -172,7 +172,7 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	loc := cloudLocations{}
@@ -183,7 +183,7 @@ func filterCloudProviderAvailabilityZonesFromSecret(obj *unstructured.Unstructur
 		return loc, nil
 	}
 	if err := yaml.Unmarshal(zoneData, &loc.Zones); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	provider, ok := secret.Data["type"]

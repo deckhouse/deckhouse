@@ -140,7 +140,7 @@ func ekvFilterControlPlaneAnnotations(unstructured *unstructured.Unstructured) (
 	var pod corev1.Pod
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	annotations := pod.GetAnnotations()
 
@@ -157,7 +157,7 @@ func ekvFilterNode(unstructured *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(unstructured, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	rawV := node.Status.NodeInfo.KubeletVersion
@@ -180,7 +180,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	versions := kubernetesVersionsInSecret{}

@@ -75,7 +75,7 @@ func filterAuditSecret(unstructured *unstructured.Unstructured) (go_hook.FilterR
 
 	err := sdk.FromUnstructured(unstructured, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	data := sec.Data["audit-policy.yaml"]
@@ -88,7 +88,7 @@ func filterConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(unstructured, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	yamlData := struct {

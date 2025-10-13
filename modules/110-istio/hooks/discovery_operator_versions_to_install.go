@@ -49,7 +49,7 @@ func applyIstioOperatorFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(obj, &iop)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return IstioOperatorCrdInfo{

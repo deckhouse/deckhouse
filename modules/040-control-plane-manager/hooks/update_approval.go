@@ -79,7 +79,7 @@ func updateApprovalFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 
 	err := sdk.FromUnstructured(unstructured, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var isReady bool
@@ -118,7 +118,7 @@ func updateApprovalFilterPod(unstructured *unstructured.Unstructured) (go_hook.F
 
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	var isReady bool
 	for _, cond := range pod.Status.Conditions {

@@ -58,7 +58,7 @@ func hostNetworkFalse(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	err := sdk.FromUnstructured(obj, ds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if !ds.Spec.Template.Spec.HostNetwork {

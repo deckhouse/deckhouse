@@ -94,7 +94,7 @@ func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 
 	err := sdk.FromUnstructured(unstructured, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var cert certificate.Certificate

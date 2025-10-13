@@ -93,7 +93,7 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	podGenerationStr := pod.Labels["pod-template-generation"]
@@ -123,7 +123,7 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 
 	err := sdk.FromUnstructured(unstructured, &ds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ds.GetGeneration(), nil

@@ -8,6 +8,7 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -28,7 +29,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, _ *con
 
 	err := json.Unmarshal([]byte(input.Values.Get("csiVsphere").String()), &moduleConfiguration)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
@@ -41,7 +42,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, _ *con
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {
-			return err
+			return fmt.Errorf("from unstructured: %w", err)
 		}
 	}
 	input.Values.Set("csiVsphere.internal.providerDiscoveryData", discoveryData)

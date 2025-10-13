@@ -64,7 +64,7 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	s := Secret{
@@ -95,7 +95,7 @@ func ApplyCopierNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	namespace := &v1.Namespace{}
 	err := sdk.FromUnstructured(obj, namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	n := &Namespace{
@@ -243,7 +243,7 @@ func createOrUpdateSecret(k8 k8s.Client, secret Secret) error {
 	if errors.IsNotFound(err) {
 		return createSecret(k8, secret)
 	} else if err != nil {
-		return err
+		return fmt.Errorf("get: %w", err)
 	}
 
 	return updateSecret(k8, secret)

@@ -55,7 +55,10 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	var extenderCR KubeSchedulerWebhookConfiguration
 
 	err := sdk.FromUnstructured(obj, &extenderCR)
-	return extenderCR.Webhooks, err
+	if err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+	return extenderCR.Webhooks, nil
 }
 func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 	type extenderConfig struct {

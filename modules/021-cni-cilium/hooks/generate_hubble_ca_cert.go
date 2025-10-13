@@ -65,7 +65,7 @@ func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return certificate.Certificate{

@@ -109,7 +109,7 @@ func applyIstiodPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	var pod v1.Pod
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return istiodPod{
 		Name:     pod.Name,

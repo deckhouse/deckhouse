@@ -57,7 +57,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]

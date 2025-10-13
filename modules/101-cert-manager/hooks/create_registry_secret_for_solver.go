@@ -99,7 +99,7 @@ func applyRegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	var s corev1.Secret
 	err := sdk.FromUnstructured(obj, &s)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ns := s.GetNamespace()
@@ -119,7 +119,7 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	var s corev1.ServiceAccount
 	err := sdk.FromUnstructured(obj, &s)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return s.GetNamespace(), nil

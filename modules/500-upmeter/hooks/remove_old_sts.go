@@ -61,7 +61,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sts appsv1.StatefulSet
 	if err := sdk.FromUnstructured(obj, &sts); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {

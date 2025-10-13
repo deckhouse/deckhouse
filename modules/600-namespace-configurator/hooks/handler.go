@@ -89,11 +89,11 @@ func handleNamespaceConfiguration(ctx context.Context, input *go_hook.HookInput)
 
 		err = configItem.Load(configuration)
 		if err != nil {
-			return err
+			return fmt.Errorf("load: %w", err)
 		}
 		err = configItem.Apply(ctx, input)
 		if err != nil {
-			return err
+			return fmt.Errorf("apply: %w", err)
 		}
 	}
 
