@@ -1,0 +1,13 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 10a69b31..f8205808 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -945,7 +945,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	// we are authenticated
+ 	p.addHeadersForProxying(rw, session)
+ 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+-		rw.WriteHeader(http.StatusAccepted)
++		rw.WriteHeader(http.StatusOK)
+ 	})).ServeHTTP(rw, req)
+ }
+ 

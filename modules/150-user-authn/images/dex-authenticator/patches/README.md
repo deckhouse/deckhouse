@@ -26,3 +26,7 @@ Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time.
 ### 005-fix-cves.patch
 
 Fixes CVE-2025-30204 CVE-2025-22868 CVE-2024-28180
+
+### 006-status-ok.patch
+
+some tests
