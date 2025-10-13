@@ -86,6 +86,41 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
     email = ctx.review.request.object.spec.email
     groups = ctx.review.request.object.spec.groups
 
+    # Email validation with backward compatibility
+    has_upper = bool(email) and email != email.lower()
+    old_email = None
+    email_changed = False
+    
+    if operation == "UPDATE" and ctx.review.request.oldObject is not None:
+        old_email = ctx.review.request.oldObject.spec.email
+        email_changed = old_email is not None and old_email != email
+
+    # Case-insensitive email uniqueness check
+    if operation == "CREATE" or (operation == "UPDATE" and email_changed):
+        user_with_the_same_email = [
+            obj.filterResult for obj in ctx.snapshots.users 
+            if obj.filterResult.name != user_name and obj.filterResult.email and obj.filterResult.email.lower() == email.lower()
+        ]
+        if user_with_the_same_email:
+            output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{user_with_the_same_email[0].email}\" (case-insensitive match)")
+            return
+
+    # CREATE: forbid uppercase emails
+    if operation == "CREATE" and has_upper:
+        output.deny(f"users.deckhouse.io \"{user_name}\", \".spec.email\" must be lowercase. Use \"{email.lower()}\" instead")
+        return
+
+    # UPDATE: forbid changing lowercase email to uppercase
+    if operation == "UPDATE" and email_changed and has_upper:
+        output.deny(f"users.deckhouse.io \"{user_name}\", changing \".spec.email\" to contain uppercase is forbidden; use lowercase")
+        return
+
+    # Legacy updates without email change: allow with warning for uppercase
+    if operation == "UPDATE" and not email_changed and has_upper:
+        output.allow("\".spec.email\" contains uppercase; Dex lowercases emails. Consider migrating to lowercase.")
+        return
+
+    # Original email uniqueness check (exact match) - keep for backward compatibility
     user_with_the_same_email = [obj.filterResult for obj in ctx.snapshots.users if obj.filterResult.name != user_name and obj.filterResult.email == email]
     if user_with_the_same_email:
         output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"")
