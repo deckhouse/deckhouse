@@ -51,7 +51,7 @@ func filterIngressClass(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &ic)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ic.Name, nil
