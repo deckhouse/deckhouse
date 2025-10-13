@@ -522,7 +522,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		meta.Changelog = changelog
 	}
 
-	return meta, err
+	if err != nil {
+		return meta, fmt.Errorf("decode: %w", err)
+	}
+	return meta, nil
 }
 
 type moduleReader struct {

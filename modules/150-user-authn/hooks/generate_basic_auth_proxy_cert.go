@@ -181,7 +181,7 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	defer cancel()
 	err = kubeClient.BatchV1().Jobs(proxyJobNS).Delete(ctx, proxyJobName, v1.DeleteOptions{PropagationPolicy: ptr.To(v1.DeletePropagationForeground)})
 	if err != nil && !apierrors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 	createdJob, err := kubeClient.BatchV1().Jobs(proxyJobNS).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
