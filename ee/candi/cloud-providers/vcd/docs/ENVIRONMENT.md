@@ -311,3 +311,11 @@ shutdown -P now
 * VCD supports CSI; disks are created as VCD Independent Disks.
 * The `disk.EnableUUID` guest property must be set for the virtual machine templates in use.
 * Deckhouse Kubernetes Platform supports disk resizing as of v1.59.1.
+
+## Using the load balancers
+
+* VCD supports the use of Service resources of type LoadBalancer.
+* Load balancers are supported only when using the `NSX-T` network virtualization platform.
+* Load balancer functionality must be explicitly enabled in the Edge Gateway by your VMware Cloud Director service provider. You can check the status in Edge Gateway under Load Balancer -> General Settings; the State should be set to Active.
+* A load balancer is created as a combination of a Pool and a Virtual Service for each exposed port.
+* If a firewall is used, a rule allowing traffic to the external address and ports must be created.
