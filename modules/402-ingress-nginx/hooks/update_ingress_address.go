@@ -63,8 +63,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var svc corev1.Service
 
-	if err := sdk.FromUnstructured(obj, &svc); err != nil {
-		return nil, err
+	err := sdk.FromUnstructured(obj, &svc)
+	if err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	if len(svc.Status.LoadBalancer.Ingress) != 0 {
 		return loadBalancerService{

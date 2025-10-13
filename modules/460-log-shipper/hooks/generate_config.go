@@ -105,7 +105,7 @@ func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, endpoints)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var lokiEndpoint endpoint

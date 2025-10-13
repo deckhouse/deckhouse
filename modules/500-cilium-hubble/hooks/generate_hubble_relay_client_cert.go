@@ -61,7 +61,7 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return certificate.Certificate{

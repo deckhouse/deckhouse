@@ -61,16 +61,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func setAnnotationValidationSuspendedFilterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var cm v1.ConfigMap
-	if err := sdk.FromUnstructured(obj, &cm); err != nil {
-		return nil, err
+	err := sdk.FromUnstructured(obj, &cm)
+	if err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return cm, nil
 }
 
 func setAnnotationValidationSuspendedFilterIngressNginxController(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ctrl internal.IngressNginxController
-	if err := sdk.FromUnstructured(obj, &ctrl); err != nil {
-		return nil, err
+	err := sdk.FromUnstructured(obj, &ctrl)
+	if err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return ctrl, nil
 }
