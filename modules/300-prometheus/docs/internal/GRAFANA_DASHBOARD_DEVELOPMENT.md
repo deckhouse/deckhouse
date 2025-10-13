@@ -5,20 +5,75 @@ type:
 search: making Grafana graphs
 ---
 
-1. The [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) custom resource allows you to create Grafana dashboards. The [shell-operator](https://github.com/flant/shell-operator) sidecar container runs along with the main container in the Grafana Pod and monitors that resource. The hook creates/deletes/edits the specific dashboard in response to a corresponding event using some special mechanism.
-2. In modules, dashboard manifests are located at `<module_root>/monitoring/grafana-dashboards/`. They are automatically converted to [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) CRs, while:
-   * each subdirectory in the above directory corresponds to a Folder in Grafana,
-   * and each file corresponds to a Dashboard in Grafana.
-3. If you need to add a new Folder, just create a directory in the `grafana-dashboards/` and add at least one JSON manifest to it.
-4. You do not need to edit Dashboard files directly (unless you want to do a minor quick fix). Instead:
-   * Open the Dashboard in Grafana:
-     * if the Dashboard already exists, open it and click the ["Make editable" button](../images/grafana_make_editable.jpg);
-     * if the Dashboard is a new one, then create it (in any Folder — it will be moved to the folder that corresponds to the repository directory);
-     * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
-   * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
-   * [Export the Dashboard to JSON](../images/grafana_export.jpg) and save it to a file (the new or existing one).
-5. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
-6. Note that system Dashboards must be stored in `d8`-prefixed `GrafanaDashboardDefinition` custom resources.
+## Self-service dashboard management mechanism in the Observability module
+
+The Observability module adds new dashboard types, including namespace-scoped resources.
+
+This allows users to create and manage their own dashboards without requiring permissions for cluster-level objects.
+
+Previously, dashboards could only be created using the GrafanaDashboardDefinition resource, which required permissions to cluster-level objects. The new mechanism introduces resources that operate within a specific namespace.
+
+### Supported resource types
+
+- **ObservabilityDashboard** — dashboards within a namespace.
+
+Available in the Deckhouse web interface: **Monitoring → Projects**.
+
+- **ClusterObservabilityDashboard** — dashboards for monitoring cluster components.
+
+Available in the Deckhouse web interface: **Monitoring → System**.
+
+- **ClusterObservabilityPropagatedDashboard** — allows you to expand the list of dashboards from the two previous categories.
+
+These dashboards are automatically added in the Deckhouse web interface and appear in the following sections:
+- **Monitoring → System**
+- **Monitoring → Projects**
+  Available to users with rights to the corresponding namespace or system partition.
+
+> Converting existing dashboards from the GrafanaDashboardDefinition resource to the new types is done manually.
+
+### Supported annotations:
+
+- **metadata.deckhouse.io/category** — sets the folder (category) in the interface;
+- **metadata.deckhouse.io/title** — sets the displayed dashboard title. If not specified, the title from the JSON
+  manifest will be used.
+
+### Custom Data Source Support
+
+Data sources previously created through the **GrafanaAdditionalDatasource** resource continue to work and are available in the Deckhouse web interface:
+- **Data Overview**
+- **Dashboards**
+
+### Which dashboard type should I choose?
+
+The choice of a type depends on the tasks and context of use.
+
+#### ObservabilityDashboard
+
+- **When to choose:** For monitoring resources within a specific namespace.
+- **Advantages:** Available only to users with access to this namespace, simplifying management and delimiting permissions.
+
+#### ClusterObservabilityDashboard
+
+- **When to choose:** For monitoring all cluster components with system-wide coverage.
+- **Advantages:** Suitable for operators and administrators who need global cluster visibility.
+
+#### ClusterObservabilityPropagatedDashboard
+
+- **When to choose:** For automatically distributing dashboards to all users with access to specific namespaces or system partitions.
+- **Advantages:** Convenient centralized distribution of shared dashboards useful to multiple users.
+  Send feedback
+  Translation results available
+
+To configure creating a dashboard as ClusterObservabilityPropagatedDashboard:
+
+1. Add the `propagated-` prefix to the JSON file containing the dashboard model.
+
+2. In [lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/templates/_monitoring_grafana_dashboards.tpl#L76), normalization is used where all slashes are converted to dashes.
+
+3. Dashboard type determination:
+    - A file named `propagated-pod.json` will create a ClusterObservabilityPropagatedDashboard (COPD)
+    - A file named `pod.json` will create a ClusterObservabilityDashboard (COD)
 
 ## How do I quickly optimize a third-party Dashboard?
 
@@ -401,83 +456,6 @@ It makes sense to set automatic updates every 30 seconds since Prometheus scrape
 ### 4. Sorting in the Legend
 
 - In the legend, all values should be sorted in descending order by the Mean column.
-
-## Self-service dashboard management mechanism in the Observability module
-
-The Observability module adds new dashboard types, including namespace-scoped resources.
-
-This allows users to create and manage their own dashboards without requiring permissions for cluster-level objects.
-
-Previously, dashboards could only be created using the GrafanaDashboardDefinition resource, which required permissions to cluster-level objects. The new mechanism introduces resources that operate within a specific namespace.
-
-### Supported resource types
-
-- **ObservabilityDashboard** — dashboards within a namespace.
-
-Available in the Deckhouse web interface: **Monitoring → Projects**.
-
-- **ClusterObservabilityDashboard** — dashboards for monitoring cluster components.
-
-Available in the Deckhouse web interface: **Monitoring → System**.
-
-- **ClusterObservabilityPropagatedDashboard** — allows you to expand the list of dashboards from the two previous categories.
-
-These dashboards are automatically added in the Deckhouse web interface and appear in the following sections:
-- **Monitoring → System**
-- **Monitoring → Projects**
-  Available to users with rights to the corresponding namespace or system partition.
-
-> Converting existing dashboards from the GrafanaDashboardDefinition resource to the new types is done manually.
-
-### Dashboard Access Control
-
-Dashboard access permissions are configured using RBAC:
-
-- For **reading**, the 'get' permission on the corresponding resource is enough.
-- For **creating and editing**, the following permissions are required: 'create', 'update', 'patch', and 'delete'.
-
-Permissions are assigned separately for each resource type:
-
-| Resource | Purpose |
-|--------|------------|
-| `observabilitydashboards.observability.deckhouse.io` | Namespaced dashboards |
-| `clusterobservabilitydashboards.observability.deckhouse.io` | System dashboards |
-| `clusterobservabilitypropagateddashboards.observability.deckhouse.io` | Dashboards distributed to all users |
-
-### Metrics Access Control
-
-Access to metrics is also controlled through RBAC:
-
-- Namespace users only have access to metrics in their namespace (RBAC access to the metrics.observability.deckhouse.io resource).
-- Platform administrators have access to all system metrics (d8-*, kube-*, and metrics without the namespace label) through the clustermetrics.observability.deckhouse.io resource.
-- Metrics from user namespaces are accessible if the appropriate permissions are assigned through metrics.observability.deckhouse.io.
-
-### Custom Data Source Support
-
-Data sources previously created through the **GrafanaAdditionalDatasource** resource continue to work and are available in the Deckhouse web interface:
-- **Data Overview**
-- **Dashboards**
-
-### Which dashboard type should I choose?
-
-The choice of a type depends on the tasks and context of use.
-
-#### ObservabilityDashboard
-
-- **When to choose:** For monitoring resources within a specific namespace.
-- **Advantages:** Available only to users with access to this namespace, simplifying management and delimiting permissions.
-
-#### ClusterObservabilityDashboard
-
-- **When to choose:** For monitoring all cluster components with system-wide coverage.
-- **Advantages:** Suitable for operators and administrators who need global cluster visibility.
-
-#### ClusterObservabilityPropagatedDashboard
-
-- **When to choose:** For automatically distributing dashboards to all users with access to specific namespaces or system partitions.
-- **Advantages:** Convenient centralized distribution of shared dashboards useful to multiple users.
-  Send feedback
-  Translation results available
 
 ## Useful notes
 
