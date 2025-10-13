@@ -77,11 +77,15 @@ spec:
                   type: string
                   x-doc-required: false
                 mainNetwork:
+                  type: string
+                  x-doc-required: false
                   description: |
                     Primary network for the for the VMs main NIC.
 
                     **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
+                  type: string
+                  x-doc-required: false
                   description: |
                     List of networks (subnets) for secondary NICs.
                 subnets:
