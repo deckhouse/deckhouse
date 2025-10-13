@@ -21,9 +21,9 @@
 </head>
 
 <body>
+  {% include header.html %}
   <div class="content">
     {%- if site.mode == 'module' %}
-    {% include header.html %}
     {%- else %}
      <!--#include virtual="/includes/header.html" -->
     {%- endif %}
