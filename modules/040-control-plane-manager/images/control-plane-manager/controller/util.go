@@ -117,7 +117,7 @@ func removeDirectory(dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func removeDirectoryContents(dir string) error {
+func removeDirectoryContent(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
