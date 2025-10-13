@@ -40,7 +40,7 @@ func getNodeNameWithSupportedDistro(obj *unstructured.Unstructured) (go_hook.Fil
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if _, ok := node.Labels[deprecatedEbpfSchedulingLabelKey]; ok {
@@ -73,7 +73,7 @@ func unlabelNodes(_ context.Context, input *go_hook.HookInput) error {
 			var node v1.Node
 			err := sdk.FromUnstructured(obj, &node)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("from unstructured: %w", err)
 			}
 
 			delete(node.Labels, deprecatedEbpfSchedulingLabelKey)

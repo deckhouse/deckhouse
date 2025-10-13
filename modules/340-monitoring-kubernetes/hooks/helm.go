@@ -147,7 +147,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
@@ -163,10 +163,10 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("raw message to string: %w", err)
 	}
 
-	return kubernetesVersion, err
+	return kubernetesVersion, nil
 }
 func rawMessageToString(message json.RawMessage) (string, error) {
 	var result string
