@@ -48,20 +48,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2025-58058"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/ulikunitz/xz@v0.5.12"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Memory leak in xz library - мы не используем эту зависимость напрямую",
-      "timestamp": "2025-10-09T14:21:14.944084391Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2025-8869"
       },
       "products": [
