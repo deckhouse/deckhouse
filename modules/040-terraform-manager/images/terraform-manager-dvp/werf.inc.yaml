@@ -25,7 +25,7 @@ shell:
   - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
-  - rm -rf .git
+  - rm -rf .git manifest/test/
 ---
 image: terraform-provider-kubernetes
 fromImage: builder/golang-alpine
