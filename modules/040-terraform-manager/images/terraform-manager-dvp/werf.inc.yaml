@@ -13,7 +13,7 @@ import:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-romCacheVersion: "2025-10-13.0"
+fromCacheVersion: "2025-10-13.0"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
