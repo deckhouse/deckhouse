@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В CVE-2025-1767 описана уязвимость в kubelet, позволяющая копировать репозиторий из volume с типом gitRepo в пределах одной ноды. Поскольку в crictl импортируются только типы из kubelet и не используется его рантайм, эксплуатация уязвимости исключается",
+      "timestamp": "2025-10-09T10:24:07.119115Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5187"
+      },
+      "products": [
+        {
+          "@id": "k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В CVE-2025-5187 описана уязвимость в NodeRestriction admission controller, позволяющая через патч объекта с OwnerReference удалить объект Node. В crictl не используется код admission controller-а",
+      "timestamp": "2025-10-09T10:21:53.069107Z"
+    }
+  ],
+  "timestamp": "2025-10-09T10:25:02Z"
+}

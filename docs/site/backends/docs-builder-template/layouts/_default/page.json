@@ -1,0 +1,65 @@
+{{- if and (eq .Section "search") (eq .Type "search") -}}
+{{- $modulesData := .Site.Data.modules_all -}}
+{{- $currentLang := .Site.Language.Lang -}}
+{"documents": [
+    {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
+    {{- $first := true -}}
+    {{- range $modulesStablestList }}
+      {{- $moduleName := index . "name" }}
+      {{- $moduleChannel := index . "channel" }}
+      {{- $moduleData := index $modulesData $moduleName -}}
+      {{- $moduleSection := printf "modules/%s/%s" $moduleName $moduleChannel }}
+      {{- range $.Site.Pages }}
+        {{- $relPermalinkWithoutLang := replaceRE `/(ru/|en/)` "/" .RelPermalink }}
+        {{- if and (hasPrefix $relPermalinkWithoutLang (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix $relPermalinkWithoutLang "/configuration.html")) (not (hasSuffix $relPermalinkWithoutLang "/cr.html")) }}
+          {{- if .File }}
+            {{- if not $first -}},{{- end -}}
+            {{- $first = false -}}
+            { "title": {{ .Title | jsonify }},
+              "url": {{ .RelPermalink | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
+              {{- $keywords := slice -}}
+              {{- if and $moduleData $moduleData.tags -}}
+                {{- $keywords = $keywords | append $moduleData.tags -}}
+              {{- end -}}
+              {{- if .Params.search -}}
+                {{- $keywords = $keywords | append (split .Params.search ",") -}}
+              {{- end -}}
+              {{- if gt (len $keywords) 0 -}}
+              "keywords": {{ $keywords | jsonify }},
+              {{- end -}}
+              "module": {{ $moduleName | jsonify }},
+              "moduletype": "source",
+              "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
+              "content": {{ .Content | plainify | jsonify }}
+            }
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end -}}
+  ],
+  "parameters": [
+  {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
+  {{- $allParameters := slice }}
+  {{- range $modulesStablestList }}
+    {{- $moduleName := index . "name" }}
+    {{- $moduleChannel := index . "channel" }}
+    {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
+    {{- if not $moduleData }}
+      {{- continue -}}
+    {{- end }}
+    {{- $moduleParams := partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" false) }}
+    {{- if $moduleParams }}
+      {{- $allParameters = $allParameters | append $moduleParams }}
+    {{- end }}
+  {{- end -}}
+  {{- $first := true }}
+  {{- range $allParameters }}
+    {{- if not $first }},{{- end }}
+    {{- $first = false }}
+    {{ . | jsonify }}
+  {{- end -}}
+  ]
+}
+{{- else -}}
+{}
+{{- end -}}

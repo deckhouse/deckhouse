@@ -208,7 +208,7 @@ Follow the steps below to use a custom or interim CA:
 
 You can now use the created `ClusterIssuer` to issue certificates for all Deckhouse components or a particular component.
 
-For example, to issue certificates for all Deckhouse components, specify the `ClusterIssuer` name in the [ClusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`d8 k edit mc global`):
+For example, to issue certificates for all Deckhouse components, specify the `ClusterIssuer` name in the [ClusterIssuerName](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`d8 k edit mc global`):
 
   ```yaml
   spec:

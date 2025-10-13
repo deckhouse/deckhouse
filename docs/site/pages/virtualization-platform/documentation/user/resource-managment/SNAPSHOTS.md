@@ -65,7 +65,7 @@ After creation, `VirtualDiskSnapshot` can be in the following states (phases):
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block.
 
-A full description of the `VirtualDiskSnapshot` resource configuration parameters for machines can be found at [link](/products/virtualization-platform/reference/cr/virtualdisksnapshot.html).
+A full description of the `VirtualDiskSnapshot` resource configuration parameters for machines can be found at [link](/modules/virtualization/cr.html#virtualdisksnapshot).
 
 How to create a disk image in the web interface:
 
@@ -142,9 +142,12 @@ There is a risk of data loss or integrity violation when restoring from such a s
 
 Creating a virtual machine snapshot will fail if at least one of the following conditions is met:
 
-- not all dependencies of the virtual machine are ready;
-- there are changes pending restart of the virtual machine;
-- there is a disk in the process of resizing among the dependent devices.
+- Not all dependencies of the virtual machine are ready.
+- There is a disk in the process of resizing among the dependent devices.
+
+{% alert level="warning" %}
+If there are pending VM changes awaiting a restart when the snapshot is created, the snapshot will include the updated VM configuration.
+{% endalert %}
 
 When a snapshot is created, the dynamic IP address of the VM is automatically converted to a static IP address and saved for recovery.
 
@@ -249,6 +252,68 @@ d8 k get vmop <vmop-name> -o json | jq “.status.resources”
 {% alert level="warning" %}
 It is not recommended to cancel the restore operation (delete the `VirtualMachineOperation` resource in the `InProgress` phase) from a snapshot, which can result in an inconsistent state of the restored virtual machine.
 {% endalert %}
+
+## Creating a VM clone
+
+VM cloning is performed using the `VirtualMachineOperation` resource with the `clone` operation type.
+
+{% alert level="warning" %}
+Before cloning, the source VM must be [powered off](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#virtual-machine-startup-policy-and-virtual-machine-state-management).
+
+It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
+{% endalert %}
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: <vmop-name>
+spec:
+  type: Clone
+  virtualMachineName: <name of the VM to be cloned>
+  clone:
+    mode: DryRun | Strict | BestEffort
+    nameReplacements: []
+    customization: {}
+```
+
+{% alert level="warning" %}
+The cloned VM will be assigned a new IP address for the cluster network and MAC addresses for additional network interfaces (if any), so you will need to reconfigure the network settings of the guest OS after cloning.
+{% endalert %}
+
+Cloning creates a copy of an existing VM, so the resources of the new VM must have unique names. To do this, use the `.spec.clone.nameReplacements` and/or `.spec.clone.customisation` parameters.
+
+- `.spec.clone.nameReplacements`: Allows you to replace the names of existing resources with new ones to avoid conflicts.
+- `.spec.clone.customization`: Sets a prefix or suffix for the names of all cloned VM resources (disks, IP addresses, etc.).
+
+Configuration example:
+
+```yaml
+spec:
+  clone:
+    nameReplacements:
+      - from:
+          kind: <resource type>
+          name: <old name>
+      - to:
+          name: <new name>
+    customization:
+      namePrefix: <prefix>
+      nameSuffix: <suffix>
+```
+
+As a result, a VM named <prefix><new name><suffix> will be created.
+
+One of three modes can be used for the cloning operation:
+- `DryRun`: A test run to check for possible conflicts. The results are displayed in the `status.resources` field of the VirtualMachineOperation resource.
+- `Strict`: Strict mode, requiring all resources with new names and their dependencies (e.g., images) to be present in the cloned VM.
+- `BestEffort`: Mode in which missing external dependencies (e.g., ClusterVirtualImage, VirtualImage) are automatically removed from the configuration of the cloned VM.
+
+Information about conflicts that arose during cloning can be viewed in the resource status:
+
+```bash
+d8 k get vmop <vmop-name> -o json | jq '.status.resources'
+```
 
 ## Data export
 

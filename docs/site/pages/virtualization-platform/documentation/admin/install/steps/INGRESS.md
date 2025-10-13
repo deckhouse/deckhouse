@@ -4,13 +4,13 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.
 ---
 
 {% alert level=“info” %}
-To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
 Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
 {% endalert %}
 
 ## Ingress Setup
 
-Ensure that the Kruise controller manager for the [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module has started and is in the `Running` status.
+Ensure that the Kruise controller manager for the [ingress-nginx](/modules/ingress-nginx/) module has started and is in the `Running` status.
 
 ```shell
 d8 k -n d8-ingress-nginx get po -l app=kruise
@@ -21,7 +21,7 @@ Create an IngressNginxController resource that describes the parameters for the 
 ```yaml
 d8 k apply -f - <<EOF
 # Section describing the NGINX Ingress controller parameters.
-# https://deckhouse.io/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:

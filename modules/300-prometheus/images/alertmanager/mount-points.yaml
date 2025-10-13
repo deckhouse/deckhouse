@@ -1,0 +1,7 @@
+files:
+- /etc/alertmanager/web_config/web-config.yaml
+dirs:
+- /alertmanager
+- /etc/alertmanager/certs
+- /etc/alertmanager/config
+- /etc/alertmanager/config_out

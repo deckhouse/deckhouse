@@ -65,7 +65,7 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
         properties:
           authURL:
             description: |
@@ -82,9 +82,9 @@ properties:
         description: |
           Массив групп пользователей с доступом в панель администратора OpenVPN.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
+          Используется, если включен модуль [user-authn](https://deckhouse.ru/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
 
-          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider).
+          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
       whitelistSourceRanges:
         description: |
           Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
@@ -110,7 +110,7 @@ properties:
           * `CertManager` — панель администратора OpenVPN будет работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — панель администратора OpenVPN будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
           * `Disabled` — панель администратора OpenVPN будет работать только по HTTP;
-          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -127,7 +127,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

@@ -19,7 +19,6 @@ DVP offers a wide range of solutions, which can be divided into two main groups.
 ### Software-defined storage
 
 - [Managing logical volumes on cluster nodes](../storage/sds/node-configurator/about.html)
-- [Local storage using Local Path Provisioner](../storage/sds/local-path-provisioner.html)
 - [Local storage based on LVM (Logical Volume Manager)](../storage/sds/lvm-local.html)
 - [Replicated storage based on DRBD (Distributed Replicated Block Device)](../storage/sds/lvm-replicated.html)
 

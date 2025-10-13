@@ -21,6 +21,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
@@ -31,11 +34,13 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /coredns-helper main.go
   - chmod 0700 /coredns-helper

@@ -4,6 +4,11 @@
 # <template: security_scan_template>
 steps:
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 2 }!}
   - name: Running default user validation on ${{env.TAG}}

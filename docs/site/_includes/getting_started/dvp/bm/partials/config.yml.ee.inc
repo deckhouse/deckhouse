@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/cr/clusterconfiguration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/reference/cr/clusterconfiguration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -20,9 +20,9 @@ clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/cr/initconfiguration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/reference/cr/initconfiguration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -50,9 +50,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -97,9 +97,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#cni-cilium
+# [<en>] https://deckhouse.io/modules/cni-cilium/
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#cni-cilium
+# [<ru>] https://deckhouse.io/modules/cni-cilium/
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -113,9 +113,9 @@ spec:
     tunnelMode: VXLAN
 ---
 # [<en>] admission-policy-engine module settings
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#admission-policy-engine
+# [<en>] https://deckhouse.io/modules/admission-policy-engine/
 # [<ru>] Настройки модуля admission-policy-engine
-# [<ru>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#admission-policy-engine
+# [<ru>] https://deckhouse.io/modules/admission-policy-engine/
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -125,9 +125,9 @@ spec:
   version: 1
 ---
 # [<en>] multitenancy-manager module settings
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#multitenancy-manager
+# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
 # [<ru>] Настройки модуля multitenancy-manager
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/mc.html#multitenancy-manager
+# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -137,9 +137,9 @@ spec:
   version: 1
 ---
 # [<en>] Static cluster settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/reference/cr/staticclusterconfiguration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
 # [<ru>] Параметры статического кластера.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/reference/cr/staticclusterconfiguration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is

@@ -6,11 +6,11 @@ lang: ru
 
 ## Описание
 
-Проекты (ресурс [Project](../../../../reference/cr/project.html)) в Deckhouse Virtualization Platform (DVP) обеспечивают изолированные окружения для создания ресурсов пользователя.
+Проекты (ресурс [Project](/modules/multitenancy-manager/cr.html#project)) в Deckhouse Virtualization Platform (DVP) обеспечивают изолированные окружения для создания ресурсов пользователя.
 
 Настройки проекта позволяют задать квоты для ресурсов, ограничить сетевое взаимодействие, как внутри платформы, так и вне её.
 
-Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../../../reference/cr/projecttemplate.html)).
+Для создания проектов используются шаблоны (ресурс [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate)).
 
 {% alert level="warning" %}
 При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
@@ -49,10 +49,10 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](../../../../reference/cr/project.html) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](../../../../reference/cr/project.html#project-v1alpha2-spec-projecttemplatename).
-1. В параметре [.spec.parameters](../../../../reference/cr/project.html#project-v1alpha2-spec-parameters) ресурса `Project` укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](../../../../reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса `ProjectTemplate`.
+1. Для создания проекта создайте ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-projecttemplatename).
+1. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-parameters) ресурса `Project` укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса `ProjectTemplate`.
 
-   Пример создания проекта с помощью ресурса [Project](../../../../reference/cr/project.html) из `default` [ProjectTemplate](../../../../reference/cr/projecttemplate.html) представлен ниже:
+   Пример создания проекта с помощью ресурса [Project](/modules/multitenancy-manager/cr.html#project) из `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

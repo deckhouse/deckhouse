@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Определяет конфигурацию модуля Deckhouse. Название ресурса ModuleConfig должно соответствовать названию модуля (например, `control-plane-manager` для модуля `control-plane-manager`).
+            Определяет конфигурацию модуля Deckhouse Kubernetes Platform (параметры модуля). Название ресурса ModuleConfig должно соответствовать названию модуля (например, `control-plane-manager` для модуля `control-plane-manager`).
           properties:
             spec:
               type: object
@@ -15,17 +15,15 @@ spec:
                 maintenance:
                   description: |
                     Задаёт режим управления работой модуля.
-                    
+
                     - `NoResourceReconciliation` — автономный режим для разработки или отладки модуля.
-                    
+
                       В этом режиме:
-                    
+
                       - Изменения в конфигурации или хуках модуля не синхронизируются, в результате чего ресурсы не обновляются автоматически.
                       - Отключается мониторинг ресурсов модуля, в результате чего удалённые ресурсы не восстанавливаются.
                       - Ко всем ресурсам модуля применяется лейбл `maintenance: NoResourceReconciliation`.
                       - Срабатывает алерт `ModuleIsInMaintenanceMode`.
-                    
-                      При перезапуске Deckhouse модуль единовременно применяет последнее состояние, после чего продолжает работу в автономном режиме.
                 version:
                   description: |
                     Версия схемы настроек модуля.

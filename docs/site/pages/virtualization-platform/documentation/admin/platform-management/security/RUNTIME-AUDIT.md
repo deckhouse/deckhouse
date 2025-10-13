@@ -66,7 +66,7 @@ On some systems, eBPF probes may not work.
 1. (**Optional**) If the cluster control plane is not managed by DVP with `control-plane-manager`,
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
-All available security audit parameters are listed in the [`runtime-audit-engine`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html) module documentation.
+All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
 
 ### Manually configuring the Kubernetes API audit webhook
 
@@ -113,16 +113,16 @@ DVP includes:
   - Kubernetes audit rules (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
   
   To configure the list of built-in rules,
-  use the [`settings.builtInRulesList`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
+  use the [`settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
   of the `runtime-audit-engine` module.
 
-- **Custom rules**, defined via the [FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
+- **Custom rules**, defined via the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 For more information on how security audit rules work, refer to [Architecture](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ### Adding a custom rule
 
-To add a rule, create a [FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) resource with the required conditions.
+To add a rule, create a [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) resource with the required conditions.
 Use the [Falco condition syntax](https://falco.org/docs/concepts/rules/conditions/).
 Falco agents will automatically apply the created rule.
 
@@ -158,7 +158,7 @@ For more rule examples, see:
 ### Applying a third-party rule
 
 Since Falco rule structure differs from DVP custom resource format,
-third-party rules from the internet must be converted to a [FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) resource
+third-party rules from the internet must be converted to a [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) resource
 before applying them.
 
 Use the following script to convert:
@@ -213,7 +213,7 @@ Example conversion result:
 ## Log collection and alerts
 
 DVP exports security audit events as Prometheus metrics,
-allowing you to set up alerts via the [CustomPrometheusRules](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customprometheusrules) resource.
+allowing you to set up alerts via the [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) resource.
 This makes it possible to:
 
 - Connect an external log storage (for example, Loki or Elasticsearch).
@@ -222,7 +222,7 @@ This makes it possible to:
 ### Configuring log and event collection
 
 All security audit events are sent to stdout.
-To collect and forward events to a log storage, create a [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) resource
+To collect and forward events to a log storage, create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) resource
 following the example:
 
 ```yaml
@@ -250,7 +250,7 @@ spec:
 ### Configuring critical event alerts
 
 To create alerts for critical events,
-create a [CustomPrometheusRules](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customprometheusrules) object following the example:
+create a [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) object following the example:
 {% raw %}
 
 ```yaml
@@ -297,7 +297,7 @@ Falco uses the `debug` logging level by default.
 
 In Falcosidekick, debug logging is disabled by default.
 To enable it,
-set the [`spec.settings.debugLogging`](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) parameter to `true`,
+set the [`spec.settings.debugLogging`](/modules/runtime-audit-engine/configuration.html#parameters-debuglogging) parameter to `true`,
 for example:
 
 ```yaml

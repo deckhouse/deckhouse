@@ -124,7 +124,7 @@ ColdStandby provides a mechanism to recover a virtual machine from a failure on 
 The following requirements must be met for this mechanism to work:
 
 - The virtual machine startup policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- The [Fencing mechanism](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode) must be enabled on nodes running the virtual machines.
+- The [Fencing mechanism](/modules/node-manager/cr.html#nodegroup#nodegroup-v1-spec-fencing-mode) must be enabled on nodes running the virtual machines.
 
 Let's see how it works on the example:
 

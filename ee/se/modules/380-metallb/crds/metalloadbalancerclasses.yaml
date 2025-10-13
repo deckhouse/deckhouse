@@ -58,7 +58,7 @@ spec:
                         - ee
                         - cse-lite
                         - cse-pro
-                      x-doc-examples: ["eth1", "eth2"]
+                      x-doc-examples: [["eth1", "eth2"]]
                       description: |-
                         A list of network interfaces from which the assigned IP addresses will be announced.
                         If this field is not filled in or an empty array is specified, the announcement will occur from all interfaces on the node.

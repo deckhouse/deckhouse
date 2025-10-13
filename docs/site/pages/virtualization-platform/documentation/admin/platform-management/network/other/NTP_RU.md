@@ -10,13 +10,13 @@ lang: ru
 
 ## Включение встроенной синхронизации времени
 
-Включите модуль [`chrony`](/products/kubernetes-platform/documentation/v1/modules/chrony/), чтобы включить синхронизацию времени:
+Включите модуль [`chrony`](/modules/chrony/), чтобы включить синхронизацию времени:
 
 ```shell  
 d8 platform module enable chrony
 ```
 
-По умолчанию в качестве источника времени используется сервер `pool.ntp.org`. Указать список NTP-серверов можно с помощью параметра [`ntpServers`](/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html#parameters-ntpservers) конфигурации модуля `chrony`.
+По умолчанию в качестве источника времени используется сервер `pool.ntp.org`. Указать список NTP-серверов можно с помощью параметра [`ntpServers`](/modules/chrony/configuration.html#parameters-ntpservers) конфигурации модуля `chrony`.
 
 Пример конфигурации модуля с указанием NTP-серверов:
 
@@ -38,7 +38,7 @@ spec:
 
 Чтобы отключить встроенный механизм синхронизации времени и использовать собственные NTP-демоны на узлах, выполните следующие шаги:
 
-1. Отключите модуль [`chrony`](/products/kubernetes-platform/documentation/v1/modules/chrony/):
+1. Отключите модуль [`chrony`](/modules/chrony/):
 
    ```shell
    d8 platform module disable chrony
@@ -50,7 +50,7 @@ spec:
    Module chrony disabled
    ```
 
-2. Создайте ресурс [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration), чтобы включить NTP-демоны на узлах.
+2. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), чтобы включить NTP-демоны на узлах.
 
    Пример для `systemd-timesyncd`:
 

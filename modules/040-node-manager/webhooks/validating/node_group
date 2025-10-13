@@ -268,7 +268,7 @@ EOF
   # check topologyManager.enabled and resourceReservation.mode == "static"
   if context::jq -e -r '.review.request.object.spec.kubelet.resourceReservation.mode == "Static" and .review.request.object.spec.kubelet.topologyManager.enabled == true and .review.request.object.spec.kubelet.resourceReservation.static.cpu == null' >/dev/null 2>&1; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"for .spec.kubelet.topologyManager.enabled and .spec.kubelet.resourceReservation.mode == "static" and .spec.kubelet.resourceReservation.static.cpu must be specified"}
+{"allowed":false, "message":"for .spec.kubelet.topologyManager.enabled and .spec.kubelet.resourceReservation.mode == \"static\" and .spec.kubelet.resourceReservation.static.cpu must be specified"}
 EOF
     return 0
   fi
@@ -280,10 +280,13 @@ EOF
 
     if [[ "${oldCriType}" != "${newCriType}" ]]; then
       nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
-      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '
+        .snapshots.nodes_with_containerd_custom_conf[]?
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup)
+        | .filterResult.nodeName' | tr '\n' ' ')"
       if [[ $nodesForbidingChanges != "" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-  {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
+{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
 EOF
         return 0
       fi

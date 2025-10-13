@@ -242,8 +242,6 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
@@ -251,14 +249,12 @@ docs: bin/werf ## Run containers with the documentation.
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+	docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -483,7 +479,7 @@ controller-gen-generate: controller-gen
 
 ## Generate clientset
 .PHONY: client-gen-generate
-client-gen-generate: client-gen 
+client-gen-generate: client-gen
 	$(CLIENT_GEN) \
 		--clientset-name "versioned" \
 		--input-base "" \
@@ -494,7 +490,7 @@ client-gen-generate: client-gen
 
 ## Generate listers (required for informers)
 .PHONY: lister-gen-generate
-lister-gen-generate: lister-gen 
+lister-gen-generate: lister-gen
 	$(LISTER_GEN) \
 		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
 		--output-dir "./deckhouse-controller/pkg/client/listers" \
@@ -536,7 +532,7 @@ $(INFORMER_GEN): $(LOCALBIN)
 
 ## Download controller-gen locally if necessary.
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) 
+controller-gen: $(CONTROLLER_GEN)
 $(CONTROLLER_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 

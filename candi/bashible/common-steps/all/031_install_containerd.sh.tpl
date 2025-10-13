@@ -51,7 +51,7 @@ command -v containerd &>/dev/null && cntrd_version_change_check
 {{- $containerd := "containerd1728"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerd214" }}
-bb-package-install "erofs:{{ .images.registrypackages.erofs }}"
+bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
 bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"

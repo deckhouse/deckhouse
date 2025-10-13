@@ -82,7 +82,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Для получения детального списка привилегий, обратитесь [к документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
+Для получения детального списка привилегий, обратитесь [к документации](/modules/cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
 При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
@@ -114,4 +114,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
 {% endalert %}
 
-Если вам необходимо использовать собственный образ, обратитесь к [документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+Если вам необходимо использовать собственный образ, обратитесь к [документации](/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).

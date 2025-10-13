@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/mo
 
 DVP can collect statistics about the availability of cluster components and Deckhouse components themselves. This data allows you to evaluate the degree of SLA compliance and obtain availability information in the web interface.
 
-In addition, using the custom resource [UpmeterRemoteWrite](/products/kubernetes-platform/documentation/v1/modules/upmeter/cr.html#upmeterremotewrite), you can export availability metrics via the Prometheus Remote Write protocol.
+In addition, using the custom resource [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite), you can export availability metrics via the Prometheus Remote Write protocol.
 
 To start collecting availability metrics and activate the [interface](#interface), enable the `upmeter` module [in the Deckhouse web interface](/modules/console/stable/) or using the following command:
 
@@ -28,7 +28,7 @@ spec:
   settings:
 ```
 
-The complete list of settings is available [in the module documentation](/products/kubernetes-platform/documentation/v1/modules/upmeter/configuration.html).
+The complete list of settings is available [in the module documentation](/modules/upmeter/configuration.html).
 
 ## Interface
 
@@ -84,7 +84,7 @@ spec:
 
 ## Authentication
 
-By default, the [`user-authn`](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is used for authentication. You can also configure authentication via `externalAuthentication` (see below).
+By default, the [`user-authn`](/modules/user-authn/) module is used for authentication. You can also configure authentication via `externalAuthentication` (see below).
 If these options are disabled, the module will enable basic authentication with a generated password.
 
 You can view the generated password with the command:

@@ -10,7 +10,7 @@ Signed-off-by: m.nabokikh <maksim.nabokikh@flant.com>
  main.go                         |  7 +++
  templates.go                    | 19 ++++++++
  templates/kubeconfig.html       | 16 +++++--
- templates/kubelogin-tab.html    | 81 +++++++++++++++++++++++++++++++++
+ templates/kubelogin-tab.html    | 82 +++++++++++++++++++++++++++++++++
  templates/linux-mac-common.html |  2 +-
  templates/linux-tab.html        |  2 +-
  templates/mac-tab.html          |  4 +-
@@ -288,7 +288,7 @@ new file mode 100644
 index 0000000..2905d2a
 --- /dev/null
 +++ b/templates/kubelogin-tab.html
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +{{ define "kubelogin-tab-content" }}
 +  <p>
 +  {{ if .K8sCaURI }}
@@ -351,6 +351,7 @@ index 0000000..2905d2a
 +      - "--oidc-extra-scope=groups"
 +      - "--oidc-extra-scope=offline_access"
 +      - "--oidc-extra-scope=audience:server:client_id:kubernetes"
++      - "--oidc-extra-scope=federated:id"
 +      {{- if .IDPCaPem }}
 +      - "--certificate-authority-data={{ .IDPCaEncoded }}"
 +      {{- end }}

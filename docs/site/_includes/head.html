@@ -67,7 +67,12 @@
 
 {%- if include.mode=='documentation' %}
   {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
+{%- elsif page.sidebar == 'embedded-modules' %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url %}
 {%- else %}
+  {%- if page.product_code == 'kubernetes-platform' %}
+    {%- assign page_url_without_lang = page_url_without_lang | relative_url | prepend: page.product_code | prepend: '/' %}
+  {% endif %}
   {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
 <!-- multilang -->

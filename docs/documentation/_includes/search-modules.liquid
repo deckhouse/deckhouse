@@ -1,0 +1,59 @@
+{"documents":[
+{%- assign searchedpages = site.pages | where: "sidebar", "embedded-modules" | where: "lang", page.lang %}
+{%- for page in searchedpages %}
+{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' %}{% continue %}{% endif %}
+{"title": "{{ page.title | escape }}",
+"url": "/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+{%- if page['module-kebab-name'] %}
+  {%- assign keywords = page['module-kebab-name'] | append: ', ' |  append: page['module-snake-name'] %}
+{%- else %}
+  {%- assign keywords = "" %}
+{%- endif %}
+{%- if page.search.size > 0 %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = page.search | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = page.search %}
+  {%- endif %}
+{%- endif %}
+"keywords": {{ keywords | jsonify }},
+"module": {{ page['module-kebab-name'] | jsonify }},
+"moduletype": "embedded",
+"summary": "{% if page.summary %}{{ page.summary | strip }}{% else %}{{ page.description | strip }}{% endif %}",
+"content": {{ page.content | normalizeSearchContent | jsonify -}}
+}
+{%- unless forloop.last %},{% endunless %}
+{%- endfor -%}
+],
+"parameters":[
+{%- for item in site.data.search.searchItems[page.lang] %}
+{%- assign page_canonical_url = item.url | relative_url %}
+{%- assign keywords = "" %}
+{%- if item.search.size > 0 %}
+  {%- if keywords.size > 0 %}
+    {%- assign keywords = item.search | append: ", " | append: keywords %}
+  {%- else %}
+    {%- assign keywords = item.search %}
+  {%- endif %}
+{%- endif %}
+{
+"name": "{{ item.name }}",
+"module": "{{ item.module }}",
+"moduletype": "embedded",
+"url": "{{ page_canonical_url }}",
+"resName": "{{ item.resourceName | escape }}",
+{%- if item.isResource %}
+"isResource": "true",
+{%- endif %}
+{%- if item.deprecated %}
+"deprecated": "true",
+{%- endif %}
+{%- if keywords.size > 0 %}
+"keywords": {{ keywords | jsonify }},
+{%- endif %}
+"path": "{{ item.pathString | escape }}",
+"content": {{ item.content | default: '' | normalizeSearchContent | jsonify -}}
+}
+{%- unless forloop.last %},{% endunless %}
+{%- endfor -%}
+]}

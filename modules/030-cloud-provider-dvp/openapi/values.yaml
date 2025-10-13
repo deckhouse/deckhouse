@@ -19,7 +19,7 @@ properties:
           Run the following command to change the configuration in a running cluster:
 
           ```shell
-          kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          d8 platform edit provider-cluster-configuration
           ```
         x-doc-search: |
           ProviderClusterConfiguration

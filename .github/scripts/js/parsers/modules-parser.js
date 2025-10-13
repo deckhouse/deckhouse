@@ -11,7 +11,17 @@
 
 const fs = require('fs');
 
-const STATIC_MODULES = ['ci', 'dependabot', 'testing', 'tools', 'docs', 'candi', 'deckhouse-controller'];
+const STATIC_MODULES = [
+  'ci',
+  'dependabot',
+  'testing',
+  'tools',
+  'docs',
+  'candi',
+  'deckhouse-controller',
+  'common',
+  'registrypackages'
+];
 
 /**
  *

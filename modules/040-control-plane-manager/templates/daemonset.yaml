@@ -193,7 +193,6 @@ spec:
       maxAllowed:
         cpu: 10m
         memory: 10Mi
-      {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 6 }}
     {{- end }}
 {{- end }}
 ---

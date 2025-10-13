@@ -445,7 +445,7 @@ There are two ways to solve this problem:
 {% alert level="info" %}
 Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 
-To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
 ## How to allocate nodes to system components?
@@ -745,7 +745,7 @@ This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="info" %}
-Used in containerd v1 when Deckhouse is not managed by the [Registry module](../registry).
+Used in containerd v1 when Deckhouse is not managed by the [Registry module](/modules/registry/).
 {% endalert %}
 
 The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
@@ -939,7 +939,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the [`registry` module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [`registry` module](/modules/registry/) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -1345,7 +1345,7 @@ To add a GPU node to the cluster, perform the following steps:
          effect: NoSchedule
    ```
 
-   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
+   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
 
    Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 

@@ -1,5 +1,5 @@
 {{- define "alt archive repos" }}
-{{- $date := "2025-02-09" }}
+{{- $date := "2025-10-08" }}
 - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64 classic|g" /etc/apt/sources.list.d/alt.list
 - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
 - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ noarch classic|g" /etc/apt/sources.list.d/alt.list

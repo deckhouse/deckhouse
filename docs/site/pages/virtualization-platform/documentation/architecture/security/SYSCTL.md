@@ -25,7 +25,7 @@ If you modify these parameters, Deckhouse will automatically revert them to the 
 | `fs.inotify.max_user_watches` | `524288` | Maximum number of files monitored by a single inotify instance. |
 | `fs.may_detach_mounts` | `1` | Allows lazy unmounting of a file system. |
 | `kernel.numa_balancing` | `0` | Disables automatic NUMA memory balancing. |
-| `kernel.panic` | `10 (0 if fencing is enabled)` | Time in seconds until the node reboots after it encounters the fatal kernel panic error. By default, it's set to `10`. If [`fencing`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) mode is enabled for the node, it's set to `0`, preventing the node from rebooting. |
+| `kernel.panic` | `10 (0 if fencing is enabled)` | Time in seconds until the node reboots after it encounters the fatal kernel panic error. By default, it's set to `10`. If [`fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) mode is enabled for the node, it's set to `0`, preventing the node from rebooting. |
 | `kernel.panic_on_oops` | `1` | Allows the system to trigger a kernel panic after an unexpected oops error. Required for kubelet to work correctly. |
 | `kernel.pid_max` | `2000000` | Maximum number of process IDs that can be assigned in the system. |
 | `net.bridge.bridge-nf-call-arptables` | `1` | Enables traffic filtering through arptables. Required for kube-proxy to work correctly. |

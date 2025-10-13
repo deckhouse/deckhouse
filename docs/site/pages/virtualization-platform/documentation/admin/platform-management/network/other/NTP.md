@@ -11,14 +11,14 @@ If required, you can disable this built-in mechanism and configure custom NTP da
 
 ## Enabling built-in time synchronization
 
-Enable the [`chrony`](/products/kubernetes-platform/documentation/v1/modules/chrony/) module to activate time synchronization:
+Enable the [`chrony`](/modules/chrony/) module to activate time synchronization:
 
 ```shell  
 d8 platform module enable chrony
 ```
 
 By default, the time source is the server `pool.ntp.org`.
-You can specify a list of NTP servers using the [`ntpServers`](/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html#parameters-ntpservers) parameter
+You can specify a list of NTP servers using the [`ntpServers`](/modules/chrony/configuration.html#parameters-ntpservers) parameter
 in the configuration of the `chrony` module.
 
 An example of the module configuration specifying NTP servers:
@@ -41,7 +41,7 @@ spec:
 
 To disable the built-in time synchronization mechanism and use your own NTP daemons on the nodes, follow these steps:
 
-1. Disable the [`chrony`](/products/kubernetes-platform/documentation/v1/modules/chrony/) module:
+1. Disable the [`chrony`](/modules/chrony/) module:
 
    ```shell
    d8 platform module disable chrony
@@ -53,7 +53,7 @@ To disable the built-in time synchronization mechanism and use your own NTP daem
    Module chrony disabled
    ```
 
-1. Create a [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource
    to enable the NTP daemons on the nodes.
 
    Example for `systemd-timesyncd`:

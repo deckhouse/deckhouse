@@ -17,8 +17,8 @@ If `VolumeBindingMode = WaitForFirstConsumer`, the disk is created only after it
 
 The behavior of disks during operation depends on the `AccessMode`:
 
-- `ReadWriteOnce (RWO)`: Only one instance of the virtual machine is granted access to the disk.
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
+- `ReadWriteOnce (RWO)`: Only one instance of the virtual machine can access the disk. Live migration of virtual machines with such disks is supported only in DVP commercial editions. Live migration is only available if all disks are connected statically via `.spec.blockDeviceRefs`. Disks connected dynamically via `VirtualMachineBlockDeviceAttachments` must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
 
 When creating a disk, the controller will independently determine the most optimal parameters supported by the storage.
 
@@ -43,7 +43,7 @@ sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/products/virtualization-platform/reference/cr/virtualdisk.html).
+A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/modules/virtualization/cr.html#virtualdisk).
 
 How to find out the available storage options in the DVP web interface:
 
@@ -261,3 +261,32 @@ Method #2:
 - In the form that opens, on the "Configuration" tab, in the "Size" field, you can change the size to a larger one.
 - Click on the "Save" button that appears.
 - The disk status is displayed at the top left, under its name.
+
+## Changing the disk StorageClass
+
+In the DVP commercial editions, it is possible to change the StorageClass for existing disks. Currently, this is only supported for running VMs (`Phase` should be `Running`).
+
+{% alert level="warning" %}
+Storage class migration is only available for disks connected statically via `.spec.blockDeviceRefs`.
+
+To migrate the storage class of disks attached via `VirtualMachineBlockDeviceAttachments`, they must be reattached statically by specifying disks names in `.spec.blockDeviceRefs`.
+{% endalert %}
+
+Example:
+
+```bash
+d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+```
+
+After the disk configuration is updated, a live migration of the VM is triggered, during which the disk is migrated to the new storage.
+
+If a VM has multiple disks attached and you need to change the storage class for several of them, this operation must be performed sequentially:
+
+```bash
+d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+```
+
+If migration fails, repeated attempts are made with increasing delays (exponential backoff algorithm). The maximum delay is 300 seconds (5 minutes). Delays: 5 seconds (1st attempt), 10 seconds (2nd), then each delay doubles, reaching 300 seconds (7th and subsequent attempts). The first attempt is performed without delay.
+
+To cancel migration, the user must return the storage class in the specification to the original one.

@@ -44,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
@@ -66,11 +67,7 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 
 	maxModulesLimit = 1500
-
-	metricUpdatingModuleIsNotValid     = "d8_module_updating_module_is_not_valid"
-	metricUpdatingFailedBrokenSequence = "d8_module_updating_broken_sequence"
-	metricModuleUpdatingGroup          = "d8_module_updating_group"
-	serviceName                        = "module-source-controller"
+	serviceName     = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -400,7 +397,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
 		logger.Debug("download module meta from release channel")
@@ -418,7 +415,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					"registry": source.Spec.Registry.Repo,
 				}
 
-				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			}
 
 			availableModule.Version = "unknown"

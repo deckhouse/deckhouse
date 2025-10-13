@@ -1,0 +1,10 @@
+files:
+  - /etc/prometheus/web_config/web-config.yaml
+dirs:
+  - /etc/prometheus/certs
+  - /etc/prometheus/config_out
+  - /etc/prometheus/rules/prometheus-main-rulefiles-0
+  - /etc/prometheus/rules/prometheus-longterm-rulefiles-0
+  - /etc/prometheus/secrets/prometheus-api-client-tls
+  - /etc/prometheus/secrets/alertmanagers-tls-config
+  - /prometheus

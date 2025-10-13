@@ -126,7 +126,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 - control plane — управляющие и обслуживающие сервисы. Под control plane обычно подразумевают поды istiod.
 - data plane — прикладная часть Istio. Представляет собой контейнеры sidecar-proxy.
 
-![Архитектура кластера с включенным Istio](../../images/istio/istio-architecture.svg)
+![Архитектура кластера с включенным Istio](images/istio-architecture.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
 Все сервисы из data plane группируются в mesh. Его характеристики:
@@ -184,12 +184,12 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Приложение с выключенным Istio
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_disabled_ru.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_disabled_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/ --->
 
 #### Приложение с включенным Istio
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_enabled_ru.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_enabled_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1gQfX9ge2vhp74yF5LOfpdK2nY47l_4DIvk6px_tAMPU/ --->
 
 ## Как активировать Istio для приложения
@@ -240,11 +240,11 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-- У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
+- У каждого кластера должен быть уникальный домен в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
   > `cluster.local` — неизменяемый псевдоним для домена локального кластера.
-  > Указание `cluster.local` как principals в AuthorizationPolicy всегда будет указывать на локальный кластер, даже если в mesh существует кластер, у которого [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` ([источник — документация Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
-- Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого кластера.
+  > Указание `cluster.local` как principals в AuthorizationPolicy всегда будет указывать на локальный кластер, даже если в mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` ([источник — документация Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+- Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) должны быть уникальными для каждого кластера.
 
   > - При анализе HTTP и HTTPS запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP-запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.
@@ -260,7 +260,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 - Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации нужно в кластере A сделать кластер Б доверенным и аналогично в кластере Б сделать кластер А доверенным. Это достигается взаимным обменом корневыми сертификатами.
 - Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который описывает публичный адрес ingress-gateway кластера Б.
 
-<div data-presentation="../../presentations/istio/federation_common_principles_ru.pdf"></div>
+<div data-presentation="presentations/federation_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/ --->
 
 #### Включение федерации
@@ -275,7 +275,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление федерацией
 
-<div data-presentation="../../presentations/istio/federation_istio_federation_ru.pdf"></div>
+<div data-presentation="presentations/federation_istio_federation_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/ --->
 
 Для построения федерации необходимо сделать следующее:
@@ -293,8 +293,8 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Требования к кластерам
 
-- Домены кластеров в параметре [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
-* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) должны быть уникальными для каждого кластера.
+- Домены кластеров в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) должны быть одинаковыми для всех членов мультикластера. По умолчанию значение параметра — `cluster.local`.
+* Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) должны быть уникальными для каждого кластера.
 
   > - При анализе HTTP и HTTPS запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP запросов *(в терминологии istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.
@@ -307,7 +307,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Общие принципы
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_ru.pdf"></div>
+<div data-presentation="presentations/multicluster_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/ --->
 
 - Мультикластер требует установления взаимного доверия между кластерами. Соответственно, для построения мультикластера нужно в кластере A сделать кластер Б доверенным и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
@@ -328,7 +328,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление мультикластером
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_ru.pdf"></div>
+<div data-presentation="presentations/multicluster_istio_multicluster_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/ --->
 
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.

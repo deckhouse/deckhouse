@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/update/update.html
 lang: ru
 ---
 
-Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](../../../reference/cr/moduleconfig.html).
+Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
 
 Посмотреть текущую конфигурацию настроек обновления можно с помощью команды:
 
@@ -120,9 +120,9 @@ d8 k get modulereleases
 
 ## Немедленное применение обновлений
 
-Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](../../../reference/cr/deckhouserelease.html) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
-> В этом случае будут проигнорированы окна обновления, настройки [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](../../../reference/mc.html#parameters-update-mode). Обновление применится сразу после установки аннотации.
+> В этом случае будут проигнорированы окна обновления, настройки [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](/modules/deckhouse/configuration.html#parameters-update-mode). Обновление применится сразу после установки аннотации.
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 

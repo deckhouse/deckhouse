@@ -16,7 +16,7 @@ DVP может выполнять мониторинг сетевого взаи
 
 ### Добавление дополнительных IP-адресов для мониторинга
 
-Для добавления дополнительных IP-адресов мониторинга используйте параметр [`externalTargets`](/products/kubernetes-platform/documentation/v1/modules/monitoring-ping/configuration.html#parameters-externaltargets) модуля `monitoring-ping`.
+Для добавления дополнительных IP-адресов мониторинга используйте параметр [`externalTargets`](/modules/monitoring-ping/configuration.html#parameters-externaltargets) модуля `monitoring-ping`.
 
 Пример конфигурации модуля:
 
@@ -47,4 +47,4 @@ spec:
 d8 platform module enable monitoring-kubernetes
 ```
 
-Аналогично можно включить модули `monitoring-kubernetes-control-plane` и `extended-monitoring`.
+Аналогично можно включить модули [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) и [`extended-monitoring`](/modules/extended-monitoring/).

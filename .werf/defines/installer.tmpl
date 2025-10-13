@@ -326,16 +326,6 @@ shell:
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
     echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
 
-    cat << EOD > /.tofurc
-    provider_installation {
-      filesystem_mirror {
-        path    = "/plugins"
-        include = ["registry.opentofu.org/*/*"]
-      }
-    }
-    EOD
-    ln -s /.tofurc /root/.tofurc
-
     # add bash envsubst
     # from https://gist.github.com/gmolveau/2770f2d05fa5825e1ffdb5a61f0c1283
     # envsubst is used in the e2e tests, remove it when we move tests to commander

@@ -1,4 +1,4 @@
-{{- $version := "1.8.2" }}
+{{- $version := "898dc482a0cbf4fa0db214f952319aa5e1229152" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
@@ -14,14 +14,15 @@ secrets:
     value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
-    - rm -rf /src/tools
+    - git clone $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
     - cd /src
+    - git checkout {{ $version }}
+    - rm -rf /src/tools
     - git apply /patches/*.patch --verbose
     - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine-1.24
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

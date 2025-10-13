@@ -308,7 +308,7 @@ spec:
 
     {{- with .parameters.clusterLogDestinationName }}
     ---
-    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/
+    # Refer to https://deckhouse.io/modules/log-shipper/
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -319,7 +319,7 @@ spec:
     {{- end }}
 
     ---
-    # Referer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/
+    # Referer to https://deckhouse.io/modules/admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
     kind: OperationPolicy
     metadata:
@@ -341,7 +341,7 @@ spec:
     ---
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
-    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/650-runtime-audit-engine/examples.html
+    # Refer to https://deckhouse.io/modules/runtime-audit-engine/examples.html
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
     metadata:
@@ -357,17 +357,17 @@ spec:
       - rule:
           name: Drop and execute new binary in container in {{ .projectName }} project
           condition: >
-            spawned_process 
-            and container 
-            and proc.is_exe_upper_layer=true 
-            {{ with .parameters.allowedUIDs }} 
-            and user.uid > {{ .min }} 
-            and user.uid < {{ .max }} 
-            {{ end }} 
-            {{ with .parameters.allowedGIDs }} 
-            and group.gid >= {{ .min }} 
-            and group.gid <= {{ .max }} 
-            {{ end }} 
+            spawned_process
+            and container
+            and proc.is_exe_upper_layer=true
+            {{ with .parameters.allowedUIDs }}
+            and user.uid > {{ .min }}
+            and user.uid < {{ .max }}
+            {{ end }}
+            {{ with .parameters.allowedGIDs }}
+            and group.gid >= {{ .min }}
+            and group.gid <= {{ .max }}
+            {{ end }}
             and k8s.ns.name={{ .projectName }}
           desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
           output: |
@@ -381,7 +381,7 @@ spec:
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
-    # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
+    # Refer to https://deckhouse.io/modules/admission-policy-engine/cr.html#securitypolicy
     apiVersion: deckhouse.io/v1alpha1
     kind: SecurityPolicy
     metadata:
