@@ -32,7 +32,7 @@ These dashboards are automatically added in the Deckhouse web interface and appe
 
 > Converting existing dashboards from the GrafanaDashboardDefinition resource to the new types is done manually.
 
-### Supported annotations:
+### Supported annotations
 
 - **metadata.deckhouse.io/category** — sets the folder (category) in the interface;
 - **metadata.deckhouse.io/title** — sets the displayed dashboard title. If not specified, the title from the JSON
