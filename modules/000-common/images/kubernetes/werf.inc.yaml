@@ -33,7 +33,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
-fromCacheVersion: "2025-10-10.0"
+fromCacheVersion: "2025-10-10-{{ $full_version | replace "." "-" }}"
 final: false
   {{- if $patch }}
 git:
