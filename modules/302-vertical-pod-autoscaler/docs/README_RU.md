@@ -44,5 +44,3 @@ VPA состоит из 3 компонентов:
 - `Admission Plugin` — задает resource requests при создании новых подов (контроллером или из-за активности Updater'а).
 
 При изменении ресурсов компонентом Updater это происходит с помощью [Eviction API](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/#the-eviction-api), поэтому учитываются `Pod Disruption Budget` для обновляемых подов.
-
-![Архитектура VPA](https://raw.githubusercontent.com/kubernetes/design-proposals-archive/acc25e14ca83dfda4f66d8cb1f1b491f26e78ffe/autoscaling/images/vpa-architecture.png)

@@ -22,7 +22,7 @@ fi
 # Удалить разделы про обновление DKP в FAQ и переключение между редакциями
 # (https://deckhouse.(ru|io)/documentation/v1/modules/   -> /modules/
 # (https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/   -> /modules/
-# в AlertmanagerConfig customAlertmanagerConfig удалить лишние ресиверы
+# НЕ НАДО - они внутренние.  в AlertmanagerConfig customAlertmanagerConfig удалить лишние ресиверы
 # github/gitlab
 # Cloud
 # enterprise
