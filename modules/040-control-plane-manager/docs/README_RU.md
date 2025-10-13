@@ -95,4 +95,9 @@ description: Deckhouse управляет компонентами control plane
 
 Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
+При настройке OIDC-аутентификации в аудит-логах дополнительно включается информация о пользователе в поле `user.extra`:
+- `user-authn.deckhouse.io/name` — отображаемое имя пользователя
+- `user-authn.deckhouse.io/preferred_username` — предпочитаемое имя пользователя
+- `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
+
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
