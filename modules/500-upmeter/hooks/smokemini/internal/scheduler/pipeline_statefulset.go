@@ -63,7 +63,7 @@ func (s IndexSelectorPipe) Select(state State) (string, error) {
 		if errors.Is(err, errNext) {
 			continue
 		}
-		return x, err
+		return x, fmt.Errorf("select: %w", err)
 	}
 	return "", ErrSkip
 }

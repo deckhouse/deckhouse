@@ -136,7 +136,7 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 	for i, s := range configItem.IncludeNames {
 		pattern, err := regexp.Compile(s)
 		if err != nil {
-			return err
+			return fmt.Errorf("compile: %w", err)
 		}
 		configItem.IncludePatterns[i] = pattern
 	}
@@ -144,7 +144,7 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 	for i, s := range configItem.ExcludeNames {
 		pattern, err := regexp.Compile(s)
 		if err != nil {
-			return err
+			return fmt.Errorf("compile: %w", err)
 		}
 		configItem.ExcludePatterns[i] = pattern
 	}
