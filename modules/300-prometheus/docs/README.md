@@ -12,7 +12,7 @@ The module expands the monitoring stack with preset parameters for DKP and appli
 
 Module features:
 
-- The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/). It is possible to store historical data using downsampling.
+- The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/).
 - The load is optimized by using caches and Deckhouse Prom++.
 - It is possible to store historical data using downsampling.
 - The module covers all the basic tasks of basic monitoring of the platform and applications.
