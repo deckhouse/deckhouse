@@ -7,14 +7,14 @@ kind: ClusterConfiguration
 clusterType: Static
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство подов кластера.
-podSubnetCIDR: 10.111.0.0/16
+podSubnetCIDR: 10.115.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство сети сервисов кластера.
-serviceSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.225.0.0/16
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
-clusterDomain: "cluster.local"
+clusterDomain: "internal.cluster.local"
 # [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
