@@ -47,7 +47,7 @@ shell:
   # original cilium patches
   - git apply --verbose /src/proxy/patches/*.patch
   # CSE
-  - rm -fr /src/envoy/tools/base/requirements.txt
+  # - rm -fr /src/envoy/tools/base/requirements.txt
   - rm -rf /src/envoy/.git
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
