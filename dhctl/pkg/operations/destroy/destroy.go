@@ -284,6 +284,8 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 		return err
 	}
 
+	d.logger.LogDebugF("Resources were destroyed set\n")
+
 	// why only unwatch lock without request unlock
 	// user may not delete resources and converge still working in cluster
 	// all node groups removing may still in long time run and
