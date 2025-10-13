@@ -115,6 +115,8 @@ Spellchecking commands:
 
 ## Architecture
 
+> ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+
 The Deckhouse website consists of the following parts:
 
 - **Main website**. Includes all sections except those specifically described below.
@@ -521,3 +523,67 @@ Below are some data structures used in the Jekyll projects.
     }
   }
   ```
+
+## Search
+
+This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.
+
+### Usage
+
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/path/to/search.json"
+       data-search-context="Searching in modules documentation"> 
+```
+
+### Examples
+
+#### Modules Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search modules..." 
+       class="input"
+       data-search-index-path="/modules/search-embedded-modules-index.json"
+       data-search-context="Searching in modules documentation">
+```
+
+#### Platform Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/search.json"
+       data-search-context="Searching in platform documentation and modules">
+```
+
+#### Product-Specific Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/products/kubernetes-platform/documentation/search.json"
+       data-search-context="Searching in Kubernetes Platform documentation">
+```
+
+### Behavior
+
+- The context message only appears when the search is ready and no query has been entered
+- It appears above the "What are we looking for?" message
+- If no `data-search-context` attribute is provided, the normal ready message is displayed
+- The context message is hidden when search results are shown
+
+### Internationalization
+
+Jekyll/Liquid:
+
+```html
+data-search-context="{{ site.data.i18n.search.context[page.lang] }}"
+```
+
+Hugo:
+
+```html
+data-search-context="{{ T "search_context" }}"
+```
