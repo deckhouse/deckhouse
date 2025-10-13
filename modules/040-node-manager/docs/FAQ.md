@@ -605,6 +605,7 @@ If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtual
 
 If you cannot remove the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource that modifies the containerd configuration and is incompatible with containerd v2, use the universal template:
 
+{% raw %}
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -622,6 +623,7 @@ spec:
   - '*'
   weight: 31
 ```
+{% endraw %}
 
 Additionally, to switch the CRI you may need to remove the custom label `node.deckhouse.io/containerd-config=custom`. You can do this with the following command:
 
