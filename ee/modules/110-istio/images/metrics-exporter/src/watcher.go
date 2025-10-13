@@ -7,25 +7,30 @@ package main
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"fmt"
+	"sync"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"sync"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Watcher struct {
-	mu   sync.RWMutex
+	mu        sync.RWMutex
 	clientSet *kubernetes.Clientset
-	pods map[string]*v1.Pod
+	metrics   *PrometheusExporterMetrics
+	pods      map[string]*IstioPodInfo
 }
 
-func NewWatcher(clientSet *kubernetes.Clientset) *Watcher {
+func NewWatcher(clientSet *kubernetes.Clientset, metrics *PrometheusExporterMetrics) *Watcher {
 	return &Watcher{
-		pods: make(map[string]*v1.Pod),
+		pods:      make(map[string]*IstioPodInfo),
 		clientSet: clientSet,
+		metrics:   metrics,
 	}
 }
 
@@ -41,11 +46,14 @@ func (w *Watcher) StartPodWatcher(ctx context.Context, namespace string) {
 
 	informer := factory.Core().V1().Pods().Informer()
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    w.addPod,
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    w.updatePod,
 		UpdateFunc: func(_, newObj interface{}) { w.updatePod(newObj) },
 		DeleteFunc: w.deletePod,
 	})
+	if err != nil {
+		log.Fatal(fmt.Sprintf("error adding pod event handler: %v", err))
+	}
 
 	go informer.Run(ctx.Done())
 
@@ -57,31 +65,47 @@ func (w *Watcher) StartPodWatcher(ctx context.Context, namespace string) {
 	log.Info("Shutting down Pod informer")
 }
 
-func (w *Watcher) addPod(obj interface{}) {
-	if pod, ok := obj.(*v1.Pod); ok {
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		w.pods[pod.Name] = pod
-		log.Info("Pod added: %s with IP: %s", pod.Name, pod.Status.PodIP)
-	}
-}
-
 func (w *Watcher) updatePod(obj interface{}) {
 	if pod, ok := obj.(*v1.Pod); ok {
 		w.mu.Lock()
 		defer w.mu.Unlock()
-		w.pods[pod.Name] = pod
-		log.Info("Pod updated: %s with IP: %s", pod.Name, pod.Status.PodIP)
+		w.pods[pod.Name] = &IstioPodInfo{
+			pod.GetName(),
+			pod.Status.PodIP,
+			pod.Status.Phase,
+		}
+		log.Info(fmt.Sprintf("Pod updated: %s with IP: %s", pod.Name, pod.Status.PodIP))
 	}
 }
 
 func (w *Watcher) deletePod(obj interface{}) {
-	if pod, ok := obj.(*v1.Pod); ok {
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		delete(w.pods, pod.Name)
-		log.Info("Pod deleted: %s", pod.Name)
+	pod := podFromDeleteEvent(obj)
+	if pod == nil {
+		log.Error(fmt.Sprintf("Received unexpected object on pod delete event: %T", obj))
+		return
 	}
+
+	w.mu.Lock()
+	delete(w.pods, pod.Name)
+	w.mu.Unlock()
+
+	log.Info(fmt.Sprintf("Pod deleted: %s", pod.Name))
+	if w.metrics != nil {
+		w.metrics.DeleteIstiodMetrics(pod.Name)
+	}
+}
+
+func podFromDeleteEvent(obj interface{}) *v1.Pod {
+	switch t := obj.(type) {
+	case *v1.Pod:
+		return t
+	case cache.DeletedFinalStateUnknown:
+		if pod, ok := t.Obj.(*v1.Pod); ok {
+			return pod
+		}
+	}
+
+	return nil
 }
 
 func (w *Watcher) GetRunningIstiodPods() []IstioPodInfo {
@@ -90,10 +114,11 @@ func (w *Watcher) GetRunningIstiodPods() []IstioPodInfo {
 
 	var pods []IstioPodInfo
 	for _, pod := range w.pods {
-		if pod.Status.Phase == v1.PodRunning && pod.Status.PodIP != "" {
+		if pod.Status == v1.PodRunning && pod.IP != "" {
 			pods = append(pods, IstioPodInfo{
-				Name: pod.Name,
-				IP:   pod.Status.PodIP,
+				Name:   pod.Name,
+				IP:     pod.IP,
+				Status: pod.Status,
 			})
 		}
 	}
