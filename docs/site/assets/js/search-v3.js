@@ -12,6 +12,10 @@ class ModuleSearch {
       console.error('Search results element not found');
       return;
     }
+
+    // Store the original placeholder from HTML for later restoration
+    this.originalPlaceholder = this.searchInput.placeholder;
+
     this.searchIndex = null;
     this.searchData = null;
     this.lunrIndex = null;
@@ -34,12 +38,15 @@ class ModuleSearch {
       document: 5
     };
     this.isDataLoaded = false;
+    this.isLoadingInBackground = false;
     this.searchTimeout = null; // For debouncing search input
 
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
       searchDebounceMs: 300, // Debounce search input by 300ms
+      backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
+      searchContext: '', // Search context message to display above ready message
       ...options
     };
 
@@ -135,19 +142,40 @@ class ModuleSearch {
 
     // Hide search results by default
     this.searchResults.style.display = 'none';
+
+    // Initialize UI state
+    this.updateUIState();
+
+    // Start background loading of search indexes after page is fully loaded
+    this.startBackgroundLoading();
   }
 
   setupEventListeners() {
-    // Load search index on focus (only if not already loaded)
+    // Show search results container when focused
     this.searchInput.addEventListener('focus', () => {
-      // Show loading state when user first focuses on search
-      if (!this.isDataLoaded) {
+      // Show search results container when focused (even if empty)
+      this.searchResults.style.display = 'flex';
+
+      // If data is not loaded and not currently loading, trigger loading
+      if (!this.isDataLoaded && !this.isLoadingInBackground) {
         this.showLoading();
         this.searchInput.placeholder = this.t('loading');
         this.loadSearchIndex();
+      } else if (this.isDataLoaded) {
+        // Data is loaded, check if there's a query in the input
+        const query = this.searchInput.value.trim();
+        if (query.length > 0) {
+          // There's a query, execute the search
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(query);
+        } else {
+          // No query, show ready message
+          this.updateUIState();
+        }
+      } else {
+        // Data is loading in background, show loading state
+        this.updateUIState();
       }
-      // Show search results container when focused (even if empty)
-      this.searchResults.style.display = 'flex';
     });
 
     // Hide results when input loses focus (unless clicking on results)
@@ -172,6 +200,11 @@ class ModuleSearch {
         const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
         if (!isClickingOnSearch && !isBlurToSearch && !hasLoadingOrError) {
           this.searchResults.style.display = 'none';
+          // Restore original HTML placeholder when search is closed
+          this.searchInput.placeholder = this.originalPlaceholder;
+        } else if (!isClickingOnSearch && !isBlurToSearch) {
+          // Even if there are loading/error messages, we should restore the placeholder when closing
+          this.searchInput.placeholder = this.originalPlaceholder;
         }
       }, 150);
     });
@@ -196,14 +229,18 @@ class ModuleSearch {
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
+        // Set placeholder to "ready" when actively searching
+        if (this.isDataLoaded) {
+          this.searchInput.placeholder = this.t('ready');
+        }
         // Debounce the search to prevent excessive calls
         this.searchTimeout = setTimeout(() => {
           this.handleSearch(query);
         }, this.options.searchDebounceMs);
       } else {
-        // Show "What are we looking for?" message when search is cleared
-        this.searchResults.style.display = 'flex';
-        this.showMessage(this.t('ready'));
+        // Input is cleared - hide search results and restore HTML placeholder
+        this.searchResults.style.display = 'none';
+        this.searchInput.placeholder = this.originalPlaceholder;
       }
     });
 
@@ -266,13 +303,55 @@ class ModuleSearch {
     });
   }
 
+  startBackgroundLoading() {
+    // Don't start if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    // Wait for page to be fully loaded before starting background loading
+    if (document.readyState === 'complete') {
+      // Page is already loaded, start background loading after a delay
+      setTimeout(() => {
+        this.loadSearchIndexInBackground();
+      }, this.options.backgroundLoadDelay);
+    } else {
+      // Wait for page to finish loading
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          this.loadSearchIndexInBackground();
+        }, this.options.backgroundLoadDelay);
+      });
+    }
+  }
+
+  async loadSearchIndexInBackground() {
+    // Don't load if already loaded or currently loading
+    if (this.isDataLoaded || this.isLoadingInBackground) {
+      return;
+    }
+
+    this.isLoadingInBackground = true;
+
+    try {
+      await this.loadSearchIndex();
+    } catch (error) {
+      console.warn('Background loading of search index failed:', error);
+    } finally {
+      this.isLoadingInBackground = false;
+    }
+  }
+
   async loadSearchIndex() {
     if (this.isDataLoaded) {
       return; // Already loaded
     }
 
     try {
-      this.showLoading();
+      // Only show loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.showLoading();
+      }
 
       // Parse search index paths with boost levels
       const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
@@ -350,34 +429,60 @@ class ModuleSearch {
       this.buildSearchDictionary();
       this.buildFuseIndex();
       this.isDataLoaded = true;
-      this.hideLoading();
 
-      // Update placeholder to indicate search is ready
-      this.searchInput.placeholder = this.t('ready');
+      // Only hide loading UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        this.hideLoading();
+      }
 
-      // Keep focus on search input after loading
-      this.searchInput.focus();
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
-      // Execute search with pending query if user was typing while loading
-      if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
-        // Update the input value to match what the user typed
-        this.searchInput.value = this.pendingQuery;
-        this.searchResults.style.display = 'flex';
-        this.handleSearch(this.pendingQuery.trim());
-        this.pendingQuery = ''; // Clear pending query
+      // Only focus and show UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after loading
+        this.searchInput.focus();
+
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after on-demand loading:', this.pendingQuery);
+          this.pendingQuery = ''; // Clear pending query
+        } else {
+          // Show message that search index is loaded and ready
+          this.showMessage(this.t('ready'));
+        }
       } else {
-        // Show message that search index is loaded and ready
-        this.showMessage(this.t('ready'));
+        // Background loading completed
+        // Update UI to reflect that data is now loaded
+        this.updateUIState();
+
+        // Execute search with pending query if user was typing while loading
+        if (this.pendingQuery && this.pendingQuery.trim().length > 0) {
+          // Update the input value to match what the user typed
+          this.searchInput.value = this.pendingQuery;
+          this.searchResults.style.display = 'flex';
+          this.handleSearch(this.pendingQuery.trim());
+          console.log('Executed search with pending query after background loading:', this.pendingQuery);
+        }
+
+        // Clear pending query after processing
+        this.pendingQuery = '';
       }
     } catch (error) {
       console.error('Error loading search index:', error);
-      // Update placeholder to indicate search is ready (even with error)
-      this.searchInput.placeholder = this.t('ready');
+      // Update UI state (including placeholder)
+      this.updateUIState();
 
-      // Keep focus on search input after error
-      this.searchInput.focus();
-
-      this.showError('Failed to load search index. Please try again later.');
+      // Only show error UI if not loading in background
+      if (!this.isLoadingInBackground) {
+        // Keep focus on search input after error
+        this.searchInput.focus();
+        this.showError('Failed to load search index. Please try again later.');
+      }
     }
   }
 
@@ -678,19 +783,33 @@ class ModuleSearch {
       }
     }
 
-    // Check for other problematic patterns that might cause Lunr parsing errors
-    // Remove or escape special characters that might be interpreted as field names
-    const problematicPatterns = [
-      /^[a-zA-Z]+:/, // Pattern like "field:value" that might be interpreted as field query
-    ];
+    // Apply comprehensive sanitization for all Lunr special operators and patterns
+    let sanitized = query;
+    let hasChanges = false;
 
-    for (const pattern of problematicPatterns) {
-      if (pattern.test(query)) {
-        // Replace colons with spaces to prevent field interpretation
-        const sanitized = query.replace(/:/g, ' ').trim();
-        console.log(`Problematic pattern detected, sanitized: "${query}" -> "${sanitized}"`);
-        return sanitized;
-      }
+    // Handle field patterns like "field:value" or queries starting with colon like ":version"
+    if (/^[a-zA-Z]*:/.test(sanitized)) {
+      sanitized = sanitized.replace(/:/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle Lunr PRESENCE operator (--)
+    if (sanitized.includes('--')) {
+      sanitized = sanitized.replace(/--/g, ' ');
+      hasChanges = true;
+    }
+
+    // Handle other Lunr operators (+ and - at the beginning of words)
+    const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
+    if (lunrOperatorPattern.test(sanitized)) {
+      sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      sanitized = sanitized.trim();
+      // console.log(`Lunr operators detected, sanitized: "${query}" -> "${sanitized}"`);
+      return sanitized;
     }
 
     return query;
@@ -1244,7 +1363,13 @@ class ModuleSearch {
 
   showMessage(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+
+    // If this is the ready message and we have a search context, show the context message
+    if (message === this.t('ready') && this.options.searchContext) {
+      this.searchResults.innerHTML = `<div class="loading">${this.options.searchContext}</div>`;
+    } else {
+      this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
+    }
   }
 
   showNoResults(query) {
@@ -1260,6 +1385,24 @@ class ModuleSearch {
     this.searchResults.style.display = 'flex';
     this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
   }
+
+  // Check current state and update UI accordingly
+  updateUIState() {
+    if (this.isDataLoaded) {
+      // Only set placeholder to "ready" when search results are visible (user is actively searching)
+      if (this.searchResults.style.display === 'flex') {
+        this.searchInput.placeholder = this.t('ready');
+        this.showMessage(this.t('ready'));
+      }
+      // Don't change placeholder when search results are hidden (let HTML placeholder show)
+    } else if (this.isLoadingInBackground) {
+      this.searchInput.placeholder = this.t('loading');
+      if (this.searchResults.style.display === 'flex') {
+        this.showLoading();
+      }
+    }
+    // Don't set placeholder when data is not loaded and not loading (let HTML placeholder show)
+  }
 }
 
 // Initialize search when DOM is loaded
@@ -1267,11 +1410,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if there's a data attribute on the search input for custom search index path
   const searchInput = document.getElementById('search-input');
   const searchIndexPath = searchInput?.dataset.searchIndexPath;
+  const searchContext = searchInput?.dataset.searchContext;
 
   // Create search instance with custom options if specified
   const options = {};
   if (searchIndexPath) {
     options.searchIndexPath = searchIndexPath;
+  }
+  if (searchContext) {
+    options.searchContext = searchContext;
   }
 
   window.moduleSearch = new ModuleSearch(options);
