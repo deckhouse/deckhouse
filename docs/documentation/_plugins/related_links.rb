@@ -1,5 +1,6 @@
 require 'nokogiri'
 require 'uri'
+require 'liquid'
 
 module Jekyll
   class LinksExtractor
@@ -12,7 +13,7 @@ module Jekyll
       localhost
       127.0.0.1
     ].freeze
-    def self.extract_links_from_content(content, base_url = '', site_data = nil, page_lang = 'en')
+    def self.extract_links_from_content(content, base_url = '', site_data = nil, page_lang = 'en', jekyll_context = nil)
       return [] unless content
 
       links = []
@@ -21,12 +22,15 @@ module Jekyll
       content.scan(/\[([^\]]*)\]\(([^)]+)\)/) do |text, url|
         next if skip_link?(url)
 
-        link_type = determine_link_type(url, url)
+        # Render Jekyll expressions in URL if present
+        final_url = has_jekyll_expressions?(url) ? render_jekyll_url(url, jekyll_context) : url
+
+        link_type = determine_link_type(final_url, final_url)
 
         # Determine title based on link type
         title = text.strip
         if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(url)
+          module_name = extract_module_name(final_url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
@@ -59,9 +63,19 @@ module Jekyll
         end
 
         # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
-        final_url = url
-        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf' || link_type == 'module_doc'
-          final_url = url.split('#')[0]
+        if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
+          final_url = final_url.split('#')[0]
+        end
+
+        # For module_docs, use only base module URL (e.g., /modules/cloud-provider-aws/faq.html -> /modules/cloud-provider-aws/)
+        if link_type == 'module_doc'
+          # Extract module name and construct base module URL
+          module_name = extract_module_name(final_url)
+          if module_name
+            # Remove language prefix and construct base module URL
+            base_url = final_url.sub(/^(\/?(en\/|ru\/))?/, '')
+            final_url = "/modules/#{module_name}/"
+          end
         end
 
         link_data = {
@@ -72,7 +86,7 @@ module Jekyll
 
         # Add module name for module links
         if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(url)
+          module_name = extract_module_name(final_url)
           link_data['module'] = module_name if module_name
         end
 
@@ -86,15 +100,18 @@ module Jekyll
           url = link['href']
           next if skip_link?(url)
 
+          # Render Jekyll expressions in URL if present
+          final_url = has_jekyll_expressions?(url) ? render_jekyll_url(url, jekyll_context) : url
+
           title = link.text.strip
           title = link['title'] if title.empty? && link['title']
-          title = url if title.empty?
+          title = final_url if title.empty?
 
-        link_type = determine_link_type(url, url)
+        link_type = determine_link_type(final_url, final_url)
 
         # Determine title based on link type
         if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(url)
+          module_name = extract_module_name(final_url)
           if module_name && site_data && site_data['i18n'] && site_data['i18n']['common']
             case link_type
             when 'module_conf'
@@ -129,9 +146,19 @@ module Jekyll
         end
 
         # For module_crds, module_conf, module_cluster_conf, global_crds, and global_conf links, remove anchors from URL
-        final_url = url
         if link_type == 'module_crds' || link_type == 'module_conf' || link_type == 'module_cluster_conf' || link_type == 'global_crds' || link_type == 'global_conf'
-          final_url = url.split('#')[0]
+          final_url = final_url.split('#')[0]
+        end
+
+        # For module_docs, use only base module URL (e.g., /modules/cloud-provider-aws/faq.html -> /modules/cloud-provider-aws/)
+        if link_type == 'module_doc'
+          # Extract module name and construct base module URL
+          module_name = extract_module_name(final_url)
+          if module_name
+            # Remove language prefix and construct base module URL
+            base_url = final_url.sub(/^(\/?(en\/|ru\/))?/, '')
+            final_url = "/modules/#{module_name}/"
+          end
         end
 
         link_data = {
@@ -142,7 +169,7 @@ module Jekyll
 
         # Add module property for module links
         if link_type == 'module_doc' || link_type == 'module_conf' || link_type == 'module_crds' || link_type == 'module_cluster_conf'
-          module_name = extract_module_name(url)
+          module_name = extract_module_name(final_url)
           link_data['module'] = module_name if module_name
         end
 
@@ -157,6 +184,27 @@ module Jekyll
     end
 
     private
+
+    def self.has_jekyll_expressions?(url)
+      # Check if URL contains Jekyll/Liquid expressions
+      url.include?('{{') || url.include?('{%')
+    end
+
+    def self.render_jekyll_url(url, jekyll_context)
+      return url unless jekyll_context
+
+      begin
+        # Parse and render the Liquid template using the global Jekyll context
+        template = Liquid::Template.parse(url)
+        rendered_url = template.render(jekyll_context)
+
+        # Return the rendered URL, or original if rendering failed
+        rendered_url.empty? ? url : rendered_url
+      rescue => e
+        puts "Warning: Failed to render Jekyll expression in URL '#{url}': #{e.message}"
+        url
+      end
+    end
 
     def self.skip_link?(url)
       return true if url.nil? || url.empty?
@@ -284,7 +332,20 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
     # Extract links from the page content
     page_lang = page['lang'] || 'en'
-    extracted_links = Jekyll::LinksExtractor.extract_links_from_content(page.content, base_url, site.data, page_lang)
+
+    # Create Jekyll context for rendering
+    jekyll_context = {
+      'site' => {
+        'mode' => site.config['mode'],
+        'd8Revision' => site.config['d8Revision'],
+        'urls' => site.config['urls']
+      },
+      'page' => {
+        'lang' => page_lang
+      }
+    }
+
+    extracted_links = Jekyll::LinksExtractor.extract_links_from_content(page.content, base_url, site.data, page_lang, jekyll_context)
 
     # Get existing related_links from page metadata
     existing_links = page.data['related_links'] || []
