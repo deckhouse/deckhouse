@@ -74,13 +74,13 @@ func initAgentInstance(
 	return agentInstance, err
 }
 
-func NewClient(session *session.Session, privKeys []session.AgentPrivateKey) *Client {
+func NewClient(session *session.Session, privKeys []session.AgentPrivateKey, initNewAgent bool) *Client {
 	return &Client{
 		Settings:    session,
 		privateKeys: privKeys,
 
 		// We use arbitrary privKeys param, so always reinitialize agent with privKeys
-		InitializeNewAgent: true,
+		InitializeNewAgent: initNewAgent,
 	}
 }
 

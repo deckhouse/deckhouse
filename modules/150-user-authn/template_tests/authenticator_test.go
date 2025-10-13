@@ -109,10 +109,64 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     keepUsersLoggedInFor: "2h20m4s"
 `)
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
+
+			// Since template tests do not run Go hooks, we must mock the values the hook would have created.
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
+"test-2@d8-test":
+  name: "test-2-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-2"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-2-dex-authenticator"
+      truncated: false
+      hash: ""
+    "1":
+      name: "test-2-3230e1af-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-3@d8-test":
+  name: "test-3-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-3"
+  secretTruncated: false
+  secretHash: ""
+"test-4@d8-test":
+  name: "test-4-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-4"
+  secretTruncated: false
+  secretHash: ""
+"test@d8-test":
+  name: "test-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-dex-authenticator"
+      truncated: false
+      hash: ""
+    "1":
+      name: "test-05f0e90e-dex-authenticator"
+      truncated: false
+      hash: ""
+`)
 			hec.HelmRender()
 		})
 		It("Should create desired objects", func() {
-			Expect(hec.KubernetesResource("Service", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
+			svc := hec.KubernetesResource("Service", "d8-test", "test-dex-authenticator")
+			Expect(svc.Exists()).To(BeTrue())
+			Expect(svc.Field("metadata.labels.deckhouse\\.io/dex-authenticator-for").String()).To(Equal("test"))
+			Expect(svc.Field("metadata.labels.deckhouse\\.io/name-truncated").Exists()).To(BeFalse())
+
 			Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-test", "registry-dex-authenticator").Exists()).To(BeTrue())
@@ -178,6 +232,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			ingressTest2 := hec.KubernetesResource("Ingress", "d8-test", "test-2-dex-authenticator")
 			Expect(ingressTest2.Exists()).To(BeTrue())
 			Expect(ingressTest2.Field("spec.ingressClassName").String()).To(Equal("test"))
+			Expect(ingressTest2.Field("metadata.labels.deckhouse\\.io/dex-authenticator-for").String()).To(Equal("test-2"))
+			Expect(ingressTest2.Field("metadata.labels.deckhouse\\.io/name-truncated").Exists()).To(BeFalse())
 
 			Expect(ingressTest2.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.com"]`))
 			Expect(ingressTest2.Field("spec.tls.0.secretName").String()).To(Equal("test"))
@@ -187,6 +243,8 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			ingressTest2Two := hec.KubernetesResource("Ingress", "d8-test", "test-2-3230e1af-dex-authenticator")
 			Expect(ingressTest2Two.Exists()).To(BeTrue())
 			Expect(ingressTest2Two.Field("spec.ingressClassName").String()).To(Equal("test-two"))
+			Expect(ingressTest2Two.Field("metadata.labels.deckhouse\\.io/dex-authenticator-for").String()).To(Equal("test-2"))
+			Expect(ingressTest2Two.Field("metadata.labels.deckhouse\\.io/name-truncated").Exists()).To(BeFalse())
 
 			Expect(ingressTest2Two.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator-two.com"]`))
 			Expect(ingressTest2Two.Field("spec.tls.0.secretName").String()).To(Equal("test"))
@@ -211,7 +269,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator.com"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator-two.com"))
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid profile offline_access audience:server:client_id:kubernetes"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid profile offline_access federated:id audience:server:client_id:kubernetes"))
 
 			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
 			Expect(deploymentTest3.Exists()).To(BeTrue())

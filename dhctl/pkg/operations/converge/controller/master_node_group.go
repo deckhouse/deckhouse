@@ -49,7 +49,7 @@ func NewMasterNodeGroupController(controller *NodeGroupController, skipChecks bo
 		NodeGroupController: controller,
 		skipChecks:          skipChecks,
 	}
-	masterNodeGroupController.layoutStep = "master-node"
+	masterNodeGroupController.layoutStep = infrastructure.MasterNodeStep
 	masterNodeGroupController.nodeGroup = masterNodeGroupController
 
 	return masterNodeGroupController
@@ -262,7 +262,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	var nodeGroupSettingsFromConfig []byte
 
-	nodeRunner := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
+	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupName:   c.name,
 		NodeGroupStep:   c.layoutStep,
@@ -276,6 +276,9 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		},
 		Hook: hook,
 	}, ctx.ChangesSettings().AutomaticSettings)
+	if err != nil {
+		return err
+	}
 
 	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.GetMasterNodeResult)
 	if err != nil {
@@ -318,6 +321,10 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	}
 
 	c.state.State[nodeName] = outputs.InfrastructureState
+
+	if c.nodeToHost != nil {
+		c.nodeToHost[nodeName] = outputs.MasterIPForSSH
+	}
 
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
 }

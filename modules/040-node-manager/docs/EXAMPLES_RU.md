@@ -76,14 +76,14 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
-  # Пример для узлов типа Static
+  # Пример для узлов типа Static.
   nodeType: Static
   staticInstances:
     count: 2
     labelSelector:
       matchLabels:
         role: system
-  # Пример для узлов типа CloudEphemeral
+  # Пример для узлов типа CloudEphemeral.
   # nodeType: CloudEphemeral
   # cloudInstances:
   #   classReference:
@@ -104,7 +104,7 @@ spec:
 Для работы узлов с GPU требуются **драйвер NVIDIA** и **NVIDIA Container Toolkit**. Возможны два варианта установки драйвера:
 
 1. **Ручная установка** — администратор устанавливает драйвер до включения узла в кластер.
-1. **Автоматизация через `NodeGroupConfiguration`** (см. [Порядок действий по добавлению GPU-узла в кластер](../node-manager/faq.html#порядок-действий-по-добавлению-gpu-узла-в-кластер)).
+1. **Автоматизация через `NodeGroupConfiguration`** (подробнее – в разделе [Порядок действий по добавлению GPU-узла в кластер](../node-manager/faq.html#порядок-действий-по-добавлению-gpu-узла-в-кластер)).
 
 После того как драйвер установлен и в NodeGroup добавлен блок `spec.gpu`,
 `node-manager` включает полноценную поддержку GPU: автоматически разворачиваются
@@ -164,8 +164,8 @@ spec:
 Физический GPU (A100, A30 и др.) делится на аппаратные экземпляры.
 Планировщик увидит ресурсы `nvidia.com/mig-1g.5gb`.
 
-Полный список поддерживаемых GPU-устройств и их профили см. в  
-[FAQ → Как посмотреть доступные MIG-профили в кластере?](../node-manager/faq.html#как-посмотреть-доступные-mig-профили-в-кластере).
+Полный список поддерживаемых GPU-устройств и их профили можно увидеть, воспользовавшись  
+[инструкцией](../node-manager/faq.html#как-посмотреть-доступные-mig-профили-в-кластере).
 
 ```yaml
 spec:
@@ -214,9 +214,9 @@ spec:
 Чтобы добавить новый статический узел (выделенная ВМ, bare-metal-сервер и т. п.) в кластер вручную, выполните следующие шаги:
 
 1. Для [CloudStatic-узлов](../node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
-   - [Для AWS](../cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для GCP](../cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для YC](../cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для AWS](/modules/cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для GCP](/modules/cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
+   - [Для YC](/modules/cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
 1. Используйте существующий или создайте новый ресурс [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
@@ -238,6 +238,10 @@ spec:
    ```
 
 ### С помощью Cluster API Provider Static
+
+{% alert level="warning" %}
+Если вы ранее увеличивали количество master-узлов в кластере в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), перед добавлением обычных узлов с помощью CAPS [убедитесь](../control-plane-manager/faq.html#как-добавить-master-узел-в-статическом-или-гибридном-кластере), что не произойдет их «перехват».
+{% endalert %}
 
 Простой пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 
@@ -646,4 +650,4 @@ spec:
 
 ### Добавление в containerd возможности скачивать образы из insecure container registry
 
-Возможность скачивания образов из insecure container registry включается с помощью параметра `insecure_skip_verify` в конфигурационном файле containerd. Подробнее — в разделе [«Как добавить конфигурацию для дополнительного registry»](faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+Возможность скачивания образов из insecure container registry включается с помощью параметра `insecure_skip_verify` в конфигурационном файле containerd. Подробнее — в разделе [Как добавить конфигурацию для дополнительного registry](faq.html#как-добавить-конфигурацию-для-дополнительного-registry).

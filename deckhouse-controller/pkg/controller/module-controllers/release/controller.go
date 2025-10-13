@@ -28,13 +28,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -62,18 +63,20 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
 	controllerName = "d8-module-release-controller"
-
-	delayTimer = 3 * time.Second
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
 
 	defaultCheckInterval   = 15 * time.Second
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
+
+	// time to wait before next check that no modules are applying
+	restartCheckDuration = 15 * time.Second
 
 	outdatedReleasesKeepCount = 3
 )
@@ -85,7 +88,7 @@ func RegisterController(
 	exts *extenders.ExtendersStack,
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -97,10 +100,17 @@ func RegisterController(
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
-		delayTimer:           time.NewTimer(delayTimer),
+		restartCheckTicker:   time.NewTicker(restartCheckDuration),
 		dependencyContainer:  dc,
 		exts:                 exts,
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
+		shutdownFunc: func() error {
+			if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+				return err
+			}
+
+			return nil
+		},
 	}
 
 	r.init.Add(1)
@@ -142,13 +152,17 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
-	metricStorage        metric.Storage
+	metricStorage        metricsstorage.Storage
 	downloadedModulesDir string
 	symlinksDir          string
-	restartReason        string
 	clusterUUID          string
-	mtx                  sync.Mutex
-	delayTimer           *time.Timer
+	restartCheckTicker   *time.Ticker
+
+	activeApplyCount    atomic.Int32
+	releaseWasProcessed atomic.Bool // at least one release was processed
+	readyForRestart     atomic.Bool
+
+	shutdownFunc func() error
 
 	metricsUpdater MetricsUpdater
 }
@@ -188,8 +202,8 @@ func (r *reconciler) preflight(ctx context.Context) error {
 			"module":  release.GetModuleName(),
 		}
 
-		r.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), labels)
-		r.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), labels)
+		r.metricStorage.GaugeSet(metrics.ModulePullSecondsTotal, release.Status.PullDuration.Seconds(), labels)
+		r.metricStorage.GaugeSet(metrics.ModuleSizeBytesTotal, float64(release.Status.Size), labels)
 	}
 
 	r.log.Debug("controller is ready")
@@ -199,29 +213,42 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 func (r *reconciler) restartLoop(ctx context.Context) {
 	for {
-		r.mtx.Lock()
 		select {
-		case <-r.delayTimer.C:
-			if r.restartReason != "" {
-				r.log.Info("restart Deckhouse", slog.String("reason", r.restartReason))
-				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+		case <-r.restartCheckTicker.C:
+			// check if no modules are applying now
+			if r.activeApplyCount.Load() > 0 {
+				r.log.Info("waiting for modules to apply before Deckhouse restart",
+					slog.Int("active_apply_count", int(r.activeApplyCount.Load())))
+
+				r.readyForRestart.Store(false)
+			}
+
+			if r.releaseWasProcessed.Load() && r.readyForRestart.Load() {
+				r.log.Info("restarting Deckhouse...")
+
+				if err := r.shutdownFunc(); err != nil {
 					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
 				}
+
+				return
 			}
-			r.delayTimer.Reset(delayTimer)
+
+			// if we pass this check here, we wait one more tick
+			// to be sure that no new releases are processing
+			// before we restart Deckhouse
+			if r.releaseWasProcessed.Load() && r.activeApplyCount.Load() == 0 {
+				r.log.Info(
+					"all modules processed, ready to restart",
+					slog.Int("active_apply_count", int(r.activeApplyCount.Load())),
+				)
+
+				r.readyForRestart.Store(true)
+			}
 
 		case <-ctx.Done():
 			return
 		}
-		r.mtx.Unlock()
 	}
-}
-
-func (r *reconciler) emitRestart(msg string) {
-	r.mtx.Lock()
-	r.delayTimer.Reset(delayTimer)
-	r.restartReason = msg
-	r.mtx.Unlock()
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -441,18 +468,8 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleDeployedRelease")
 	defer span.End()
-
-	res := ctrl.Result{}
-
 	var needsUpdate bool
-
-	var modulesChangedReason string
-	defer func() {
-		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
-		}
-	}()
-
+	res := ctrl.Result{}
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	labelSelector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelSource: release.GetModuleSource(), v1alpha1.ModuleReleaseLabelModule: release.GetModuleName()}
 
@@ -480,12 +497,14 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	if release.GetReinstall() {
-		err := r.runReleaseDeploy(ctx, release, nil)
+		err := r.applyRelease(ctx, release, nil)
 		if err != nil {
 			return res, fmt.Errorf("run release deploy: %w", err)
 		}
 
-		modulesChangedReason = "module release reloaded"
+		r.log.Info("module release reloaded, waiting for Deckhouse restart", slog.String("release", release.GetName()))
+
+		r.releaseWasProcessed.Store(true)
 
 		return res, nil
 	}
@@ -502,15 +521,24 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		}
 	}
 
+	// at least one release for module source is deployed, add finalizer to prevent module source deletion
+	source := new(v1alpha1.ModuleSource)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		r.log.Error("failed to get module source", slog.String("module_source", release.GetModuleSource()), log.Err(err))
+
+		return res, fmt.Errorf("get module source: %w", err)
+	}
+
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
 		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
+		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+			module.InjectRegistryValue(utils.BuildRegistryValue(source))
+		}
 
 		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		source := release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelSource]
-
-		if err := r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), source, modulePath); err != nil {
+		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), "", modulePath); err != nil {
 			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return res, fmt.Errorf("run module with new open api schema: %w", err)
@@ -543,14 +571,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		}
 
 		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// at least one release for module source is deployed, add finalizer to prevent module source deletion
-	source := new(v1alpha1.ModuleSource)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-		r.log.Error("failed to get module source", slog.String("module_source", release.GetModuleSource()), log.Err(err))
-
-		return res, fmt.Errorf("get module source: %w", err)
 	}
 
 	if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
@@ -719,13 +739,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("handle pending release")
 
-	var modulesChangedReason string
-	defer func() {
-		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
-		}
-	}()
-
 	var (
 		policy *v1alpha2.ModuleUpdatePolicy
 		err    error
@@ -736,7 +749,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	if found {
 		policy, err = r.getUpdatePolicy(ctx, policyName)
 		if err != nil {
-			r.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, map[string]string{
+			r.metricStorage.CounterAdd(metrics.ModuleUpdatePolicyNotFound, 1.0, map[string]string{
 				"version":        release.GetReleaseVersion(),
 				"module_release": release.GetName(),
 				"module":         release.GetModuleName(),
@@ -806,12 +819,15 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		logger.Warn("forced release found")
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
-		if err = r.ApplyRelease(ctx, release, task); err != nil {
+		if err = r.applyRelease(ctx, release, task); err != nil {
 			logger.Error("apply forced release", log.Err(err))
+
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
-		modulesChangedReason = "a new module release deployed"
+		r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
+
+		r.releaseWasProcessed.Store(true)
 
 		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
@@ -890,6 +906,15 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
+		metricLabels[releaseUpdater.MajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
+		if task.IsMajor {
+			metricLabels[releaseUpdater.MajorReleaseName] = release.GetName()
+		}
+
+		if task.IsFromTo {
+			metricLabels[releaseUpdater.FromToName] = release.GetName()
+		}
+
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
@@ -931,7 +956,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("pre apply checks passed")
 
-	err = r.ApplyRelease(ctx, release, task)
+	err = r.applyRelease(ctx, release, task)
 	if err != nil {
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
@@ -941,7 +966,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{}, nil
 	}
 
-	modulesChangedReason = "a new module release deployed"
+	r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
+
+	r.releaseWasProcessed.Store(true)
 
 	logger.Debug("module release deployed")
 
@@ -1013,10 +1040,15 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 	return policy, nil, nil
 }
 
-// ApplyRelease applies predicted release
-func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
+// applyRelease applies predicted release
+func (r *reconciler) applyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
 	defer span.End()
+
+	r.activeApplyCount.Add(1)
+	defer func() {
+		r.activeApplyCount.Add(-1)
+	}()
 
 	var dri *releaseUpdater.ReleaseInfo
 
@@ -1308,7 +1340,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		if valuesByConfig || strings.Contains(err.Error(), "is required") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
 				configConfigurationErrorMetricsLabels,
 			)
@@ -1331,7 +1363,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
-	r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 		0,
 		configConfigurationErrorMetricsLabels,
 	)
@@ -1660,12 +1692,15 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 			r.log.Error("failed to remove module in downloaded symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
 			return ctrl.Result{}, err
 		}
+
+		r.log.Info("module release deleted, waiting for Deckhouse restart", slog.String("release", release.GetName()))
+
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
 
 		// restart controller for completely remove module
 		// TODO: we need another solution for remove module from modulemanager
-		r.emitRestart("a module release was removed")
+		r.releaseWasProcessed.Store(true)
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {

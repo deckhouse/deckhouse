@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/modules/log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -433,7 +433,7 @@ spec:
                 transformations:
                   description: |
                     Список трансформаций, которые могут применяться к логам перед отправкой.
-                    
+
                     Возможные варианты:
 
                       - `ReplaceKeys` — заменяет `source` на `target` в заданных ключах лейблов.

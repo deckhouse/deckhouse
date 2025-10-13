@@ -8,7 +8,7 @@ description: "Синхронизация времени в кластере Deck
 ## Как работает
 
 Модуль запускает `chrony` агенты на всех узлах кластера.
-По умолчанию используется NTP сервер `pool.ntp.org`. NTP сервер можно изменить через [настройки](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) модуля.
+По умолчанию используется NTP сервер `pool.ntp.org`. NTP сервер можно изменить через [настройки](/modules/chrony/configuration.html) модуля.
 Для просмотра используемых NTP серверов можно воспользоваться командой:
 
 ```bash

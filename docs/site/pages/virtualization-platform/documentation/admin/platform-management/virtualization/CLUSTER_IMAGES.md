@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
+The [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
 
 The process of creating an image involves the following steps:
 
-1. The user creates a [`ClusterVirtualImage`](../../../reference/cr/clustervirtualimage.html) resource.
+1. The user creates a [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource.
 1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
 1. Once the upload is complete, the resource becomes available for disk creation.
 
@@ -32,7 +32,7 @@ Examples of resources for obtaining pre-installed virtual machine disk images:
   - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
   - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
 - RockyLinux
-  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/)
   - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
 - CentOS
   - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
@@ -55,7 +55,7 @@ Images can be downloaded from various sources, such as HTTP servers hosting imag
 
 Images can also be created based on other images or virtual machine disks.
 
-For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](../../../../reference/cr/clustervirtualimage.html).
+For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](/modules/virtualization/cr.html#clustervirtualimage).
 
 ## Increasing the size of DVCR
 

@@ -99,7 +99,7 @@ spec:
                       description: |
                         The name of the existing StorageClass will be used to create the virtual machine's root disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
                       description: |
@@ -122,6 +122,24 @@ spec:
                             The name of the image that will be used to create the root disk.
 
                             > The installation requires Linux OS images with cloud-init pre-installed.
+                additionalDisks:
+                  type: array
+                  description: |
+                    Parameters for additional virtual machine disks.
+                  items:
+                    type: object
+                    required: ["size", "storageClass"]
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Size of the additional disk.
+                        x-doc-example: "10Gi"
+                      storageClass:
+                        type: string
+                        description: |
+                          Name of the existing StorageClass that will be used to create the additional disk.
   scope: Cluster
   names:
     plural: dvpinstanceclasses

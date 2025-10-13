@@ -6,11 +6,11 @@ lang: ru
 
 ## Образы
 
-Ресурс [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
+Ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html).
+1. Пользователь создаёт ресурс [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage).
 1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 1. После завершения загрузки ресурс становится доступным для создания дисков.
 
@@ -33,7 +33,7 @@ lang: ru
   - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/);
   - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/);
 - RockyLinux:
-  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/);
+  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/);
   - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/);
 - CentOS:
   - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/);
@@ -60,7 +60,7 @@ lang: ru
 
 Образы могут быть созданы на основе других образов и дисков виртуальных машин.
 
-С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](../../../../reference/cr/clustervirtualimage.html).
+С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](/modules/virtualization/cr.html#clustervirtualimage).
 
 ## Увеличение размера DVCR
 

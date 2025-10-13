@@ -4,66 +4,67 @@ permalink: ru/virtualization-platform/documentation/admin/install/steps/storage.
 lang: ru
 ---
 
-## Настройка хранилища
-
 После добавления worker-узлов необходимо настроить хранилище, которое будет использоваться для создания дисков виртуальных машин и для хранения метрик компонентов кластера. Хранилище можно выбрать из [списка поддерживаемых](/products/virtualization-platform/documentation/about/requirements.html#поддерживаемые-хранилища).
 
-Далее рассмотрим включение и настройку программно-определяемого хранилища `sds-replicated-volume`. Это хранилище позволяет создать реплицируемые тома на основе дискового пространства узлов. Для примера настроим StorageClass на основе томов с двумя репликами, которые располагаются на дисках `/dev/sda`.
+Далее рассматривается использование программно-определяемого реплицируемого блочного хранилища на базе DRBD, которое позволяет создавать реплицируемые тома на основе дискового пространства узлов. Для примера настроим StorageClass на основе томов с двумя репликами, которые располагаются на дисках `/dev/sda`.
 
-## Добавление sds-replicated-volume
+{% alert level="info" %}
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+{% endalert %}
 
-Для добавления хранилища `sds-replicated-volume` нужно включить два модуля Deckhouse, создав ресурсы ModuleConfig:
+## Включение возможности использования реплицируемого хранилища
 
-```yaml
-sudo -i d8 k create -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: snapshot-controller
-spec:
-  enabled: true
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-replicated-volume
-spec:
-  enabled: true
-EOF
-```
+Включите модули `sds-node-configurator`, `snapshot-controller` и `sds-replicated-volume` при помощи веб-интерфейса администратора или через CLI:
 
-Дождитесь включения модуля:
+1. Включите модуль `sds-node-configurator`:
 
-```shell
-sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
-```
+   ```shell
+   sudo -i d8 s module enable sds-node-configurator
+   ```
 
-Убедитесь, что все поды модуля `sds-replicated-volume` находятся в состоянии `Running` (может потребоваться некоторое время):
+1. Дождитесь, пока модуль `sds-node-configurator` перейдёт в состояние `Ready`:
 
-```shell
-sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
-```
+   ```shell
+   d8 k get module sds-node-configurator -w
+   ```
 
-## Настройка sds-replicated-volume
+1. Включите модуль `snapshot-controller`:
+
+   ```shell
+   sudo -i d8 s module enable snapshot-controller
+   ```
+
+1. Включите модуль `sds-replicated-volume`:
+
+   ```shell
+   sudo -i d8 s module enable sds-replicated-volume
+   ```
+
+1. Дождитесь пока модуль `sds-replicated-volume` перейдёт в состояние `Ready`:
+
+   ```shell
+   sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+   ```
+
+1. Убедитесь, что в пространствах имен `d8-sds-node-configurator`, `d8-snapshot-controller` и `d8-sds-replicated-volume` все поды находятся в статусе `Running` или `Completed`:
+
+   ```shell
+   sudo -i d8 k -n d8-sds-node-configurator get pod -owide -w
+   sudo -i d8 k -n d8-sds-snapshot-controller get pod -owide -w
+   sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
+   ```
+
+## Настройка реплицируемого хранилища
 
 Настройка хранилища включает в себя объединение доступных блочных устройств на узлах в пулы, из которых затем будет создан StorageClass.
 
 1. Получите доступные блочные устройства:
 
    ```shell
-   sudo -i d8 k get blockdevices.storage.deckhouse.io
+   d8 k get blockdevices.storage.deckhouse.io
    ```
 
-   Пример вывода с дополнительными дисками sda:
+   {% offtopic title="Пример вывода с дополнительными дисками sda..." %}
 
    ```console
    NAME                                           NODE           CONSUMABLE   SIZE          PATH        AGE
@@ -72,16 +73,18 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    dev-b1c720a7cec32ae4361de78b71f08da1965b1d0c   dvp-worker-2   false        468851544Ki   /dev/sda    8m12s
    ```
 
+   {% endofftopic %}
+
 1. Создайте VolumeGroup на каждом узле.
 
-   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
+   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
-   Для создания ресурса LVMVolumeGroup на узле используйте следующие команды:
+   Для создания ресурса LVMVolumeGroup, для каждого узла выполните следующие команды (укажите имя узла и имя блочного устройства):
 
-   ```yaml
-   export NODE_NAME="dvp-worker-1"
-   export DEV_NAME="dev-40bf7a561aee502f20b81cf1eff873a0455a95cb"
-   sudo -i d8 k apply -f - <<EOF
+   ```shell
+   export NODE_NAME="<NODE_NAME>"
+   export DEV_NAME="<BLOCK_DEVICE_NAME>"
+   d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: LVMVolumeGroup
    metadata:
@@ -101,15 +104,13 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    EOF
    ```
 
-   Повторите действия для каждого узла, блочное устройство которого планируется использовать. В примере это все три узла: `master-0`, `dvp-master-1` и `dvp-master-2`.
-
    Дождитесь, что все созданные ресурсы LVMVolumeGroup перейдут в состояние `Ready`:
 
    ```shell
-   sudo -i d8 k get lvg -w
+   d8 k get lvg -w
    ```
 
-   Пример вывода:
+   {% offtopic title="Пример вывода..." %}
 
    ```console
    NAME                THINPOOLS  CONFIGURATION APPLIED   PHASE   NODE          SIZE       ALLOCATED SIZE VG   AGE
@@ -118,49 +119,54 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    vg-on-dvp-worker-2  0/0        True                    Ready   dvp-worker-2  360484Mi   30064Mi        vg-1 6s
    ```
 
+   {% endofftopic %}
+
 1. Создайте пул из групп томов LVM.
 
-   Созданные группы томов нужно собрать в пул для репликации. Пул задаётся в ресурсе ReplicatedStoragePool:
+   Созданные группы томов нужно собрать в пул для репликации (задаётся в ресурсе ReplicatedStoragePool). Для этого выполните следующую команду (укажите имена созданных групп томов):
 
-   ```yaml
-   sudo -i d8 k apply -f - <<EOF
-    apiVersion: storage.deckhouse.io/v1alpha1
-    kind: ReplicatedStoragePool
-    metadata:
-      name: sds-pool
-    spec:
-      type: LVM
-      lvmVolumeGroups:
-        - name: vg-on-dvp-worker-01
-        - name: vg-on-dvp-worker-02
-        - name: vg-on-master
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: ReplicatedStoragePool
+   metadata:
+     name: sds-pool
+   spec:
+     type: LVM
+     lvmVolumeGroups:
+       # Укажите свои имена групп томов.
+       - name: vg-on-dvp-worker-01
+       - name: vg-on-dvp-worker-02
+       - name: vg-on-master
    EOF
    ```
 
    Дождитесь, когда ресурс перейдет в состояние `Completed`:
 
    ```shell
-   sudo -i d8 k get rsp data -w
+   d8 k get rsp data -w
    ```
 
-   Пример вывода:
+   {% offtopic title="Пример вывода..." %}
 
    ```console
    NAME         PHASE       TYPE   AGE
    sds-pool     Completed   LVM    32s
    ```
 
+   {% endofftopic %}
+
 1. Задайте параметры StorageClass.
 
-   Модуль `sds-replicated-volume` использует ресурсы ReplicatedStorageClass для автоматического создания StorageClass'ов с нужными характеристиками. В этом ресурсе важны следующие параметры:
+   Модуль `sds-replicated-volume` использует ресурсы ReplicatedStorageClass для автоматического создания StorageClass с нужными характеристиками. В этом ресурсе важны следующие параметры:
 
    - `replication` — параметры репликации, для 2 реплик будет использоваться значение `Availability`;
    - `storagePool` — имя созданного ранее пула, в данном примере указывается `sds-pool`.
 
-   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclassreplicatedstorageclass.html).
 
-   ```yaml
-   sudo -i d8 k apply -f - <<EOF
+   ```shell
+   d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
    metadata:
@@ -176,20 +182,21 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    Проверьте, что в кластере появился соответствующий StorageClass:
 
    ```shell
-   sudo -i d8 k get sc
+   d8 k get sc
    ```
 
-   Пример вывода:
+   {% offtopic title="Пример вывода..." %}
 
    ```console
    NAME     PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```
 
-1. Установите StorageClass по умолчанию:
+   {% endofftopic %}
+
+1. Установите StorageClass по умолчанию (укажите имя своего объекта StorageClass):
 
    ```shell
-   # Укажите имя своего объекта StorageClass.
-   DEFAULT_STORAGE_CLASS=replicated-storage-class
-   sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+   DEFAULT_STORAGE_CLASS=<DEFAULT_STORAGE_CLASS_NAME>
+   d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```

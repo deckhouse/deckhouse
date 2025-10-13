@@ -25,10 +25,22 @@ objectSelector: {}
   {{- else }}
     - CREATE
     - UPDATE
+    - DELETE
   {{- end }}
   resources:
     {{- $trackResource.resources | toYaml | nindent 4 }}
   {{- end }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  apiVersions:
+  - '*'
+  operations:
+  - CREATE
+  - UPDATE
+  - DELETE
+  resources:
+  - roles
+  - rolebindings
 - apiGroups:
   - constraints.gatekeeper.sh
   apiVersions:
@@ -36,6 +48,7 @@ objectSelector: {}
   operations:
   - CREATE
   - UPDATE
+  - DELETE
   resources:
   - '*'
   scope: '*'
@@ -58,18 +71,24 @@ webhooks:
   - apiGroups: ["apps"]
     resources: ["deployments", "daemonsets", "statefulsets"]
     apiVersions: ["*"]
-    operations: ["CREATE", "UPDATE"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
   - apiGroups: ["apps.kruise.io"]
     apiVersions: ["*"]
     resources: ["daemonsets"]
-    operations: ["CREATE", "UPDATE"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods"]
-    operations: ["CREATE"]
+    operations: ["CREATE", "DELETE"]
 
   {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+
+  {{/* Always validate CONNECT for exec/attach subresources */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
 
   {{/* Increase timeout for trivy-provider */}}
   timeoutSeconds: 30
@@ -91,6 +110,11 @@ webhooks:
   {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+  {{/* Always validate CONNECT for exec/attach subresources */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-virtualization'

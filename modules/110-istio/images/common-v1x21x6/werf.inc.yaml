@@ -27,3 +27,5 @@ shell:
 
   # getting rid of unused vulnerable code
   - rm -rf /src/istio/samples
+  - rm -rf /src/istio/security/samples
+  - rm -rf /src/istio/security/tools/jwt/samples

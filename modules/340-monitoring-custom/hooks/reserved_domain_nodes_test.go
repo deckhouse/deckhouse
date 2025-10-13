@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -103,7 +103,7 @@ spec:
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -121,13 +121,13 @@ spec:
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 			// second is metrics
 			expectedMetric := operation.MetricOperation{
 				Name:   "reserved_domain_nodes",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"name": "stateful",
@@ -150,13 +150,13 @@ spec:
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 			// second is metrics
 			expectedMetric := operation.MetricOperation{
 				Name:   "reserved_domain_nodes",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"name": "double",
@@ -179,13 +179,13 @@ spec:
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 			// second is metrics
 			expectedMetric := operation.MetricOperation{
 				Name:   "reserved_domain_nodes",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"name": "database",

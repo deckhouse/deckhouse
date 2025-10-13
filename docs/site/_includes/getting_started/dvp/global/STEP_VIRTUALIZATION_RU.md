@@ -1,4 +1,4 @@
-Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#virtualization) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам:
+Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам:
 
 ```shell
 sudo -i d8 k create -f - <<EOF

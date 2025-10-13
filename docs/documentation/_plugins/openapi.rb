@@ -23,7 +23,7 @@ module Jekyll
         return if input.nil? || input.empty? || input["properties"].nil?|| input["properties"].empty?
 
         puts "Rendering ModuleConfig for #{moduleName} (#{@context.registers[:page]['lang']})"
-        @@JSONSchema.format_configuration(@context.registers[:site], @context.registers[:page], input, true)
+        @@JSONSchema.format_configuration(@context.registers[:site], @context.registers[:page], input, moduleName, true)
     end
   end
 end

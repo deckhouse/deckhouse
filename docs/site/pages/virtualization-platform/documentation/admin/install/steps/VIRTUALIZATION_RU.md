@@ -4,15 +4,24 @@ permalink: ru/virtualization-platform/documentation/admin/install/steps/virtuali
 lang: ru
 ---
 
-## Настройка виртуализации
+{% alert level="info" %}
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+{% endalert %}
 
-После настройки хранилища необходимо включить модуль виртуализации. Включение и настройка модуля производятся с помощью ресурса ModuleConfig.
+После настройки хранилища необходимо включить модуль `virtualization`. Включение и настройка модуля производятся с помощью веб-интерфейса администратора или с помощью следующей команды:
 
-В параметрах `spec` установите:
+```shell
+d8 s module enable virtualization
+```
 
-- `enabled: true` — флаг для включения модуля;
-- `settings.virtualMachineCIDRs` — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
-- `settings.dvcr.storage.persistentVolumeClaim.size` — размер дискового пространства для хранения образов виртуальных машин.
+Отредактируйте конфигурацию модуля [одним из способов](#конфигурация-модуля-virtualization).
+
+В конфигурации модуля укажите:
+
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
 
 Пример базовой настройки модуля виртуализации:
 
@@ -38,10 +47,10 @@ spec:
 Дождитесь, пока все поды модуля не перейдут в статус `Running`:
 
 ```shell
-sudo -i d8 k get po -n d8-virtualization
+d8 k get po -n d8-virtualization
 ```
 
-Пример вывода:
+{% offtopic title="Пример вывода..." %}
 
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
@@ -62,31 +71,36 @@ vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
 
-Как задать конфигурацию модуля `virtualization` в веб-интерфейсе:
+{% endofftopic %}
+
+## Конфигурация модуля `virtualization`
+
+Изменить конфигурацию модуля `virtualization` можно через веб-интерфейс администратора или через CLI.
+
+### Через веб-интерфейс администратора
 
 - Перейдите на вкладку «Система», далее в раздел «Deckhouse» → «Модули».
 - Из списка выберите модуль `virtualization`.
 - Во всплывающем окне выберите вкладку «Конфигурация».
 - Для отображения настроек нажмите переключатель «Дополнительные настройки».
-- Выполните настройки. Название полей на форме соотносится с названием параметров в YAML.
+- Укажите необходимые параметры модуля.
 - Для применения настроек нажмите кнопку «Сохранить».
 
-### Описание параметров
+### Через CLI
+
+```shell
+d8 k edit mc virtualization
+```
+
+## Описание параметров
 
 Ниже представлены описания параметров модуля виртуализации.
 
-#### Параметры для включения/выключения модуля
-
-Управление состоянием модуля осуществляется через поле `.spec.enabled`. Укажите:
-
-- `true` — чтобы включить модуль;
-- `false` — чтобы выключить модуль.
-
-#### Версия конфигурации
+### Версия конфигурации
 
 Параметр `.spec.version` определяет версию схемы настроек. Структура параметров может меняться между версиями. Актуальные значения приведены в разделе настроек.
 
-#### Параметры для настройки постоянного тома для хранения образов виртуальных машин (DVCR)
+### Параметры для настройки постоянного тома для хранения образов виртуальных машин (DVCR)
 
 Блок `.spec.settings.dvcr.storage` настраивает постоянный том для хранения образов:
 
@@ -94,10 +108,10 @@ vm-route-forge-nq9xr                         1/1     Running   0             10m
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
 
 {% alert level="warning" %}
-Хранилище, обслуживающее класс хранения (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
+Хранилище, обслуживающее класс хранения (параметр `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
 {% endalert %}
 
-#### Сетевые настройки
+### Сетевые настройки
 
 В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.
 
@@ -120,7 +134,7 @@ spec:
 Запрещено удалять подсети, если адреса из них уже выданы виртуальным машинам.
 {% endalert %}
 
-#### Настройки классов хранения для образов
+### Настройки классов хранения для образов
 
 Настройки классов хранения для образов определяются в параметре `.spec.settings.virtualImages` настроек модуля.
 
@@ -128,7 +142,7 @@ spec:
 
 ```yaml
 spec:
-  ...
+  #...
   settings:
     virtualImages:
       allowedStorageClassNames:
@@ -142,7 +156,7 @@ spec:
 - `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
 - `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualImage, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
-#### Настройки классов хранения для дисков
+### Настройки классов хранения для дисков
 
 Настройки классов хранения для дисков определяются в параметре `.spec.settings.virtualDisks` настроек модуля.
 
@@ -150,7 +164,7 @@ spec:
 
 ```yaml
 spec:
-  ...
+  #...
   settings:
     virtualDisks:
       allowedStorageClassNames:
@@ -164,7 +178,7 @@ spec:
 - `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
 - `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
-#### Настройка аудита событий безопасности
+### Настройка аудита событий безопасности
 
 {% alert level="warning" %}
 Недоступно в Community Edition.
@@ -172,12 +186,11 @@ spec:
 
 {% alert level="warning" %}
 Для активации аудита требуется, чтобы были включены следующие модули:
-
 - `log-shipper`,
 - `runtime-audit-engine`.
 {% endalert %}
 
-Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля  в `true`:
+Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля в `true`:
 
 ```yaml
 spec:

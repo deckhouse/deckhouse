@@ -18,7 +18,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -82,7 +82,7 @@ properties:
           - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
           - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace.
           - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP.
-          - `OnlyInURI` — HTTP access with an external HTTPS balancer. The balancer terminates HTTPS, and all links in [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) are generated with the HTTPS scheme. The balancer must provide redirection from HTTP to HTTPS.
+          - `OnlyInURI` — HTTP access with an external HTTPS balancer. The balancer terminates HTTPS, and all links in [`user-authn`](../../modules/user-authn/) are generated with the HTTPS scheme. The balancer must provide redirection from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"

@@ -17,7 +17,6 @@ config:
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
-    allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowValueIds:
       - SOURCE_REPO

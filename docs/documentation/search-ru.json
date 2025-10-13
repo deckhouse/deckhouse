@@ -1,0 +1,9 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: ru/search.json
+lang: ru
+---
+
+{%- include search.liquid %}

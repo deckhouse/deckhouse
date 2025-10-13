@@ -3,22 +3,25 @@ title: "Other settings"
 permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.html
 ---
 
+{% alert level=“info” %}
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
+Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+{% endalert %}
+
 ## Ingress Setup
 
-Ensure that the Kruise controller manager for the [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) module has started and is in the `Running` status.
-
-Run the following command on the **master node**:
+Ensure that the Kruise controller manager for the [ingress-nginx](/modules/ingress-nginx/) module has started and is in the `Running` status.
 
 ```shell
-sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
+d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 
 Create an IngressNginxController resource that describes the parameters for the NGINX Ingress controller:
 
 ```yaml
-sudo -i d8 k apply -f - <<EOF
+d8 k apply -f - <<EOF
 # Section describing the NGINX Ingress controller parameters.
-# https://deckhouse.io/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -44,7 +47,7 @@ EOF
 The Ingress controller startup may take some time. Make sure the Ingress controller pods have transitioned to the `Running` status by running the following command:
 
 ```shell
-sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
+d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 
 {% offtopic title="Example output..." %}
@@ -66,11 +69,13 @@ The domain used in the template must not match the domain specified in the `clus
 
 ### Using a Wildcard Domain
 
-Ensure that the subdomains resolve to the IP address of the node where the nginx-controller is running. In this case, it is `master-0`. Also, verify that the name template matches the format `%s.<domain>`:
+Ensure that the subdomains resolve to the IP address of the node where the Ingress controller is running. In this case, it is `master-0`. Also, verify that the name template matches the format `%s.<domain>`:
 
 ```shell
-sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
+d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
+
+{% offtopic title="Example outputs..." %}
 
 Example output if a custom Wildcard domain was used:
 
@@ -78,11 +83,13 @@ Example output if a custom Wildcard domain was used:
 %s.my-dvp-cluster.example.com
 ```
 
-Example output if a domain from the ssslip.io service was used:
+Example output if a domain from the sslip.io service was used:
 
 ```console
 %s.54.43.32.21.sslip.io
 ```
+
+{% endofftopic %}
 
 ### Using Separate Domains Instead of a Wildcard Domain
 
@@ -92,14 +99,13 @@ For example, for the domain `my-dvp-cluster.example.com` and a template with sub
 
 ```console
 api.my-dvp-cluster.example.com
-argocd.my-dvp-cluster.example.com
+console.my-dvp-cluster.example.com
 dashboard.my-dvp-cluster.example.com
-documentation.my-dvp-cluster.example.com
+deckhouse-tools.my-dvp-cluster.example.com
 dex.my-dvp-cluster.example.com
+documentation.my-dvp-cluster.example.com
 grafana.my-dvp-cluster.example.com
 hubble.my-dvp-cluster.example.com
-istio.my-dvp-cluster.example.com
-istio-api-proxy.my-dvp-cluster.example.com
 kubeconfig.my-dvp-cluster.example.com
 openvpn-admin.my-dvp-cluster.example.com
 prometheus.my-dvp-cluster.example.com
@@ -111,14 +117,13 @@ For the domain `my-dvp-cluster.example.com` and a template with individual domai
 
 ```console
 api-my-dvp-cluster.example.com
-argocd-my-dvp-cluster.example.com
+console-my-dvp-cluster.example.com
 dashboard-my-dvp-cluster.example.com
-documentation-my-dvp-cluster.example.com
+deckhouse-tools-my-dvp-cluster.example.com
 dex-my-dvp-cluster.example.com
+documentation-my-dvp-cluster.example.com
 grafana-my-dvp-cluster.example.com
 hubble-my-dvp-cluster.example.com
-istio-my-dvp-cluster.example.com
-istio-api-proxy-my-dvp-cluster.example.com
 kubeconfig-my-dvp-cluster.example.com
 openvpn-admin-my-dvp-cluster.example.com
 prometheus-my-dvp-cluster.example.com
@@ -135,14 +140,13 @@ export PUBLIC_IP="<PUBLIC_IP>"
 export CLUSTER_DOMAIN="my-dvp-cluster.example.com"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.$CLUSTER_DOMAIN
-$PUBLIC_IP argocd.$CLUSTER_DOMAIN
+$PUBLIC_IP console.$CLUSTER_DOMAIN
 $PUBLIC_IP dashboard.$CLUSTER_DOMAIN
-$PUBLIC_IP documentation.$CLUSTER_DOMAIN
+$PUBLIC_IP deckhouse-tools.$CLUSTER_DOMAIN
 $PUBLIC_IP dex.$CLUSTER_DOMAIN
+$PUBLIC_IP documentation.$CLUSTER_DOMAIN
 $PUBLIC_IP grafana.$CLUSTER_DOMAIN
 $PUBLIC_IP hubble.$CLUSTER_DOMAIN
-$PUBLIC_IP istio.$CLUSTER_DOMAIN
-$PUBLIC_IP istio-api-proxy.$CLUSTER_DOMAIN
 $PUBLIC_IP kubeconfig.$CLUSTER_DOMAIN
 $PUBLIC_IP openvpn-admin.$CLUSTER_DOMAIN
 $PUBLIC_IP prometheus.$CLUSTER_DOMAIN
@@ -167,7 +171,7 @@ To access the cluster's web interfaces, you can create a static user:
 1. Create the user:
 
    ```yaml
-   sudo -i d8 k create -f - <<EOF
+   d8 k create -f - <<EOF
    ---
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
@@ -187,7 +191,7 @@ To access the cluster's web interfaces, you can create a static user:
    spec:
      email: admin@my-dvp-cluster.example.com
      password: '<BASE64 PASSWORD>'
-   
+
    EOF
    ```
 
@@ -199,5 +203,10 @@ Now you can log in to the cluster web interfaces using your email and password. 
 The module is available only to EE edition users.
 {% endalert %}
 
-The `console` module will allow you to manage virtualization components through the Deckhouse web interface.
-To enable it, use the instructions in [Web Interface](https://deckhouse.io/modules/console/stable/) section.
+The `console` module allows you to manage virtualization components through the Deckhouse web interface.
+
+To enable the module, run the following command:
+
+```shell
+d8 s module enable console
+```

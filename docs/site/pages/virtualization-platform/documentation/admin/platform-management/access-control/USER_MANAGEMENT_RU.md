@@ -23,7 +23,7 @@ lang: ru
 
 ## Создание пользователя
 
-Для создания статического пользователя используется ресурс [User](../../../../reference/cr/user.html).
+Для создания статического пользователя используется ресурс [User](/modules/user-authn/cr.html#user).
 
 Перед этим необходимо сгенерировать хэш пароля с помощью следующей команды:
 
@@ -50,7 +50,7 @@ spec:
 
 ## Создание группы пользователей
 
-Для создания группы пользователей используется ресурс [Group](../../../../reference/cr/group.html).
+Для создания группы пользователей используется ресурс [Group](/modules/user-authn/cr.html#group).
 
 Пример манифеста для создания группы:
 
@@ -93,7 +93,7 @@ spec:
 
 ## Настройка внешних провайдеров
 
-Для настройки внешниx провайдеров используется ресурс [DexProvider](../../../../reference/cr/dexprovider.html).
+Для настройки внешних провайдеров используется ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 ### GitHub
 
@@ -201,7 +201,7 @@ spec:
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
-1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](../../../../reference/cr/dexprovider.html).
+1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider).
 1. Группы CROWD укажите в lowercase-формате для ресурса `DexProvider`.
 
 ### Bitbucket Cloud
@@ -307,7 +307,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 

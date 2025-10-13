@@ -3,7 +3,7 @@ title: "Virtual Machine Classes"
 permalink: en/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
 ---
 
-The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
+The [`VirtualMachineClass`](/modules/virtualization/cr.html#virtualmachineclass) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
 During installation, a single VirtualMachineClass `generic` resource is automatically created. It represents a universal CPU type based on the older, but widely supported, Nehalem architecture. This enables running VMs on any nodes in the cluster and allows live migration.
 
@@ -269,7 +269,7 @@ The `.spec.sizingPolicy` block allows you to set sizing policies for virtual mac
 {% alert level="warning" %}
 Changes in the `.spec.sizingPolicy` block can also affect virtual machines. For virtual machines whose sizing policy will not meet the new policy requirements, the `SizingPolicyMatched` condition in the `.status.conditions` block will be false (`status: False`).
 
-When configuring `sizingPolicy`, be sure to consider the [CPU topology](./user_guide.html#automatic-cpu-topology-configuration) for virtual machines.
+When configuring `sizingPolicy`, be sure to consider the [CPU topology](../../../user/resource-management/virtual-machines.html#automatic-cpu-topology-configuration) for virtual machines.
 {% endalert %}
 
 The `cores` block is mandatory and specifies the range of cores to which the rule described in the same block applies.

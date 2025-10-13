@@ -18,8 +18,8 @@ import:
     add: /src/templates
     to: /app/templates
     before: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/dex-k8s-authenticator"]
@@ -48,7 +48,7 @@ shell:
     - git apply --whitespace=fix -v /patches/*.patch
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-src-artifact
@@ -64,6 +64,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags '-s -w' -o dex-k8s-authenticator .
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o dex-k8s-authenticator .`) | indent 6 }}
     - chown 64535:64535 dex-k8s-authenticator
     - chmod 0700 dex-k8s-authenticator

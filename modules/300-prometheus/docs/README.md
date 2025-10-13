@@ -67,7 +67,7 @@ Deckhouse allows you to flexibly configure alerts for each namespace and specify
 
 ## Monitoring Management as code (IaC approach)
 
-The capabilities of the DKP monitoring system can be expanded by using the [Observability module](/products/kubernetes-platform/modules/observability/stable/). It is used to implement:
+The capabilities of the DKP monitoring system can be expanded by using the [Observability module](/modules/observability/stable/). It is used to implement:
 
 - managing alerts;
 - differentiation of access rights to settings and monitoring data;
@@ -90,7 +90,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 ## Architecture
 
-![The scheme of interaction](../../images/prometheus/prometheus_monitoring_new.svg)
+![The scheme of interaction](images/prometheus_monitoring.svg)
 
 ### Basic monitoring components
 
@@ -105,7 +105,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 | **metrics-adapter**                       | The component connecting Prometheus and Kubernetes metrics API. It enables HPA support in a Kubernetes cluster.                                                                                                                                                                                                                                       |
 | **vertical-pod-autoscaler**               | An autoscaling tool to help size Pods for the optimal CPU and memory resources required by the Pods.                                                                                                                                                                                                                                                  |
 | **Various Exporters**                     | Precooked exporters connected to Prometheus. The list includes exporters for all necessary metrics: `kube-state-metrics`, `node-exporter`, `oomkill-exporter`, `image-availability-exporter`, and many more.                                                                                                                                          |
-| **Push/pull the metric collection model** | Monitoring uses a pull model by default. Data is collected from applications at the initiative of the monitoring system. The push model is also supported: metrics can be transmitted via the Prometheus Remote Write protocol or using the [Prometheus Pushgateway](/products/kubernetes-platform/documentation/v1/modules/prometheus-pushgateway/). |
+| **Push/pull the metric collection model** | Monitoring uses a pull model by default. Data is collected from applications at the initiative of the monitoring system. The push model is also supported: metrics can be transmitted via the Prometheus Remote Write protocol or using the [Prometheus Pushgateway](/modules/prometheus-pushgateway/). |
 
 ### External components
 

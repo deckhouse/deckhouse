@@ -23,7 +23,7 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v2.42.0
+    tag: v2.44.0
     stageDependencies:
       install:
         - '**/*.go'
@@ -60,9 +60,9 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -ldflags "-extldflags -static" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
     - chown 64535:64535 dex
     - chmod 0700 dex

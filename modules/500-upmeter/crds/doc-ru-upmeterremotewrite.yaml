@@ -28,6 +28,15 @@ spec:
                           description: Отключить проверку сертификата.
                         ca:
                           description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
+                    headers:
+                      description: HTTP-заголовки, необходимые при отправке с каждым запросом.
+                      properties:
+                        X-Scope-OrgID:
+                          description: |
+                            Заголовок `X-Scope-OrgID`, указывающий ID тенанта.
+                        X-Auth-Token:
+                          description: |
+                            Заголовок `X-Auth-Token`, указывающий токен аутентификации.
                 additionalLabels:
                   description: Дополнительные метки для добавления ко всем метрикам.
                 intervalSeconds:

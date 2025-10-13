@@ -11,7 +11,7 @@ properties:
             description: |
               Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
 
-              Издатель по-умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
+              Издатель по умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
 
               **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
@@ -79,7 +79,7 @@ properties:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/modules/user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -105,7 +105,7 @@ properties:
         description: |
           Параметры авторизации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/modules/user-authz/).
         properties:
           webhookURL:
             description: |

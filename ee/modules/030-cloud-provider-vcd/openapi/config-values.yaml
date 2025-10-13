@@ -28,5 +28,5 @@ properties:
           * an arbitrary StorageClass present in the cluster that has the default annotation;
           * StorageClass for `default StorageProfile`;
           * the first (in lexicographic order) StorageClass created by the module.
- 
-          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).

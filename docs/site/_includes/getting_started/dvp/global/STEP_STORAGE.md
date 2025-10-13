@@ -1,3 +1,8 @@
+{% alert level="warning" %}
+At this stage, an example of configuring software-defined storage based on DRBD is provided.
+If you want to use a different type of storage, refer to the section ["Configuring Storage"](../../documentation/admin/install/steps/storage.html).
+{% endalert %}
+
 At this step, the cluster is deployed in a minimal configuration. Configure the storage that will be used to create storage for metrics of the cluster components and virtual machine disks.
 
 Enable `sds-replicated-volume` module — a module for the software-defined storage. Run the following commands on the **master node**:
@@ -43,7 +48,7 @@ Combine the available block devices on the nodes into LVM volume groups. To obta
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 
-To combine block devices on one node, it is necessary to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
+To combine block devices on one node, it is necessary to create an LVM volume group using the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource.
 To create the LVMVolumeGroup resource on the node, run the following command, replacing the names of the node and block devices with your own:
 
 ```shell

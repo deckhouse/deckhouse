@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый Custom Resource [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup). Параметр [`nodeType`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый Custom Resource [NodeGroup](/modules/node-manager/cr.html#nodegroup). Параметр [`nodeType`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -389,4 +389,4 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Например, перезагрузка узла требуется в Astra Linux при изменении параметра sysctl: `kernel.yama.ptrace_scope` (результат работы команды `astra-ptrace-lock enable/disable`).
 
-Режим перезагрузки определяется полем disruptions в секции параметров [`disruptions`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.
+Режим перезагрузки определяется полем disruptions в секции параметров [`disruptions`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.

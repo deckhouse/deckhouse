@@ -7,7 +7,7 @@ check_changelog:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
       run: |
-        exit 0
+        exit 0 #TODO to delete, debug
         if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
           echo "Not a tag push, skipping changelog check."
           exit 0
@@ -40,7 +40,13 @@ steps:
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
-  {!{ tmpl.Exec "import_secrets" $ctx | strings.Indent 2 }!}
+
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key" "access_token" "COSIGN_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
@@ -90,7 +96,7 @@ steps:
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 {!{- end }!}
-      COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+      COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -207,10 +213,10 @@ steps:
       ACTIONS_ID_TOKEN="null" #clear value
       AUTH_ROLE="null" #clear value
 
-      echo WERF_REPO
-      echo $WERF_REPO | base64
+      echo WERF_REPO #TODO debug
+      echo $WERF_REPO | base64 #TODO debug
       type werf && source $(werf ci-env github --verbose --as-file)
-      echo $WERF_REPO | base64
+      echo $WERF_REPO | base64 #TODO debug
       werf build \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \

@@ -63,6 +63,7 @@ type SecurityPolicySpec struct {
 		AllowHostPID             *bool     `json:"allowHostPID,omitempty"`
 		AllowPrivileged          *bool     `json:"allowPrivileged,omitempty"`
 		AllowPrivilegeEscalation *bool     `json:"allowPrivilegeEscalation,omitempty"`
+		AllowRbacWildcards       *bool     `json:"allowRbacWildcards,omitempty"`
 		AllowedProcMount         string    `json:"allowedProcMount,omitempty"`
 		AllowedCapabilities      []string  `json:"allowedCapabilities,omitempty"`
 		AllowedAppArmor          []string  `json:"allowedAppArmor,omitempty"`
@@ -127,9 +128,10 @@ type OperationPolicySpec struct {
 			Limits   []string `json:"limits,omitempty"`
 			Requests []string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
-		DisallowedImageTags []string `json:"disallowedImageTags,omitempty"`
-		RequiredProbes      []string `json:"requiredProbes,omitempty"`
-		RequiredLabels      struct {
+		DisallowedImageTags   []string     `json:"disallowedImageTags,omitempty"`
+		DisallowedTolerations []Toleration `json:"disallowedTolerations,omitempty"`
+		RequiredProbes        []string     `json:"requiredProbes,omitempty"`
+		RequiredLabels        struct {
 			Labels []struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
@@ -169,4 +171,13 @@ type NamespaceSelector struct {
 	ExcludeNames []string `json:"excludeNames,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// Toleration represents a Kubernetes toleration pattern for disallowed tolerations.
+// Only key/operator/value/effect are used for matching.
+type Toleration struct {
+	Key      string `json:"key,omitempty"`
+	Operator string `json:"operator,omitempty"`
+	Value    string `json:"value,omitempty"`
+	Effect   string `json:"effect,omitempty"`
 }

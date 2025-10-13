@@ -85,6 +85,33 @@ jobs:
             echo "No editions requested. Building only FE."
           fi
 
+  check_branch_name:
+    name: Check branch name
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+      with:
+        fetch-depth: 0
+    - name: Check branch name
+      id: check_branch_name
+      env:
+        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      run: |
+        if [ -z "${CI_COMMIT_TAG}" ]; then
+          exit 0 # Skip job if there is no tag
+        fi
+        TAG_NAME="${GITHUB_REF#refs/tags/}" # Remove "refs/tags/" prefix
+        echo "TAG_NAME=${TAG_NAME}"
+        MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
+        MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
+        RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
+        echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
+        echo "GITHUB_SHA=${GITHUB_SHA}"
+        echo "Current commit in branch:"
+        git branch -r --contains ${GITHUB_SHA}
+        # grep returns exit code 1 if branch not found
+        git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
+
 {!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 2 }!}
 
   build_fe:
