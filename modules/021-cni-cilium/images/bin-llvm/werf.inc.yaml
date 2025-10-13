@@ -43,7 +43,7 @@ secrets:
 shell:
   setup:
   - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-build-cache.git /tmp/ccache-dir
+  # - git clone --depth 1 --branch {{ $llvmCacheRev }} $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-build-cache.git /tmp/ccache-dir
   - rm -rf /tmp/ccache-dir/.git
   #
   - export GCC_VERSION=11
