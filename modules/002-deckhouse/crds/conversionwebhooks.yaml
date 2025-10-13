@@ -28,8 +28,7 @@ spec:
             apiVersion:
               description: |-
                 APIVersion defines the versioned schema of this representation of an object.
-                Servers should convert recognized schemas to the latest internal value, and
-                may reject unrecognized values.
+                Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values.
                 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
               type: string
             context:
@@ -104,17 +103,14 @@ spec:
                         type: string
                       labelSelector:
                         description: |-
-                          A label selector is a label query over a set of resources. The result of matchLabels and
-                          matchExpressions are ANDed. An empty label selector matches all objects. A null
-                          label selector matches no objects.
+                          A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
                         properties:
                           matchExpressions:
                             description: |-
                               `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
                             items:
                               description: |-
-                                A label selector requirement is a selector that contains values, a key, and an operator that
-                                relates the key and values.
+                                A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
                               properties:
                                 key:
                                   description: |-
@@ -167,17 +163,14 @@ spec:
                         properties:
                           labelSelector:
                             description: |-
-                              A label selector is a label query over a set of resources. The result of matchLabels and
-                              matchExpressions are ANDed. An empty label selector matches all objects. A null
-                              label selector matches no objects.
+                              A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
                             properties:
                               matchExpressions:
                                 description: |-
                                   `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
                                 items:
                                   description: |-
-                                    A label selector requirement is a selector that contains values, a key, and an operator that
-                                    relates the key and values.
+                                    A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
                                   properties:
                                     key:
                                       description: |-
@@ -247,10 +240,8 @@ spec:
               type: array
             conversions:
               description: |-
-                This binding transforms a hook into a handler
-                for conversions defined in CustomResourceDefinition.
-                The Shell-operator updates a CRD with .spec.conversion,
-                starts HTTPS server, and runs hooks to handle ConversionReview requests.
+                This binding transforms a hook into a handler for conversions defined in CustomResourceDefinition.
+                The Shell-operator updates a CRD with `.spec.conversion`, starts HTTPS server, and runs hooks to handle ConversionReview requests.
               items:
                 properties:
                   from:
