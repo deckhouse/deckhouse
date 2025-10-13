@@ -44,13 +44,15 @@ title: "Модуль deckhouse: FAQ"
    d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-  {% alert level="info" %}
-  Флаг `--exclude` позволяет исключить файлы, данные по которым не будут включены в архив.
-  ```sh
-  d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
-  ```
-  Флаг `--list-exclude` отображает список файлов, которые можно исключить из выборки.
-  {% endalert %}
+{% alert level="info" %}
+Флаг `--exclude` позволяет исключить файлы, данные по которым не будут включены в архив.
+
+```sh
+d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+```
+
+Флаг `--list-exclude` отображает список файлов, которые можно исключить из выборки.
+{% endalert %}
 
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
 

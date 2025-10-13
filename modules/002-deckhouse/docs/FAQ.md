@@ -47,9 +47,9 @@ We always appreciate helping users with debugging complex issues. Please follow 
 {% alert level="info" %}
 The `--exclude` flag allows you to exclude files whose data will not be included in the archive..
 
-   ```sh
-   d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
-   ```
+```sh
+d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+```
 
 The `--list-exclude` flag displays a list of files that can be excluded from the selection.
 {% endalert %}
