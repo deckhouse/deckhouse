@@ -19,8 +19,15 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.15.0 $(cat /run/secrets/SOURCE_REPO)/kubernetes/kube-state-metrics.git .
+  - git clone --depth 1 --branch v2.17.0 $(cat /run/secrets/SOURCE_REPO)/kubernetes/kube-state-metrics.git .
+  - git apply /patches/*.patch --verbose
   - rm -rf .git tools
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      setup:
+        - "**/*"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
