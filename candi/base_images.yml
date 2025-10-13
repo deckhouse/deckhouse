@@ -264,8 +264,8 @@ tools/openssl: "sha256:b62c1a04192ba4605b92f068d5fa21f7d05d9478946d6feee0449a57f
 tools/openssl-3.5.1: "sha256:b62c1a04192ba4605b92f068d5fa21f7d05d9478946d6feee0449a57f96cebc7" # fromImage: builder/scratch
 tools/procps: "sha256:910050ab2720c7f178a581436ba0d4fecc6dc2da4d31b2bf234e11b5045ea464" # fromImage: builder/scratch
 tools/procps-v4.0.5: "sha256:910050ab2720c7f178a581436ba0d4fecc6dc2da4d31b2bf234e11b5045ea464" # fromImage: builder/scratch
-tools/pwru: "sha256:2d41d33120300d23b0445c045575502c6917baeb04c05a54a8f0859fcbc67ff6" # fromImage: builder/scratch
-tools/pwru-v1.0.9: "sha256:2d41d33120300d23b0445c045575502c6917baeb04c05a54a8f0859fcbc67ff6" # fromImage: builder/scratch
+tools/pwru: "sha256:b6bca3879df8df197700167006acd9a31399f8eb9a55d67b4e1e43b44e1a337e" # fromImage: builder/scratch
+tools/pwru-v1.0.10: "sha256:b6bca3879df8df197700167006acd9a31399f8eb9a55d67b4e1e43b44e1a337e" # fromImage: builder/scratch
 tools/sed: "sha256:16491488117512e473b3d801f7536195b0fb7eed4f12c5fca175932800610425" # fromImage: builder/scratch
 tools/sed-v4.9: "sha256:16491488117512e473b3d801f7536195b0fb7eed4f12c5fca175932800610425" # fromImage: builder/scratch
 tools/semver: "sha256:c2a68ad5ee839aecc88a6ab9610f5dd9d1c3e8cdcd7d459e27c6d6303ceed620" # fromImage: builder/scratch
