@@ -1,6 +1,6 @@
 ---
 title: "Модуль secret-copier"
-description: "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Kubernetes Platform."
+description: "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Platform Certified Security Edition."
 ---
  
 Этот модуль отвечает за копирование секретов во все пространства имён.

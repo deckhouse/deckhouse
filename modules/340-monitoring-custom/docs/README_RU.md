@@ -1,6 +1,6 @@
 ---
 title: "Автоматическая настройка системы мониторинга для сбора метрик с пользовательских приложений"
-description: "Мониторинг приложений пользователей в Deckhouse Kubernetes Platform."
+description: "Мониторинг приложений пользователей в Deckhouse Platform Certified Security Edition."
 type:
   - instruction
 search: prometheus

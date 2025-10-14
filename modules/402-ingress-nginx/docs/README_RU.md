@@ -1,6 +1,6 @@
 ---
 title: "Модуль ingress-nginx"
-description: "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью NGINX Ingress controller."
+description: "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Platform Certified Security Edition с помощью NGINX Ingress controller."
 ---
 
 Устанавливает и управляет NGINX Ingress controller с помощью Custom Resources. Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме и учитывает все особенности реализации инфраструктуры облаков и bare metal, а также кластеров Kubernetes различных типов.
@@ -49,7 +49,7 @@ description: "Балансировка и терминация трафика HT
 ### Основные принципы сбора статистики
 
 1. На каждый запрос на стадии `log_by_lua_block` вызывается модуль, который рассчитывает необходимые данные и складывает их в буфер (у каждого nginx worker собственный буфер).
-1. На стадии `init_by_lua_block` для каждого nginx worker запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через TCP socket в `protobuf_exporter` (разработка DKP).
+1. На стадии `init_by_lua_block` для каждого nginx worker запускается процесс, который раз в секунду асинхронно отправляет данные в формате `protobuf` через TCP socket в `protobuf_exporter` (разработка Deckhouse Platform Certified Security Edition).
 1. `protobuf_exporter` запущен sidecar-контейнером в поде с ingress-controller, принимает сообщения в формате `protobuf`, разбирает, агрегирует их по установленным правилам и экспортирует в формате для Prometheus.
 1. Prometheus каждые 30 секунд собирает метрики как в ingress-controller (там есть небольшое количество нужных нам метрик), так и в protobuf_exporter, на основании этих данных все работает!
 

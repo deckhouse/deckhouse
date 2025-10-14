@@ -1,6 +1,6 @@
 ---
 title: "Модуль cilium-hubble"
-description: "Визуализация сетевого стека кластера Deckhouse Kubernetes Platform с помощью Cilium Hubble."
+description: "Визуализация сетевого стека кластера Deckhouse Platform Certified Security Edition с помощью Cilium Hubble."
 webIfaces:
 - name: hubble
 ---

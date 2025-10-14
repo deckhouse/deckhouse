@@ -1,6 +1,6 @@
 ---
 title: "Модуль operator-prometheus"
-description: "Установка и управление системой мониторинга в кластере Deckhouse Kubernetes Platform."
+description: "Установка и управление системой мониторинга в кластере Deckhouse Platform Certified Security Edition."
 ---
 
 Модуль устанавливает prometheus operator.

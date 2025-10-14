@@ -1,6 +1,6 @@
 ---
 title: "Модуль service-with-healthchecks: примеры"
-description: "Примеры настройки балансировщика с модулем service-with-healthchecks в Deckhouse Kubernetes Platform"
+description: "Примеры настройки балансировщика с модулем service-with-healthchecks в Deckhouse Platform Certified Security Edition"
 ---
 
 ## Размещение двух независимых балансировщиков на одной виртуальной машине

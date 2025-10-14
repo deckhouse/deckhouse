@@ -19,7 +19,7 @@ weight: 10
 
   ![](./images/cases-pods-and-vms.ru.png)
 
-- Создание кластеров DKP.
+- Создание кластеров Deckhouse Platform Certified Security Edition.
 
   ![](./images/cases.dkp.ru.png)
 

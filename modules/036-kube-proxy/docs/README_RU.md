@@ -1,6 +1,6 @@
 ---
 title: "Модуль kube-proxy"
-description: "Управление компонентами kube-proxy на узле кластера Deckhouse Kubernetes Platform."
+description: "Управление компонентами kube-proxy на узле кластера Deckhouse Platform Certified Security Edition."
 ---
 
 Модуль удаляет весь комплект kube-proxy (`DaemonSet`, `ConfigMap`, `RBAC`) от `kubeadm` и устанавливает свой.

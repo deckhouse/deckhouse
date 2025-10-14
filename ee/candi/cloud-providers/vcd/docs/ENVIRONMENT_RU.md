@@ -310,4 +310,4 @@ shutdown -P now
 
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
 * Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
-* Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
+* Deckhouse Platform Certified Security Edition поддерживает изменение размера дисков с версии v1.59.1.

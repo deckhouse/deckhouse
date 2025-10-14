@@ -1,6 +1,6 @@
 ---
 title: "Модуль openvpn"
-description: "Доступ к ресурсам кластера Deckhouse Kubernetes Platform через OpenVPN с аутентификацией по сертификатам."
+description: "Доступ к ресурсам кластера Deckhouse Platform Certified Security Edition через OpenVPN с аутентификацией по сертификатам."
 webIfaces:
 - name: openvpn-admin
 ---

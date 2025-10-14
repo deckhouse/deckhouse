@@ -7,6 +7,6 @@ search: used directories, file system paths, security scanning, antivirus config
 
 Если узлы кластера Kubernetes анализируются сканерами безопасности (антивирусными средствами), то может потребоваться их настройка для исключения ложноположительных срабатываний.
 
-Deckhouse Kubernetes Platform (DKP) использует следующие директории при работе ([скачать в csv](../deckhouse-directories.csv)):
+Deckhouse Platform Certified Security Edition использует следующие директории при работе ([скачать в csv](../deckhouse-directories.csv)):
 
 {% include used_directories.liquid %}

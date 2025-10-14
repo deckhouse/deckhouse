@@ -1,6 +1,6 @@
 ---
 title: "Модуль extended-monitoring"
-description: "Метрики для расширенного мониторинга кластера Deckhouse Kubernetes Platform."
+description: "Метрики для расширенного мониторинга кластера Deckhouse Platform Certified Security Edition."
 ---
 
 Модуль `extended-monitoring` расширяет возможности мониторинга кластера за счёт дополнительных Prometheus exporter’ов, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов.

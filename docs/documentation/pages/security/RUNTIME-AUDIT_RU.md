@@ -1,13 +1,13 @@
 ---
 title: Аудит событий безопасности
 permalink: security/events/runtime-audit.html
-description: "Настройка аудита событий безопасности в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
+description: "Настройка аудита событий безопасности в Deckhouse Platform Certified Security Edition. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства поиска угроз безопасности
+Deckhouse Platform Certified Security Edition предоставляет встроенные средства поиска угроз безопасности
 за счёт анализа событий ядра Linux и аудита событий Kubernetes API.
-DKP позволяет:
+Deckhouse Platform Certified Security Edition позволяет:
 
 - находить угрозы в окружениях, анализируя приложения и контейнеры;
 - обнаруживать попытки применения уязвимостей из базы CVE и признаки запуска криптовалютных майнеров;
@@ -19,7 +19,7 @@ DKP позволяет:
 
 ## Источники данных для аудита безопасности
 
-DKP использует два основных источника событий:
+Deckhouse Platform Certified Security Edition использует два основных источника событий:
 
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом Kubernetes auditing и вебхук-интерфейс.
@@ -66,7 +66,7 @@ DKP использует два основных источника событи
      enabled: true
    ```
 
-1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
+1. (**Опционально**) Если control plane в кластере не управляется Deckhouse Platform Certified Security Edition при помощи [`control-plane-manager`](/modules/control-plane-manager/),
    настройте вебхук аудита API Kubernetes вручную.
 
 Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
@@ -112,7 +112,7 @@ DKP использует два основных источника событи
 ## Работа с правилами аудита
 
 Для анализа событий безопасности используются правила, определяющие критерии подозрительного поведения.
-В DKP предусмотрены:
+В Deckhouse Platform Certified Security Edition предусмотрены:
 
 - **встроенные правила**, включая:
   - правила для аудита Kubernetes (располагаются в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`);
@@ -164,7 +164,7 @@ spec:
 
 ### Применение стороннего правила
 
-Поскольку структура правил Falco отличается от схемы кастомных ресурсов DKP,
+Поскольку структура правил Falco отличается от схемы кастомных ресурсов Deckhouse Platform Certified Security Edition,
 сторонние правила из интернета необходимо сконвертировать [в ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) перед применением.
 
 Используйте следующий скрипт для конвертации:
@@ -218,7 +218,7 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 
 ## Сбор логов и оповещения
 
-DKP экспортирует события аудита безопасности в формате метрик Prometheus,
+Deckhouse Platform Certified Security Edition экспортирует события аудита безопасности в формате метрик Prometheus,
 по которым можно настроить оповещения через [ресурс CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules).
 Это позволяет:
 
@@ -290,7 +290,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 ## Отладка и эмуляция событий
 
-Для отладки и эмуляции событий безопасности в DKP можно использовать:
+Для отладки и эмуляции событий безопасности в Deckhouse Platform Certified Security Edition можно использовать:
 
 - утилиту `event-generator`;
 - HTTP-эндпоинт `/test` сервиса `falcosidekick`.

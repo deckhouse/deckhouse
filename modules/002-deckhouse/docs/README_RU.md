@@ -70,7 +70,7 @@ search: releaseChannel, стабилизация релизного канала
 
   В этом случае вы остановитесь на текущем релизе, но будете получать patch-версии текущего релиза (с учетом установленных окон обновлений). Для применения обновления минорной версии релиза необходимо будет выполнить [ручное действие](usage.html#ручное-подтверждение-обновлений).
   
-  Например: текущая версия DKP `v1.70.1`, после установки режима автоматического обновления для патч-версий, Deckhouse сможет обновиться до версии `v1.70.1`, но не будет обновляться до версии `v1.71.*` и выше.
+  Например: текущая версия Deckhouse Platform Certified Security Edition `v1.70.1`, после установки режима автоматического обновления для патч-версий, Deckhouse сможет обновиться до версии `v1.70.1`, но не будет обновляться до версии `v1.71.*` и выше.
   
   Для установки режима автоматического обновления для патч-версий необходимо в ModuleConfig `deckhouse` установить параметр [settings.update.mode](configuration.html#parameters-update-mode) в `AutoPatch`:
 
@@ -80,9 +80,9 @@ search: releaseChannel, стабилизация релизного канала
 
 - Установить конкретный тег для Deployment `deckhouse` и удалить параметр [releaseChannel](configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
-  В таком случае DKP останется на конкретной версии, никакой информации о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
+  В таком случае Deckhouse Platform Certified Security Edition останется на конкретной версии, никакой информации о новых доступных версиях (объекты DeckhouseRelease) в кластере появляться не будет.
 
-  Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
+  Пример установки версии `v1.66.3` для Deckhouse Platform Certified Security Edition EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
 
   ```shell
   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3

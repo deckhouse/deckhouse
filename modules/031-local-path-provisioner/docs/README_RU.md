@@ -1,6 +1,6 @@
 ---
 title: "Модуль local-path-provisioner"
-description: "Управление локальным хранилищем на узлах Kubernetes в Deckhouse Kubernetes Platform."
+description: "Управление локальным хранилищем на узлах Kubernetes в Deckhouse Platform Certified Security Edition."
 ---
 
 Позволяет пользователям Kubernetes использовать локальное хранилище на узлах.

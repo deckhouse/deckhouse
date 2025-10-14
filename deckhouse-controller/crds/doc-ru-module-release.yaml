@@ -34,7 +34,7 @@ spec:
                           to:
                             description: Конечная версия диапазона — минорная ветка (`X.Y`).
                 requirements:
-                  description: Зависимости релиза — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform мог запустить эту версию модуля.
+                  description: Зависимости релиза — набор условий, которые должны выполняться чтобы Deckhouse Platform Certified Security Edition мог запустить эту версию модуля.
                   properties:
                     deckhouse:
                       description: Требование к версии Deckhouse.

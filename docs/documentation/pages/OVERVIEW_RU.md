@@ -4,7 +4,7 @@ permalink: ru/
 lang: ru
 ---
 
-Приветствуем вас на главной странице документации Deckhouse Kubernetes Platform — платформы для управления Kubernetes-кластерами.
+Приветствуем вас на главной странице документации Deckhouse Platform Certified Security Edition — платформы для управления Kubernetes-кластерами.
 
 Как быстро найти то, что нужно:
 

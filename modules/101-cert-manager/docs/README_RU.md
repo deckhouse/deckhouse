@@ -1,6 +1,6 @@
 ---
 title: "Модуль cert-manager"
-description: "Управление сертификатами в кластере Deckhouse Kubernetes Platform."
+description: "Управление сертификатами в кластере Deckhouse Platform Certified Security Edition."
 ---
 
 Устанавливает надежную и высокодоступную инсталляцию cert-manager release v1.17.1.

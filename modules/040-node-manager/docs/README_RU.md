@@ -349,7 +349,7 @@ rm /var/lib/bashible/configuration_checksum
 
 ## Мониторинг
 
-Для групп узлов (ресурс `NodeGroup`) DKP экспортирует метрики доступности группы.
+Для групп узлов (ресурс `NodeGroup`) Deckhouse Platform Certified Security Edition экспортирует метрики доступности группы.
 
 ### Какую информацию собирает Prometheus?
 

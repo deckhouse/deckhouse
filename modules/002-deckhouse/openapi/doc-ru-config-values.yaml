@@ -186,13 +186,13 @@ properties:
   license:
     type: object
     description: |
-      Настройки редакции Deckhouse Kubernetes Platform.
+      Настройки редакции Deckhouse Platform Certified Security Edition.
     properties:
       edition:
         type: string
         x-examples: ["CE"]
         description: |
-          Редакция Deckhouse Kubernetes Platform.
+          Редакция Deckhouse Platform Certified Security Edition.
           - `CE` — Community Edition.
           - `BE` — Basic Edition.
           - `EE` — Enterprise Edition.

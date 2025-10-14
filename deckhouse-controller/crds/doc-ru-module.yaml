@@ -39,14 +39,14 @@ spec:
                 disableOptions:
                   description: Параметры защиты от отключения модуля.
                 requirements:
-                  description: Зависимости модуля — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform (DKP) мог запустить модуль.
+                  description: Зависимости модуля — набор условий, которые должны выполняться чтобы Deckhouse Platform Certified Security Edition мог запустить модуль.
                   properties:
                     deckhouse:
                       description: Требование к версии Deckhouse.
                     kubernetes:
                       description: Требование к версии Kubernetes.
                     bootstrapped:
-                      description: Требование к статусу установки кластера (только для встроенных модулей DKP).
+                      description: Требование к статусу установки кластера (только для встроенных модулей Deckhouse Platform Certified Security Edition).
                     modules:
                       description: Список других включенных модулей, которые необходимы для работы модуля.
               accessibility:

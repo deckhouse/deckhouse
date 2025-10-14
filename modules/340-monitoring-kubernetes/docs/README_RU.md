@@ -1,6 +1,6 @@
 ---
 title: "Модуль monitoring-kubernetes"
-description: "Базовый мониторинг узлов кластера Deckhouse Kubernetes Platform."
+description: "Базовый мониторинг узлов кластера Deckhouse Platform Certified Security Edition."
 ---
 
 Модуль `monitoring-kubernetes` обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов.

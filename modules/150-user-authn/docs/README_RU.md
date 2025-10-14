@@ -1,7 +1,7 @@
 ---
 title: "Модуль user-authn"
 search: kube config generator
-description: "Единая система аутентификации Deckhouse Kubernetes Platform, интегрированная с Kubernetes и веб-интерфейсами Deckhouse Kubernetes Platform."
+description: "Единая система аутентификации Deckhouse Platform Certified Security Edition, интегрированная с Kubernetes и веб-интерфейсами Deckhouse Platform Certified Security Edition."
 webIfaces:
 - name: kubeconfig
   urlInfo: faq.html#как-я-могу-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api

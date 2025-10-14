@@ -1,6 +1,6 @@
 ---
 title: "Модуль log-shipper"
-description: Сбор, фильтрация и обогащение логов в кластере Deckhouse Kubernetes Platform.
+description: Сбор, фильтрация и обогащение логов в кластере Deckhouse Platform Certified Security Edition.
 ---
 
 Модуль `log-shipper` упрощает настройку сбора логов в Kubernetes. Он позволяет быстро организовать сбор логов как с приложений, запущенных в кластере, так и с самих узлов, а затем отправлять их в любую систему хранения — внутреннюю или внешнюю (например, Loki, Elasticsearch, S3 и другие).

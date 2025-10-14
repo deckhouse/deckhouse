@@ -1,6 +1,6 @@
 ---
 title: "Модуль istio"
-description: "Организация сети service mesh в кластере Deckhouse Kubernetes Platform"
+description: "Организация сети service mesh в кластере Deckhouse Platform Certified Security Edition"
 webIfaces:
 - name: istio
 ---
@@ -13,7 +13,7 @@ webIfaces:
 |     1.21     |                                           1.26, 1.27, 1.28, 1.29, 1.30, 1.31                                          |  Поддерживается  |
 |     1.19     |                                                     1.25<sup>*</sup>, 1.26, 1.27, 1.28, 1.28, 1.29, 1.30                                                     |       Устарела и будет удалена       |
 
-<sup>*</sup> — версия Kubernetes **НЕ поддерживается** в текущем релизе Deckhouse Kubernetes Platform.
+<sup>*</sup> — версия Kubernetes **НЕ поддерживается** в текущем релизе Deckhouse Platform Certified Security Edition.
 
 {::options parse_block_html="false" /}
 

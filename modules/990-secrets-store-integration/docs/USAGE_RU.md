@@ -561,11 +561,11 @@ for {
 
 ## Скачать мультитул d8 для команд Stronghold
 
-### Официальный сайт Deckhouse Kubernetes Platform
+### Официальный сайт Deckhouse Platform Certified Security Edition
 
 Перейдите на официальный сайт и воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/deckhouse-cli/#как-установить-deckhouse-cli)
 
-### Субдомен вашей Deckhouse Kubernetes Platform
+### Субдомен вашей Deckhouse Platform Certified Security Edition
 
 Для скачивания мультитула:
 1. Перейдите на страницу `tools..<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.

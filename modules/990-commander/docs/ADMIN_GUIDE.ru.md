@@ -26,13 +26,13 @@ Deckhouse Commander с СУБД указаны в [разделе «Устано
 
 *Менеджер кластеров* отвечает за запуск установщиков — *серверов dhctl*. Менеджер кластеров
 запускает реплику сервера dhctl только нужной версии для каждого кластера Deckhouse Kubernetes
-Platform (DKP).
+Platform (Deckhouse Platform Certified Security Edition).
 
 В каждом кластере Deckhouse Commander автоматически устанавливает модуль `commander-agent`. Этот
 модуль отвечает за синхронизацию ресурсов Kubernetes в прикладном кластере, а так же за отправку
 телеметрии в сервер API Deckhouse Commander. Телеметрия включает в себя основные метрики (общее
-количество ядер, общий объем памяти, количество узлов и общий объем хранилищ), версию DKP, версию
-Kubernetes и доступность компонентов DKP.
+количество ядер, общий объем памяти, количество узлов и общий объем хранилищ), версию Deckhouse Platform Certified Security Edition, версию
+Kubernetes и доступность компонентов Deckhouse Platform Certified Security Edition.
 
 ### Требования к сетевой доступности компонентов
 

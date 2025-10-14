@@ -668,7 +668,7 @@ spec:
 При добавлении узла в кластер указанные в файлах лейблы будут автоматически проставлены на узел.
 
 {% alert level="warning" %}
-Обратите внимание, что добавить таким образом лейблы, использующиеся в DKP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
+Обратите внимание, что добавить таким образом лейблы, использующиеся в Deckhouse Platform Certified Security Edition, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
 {% endalert %}
 
 ## Как развернуть кастомный конфигурационный файл containerd?
@@ -1268,7 +1268,7 @@ metadata:
 
 ## Как мониторить GPU?
 
-Deckhouse Kubernetes Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
+Deckhouse Platform Certified Security Edition автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
 
 ## Какие режимы работы GPU поддерживаются?
 
@@ -1325,4 +1325,4 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 
 ## Поддерживаются ли AMD или Intel GPU?
 
-Сейчас Deckhouse Kubernetes Platform автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.
+Сейчас Deckhouse Platform Certified Security Edition автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.

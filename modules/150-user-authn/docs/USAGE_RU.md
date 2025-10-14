@@ -4,7 +4,7 @@ title: "Модуль user-authn: примеры конфигурации"
 
 ## Пример конфигурации модуля
 
-В примере представлена конфигурация модуля `user-authn` в Deckhouse Kubernetes Platform.
+В примере представлена конфигурация модуля `user-authn` в Deckhouse Platform Certified Security Edition.
 
 {% raw %}
 

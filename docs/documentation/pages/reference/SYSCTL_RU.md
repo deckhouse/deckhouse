@@ -1,6 +1,6 @@
 ---
 title: Параметры sysctl, настраиваемые платформой
-description: "Список параметров sysctl, которые DKP настраивает и поддерживает на узлах кластера."
+description: "Список параметров sysctl, которые Deckhouse Platform Certified Security Edition настраивает и поддерживает на узлах кластера."
 permalink: ru/reference/sysctl.html
 lang: ru
 search: sysctl parameters reference, kernel parameters reference, параметры ядра, настройка системы

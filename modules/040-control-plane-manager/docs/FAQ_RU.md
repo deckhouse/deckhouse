@@ -8,8 +8,8 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Platform Certified Security Edition с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки Deckhouse Platform Certified Security Edition измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -716,15 +716,15 @@ spec:
 
 ### Как сделать резервную копию etcd вручную
 
-#### Используя Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+#### Используя Deckhouse CLI (Deckhouse Platform Certified Security Edition v1.65+)
 
-Начиная с релиза Deckhouse Kubernetes Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
+Начиная с релиза Deckhouse Platform Certified Security Edition v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
 d8 backup etcd ./etcd-backup.snapshot
 ```
 
-#### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
+#### Используя bash (Deckhouse Platform Certified Security Edition v1.64 и старше)
 
 Войдите на любой control-plane узел под пользователем `root` и используйте следующий bash-скрипт:
 
@@ -1091,7 +1091,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 ## Как происходит ротация сертификатов kubelet?
 
-В Deckhouse Kubernetes Platform ротация сертификатов kubelet происходит автоматически.
+В Deckhouse Platform Certified Security Edition ротация сертификатов kubelet происходит автоматически.
 
 Kubelet использует клиентский TLS-сертификат (`/var/lib/kubelet/pki/kubelet-client-current.pem`), при помощи которого может запросить у kube-apiserver новый клиентский сертификат или новый серверный сертификат (`/var/lib/kubelet/pki/kubelet-server-current.pem`).
 
@@ -1105,9 +1105,9 @@ Kubelet использует клиентский TLS-сертификат (`/va
 Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
 {% endalert %}
 
-### Особенности работы с серверными сертификатами kubelet в Deckhouse Kubernetes Platform
+### Особенности работы с серверными сертификатами kubelet в Deckhouse Platform Certified Security Edition
 
-В Deckhouse Kubernetes Platform для запросов в kubelet API используются IP-адреса. Поэтому в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не указываются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также, из-за использования динамического сертификата, в Deckhouse Kubernetes Platform (в модуле `operator-trivy`) отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
+В Deckhouse Platform Certified Security Edition для запросов в kubelet API используются IP-адреса. Поэтому в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не указываются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также, из-за использования динамического сертификата, в Deckhouse Platform Certified Security Edition (в модуле `operator-trivy`) отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
 
 {% offtopic title="Информация о логике работы с серверными сертификатами в Kubernetes" %}
 

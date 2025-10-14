@@ -4,7 +4,7 @@ properties:
     description: |
       > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
 
-      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Platform Certified Security Edition (Prometheus, Grafana, OpenVPN и т. д.).
 
         * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
@@ -13,9 +13,9 @@ properties:
     type: string
     default: null
     description: |-
-      Имя StorageClass, который DKP определит как StorageClass используемый в кластере по умолчанию.
+      Имя StorageClass, который Deckhouse Platform Certified Security Edition определит как StorageClass используемый в кластере по умолчанию.
 
-      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
+      Deckhouse Platform Certified Security Edition запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
 
       Если значение не указано, фактический StorageClass используемый в кластере по умолчанию будет определяться в следующем порядке:
 
@@ -98,7 +98,7 @@ properties:
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
       storageClass:
         description: |
-          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Platform Certified Security Edition (Prometheus, Grafana, OpenVPN и т. д.).
 
             * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.

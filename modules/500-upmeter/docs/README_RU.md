@@ -1,6 +1,6 @@
 ---
 title: "Мониторинг SLA кластера"
-description: "Сбор статистики по доступности компонентов кластера Deckhouse Kubernetes Platform."
+description: "Сбор статистики по доступности компонентов кластера Deckhouse Platform Certified Security Edition."
 webIfaces:
 - name: status
 - name: upmeter
@@ -24,7 +24,7 @@ webIfaces:
   - **webui** — показывает дашборд со статистикой по пробам и группам доступности (требует авторизации).
 - **smoke-mini** — поддерживает постоянное *smoke-тестирование* с помощью StatefulSet.
 
-Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Kubernetes Platform.
+Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Platform Certified Security Edition.
 
 ## Интерфейс
 

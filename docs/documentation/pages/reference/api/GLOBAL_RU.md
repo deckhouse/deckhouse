@@ -1,13 +1,13 @@
 ---
 title: "Глобальные настройки"
 permalink: ru/reference/api/global.html
-description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
+description: "Описание глобальных настроек Deckhouse Platform Certified Security Edition"
 module-kebab-name: global
 lang: ru
 search: global settings, global configuration, platform settings, default settings, global parameters, глобальные настройки, глобальная конфигурация, настройки платформы, настройки по умолчанию, глобальные параметры
 ---
 
-Глобальные настройки Deckhouse Kubernetes Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
+Глобальные настройки Deckhouse Platform Certified Security Edition позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
 
 Глобальные настройки Deckhouse хранятся в ModuleConfig `global`.
 

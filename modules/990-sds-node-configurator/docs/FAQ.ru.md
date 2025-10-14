@@ -1,6 +1,6 @@
 ---
 title: " Модуль sds-node-configurator: FAQ"
-description: "Модуль sds-node-configurator, Deckhouse Kubernetes Platform. Частые вопросы и ответы."
+description: "Модуль sds-node-configurator, Deckhouse Platform Certified Security Edition. Частые вопросы и ответы."
 ---
 {% alert level="warning" %}
 Работоспособность модуля гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](https://deckhouse.ru/documentation/v1/supported_versions.html#linux).
