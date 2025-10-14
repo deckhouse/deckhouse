@@ -12,9 +12,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.15.6-0.20251014175151-7cadbee53576
+	github.com/flant/addon-operator v1.15.6-0.20251014193322-ed8b40440450
 	github.com/flant/kube-client v1.4.0
-	github.com/flant/shell-operator v1.11.4-0.20251014175056-e86c8e612020
+	github.com/flant/shell-operator v1.11.4-0.20251014193230-b6e9262cf34a
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
 	github.com/google/go-cmp v0.7.0
