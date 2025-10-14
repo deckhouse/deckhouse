@@ -4,7 +4,7 @@ apiVersions:
     openAPISpec:
       type: object
       description: |
-        Describes the configuration of a cloud cluster in Deckhouse Virtualization Platform (DVP).
+        Describes the configuration of a cloud cluster in Deckhouse Platform Certified Security Edition.
 
         Used by the cloud provider if a cluster's control plane is hosted in the DVP cloud.
 
@@ -516,12 +516,12 @@ apiVersions:
         provider:
           type: object
           description: |
-            Contains settings to connect to the Deckhouse Kubernetes Platform API.
+            Contains settings to connect to the Deckhouse Platform Certified Security Edition API.
           additionalProperties: false
           properties:
             kubeconfigDataBase64:
               description: |
-                Kubeconfig to connect to Deckhouse Kubernetes Platform API, Base64-encoded.
+                Kubeconfig to connect to Deckhouse Platform Certified Security Edition API, Base64-encoded.
               type: string
               pattern: "^[A-Za-z0-9+/]+[=]{0,2}$"
             namespace:

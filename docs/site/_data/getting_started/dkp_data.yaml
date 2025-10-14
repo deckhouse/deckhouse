@@ -40,7 +40,7 @@ installTypes:
       code: without_nat
       name: WithoutNAT
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Amazon AWS"
+      en: "Deckhouse Platform Certified Security Edition in Amazon AWS"
       ru: "Deckhouse Kubernetes Platform в Amazon AWS"
     type: cloud
     name:
@@ -745,8 +745,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
-      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
+      en: "Deckhouse Kubernetes Platform on Deckhouse Platform Certified Security Edition"
+      ru: "Deckhouse Kubernetes Platform на Deckhouse Platform Certified Security Edition"
     type: cloud
     name:
       en: DVP

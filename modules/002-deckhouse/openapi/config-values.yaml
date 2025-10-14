@@ -302,14 +302,14 @@ properties:
   license:
     type: object
     description: |
-      Edition settings of the Deckhouse Kubernetes Platform.
+      Edition settings of the Deckhouse Platform Certified Security Edition.
     properties:
       edition:
         type: string
         enum: ["CSE"]
         x-examples: ["CSE"]
         description: |
-          Edition of the Deckhouse Kubernetes Platform:
+          Edition of the Deckhouse Platform Certified Security Edition:
 
           - `CSE` — Certified Security Edition.
         default: "CSE"

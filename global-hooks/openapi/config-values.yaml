@@ -65,7 +65,7 @@ properties:
 
           **Pay attention to the following:**
           - If this parameter is not specified, Ingress resources will not be created.
-          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
           - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
           - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
           For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.

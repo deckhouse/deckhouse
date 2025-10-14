@@ -25,7 +25,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration of the Deckhouse Kubernetes Platform module (module parameters). The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
+            Defines the configuration of the Deckhouse Platform Certified Security Edition module (module parameters). The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
           x-doc-examples:
             - apiVersion: deckhouse.io/v1alpha1
               kind: ModuleConfig

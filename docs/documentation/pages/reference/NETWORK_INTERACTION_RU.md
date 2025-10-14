@@ -10,7 +10,7 @@ search: network interaction, network policies, CNI configuration, Cilium, Flanne
 Если на площадке, где работает Deckhouse Platform Certified Security Edition, есть требования для ограничения сетевого взаимодействия между серверами на уровне инфраструктуры, то необходимо соблюсти следующие условия:
 
 * Включен режим туннелирования трафика между подами ([настройки](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [настройки](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel).
-* Разрешена передача трафика между [podSubnetCIDR](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration), инкапсулированного внутри VXLAN (если выполняется инспектирование и фильтрация трафика внутри VXLAN-туннеля).
+* Разрешена передача трафика между [podSubnetCIDR](/reference/api/cr.html#clusterconfiguration), инкапсулированного внутри VXLAN (если выполняется инспектирование и фильтрация трафика внутри VXLAN-туннеля).
 * В случае необходимости интеграции с внешними системами (например, LDAP, SMTP или прочие внешние API), с ними разрешено сетевое взаимодействие.
 * Локальное сетевое взаимодействие полностью разрешено в рамках каждого отдельно взятого узла кластера.
 * Разрешено взаимодействие между узлами по портам, приведенным в таблицах на текущей странице. Обратите внимание, что большинство портов входит в диапазон 4200-4299. При добавлении новых компонентов платформы им будут назначаться порты из этого диапазона (при наличии возможности).
@@ -30,10 +30,5 @@ tunnel-protocol: vxlan
 ```
 
 {%- endofftopic %}
-
-{% alert level="info" %}
-Изменения, связанные с добавлением, удалением или переопределением портов в таблицах,
-перечислены в подразделе «Сеть» соответствующей версии Deckhouse Platform Certified Security Edition [на странице «История изменений»](../release-notes.html).
-{% endalert %}
 
 {% include network_security_setup.liquid %}

@@ -234,8 +234,8 @@ export VAULT_ADDR=https://secretstoreexample.com
 Для авторизации в Stronghold Pod использует токен, сгенерированный для своего ServiceAccount'а. Для того чтобы Stronghold мог проверить валидность предоставляемых данных `ServiceAccount`, используемый сервисом Stronghold должен иметь разрешение на действия `get`, `list` и `watch`  для endpoints `tokenreviews.authentication.k8s.io` и `subjectaccessreviews.authorization.k8s.io`. Для этого также можно использовать clusterRole `system:auth-delegator`.
 
 Stronghold может использовать различные авторизационные данные для осуществления запросов в API Kubernetes:
-1. Использовать токен приложения, которое пытается авторизоваться в Stronghold. В этом случае для каждого сервиса, авторизующегося в Stronghold, требуется в используемом ServiceAccount'е иметь clusterRole `system:auth-delegator` (либо права на API представленные выше). [Пример в документации Stronghold](https://deckhouse.ru/products/stronghold/documentation/user/auth/kubernetes.html#используйте-jwt-клиента-в-качестве-рецензента-jwt)
-2. Использовать статичный токен отдельно созданного специально для Stronghold `ServiceAccount` у которого имеются необходимые права. Настройка Stronghold для такого случая подробно описана в [документации Stronghold](https://deckhouse.ru/products/stronghold/documentation/user/auth/kubernetes.html#использование-долгоживущих-токенов).
+1. Использовать токен приложения, которое пытается авторизоваться в Stronghold. В этом случае для каждого сервиса, авторизующегося в Stronghold, требуется в используемом ServiceAccount'е иметь clusterRole `system:auth-delegator` (либо права на API представленные выше).
+2. Использовать статичный токен отдельно созданного специально для Stronghold `ServiceAccount` у которого имеются необходимые права.
 
 ## Инжектирование переменных окружения
 

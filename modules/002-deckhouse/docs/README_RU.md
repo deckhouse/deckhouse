@@ -13,12 +13,12 @@ search: releaseChannel, стабилизация релизного канала
   Независимо от используемого набора включенных по умолчанию модулей любой модуль может быть явно включен или выключен в конфигурации Deckhouse (подробнее [про включение и отключение модуля](/products/kubernetes-platform/documentation/v1/admin/configuration/#включение-и-отключение-модуля)).
 - **[Канал обновлений](configuration.html#parameters-releasechannel)**
 
-  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](/products/kubernetes-platform/documentation/v1/reference/release-channels.html), различающиеся стабильностью и частотой выхода версий. Ознакомьтесь подробнее с тем, [как работает механизм автоматического обновления](/products/kubernetes-platform/documentation/v1/architecture/updating.html) и [как установить желаемый канал обновлений](/products/kubernetes-platform/documentation/v1/admin/configuration/update/configuration.html).
+  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](/products/kubernetes-platform/documentation/v1/reference/release-channels.html), различающиеся стабильностью и частотой выхода версий.
 - **[Режим обновлений](configuration.html#parameters-update-mode)** и **[окна обновлений](configuration.html#parameters-update-windows)**
 
   Deckhouse может использовать **ручной** или **автоматический** режим обновлений.
 
-  В ручном режиме обновлений автоматически применяются только важные исправления (patch-релизы), и для перехода на новый релиз Deckhouse требуется [ручное подтверждение](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-approved).
+  В ручном режиме обновлений автоматически применяются только важные исправления (patch-релизы), и для перехода на новый релиз Deckhouse требуется [ручное подтверждение](/reference/api/cr.html#deckhouserelease-v1alpha1-approved).
 
   В автоматическом режиме обновлений, если в кластере **не установлены** [окна обновлений](configuration.html#parameters-update-windows), переход на новый релиз Deckhouse осуществляется сразу после его появления на соответствующем канале обновлений. Если же в кластере **установлены** окна обновлений, переход на более свежий релиз Deckhouse начнется в ближайшее доступное окно обновлений после появления новой версии на канале обновлений.
   

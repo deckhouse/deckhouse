@@ -142,5 +142,5 @@ spec:
 
 В этом случае лог будет доступен в stdout контейнера `kube-apiserver`.
 
-Далее, используя [встроенный механизм логирования в Deckhouse Platform Certified Security Edition](../../../configuration/logging/delivery.html),
+Далее, используя встроенный механизм логирования в Deckhouse Platform Certified Security Edition,
 вы можете настроить сбор и отправку логов в собственную систему безопасности.

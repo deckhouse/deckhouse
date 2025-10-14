@@ -51,7 +51,7 @@ spec:
                   description: Time until which the release will be delayed.
                 requirements:
                   type: object
-                  description: Release dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform to run the module release.
+                  description: Release dependencies, a set of requirements that must be met for Deckhouse Platform Certified Security Edition to run the module release.
                   properties:
                     deckhouse:
                       type: string
@@ -73,7 +73,7 @@ spec:
                         List of `from`→`to` transition rules that allow skipping step-by-step updates.
                         If the current installed module version (status `Deployed`) is not lower than `from`, and the cluster has a release whose version matches `to`, the controller will skip intermediate releases and update the module to the version from `to`.
                         The `to` value can specify a minor line (`X.Y` — the latest available `X.Y.Z` will be selected).
-                        The rule is specified in the constrained release — the one whose version matches `to`. 
+                        The rule is specified in the constrained release — the one whose version matches `to`.
                       type: array
                       items:
                         type: object

@@ -76,7 +76,7 @@ spec:
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Platform Certified Security Edition to run the module.
                   properties:
                     deckhouse:
                       type: string

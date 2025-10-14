@@ -427,8 +427,8 @@ groups:
   - ports: "22"
     protocol: TCP
     description:
-      en: SSH for initializing Deckhouse Kubernetes Platform
-      ru: SSH для инициализации Deckhouse Kubernetes Platform
+      en: SSH for initializing Deckhouse Platform Certified Security Edition
+      ru: SSH для инициализации Deckhouse Platform Certified Security Edition
   - ports: "6443"
     protocol: TCP
     description:

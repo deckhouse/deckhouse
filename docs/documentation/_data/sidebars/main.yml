@@ -599,10 +599,6 @@ entries:
                     ru: Custom Resources
                   url: /modules/observability/cr.html
             - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/observability/usage.html
-            - title:
                 en: FAQ
                 ru: FAQ
               url: /modules/observability/faq.html
@@ -1100,12 +1096,8 @@ entries:
     - title:
         en: Virtualization
         ru: Подсистема Виртуализация
+        moduleName: virtualization
       folders:
-        - title:
-            en: virtualization
-            ru: virtualization
-          moduleName: virtualization
-          folders:
             - title:
                 en: Description
                 ru: Описание
@@ -1173,156 +1165,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/terraform-manager/configuration.html
-    - title:
-        en: Using
-        ru: Использование
-      folders:
-        - title:
-            en: Authentication
-            ru: Аутентификация
-          url: /user/access/authentication.html
-        - title:
-            en: Vertical Pod Autoscaling
-            ru: Вертикальное масштабирование
-          url: /user/configuration/app-scaling/vpa.html
-        - title:
-            en: Network
-            ru: Сеть
-          folders:
-            - title:
-                en: Incoming traffic processing
-                ru: Обработка входящего трафика
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /user/network/ingress/
-                - title:
-                    en: NLB
-                    ru: NLB
-                  url: /user/network/ingress/nlb.html
-                - title:
-                    en: ALB
-                    ru: ALB
-                  url: /user/network/ingress/alb.html
-            - title:
-                en: Intra-cluster communication
-                ru: Внутрикластерное взаимодействие
-              url: /user/network/intra-cluster.html
-            - title:
-                en: Managing authorization and access to workload with Istio
-                ru: Управление авторизацией и доступом к workload c Istio
-              url: /user/network/authorization-workload-istio.html
-            - title:
-                en: Request routing with Istio
-                ru: Маршрутизация запросов с Istio
-              url: /user/network/request_routing_istio.html
-            - title:
-                en: Enabling Istio for applications
-                ru: Активация Istio для приложений
-              url: /user/network/app_istio_activation.html
-            - title:
-                en: Managing request balancing between service endpoints with Istio
-                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
-              url: /user/network/managing_request_between_service_istio.html
-            - title:
-                en: Locality failover with Istio
-                ru: Locality failover с Istio
-              url: /user/network/locality_failover_istio.html
-            - title:
-                en: Configuring request retries with Istio
-                ru: Настройка retry для запросов с Istio
-              url: /user/network/retry_istio.html
-            - title:
-                en: Configuring resources for istio-proxy sidecars
-                ru: Настройка ресурсов для istio-proxy сайдкаров
-              url: /user/network/istio-sidecar-resource-management.html
-            - title:
-                en: Circuit Breaker
-                ru: Circuit Breaker
-              url: /user/network/circuit-breaker.html
-            - title:
-                en: Canary deployment
-                ru: Canary deployment
-              url: /user/network/canary-deployment.html
-        - title:
-            en: Security
-            ru: Безопасность
-          folders:
-            - title:
-                en: Container image vulnerability scanning
-                ru: Сканирование контейнерных образов на уязвимости
-              url: /user/security/scanning.html
-            - title:
-                en: Using TLS certificates
-                ru: Использование TLS-сертификатов
-              url: /user/security/tls.html
-        - title:
-            en: Web interfaces
-            ru: Веб-интерфейсы
-          folders:
-            - title:
-                en: Web UI
-                ru: Веб-интерфейс платформы
-              url: /user/web/ui.html
-            - title:
-                en: Grafana
-                ru: Grafana
-              url: /user/web/grafana.html
-            - title:
-                en: Alert management
-                ru: Управление алертами
-              url: /user/web/alertmanager.html
-            - title:
-                en: Kubeconfig generator
-                ru: Генератор kubeconfig
-              url: /user/web/kubeconfig.html
-            - title:
-                en: Downloading Deckhouse utilities
-                ru: Загрузка утилит Deckhouse
-              url: /user/web/deckhouse-tools.html
-            - title:
-                en: Secret management
-                ru: Управление секретами
-              url: /user/web/stronghold.html
-            - title:
-                en: Visualizing cluster network stack
-                ru: Визуализация сетевого стека кластера
-              url: /user/web/hubble.html
-        - title:
-            en: Multitenancy
-            ru: Мультитенантность
-          url: /user/multitenancy/
-        - title:
-            en: Monitoring
-            ru: Мониторинг
-          folders:
-            - title:
-                en: Overview
-                ru: Обзор
-              url: /user/monitoring/
-            - title:
-                en: Monitoring settings
-                ru: Настройки мониторинга
-              url: /user/monitoring/app.html
-        - title:
-            en: Logging settings
-            ru: Настройки логирования
-          url: /user/logging/
-        - title:
-            en: Containerized applications
-            ru: TODO Контейнеризированные приложения
-          draft: true
-          folders:
-            - title:
-                en: Running applications on the platform
-                ru: Запуск приложений на платформе
-              url: /user/running-containerized-applications.html
-            - title:
-                en: Migration from other platforms
-                ru: TODO  Переход с других платформ
-              url: /user/migration-from-other-platforms.html
-              draft: true
     - title:
         en: Reference
         ru: Справка

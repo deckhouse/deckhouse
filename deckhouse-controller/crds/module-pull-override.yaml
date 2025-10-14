@@ -86,7 +86,7 @@ spec:
             Defines the resource configuration for downloading specific versions of Deckhouse modules.
 
             > **Caution**. This resource is intended for development and debugging environments only.
-            > Using it in production clusters is not recommended. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
+            > Using it in production clusters is not recommended. Support for the resource might be removed in future Deckhouse Platform Certified Security Edition versions.
           required:
             - spec
           properties:

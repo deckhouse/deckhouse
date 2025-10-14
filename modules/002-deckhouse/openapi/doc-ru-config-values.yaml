@@ -36,7 +36,7 @@ properties:
 
             Для обновления и минорной, и патч-версии необходимо подтверждение.
 
-          Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
+          Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем ресурсе [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
 
           Выбранный режим обновления применяется **только** при установленном [канале обновлений](#parameters-releasechannel).
       disruptionApprovalMode:
@@ -44,7 +44,7 @@ properties:
         description: |
           Режим обновления версий Deckhouse, имеющих изменения, которые могут привести к кратковременному простою в работе системных компонентов:
           - `Auto` — автоматический режим обновления.
-          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](/reference/api/cr.html#deckhouserelease).
       windows:
         description: |
           Список окон обновлений в течение суток.

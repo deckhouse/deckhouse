@@ -1,6 +1,6 @@
 # Docs Builder
 
-A Go-based HTTP service built on [Hugo](https://gohugo.io/) that manages the complete documentation lifecycle for Deckhouse Kubernetes Platform modules. The service handles documentation uploading, building, and serving with support for multiple publication channels and languages.
+A Go-based HTTP service built on [Hugo](https://gohugo.io/) that manages the complete documentation lifecycle for Deckhouse Platform Certified Security Edition modules. The service handles documentation uploading, building, and serving with support for multiple publication channels and languages.
 
 ## Architecture Overview
 

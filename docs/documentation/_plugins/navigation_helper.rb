@@ -74,13 +74,12 @@ module Jekyll
       prev_page = current_index > 0 ? flattened[current_index - 1] : nil
       next_page = current_index < flattened.length - 1 ? flattened[current_index + 1] : nil
 
-      # Convert to relative URLs
       if prev_page
-        prev_page['full_url'] = get_relative_url(prev_page['url'], page['url'])
+        prev_page['full_url'] = prev_page['url']
       end
 
       if next_page
-        next_page['full_url'] = get_relative_url(next_page['url'], page['url'])
+        next_page['full_url'] = next_page['url']
       end
 
       { 'prev' => prev_page, 'next' => next_page }

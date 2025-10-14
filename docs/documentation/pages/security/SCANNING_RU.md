@@ -68,5 +68,3 @@ Deckhouse Platform Certified Security Edition сканирует **все рес
   ```shell
   d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
-
-Для получения информации о том, как просматривать результаты сканирования, [см. раздел «Сканирование контейнерных образов на уязвимости»](../../../user/security/scanning.html).

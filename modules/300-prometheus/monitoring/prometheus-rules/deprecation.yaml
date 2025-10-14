@@ -60,7 +60,7 @@
         summary: Deprecated Ingress with direct Prometheus access found in cluster.
         description: |
           The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
-          This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
+          This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Platform Certified Security Edition releases.
 
           To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
 - name: d8.grafana.interval_deprecation

@@ -10,13 +10,13 @@ Deckhouse Platform Certified Security Edition поддерживает инте�
 
 ## Отправка логов в KUMA
 
-Для отправки логов в систему KUMA настройте [сбор и доставку логов на стороне Deckhouse Platform Certified Security Edition](../logging/delivery.html),
+Для отправки логов в систему KUMA настройте сбор и доставку логов на стороне Deckhouse Platform Certified Security Edition,
 используя следующие ресурсы:
 
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов;
 - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — задаёт параметры сбора логов из кластера.
 
-{% alert level="info" %}
+{% alert level="info" %   }
 На стороне KUMA настройте соответствующие ресурсы для приёма событий.
 {% endalert %}
 

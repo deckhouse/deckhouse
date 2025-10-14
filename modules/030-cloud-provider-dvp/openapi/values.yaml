@@ -410,12 +410,12 @@ properties:
           provider:
             type: object
             description: |
-              Contains settings to connect to the Deckhouse Kubernetes Platform API.
+              Contains settings to connect to the Deckhouse Platform Certified Security Edition API.
             additionalProperties: false
             properties:
               kubeconfigDataBase64:
                 description: |
-                  Kubeconfig to connect to Deckhouse Kubernetes Platform API base64 encoded.
+                  Kubeconfig to connect to Deckhouse Platform Certified Security Edition API base64 encoded.
                 type: string
                 pattern: "^[A-Za-z0-9+/]+[=]{0,2}$"
               namespace:

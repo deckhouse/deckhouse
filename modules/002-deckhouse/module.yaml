@@ -7,6 +7,6 @@ subsystems:
 namespace: d8-system
 disable:
   confirmation: true
-  message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+  message: "Disabling this module will completely stop normal operation of the Deckhouse Platform Certified Security Edition."
 requirements:
   deckhouse: ">= 1.68"

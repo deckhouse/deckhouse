@@ -9,10 +9,10 @@ request-access:
   success-message:
     ru:
       title: "Запрос получен"
-      text: "Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
+      text: "Спасибо за ваш интерес к платформе Deckhouse Platform Certified Security Edition!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
     en:
       title: "Thank you"
-      text: "Thank you for your interest in the Deckhouse Kubernetes Platform!<br/>We will contact you within the next business day regarding the details of your request — please be in touch!"
+      text: "Thank you for your interest in the Deckhouse Platform Certified Security Edition!<br/>We will contact you within the next business day regarding the details of your request — please be in touch!"
   error-message:
     ru:
       title: "Ошибка"

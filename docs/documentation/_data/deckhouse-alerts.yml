@@ -3526,7 +3526,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+        Specify a Deckhouse Platform Certified Security Edition edition in `{{ $labels.module }}` ModuleConfig.
 
         ```bash
         d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
@@ -3534,7 +3534,7 @@ alerts:
 
         Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
       summary: |
-        Incorrect Deckhouse Kubernetes Platform edition.
+        Incorrect Deckhouse Platform Certified Security Edition edition.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseHighMemoryUsage
@@ -6290,7 +6290,7 @@ alerts:
       edition: ce
       description: |
         The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
-        This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
+        This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Platform Certified Security Edition releases.
 
         To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
       summary: |

@@ -2,7 +2,7 @@ apiVersions:
   - apiVersion: deckhouse.io/v1
     openAPISpec:
       description: |
-        Описывает конфигурацию облачного кластера в Deckhouse Virtualization Platform (DVP).
+        Описывает конфигурацию облачного кластера в Deckhouse Platform Certified Security Edition.
 
         Используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке.
 
@@ -242,11 +242,11 @@ apiVersions:
             > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
           description: |
-            Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+            Содержит настройки для подключения к API Deckhouse Platform Certified Security Edition.
           properties:
             kubeconfigDataBase64:
               description: |
-                Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
+                Kubeconfig для подключения к Deckhouse Platform Certified Security Edition API в кодировке Base64.
             namespace:
               description: |
                 Пространство имён, в котором будут созданы ресурсы кластера DKP.

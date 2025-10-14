@@ -36,7 +36,7 @@ apiVersions:
 
           The parameter is mandatory in the following cases:
           - Cluster nodes have more than one network interface
-          - The cluster is deployed inside a Deckhouse Virtualization Platform
+          - The cluster is deployed inside a Deckhouse Platform Certified Security Edition
 
           > When changing the value, subnets in the new list must include IP addresses of currently joined nodes.
         x-examples:
