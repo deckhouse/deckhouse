@@ -192,12 +192,12 @@ jobs:
     runs-on: [self-hosted, regular]
     steps:
 {!{- $secrets := slice -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACE_ANALYZE_SSH_USER" "SVACE_ANALYZE_SSH_USER" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACER_URL" "SVACER_URL" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACER_IMPORT_USER" "SVACER_IMPORT_USER" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACER_IMPORT_PASSWORD" "SVACER_IMPORT_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_USER" "SVACE_ANALYZE_SSH_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_URL" "SVACER_URL" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_USER" "SVACER_IMPORT_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_PASSWORD" "SVACER_IMPORT_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:

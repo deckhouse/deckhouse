@@ -2437,12 +2437,12 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_SSH_USER | SVACE_ANALYZE_SSH_USER ;
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_URL | SVACER_URL ;
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_IMPORT_USER | SVACER_IMPORT_USER ;
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACER_IMPORT_PASSWORD | SVACER_IMPORT_PASSWORD ;
-            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/github/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_USER | SVACE_ANALYZE_SSH_USER ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACER_URL | SVACER_URL ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACER_IMPORT_USER | SVACER_IMPORT_USER ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACER_IMPORT_PASSWORD | SVACER_IMPORT_PASSWORD ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
 
       # </template: import_secrets>
       - uses: deckhouse/modules-actions/svace_analyze@v4

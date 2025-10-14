@@ -10,8 +10,8 @@ import:
     add: /web
     to: /web
     before: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
@@ -46,7 +46,7 @@ shell:
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-alt-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
