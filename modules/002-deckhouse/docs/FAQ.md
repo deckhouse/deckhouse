@@ -36,8 +36,6 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
 
 ## How to collect debug info?
 
-## How to collect troubleshooting information
-
 1. Create a diagnostic archive with the `d8` utility, redirecting its output (stdout) to a file:
 
    ```shell
@@ -58,7 +56,7 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
   d8 p collect-debug-info --list-exclude
   ```
 
-<p>The following information is produced when creating the archive. The names in the “File in archive” column correspond to top-level items inside the resulting <code>tar.gz</code> archive. Certain sensitive values (for example, <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>) are excluded.</p>
+<p>The following information is produced when creating the archive. Names in the "File in archive" column correspond to top-level items inside the resulting <code>tar.gz</code> archive. Certain sensitive values (e.g., <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>) are excluded.</p>
 
 <table>
   <thead>
@@ -92,7 +90,7 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
       <td><code>deckhouse-logs</code></td>
     </tr>
     <tr>
-      <td>Controller and pod manifests from all Deckhouse namespaces</td>
+      <td>Manifests of controllers and pods from all Deckhouse namespaces</td>
       <td><code>d8-all</code></td>
     </tr>
 
@@ -145,12 +143,119 @@ Deckhouse set the log retention period to 7 days. However, according to the secu
 
     <!-- Modules and their states -->
     <tr>
-      <td rowspan="4"><strong>Modules and their states</strong></td>
+      <td rowspan="4"><strong>Modules and states</strong></td>
       <td>List of enabled modules</td>
       <td><code>deckhouse-enabled-modules</code></td>
     </tr>
     <tr>
-      <td><code>ModuleSource</code> objects in the
+      <td><code>ModuleSource</code> objects in the cluster</td>
+      <td><code>deckhouse-module-sources</code></td>
+    </tr>
+    <tr>
+      <td><code>ModulePullOverride</code> objects in the cluster</td>
+      <td><code>deckhouse-module-pull-overrides</code></td>
+    </tr>
+    <tr>
+      <td>Modules in <code>maintenance</code> mode</td>
+      <td><code>deckhouse-maintenance-modules</code></td>
+    </tr>
+
+    <!-- Controller logs and manifests -->
+    <tr>
+      <td rowspan="10"><strong>Controller logs and manifests</strong></td>
+      <td><code>machine-controller-manager</code> logs</td>
+      <td><code>mcm-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>cloud-controller-manager</code> logs</td>
+      <td><code>ccm-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>csi-controller</code> logs</td>
+      <td><code>csi-controller-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>cluster-autoscaler</code> logs</td>
+      <td><code>cluster-autoscaler-logs</code></td>
+    </tr>
+    <tr>
+      <td>Vertical Pod Autoscaler admission controller logs</td>
+      <td><code>vpa-admission-controller-logs</code></td>
+    </tr>
+    <tr>
+      <td>Vertical Pod Autoscaler recommender logs</td>
+      <td><code>vpa-recommender-logs</code></td>
+    </tr>
+    <tr>
+      <td>Vertical Pod Autoscaler updater logs</td>
+      <td><code>vpa-updater-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>capi-controller-manager</code> YAML</td>
+      <td><code>capi-controller-manager</code></td>
+    </tr>
+    <tr>
+      <td><code>caps-controller-manager</code> YAML</td>
+      <td><code>caps-controller-manager</code></td>
+    </tr>
+    <tr>
+      <td><code>machine-controller-manager</code> YAML</td>
+      <td><code>machine-controller-manager</code></td>
+    </tr>
+
+    <!-- Monitoring and alerts -->
+    <tr>
+      <td rowspan="4"><strong>Monitoring and alerts</strong></td>
+      <td>Prometheus logs</td>
+      <td><code>prometheus-logs</code></td>
+    </tr>
+    <tr>
+      <td>Active (firing) Prometheus alerts</td>
+      <td><code>alerts</code></td>
+    </tr>
+    <tr>
+      <td>Pods not in <code>Running</code> (excluding <code>Completed</code> and <code>Evicted</code>)</td>
+      <td><code>bad-pods</code></td>
+    </tr>
+    <tr>
+      <td>List of Audit Policies</td>
+      <td><code>audit-policy</code></td>
+    </tr>
+
+    <!-- Network -->
+    <tr>
+      <td rowspan="7"><strong>Network</strong></td>
+      <td>All objects in the <code>d8-istio</code> namespace</td>
+      <td><code>d8-istio-resources</code></td>
+    </tr>
+    <tr>
+      <td>All <code>istio</code> custom resources</td>
+      <td><code>d8-istio-custom-resources</code></td>
+    </tr>
+    <tr>
+      <td>Envoy configuration for <code>istio</code></td>
+      <td><code>d8-istio-envoy-config</code></td>
+    </tr>
+    <tr>
+      <td><code>istio</code> logs</td>
+      <td><code>d8-istio-system-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>istio</code> ingress gateway logs</td>
+      <td><code>d8-istio-ingress-logs</code></td>
+    </tr>
+    <tr>
+      <td><code>istio</code> users logs</td>
+      <td><code>d8-istio-users-logs</code></td>
+    </tr>
+    <tr>
+      <td>Cilium connection status (<code>cilium health status</code>)</td>
+      <td><code>cilium-health-status</code></td>
+    </tr>
+
+    <tr><td colspan="3" style="padding:0;"></td></tr>
+  </tbody>
+</table>
 
 ## How to debug pod problems with ephemeral containers?
 
