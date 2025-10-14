@@ -69,11 +69,46 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	}
 
 	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
-	if err := os.WriteFile(dst, srcBytes, perm); err != nil {
+
+	// Atomic write: write into temp file, fsync, rename over the target
+	dstDir := filepath.Dir(dst)
+	base := filepath.Base(dst)
+	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	if _, err := tmpFile.Write(srcBytes); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpFile.Name(), perm); err != nil {
 		return err
 	}
 
-	return os.Chown(dst, 0, 0)
+	if err := os.Rename(tmpFile.Name(), dst); err != nil {
+		return err
+	}
+
+	if err := os.Chown(dst, 0, 0); err != nil {
+		return err
+	}
+
+	// Fsync the directory
+	if dirFd, err := os.Open(dstDir); err == nil {
+		_ = dirFd.Sync()
+		_ = dirFd.Close()
+	}
+
+	return nil
 }
 
 func backupFile(src string) error {
