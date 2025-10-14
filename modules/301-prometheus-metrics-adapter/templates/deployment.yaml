@@ -71,7 +71,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: prometheus-metrics-adapter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "k8sPrometheusAdapter") }}
         args:
         - --secure-port=6443
@@ -106,7 +106,7 @@ spec:
             {{- include "prometheus_metrics_adapter_resources" . | nindent 12 }}
 {{- end }}
       - name: prometheus-reverse-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
         env:
         - name: PROMETHEUS_URL

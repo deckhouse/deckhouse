@@ -12,7 +12,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -31,7 +31,7 @@ apiVersions:
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
-          
+
           > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
         properties:
           replicas:
@@ -106,7 +106,7 @@ apiVersions:
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
-                    
+
                     > Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml

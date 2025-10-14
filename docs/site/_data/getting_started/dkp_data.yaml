@@ -355,8 +355,8 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
       ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
     layout:
-      code: standard
-      name: Standard
+      code: with_nat
+      name: WithNAT
     steps:
       step2:
         name:

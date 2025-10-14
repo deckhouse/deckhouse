@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -230,7 +231,7 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 		return nil, err
 	}
 
-	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, kubeServiceSnap)
+	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, kubeServiceSnap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeServiceSnap, err)
 	}
@@ -249,9 +250,9 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 	return nil, err
 }
 
-func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
-	serverK8sLabeledSnap := input.NewSnapshots.Get(kubeAPIServK8sLabeledSnap)
-	serverCPLabeledSnap := input.NewSnapshots.Get(kubeAPIServCPLabeledSnap)
+func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, error) {
+	serverK8sLabeledSnap := input.Snapshots.Get(kubeAPIServK8sLabeledSnap)
+	serverCPLabeledSnap := input.Snapshots.Get(kubeAPIServCPLabeledSnap)
 
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
@@ -262,7 +263,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		input.Logger.Info("k8s version. Pods snapshots is empty")
 	}
 
-	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, kubeEndpointsSliceSnap)
+	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.Snapshots, kubeEndpointsSliceSnap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSliceSnap, err)
 	}
@@ -305,9 +306,9 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 	return endpoints, nil
 }
 
-func k8sVersions(input *go_hook.HookInput) error {
+func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("k8s version. Start discovery")
-	endpoints, err := apiServerEndpoints(input)
+	endpoints, err := apiServerEndpoints(ctx, input)
 	if err != nil {
 		return err
 	}

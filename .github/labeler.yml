@@ -102,7 +102,6 @@ area/security:
   - modules/500-openvpn/**
   - ee/modules/160-multitenancy-manager/**
   - ee/modules/500-operator-trivy/**
-  - ee/modules/650-runtime-audit-engine/**
 
 area/storage:
   - modules/031-local-path-provisioner/**

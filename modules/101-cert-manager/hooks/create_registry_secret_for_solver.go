@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -183,8 +184,8 @@ func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccoun
 //	and this solution not generate pullSecrets name dynamically
 //	In future we want to rid all of patches in cert-manager
 //	and use vanilla cert-manager
-func handleChallenge(input *go_hook.HookInput) error {
-	d8RegistrySnap := input.NewSnapshots.Get(d8RegistrySnapshot)
+func handleChallenge(_ context.Context, input *go_hook.HookInput) error {
+	d8RegistrySnap := input.Snapshots.Get(d8RegistrySnapshot)
 	if len(d8RegistrySnap) == 0 {
 		input.Logger.Warn("Registry secret not found. Skip")
 		return nil
@@ -198,14 +199,14 @@ func handleChallenge(input *go_hook.HookInput) error {
 
 	registryCfg := regSecret.Config
 
-	challengesNss := set.NewFromSnapshot(input.NewSnapshots.Get(challengesSnapshot))
+	challengesNss := set.NewFromSnapshot(input.Snapshots.Get(challengesSnapshot))
 
-	serviceAccountsNss := set.NewFromSnapshot(input.NewSnapshots.Get(saSnapshot))
+	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots.Get(saSnapshot))
 
 	// namespace -> .dockerconfigjson content
 	secretsByNs := map[string]string{}
 
-	for regSecret, err := range sdkobjectpatch.SnapshotIter[registrySecret](input.NewSnapshots.Get(secretsSnapshot)) {
+	for regSecret, err := range sdkobjectpatch.SnapshotIter[registrySecret](input.Snapshots.Get(secretsSnapshot)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'd8_registry_secret' snapshot: %w", err)
 		}

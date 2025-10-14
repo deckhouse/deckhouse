@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -121,10 +122,10 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return addresses, nil
 }
 
-func handleAPIEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("kube_apiserver"))
+func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("kube_apiserver"))
 
-	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.NewSnapshots.Get("apiserver_endpoints")) {
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpoints")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'apiserver_endpoints' snapshot: %w", err)
 		}

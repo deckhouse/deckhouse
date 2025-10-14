@@ -18,9 +18,6 @@ The token store can also be used to bypass any other auth method:
 you can create tokens directly, as well as perform a variety of other
 operations on tokens such as renewal and revocation.
 
-Please see the [token concepts](/docs/concepts/tokens) page dedicated
-to tokens.
-
 ## Authentication
 
 ### Via the CLI
@@ -33,9 +30,3 @@ d8 stronghold login token=<token>
 
 The token is set directly as a header for the HTTP API. The header should be
 either `X-Vault-Token: <token>` or `Authorization: Bearer <token>`.
-
-## API
-
-The Token auth method has a full HTTP API. Please see the
-[Token auth method API](/api-docs/auth/token) for more
-details.

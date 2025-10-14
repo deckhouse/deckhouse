@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -76,7 +77,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleUpdateApproval)
 
-func handleUpdateApproval(input *go_hook.HookInput) error {
+func handleUpdateApproval(ctx context.Context, input *go_hook.HookInput) error {
 	approver := &updateApprover{
 		finished: false,
 
@@ -84,7 +85,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		nodeGroups: make(map[string]updateNodeGroup),
 	}
 
-	snaps := input.NewSnapshots.Get("configuration_checksums_secret")
+	snaps := input.Snapshots.Get("configuration_checksums_secret")
 	if len(snaps) == 0 {
 		input.Logger.Warn("no configuration_checksums_secret snapshot found. Skipping run")
 		return nil
@@ -94,7 +95,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal start 'configuration_checksums_secret' snapshot: %w", err)
 	}
 
-	snaps = input.NewSnapshots.Get("ngs")
+	snaps = input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[updateNodeGroup](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
@@ -103,7 +104,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		approver.nodeGroups[ng.Name] = ng
 	}
 
-	snaps = input.NewSnapshots.Get("nodes")
+	snaps = input.Snapshots.Get("nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[updateApprovalNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
@@ -116,7 +117,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 	approver.deckhouseNodeName = os.Getenv("DECKHOUSE_NODE_NAME")
 
-	err = approver.processUpdatedNodes(input)
+	err = approver.processUpdatedNodes(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveDisruptions(input)
+	err = approver.approveDisruptions(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	err = approver.approveUpdates(input)
+	err = approver.approveUpdates(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
 // TODO (core): fix linter
 //
 //nolint:unparam
-func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
+func (ar *updateApprover) approveUpdates(_ context.Context, input *go_hook.HookInput) error {
 	for _, ng := range ar.nodeGroups {
 		nodeGroupNodes := make([]updateApprovalNode, 0)
 		currentUpdates := 0
@@ -217,7 +218,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
-		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
+		if ng.Status.Desired <= ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
@@ -285,7 +286,7 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 // TODO (core): fix linter
 //
 //nolint:unparam
-func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
+func (ar *updateApprover) approveDisruptions(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
@@ -341,7 +342,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 // TODO (core): fix linter
 //
 //nolint:unparam
-func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
+func (ar *updateApprover) processUpdatedNodes(_ context.Context, input *go_hook.HookInput) error {
 	for _, node := range ar.nodes {
 		if !node.IsApproved {
 			continue

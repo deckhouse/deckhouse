@@ -67,7 +67,15 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			}()
 		}
 
+		allPassedHosts := ""
+		if len(apiserverHosts) > 0 {
+			strings.Join(apiserverHosts, ",")
+		}
+
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
+			if nodeGroupName == global.MasterNodeGroupName {
+				logger.LogInfoF("Waiting while all API-server endpoints '%s' will be available in bootstrap secret\n", allPassedHosts)
+			}
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
 				Get(ctx, "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
@@ -78,7 +86,10 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			if len(apiserverHosts) > 0 {
 				var endpoints []string
 
-				err := yaml.Unmarshal(secret.Data["apiserverEndpoints"], &endpoints)
+				endpointsRaw := secret.Data["apiserverEndpoints"]
+				logger.LogDebugF("Got raw apiserverEndpoints: %v", string(endpointsRaw))
+
+				err := yaml.Unmarshal(endpointsRaw, &endpoints)
 				if err != nil {
 					return fmt.Errorf("failed to unmarshal apiserver endpoints: %v", err)
 				}
@@ -91,6 +102,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 						return fmt.Errorf("failed to split endpoint `%s` into host and port: %v", endpoint, err)
 					}
 
+					logger.LogDebugF("Got API-server host %s from secret\n", host)
+
 					hostsMap[host] = struct{}{}
 				}
 
@@ -99,6 +112,10 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 					if !ok {
 						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
 					}
+				}
+			} else {
+				if nodeGroupName == global.MasterNodeGroupName {
+					logger.LogDebugLn("Got empty apiserver endpoints from arguments")
 				}
 			}
 
@@ -266,7 +283,7 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				return nil
 			}
 
-			return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
 		})
 }
 
@@ -323,7 +340,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				return nil
 			}
 
-			return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
 		})
 }
 

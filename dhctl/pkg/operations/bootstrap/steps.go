@@ -58,6 +58,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -137,6 +138,10 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 
 		if errors.Is(err, frontend.ErrBashibleTimeout) {
 			return frontend.ErrBashibleTimeout
+		}
+
+		if errors.Is(err, gossh.ErrBashibleTimeout) {
+			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
@@ -491,7 +496,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry, rppSignCheck string, clusterDomain string) error {
 	var clientConfigGetter registry.ClientConfigGetter
 	var client registry.Client
 	var err error
@@ -538,9 +543,10 @@ func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry
 	}
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, client)
 
-	go proxy.Serve()
+	go proxy.Serve(proxyConfig)
 
 	go func() {
 		<-ctx.Done()
@@ -705,7 +711,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -762,6 +768,10 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 			}
 
 			if errors.Is(err, frontend.ErrBashibleTimeout) {
+				return true
+			}
+
+			if errors.Is(err, gossh.ErrBashibleTimeout) {
 				return true
 			}
 
@@ -1097,7 +1107,7 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
-		case strings.HasPrefix(name, "base-infrastructure"):
+		case strings.HasPrefix(name, string(infrastructure.BaseInfraStep)):
 			fallthrough
 		case strings.HasPrefix(name, "uuid"):
 			fallthrough

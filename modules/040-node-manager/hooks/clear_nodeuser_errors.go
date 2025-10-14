@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -105,13 +106,13 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func discoverNodeUsersForClear(input *go_hook.HookInput) error {
-	nodeUserSnap := input.NewSnapshots.Get(nodeUserForClearSnapName)
+func discoverNodeUsersForClear(_ context.Context, input *go_hook.HookInput) error {
+	nodeUserSnap := input.Snapshots.Get(nodeUserForClearSnapName)
 	if len(nodeUserSnap) == 0 {
 		return nil
 	}
 
-	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
+	nodes := golibset.NewFromSnapshot(input.Snapshots.Get(nodeForClearSnapName))
 	for nuForClear, err := range sdkobjectpatch.SnapshotIter[nodeUsersForClear](nodeUserSnap) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over node_users_for_clear snapshot: %w", err)

@@ -36,7 +36,7 @@ func NewClient(unpackedImagesPath string) *Client {
 	}
 }
 
-func (c *Client) GetPackage(ctx context.Context, log log.Logger, _ *registry.ClientConfig, digest string, path string) (int64, io.ReadCloser, error) {
+func (c *Client) GetPackage(ctx context.Context, log log.Logger, _ *registry.ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error) {
 	layoutPath := c.unpackedImagesPath
 	if path != "" {
 		layoutPath = filepath.Join(c.unpackedImagesPath, path)
@@ -44,38 +44,43 @@ func (c *Client) GetPackage(ctx context.Context, log log.Logger, _ *registry.Cli
 
 	layout, err := layout.FromPath(layoutPath)
 	if err != nil {
-		return 0, nil, fmt.Errorf("error creating layout from path: %w", err)
+		return 0, "", nil, fmt.Errorf("error creating layout from path: %w", err)
 	}
 
 	index, err := layout.ImageIndex()
 	if err != nil {
-		return 0, nil, fmt.Errorf("error getting image index: %w", err)
+		return 0, "", nil, fmt.Errorf("error getting image index: %w", err)
 	}
 
 	hash, err := v1.NewHash(digest)
 	if err != nil {
-		return 0, nil, fmt.Errorf("error parsing image digest: %w", err)
+		return 0, "", nil, fmt.Errorf("error parsing image digest: %w", err)
 	}
 
 	image, err := index.Image(hash)
 	if err != nil {
-		return 0, nil, fmt.Errorf("error getting image by image digest: %w", err)
+		return 0, "", nil, fmt.Errorf("error getting image by image digest: %w", err)
 	}
 
 	layers, err := image.Layers()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
 	size, err := layers[len(layers)-1].Size()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
+	}
+
+	digestHash, err := layers[len(layers)-1].Digest()
+	if err != nil {
+		return 0, "", nil, err
 	}
 
 	reader, err := layers[len(layers)-1].Compressed()
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
 
-	return size, reader, nil
+	return size, digestHash.Hex, reader, nil
 }

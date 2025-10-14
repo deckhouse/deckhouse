@@ -35,7 +35,7 @@ spec:
                     Получить список параметров, доступных для использования в шаблонах, можно из секрета `bashible-apiserver-context`:
 
                     ```shell
-                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    d8 k -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
                     ```
 
                     Пример:

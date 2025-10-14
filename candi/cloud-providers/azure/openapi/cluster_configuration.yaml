@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -54,13 +54,13 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
         x-unsafe: true
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html#standard) layout.
+          Settings for the [`Standard`](https://deckhouse.io/modules/cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
@@ -176,7 +176,7 @@ apiVersions:
             uniqueItems: true
           instanceClass:
             description: |
-              Partial contents of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
             properties:
@@ -348,7 +348,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/modules/cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
@@ -369,7 +369,7 @@ apiVersions:
           type: string
       provider:
         description: |
-          [Parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
+          [Parameters](https://deckhouse.io/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]

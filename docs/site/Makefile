@@ -15,22 +15,19 @@ registry:
 registry-down:
 		docker rm -f registry; docker volume prune -fa
 
-network: registry
-		docker network inspect deckhouse 2>&1 1>/dev/null || docker network create deckhouse
-
-up: network
+up:
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --env local --repo localhost:4999/docs
 
 clean:
 		werf cleanup --env local --repo localhost:4999/docs --without-kube
 
 down:
-		docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 2>/dev/null; docker network rm deckhouse
+		docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
-dev: network
+dev:
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo localhost:4999/docs
 
-debug: network
+debug:
 		werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'  --dev --env development --repo localhost:4999/docs
 
 regenerate-menu:

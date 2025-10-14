@@ -83,8 +83,7 @@ management tool.
    ```
 
 1. Use the `/config` endpoint to configure Stronghold. To support JWT roles, either local keys, a JWKS URL, or an OIDC
-   Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
-   list of available configuration options, please see the [API documentation](/api-docs/auth/jwt).
+   Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required.
 
    ```text
    $ d8 stronghold write auth/jwt/config \
@@ -151,7 +150,7 @@ To limit authorization to a set of email addresses:
 }
 ```
 
-Bound claims can optionally be configured with globs. See the [API documentation](/api-docs/auth/jwt#bound_claims_type) for more details.
+Bound claims can optionally be configured with globs.
 
 ### Claims as metadata
 
@@ -195,8 +194,3 @@ A parameter of `"division"` will reference "North America", as this is a top lev
 `"/groups/primary"` uses JSON Pointer syntax to reference "Engineering" at a lower level. Any valid
 JSON Pointer can be used as a selector. Refer to the
 [JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax.
-
-## API
-
-The JWT Auth Plugin has a full HTTP API. Please see the
-[API docs](/api-docs/auth/jwt) for more details.

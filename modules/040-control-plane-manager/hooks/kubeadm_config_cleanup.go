@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -45,8 +47,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleKubeadmConfig)
 
-func handleKubeadmConfig(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("cm_kubeadm_config")
+func handleKubeadmConfig(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("cm_kubeadm_config")
 
 	if len(snaps) == 0 {
 		input.Logger.Debug("No kubeadm-config found or snapshot not configured")

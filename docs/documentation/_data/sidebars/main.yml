@@ -3,23 +3,16 @@ entries:
     - title:
         en: Overview
         ru: Введение в документацию
-      url: /deckhouse-overview.html
+      url: /
+# ------------- Administration -------------
     - title:
-        en: Deckhouse Kubernetes Platform
-        ru: Deckhouse Kubernetes Platform
+        en: Administration
+        ru: Администрирование
       folders:
         - title:
             en: Platform installation
             ru: Установка платформы
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /installing/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /installing/configuration.html
+          url: /installing/
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -27,1857 +20,1325 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /
+              url: /admin/configuration/
             - title:
-                en: Global configuration
-                ru: Глобальные настройки
-              url: /deckhouse-configure-global.html
+                en: Registries and editions
+                ru: Registries и редакции
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/registry/
+                - title:
+                    en: Third-party registry
+                    ru: Сторонний registry
+                  url: /admin/configuration/registry/third-party.html
+                - title:
+                    en: Internal registry
+                    ru: Внутренний registry
+                  url: /admin/configuration/registry/internal.html
+                - title:
+                    en: Restoring registry access
+                    ru: Восстановление подключения к registry
+                  url: /admin/configuration/registry/restore-token.html
+                - title:
+                    en: Switching editions
+                    ru: Переключение редакций
+                  url: /admin/configuration/registry/switching-editions.html
             - title:
-                en: Custom Resources
-                ru: Custom Resources
-              url: /cr.html
+                en: IAM
+                ru: IAM
+              folders:
+                - title:
+                    en: Access to API
+                    ru: TODO Доступ к API
+                  draft: true
+                  url: /admin/configuration/access/api.html
+                - title:
+                    en: Authentication
+                    ru: Аутентификация
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/authentication/
+                    - title:
+                        en: Integration with external authentication providers
+                        ru: Интеграция с внешними провайдерами аутентификации
+                      url: /admin/configuration/access/authentication/external-authentication-providers.html
+                    - title:
+                        en: Local authentication
+                        ru: Локальная аутентификация
+                      url: /admin/configuration/access/authentication/local.html
+                    - title:
+                        en: Accessing the Kubernetes API via load balancer
+                        ru: Доступ к Kubernetes API через балансировщик трафика
+                      url: /admin/configuration/access/authentication/k8s-api-lb.html
+                    - title:
+                        en: Resource configuration
+                        ru: Настройка ресурсов
+                      url: /admin/configuration/access/authentication/resource-configuration.html
+                - title:
+                    en: Authorization
+                    ru: Авторизация
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/authorization/
+                    - title:
+                        en: Current authorization model
+                        ru: Текущая модель авторизации
+                      url: /admin/configuration/access/authorization/rbac-current.html
+                    - title:
+                        en: Experimental authorization model
+                        ru: Экспериментальная модель авторизации
+                      url: /admin/configuration/access/authorization/rbac-experimental.html
+                    - title:
+                        en: Granting permissions to users and service accounts
+                        ru: Выдача прав пользователям и сервисным аккаунтам
+                      url: /admin/configuration/access/authorization/granting.html
+                    - title:
+                        en: Checking user permissions
+                        ru: Проверка наличия прав у пользователя
+                      url: /admin/configuration/access/authorization/check.html
+                    - title:
+                        en: Access for CI/CD
+                        ru: Доступ для CI/CD
+                      url: /admin/configuration/access/authorization/ci_cd.html
+            - title:
+                en: Integration with IaaS
+                ru: Интеграция с IaaS
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/integrations/integrations-overview.html
+                - title:
+                    en: Public cloud providers
+                    ru: Публичные облачные провайдеры
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/public/overview.html
+                    - title:
+                        en: Integration with Yandex Cloud
+                        ru: Интеграция с Yandex Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/yandex/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/yandex/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/yandex/storage.html
+                        - title:
+                            en: Integration with Yandex Cloud services
+                            ru: Интеграция со службами Yandex Cloud
+                          url: /admin/integrations/public/yandex/services.html
+                    - title:
+                        en: Integration with VK Cloud
+                        ru: Интеграция с VK Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/vk/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/vk/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Selectel Cloud
+                        ru: Интеграция с Selectel Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/selectel/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/selectel/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OVH Cloud
+                        ru: Интеграция с OVH Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/ovh/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/ovh/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OpenStack-based clouds
+                        ru: Интеграция с облаками на базе OpenStack
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/openstack/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/openstack/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Amazon Web Services (AWS)
+                        ru: Интеграция с Amazon Web Services (AWS)
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/amazon/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/amazon/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/amazon/storage.html
+                        - title:
+                            en: Integration with Amazon Web Services
+                            ru: Интеграция со службами Amazon Web Services
+                          url: /admin/integrations/public/amazon/services.html
+                    - title:
+                        en: Integration with Microsoft Azure
+                        ru: Интеграция с Microsoft Azure
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/azure/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/azure/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/public/azure/storage.html
+                        - title:
+                            en: Integration with Microsoft Azure services
+                            ru: Интеграция со службами Microsoft Azure
+                          url: /admin/integrations/public/azure/services.html
+                    - title:
+                        en: Integration with Google Cloud Platform (GCP)
+                        ru: Интеграция с Google Cloud Platform (GCP)
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/public/gcp/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/public/gcp/configuration-and-layout-scheme.html
+                - title:
+                    en: Private cloud providers
+                    ru: Частные облака
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/private/overview.html
+                    - title:
+                        en: Integration with VK Cloud
+                        ru: Интеграция с VK Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/vk/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/vk/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with OpenStack
+                        ru: Интеграция с OpenStack
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/openstack/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/openstack/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with Huawei Cloud
+                        ru: Интеграция с Huawei Cloud
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/huaweicloud/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/huaweicloud/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/private/huaweicloud/storage.html
+                        - title:
+                            en: Integration with Huawei Cloud services
+                            ru: Интеграция со службами Huawei Cloud
+                          url: /admin/integrations/private/huaweicloud/services.html
+                    - title:
+                        ru: Интеграция с Dynamix
+                      folders:
+                        - title:
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/private/dynamix/authorization.html
+                        - title:
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/private/dynamix/layout.html
+                        - title:
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/private/dynamix/storage.html
+                        - title:
+                            ru: Интеграция со службами Dynamix
+                          url: /admin/integrations/private/dynamix/services.html
+                - title:
+                    en: Virtualization systems
+                    ru: Системы виртуализации
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/virtualization/overview.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vsphere/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vsphere/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/vsphere/storage.html
+                        - title:
+                            en: Integration with VMware vSphere services
+                            ru: Интеграция со службами VMware vSphere
+                          url: /admin/integrations/virtualization/vsphere/services.html
+                    - title:
+                        en: Integration with DVP
+                        ru: Интеграция с DVP
+                      folders:
+                        - title:
+                            en: Integration with DVP
+                            ru: Интеграция с облаком DVP
+                          url: /admin/integrations/virtualization/dvp/services.html
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/dvp/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with VMware Cloud Director
+                        ru: Интеграция с VMware Cloud Director
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vcd/connection-and-authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with zVirt
+                        ru: Интеграция с zVirt
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/zvirt/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/zvirt/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/zvirt/storage.html
+                        - title:
+                            en: Integration with zVirt services
+                            ru: Интеграция со службами zVirt
+                          url: /admin/integrations/virtualization/zvirt/services.html
+                - title:
+                    en: Hybrid cluster
+                    ru: Гибридный кластер
+                  url: /admin/integrations/hybrid/overview.html
+            - title:
+                en: Platform update
+                ru: Обновление платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/update/
+                - title:
+                    en: Configuring updates
+                    ru: Настройка обновлений
+                  url: /admin/configuration/update/configuration.html
+                - title:
+                    en: Configuring notifications
+                    ru: Настройка уведомлений
+                  url: /admin/configuration/update/notifications.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /admin/configuration/update/faq.html
+            - title:
+                en: High reliability and availability
+                ru: Высокая надежность и доступность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/high-reliability-and-availability/
+                - title:
+                    en: Node configuration recommendations
+                    ru: Рекомендации по конфигурации узлов кластера
+                  url: /admin/configuration/high-reliability-and-availability/recommendations.html
+                - title:
+                    en: Managing HA mode
+                    ru: Управление режимом HA
+                  url: /admin/configuration/high-reliability-and-availability/enable.html
+                - title:
+                    en: Chaos engineering
+                    ru: Хаос-инжиниринг
+                  url: /admin/configuration/high-reliability-and-availability/chaos-engineering.html
+            - title:
+                en: Platform scaling and node management
+                ru: Масштабирование платформы и управление узлами
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/platform-scaling/overview.html
+                - title:
+                    en: Control plane management
+                    ru: Управление control plane
+                  folders:
+                    - title:
+                        en: General management and configuration of the control plane
+                        ru: Общее управление и конфигурация control plane
+                      url: /admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+                    - title:
+                        en: Control plane recovery and debugging
+                        ru: Восстановление и отладка control plane
+                      url: /admin/configuration/platform-scaling/control-plane/control-plane-recovery-and-debugging.html
+                    - title:
+                        en: Scaling and changing master nodes
+                        ru: Масштабирование и изменение master-узлов
+                      url: /admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html
+                    - title:
+                        en: Updating Kubernetes and versioning
+                        ru: Обновление Kubernetes и управление версиями
+                      url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+                - title:
+                    en: Node management
+                    ru: Управление узлами
+                  folders:
+                    - title:
+                        en: Node management basics in Deckhouse
+                        ru: Основы управления узлами в Deckhouse
+                      url: /admin/configuration/platform-scaling/node/node-management.html
+                    - title:
+                        en: Adding and managing cloud nodes
+                        ru: Добавление и управление облачными узлами
+                      url: /admin/configuration/platform-scaling/node/cloud-node.html
+                    - title:
+                        en: Adding and managing bare-metal nodes
+                        ru: Добавление и управление bare-metal узлами
+                      url: /admin/configuration/platform-scaling/node/bare-metal-node.html
+                    - title:
+                        en: Custom node configuration
+                        ru: Пользовательские настройки на узлах
+                      url: /admin/configuration/platform-scaling/node/node-customization.html
+                    - title:
+                        en: Migrating container runtime to ContainerdV2
+                        ru: Миграция container runtime на ContainerdV2
+                      url: /admin/configuration/platform-scaling/node/migrating.html
+            - title:
+                en: Application scaling and resource management
+                ru: Масштабирование приложений и управление ресурсами
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/app-scaling/overview.html
+                - title:
+                    en: Scaling by metrics
+                    ru: Масштабирование по метрикам
+                  url: /admin/configuration/app-scaling/scaling-by-metrics.html
+                - title:
+                    en: Horizontal pod autoscaling
+                    ru: Горизонтальное масштабирование
+                  url: /admin/configuration/app-scaling/hpa.html
+                - title:
+                    en: Vertical pod autoscaling
+                    ru: Вертикальное масштабирование
+                  url: /admin/configuration/app-scaling/vpa.html
+                - title:
+                    en: Pod restart on configuration change
+                    ru: Перезапуск подов при изменении конфигурации
+                  url: /admin/configuration/app-scaling/pod-restart.html
+                - title:
+                    en: Load distribution management
+                    ru: Управление распределением нагрузки
+                  folders:
+                    - title:
+                        en: Scheduler
+                        ru: Планировщик
+                      url: /admin/configuration/app-scaling/pod-eviction/scheduler.html
+                    - title:
+                        en: Priority classes
+                        ru: Приоритеты подов
+                      url: /admin/configuration/app-scaling/pod-eviction/priority-classes.html
+            - title:
+                en: Network
+                ru: Сеть
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/network/
+                - title:
+                    en: Internal network
+                    ru: Внутренняя сеть
+                  folders:
+                    - title:
+                        en: Internal network configuration
+                        ru: Настройка внутренней сети
+                      url: /admin/configuration/network/internal/configuration.html
+                    - title:
+                        en: Encrypting traffic between pods
+                        ru: Шифрование трафика между подами
+                      url: /admin/configuration/network/internal/encrypting-pods.html
+                    - title:
+                        en: Configuring cluster network stack visualization
+                        ru: Настройка визуализации сетевого стека кластера
+                      url: /admin/configuration/network/internal/visualization.html
+                    - title:
+                        en: Switching CNI from Flannel to Cilium
+                        ru: Переключение CNI с Flannel на Cilium
+                      url: /admin/configuration/network/internal/flannel-to-cilium.html
+                - title:
+                    en: Incoming traffic balancing
+                    ru: Балансировка входящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/ingress/
+                    - title:
+                        en: NLB
+                        ru: NLB
+                      folders:
+                        - title:
+                            en: Balancing with MetalLB
+                            ru: Балансировка средствами MetalLB
+                          url: /admin/configuration/network/ingress/nlb/metallb.html
+                        - title:
+                            en: External balancer
+                            ru: Внешний балансировщик
+                          url: /admin/configuration/network/ingress/nlb/cloud-balancing.html
+                    - title:
+                        en: ALB
+                        ru: ALB
+                      folders:
+                        - title:
+                            en: ALB with NGINX Ingress controller
+                            ru: ALB средствами NGINX Ingress controller
+                          url: /admin/configuration/network/ingress/alb/nginx.html
+                        - title:
+                            en: ALB with Istio
+                            ru: ALB средствами Istio
+                          url: /admin/configuration/network/ingress/alb/istio.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /admin/configuration/network/ingress/keepalived.html
+                - title:
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Egress Gateway
+                        ru: Egress Gateway
+                      url: /admin/configuration/network/egress/gateway.html
+                - title:
+                    en: Inter-cluster cooperation (alliance)
+                    ru: Межкластерное взаимодействие (альянс)
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/alliance/
+                    - title:
+                        en: Multicluster
+                        ru: Мультикластер
+                      url: /admin/configuration/network/alliance/multicluster.html
+                    - title:
+                        en: Federation
+                        ru: Федерация
+                      url: /admin/configuration/network/alliance/federation.html
+                - title:
+                     en: Network policy configuration
+                     ru: Настройка сетевых политик
+                  url: /admin/configuration/network/policy/configuration.html
+                - title:
+                    en: Other network configuration options
+                    ru: Другие возможности настройки сети
+                  folders:
+                    - title:
+                        en: Managing static routes and ip rules on cluster nodes
+                        ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
+                      url: /admin/configuration/network/other/static-routes.html
+                    - title:
+                        en: Managing DNS in a Kubernetes cluster
+                        ru: Управление DNS в кластере Kubernetes
+                      url: /admin/configuration/network/other/dns.html
+                    - title:
+                        en: Caching DNS requests on cluster nodes
+                        ru: Кэширование DNS-запросов на узлах кластера
+                      url: /admin/configuration/network/other/dns-caching.html
+                    - title:
+                        en: BpfLB operation modes for external traffic processing
+                        ru: Режимы работы bpfLB для обработки внешнего трафика
+                      url: /admin/configuration/network/other/bpflb.html
+                    - title:
+                        en: Synchronizing time on nodes
+                        ru: Синхронизация времени на узлах
+                      url: /admin/configuration/network/other/ntp.html
+                - title:
+                    en: Access via OpenVPN
+                    ru: Доступ через OpenVPN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/access/connection/openvpn/overview.html
+                    - title:
+                        en: Configuration
+                        ru: Настройка
+                      url: /admin/configuration/access/connection/openvpn/configuration.html
+            - title:
+                en: Storage
+                ru: Хранилища
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/storage/
+                - title:
+                    en: Storage configuration
+                    ru: Настройка хранилищ
+                  url: /admin/configuration/storage/supported-storage.html
+                - title:
+                    en: Configuring volume snapshot creation
+                    ru: Настройка создания снимков томов
+                  url: /admin/configuration/storage/snapshot-controller.html
+                - title:
+                    en: Software-defined storage (SDS)
+                    ru: Программно-определяемые хранилища (SDS)
+                  folders:
+                    - title:
+                        en: Local path provisioner storage
+                        ru: Локальное хранилище Local Path Provisioner
+                      url: /admin/configuration/storage/sds/local-path-provisioner.html
+                    - title:
+                        en: Node configuration for software-defined storage (SDS)
+                        ru: Настройка узлов для программно-определяемых хранилищ
+                      folders:
+                        - title:
+                            en: Overview
+                            ru: Обзор
+                          url: /admin/configuration/storage/sds/node-configurator/about.html
+                        - title:
+                            en: Usage scenarios
+                            ru: Примеры использования
+                          url: /admin/configuration/storage/sds/node-configurator/usage.html
+                        - title:
+                            en: Configuration scenarios
+                            ru: Сценарии конфигурации
+                          url: /admin/configuration/storage/sds/node-configurator/layouts.html
+                        - title:
+                            en: FAQ
+                            ru: FAQ
+                          url: /admin/configuration/storage/sds/node-configurator/faq.html
+                    - title:
+                        en: Local storage based on LVM
+                        ru: Локальное хранилище на основе LVM
+                      folders:
+                        - title:
+                            en: Setting up local storage based on LVM
+                            ru: Настройка локального хранилища на основе LVM
+                          url: /admin/configuration/storage/sds/lvm-local.html
+                        - title:
+                            en: Managing local storage based on LVM
+                            ru: Управление локальным хранилищем на основе LVM
+                          url: /admin/configuration/storage/sds/lvm-local-faq.html
+                    - title:
+                        en: Replicated storage based on DRBD
+                        ru: Реплицируемое хранилище на основе DRBD
+                      folders:
+                        - title:
+                            en: Setting up replicated storage based on DRBD
+                            ru: Настройка реплицируемого хранилища на основе DRBD
+                          url: /admin/configuration/storage/sds/lvm-replicated.html
+                        - title:
+                            en: Managing DRBD‑based replicated storage
+                            ru: Управление реплицируемым хранилищем на основе DRBD
+                          url: /admin/configuration/storage/sds/lvm-replicated-faq.html
+                - title:
+                    en: External
+                    ru: Внешние хранилища
+                  folders:
+                    - title:
+                        en: Distributed Ceph storage
+                        ru: Распределённое хранилище Ceph
+                      url: /admin/configuration/storage/external/ceph.html
+                    - title:
+                        en: HPE data storage
+                        ru: Хранилище данных HPE
+                      url: /admin/configuration/storage/external/hpe.html
+                    - title:
+                        en: Huawei data storage
+                        ru: Хранилище данных Huawei
+                      url: /admin/configuration/storage/external/huawei.html
+                    - title:
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
+                      url: /admin/configuration/storage/external/nfs.html
+                    - title:
+                        en: S3 object storage
+                        ru: Объектное хранилище на основе S3
+                      url: /admin/configuration/storage/external/s3.html
+                    - title:
+                        en: SCSI-based data storage
+                        ru: Хранилище данных на основе протокола SCSI
+                      url: /admin/configuration/storage/external/scsi.html
+                    - title:
+                        en: TATLIN.UNIFIED (Yadro) unified storage
+                        ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
+                      url: /admin/configuration/storage/external/yadro.html
+            - title:
+                en: Security
+                ru: Безопасность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/security/
+                - title:
+                    en: Security events
+                    ru: События безопасности
+                  folders:
+                    - title:
+                        en: Kubernetes API event audit
+                        ru: Аудит событий API Kubernetes
+                      url: /admin/configuration/security/events/kubernetes-api-audit.html
+                    - title:
+                        en: Security event audit
+                        ru: Аудит событий безопасности
+                      url: /admin/configuration/security/events/runtime-audit.html
+                - title:
+                    en: Security policies
+                    ru: Политики безопасности
+                  url: /admin/configuration/security/policies.html
+                - title:
+                    en: Vulnerability scanning
+                    ru: Сканирование на уязвимости
+                  url: /admin/configuration/security/scanning.html
+                - title:
+                    en: Certificate management
+                    ru: Управление сертификатами
+                  url: /admin/configuration/security/certificates.html
+                - title:
+                    en: Integration with KUMA and antivirus software
+                    ru: Интеграция с KUMA и антивирусным ПО
+                  url: /admin/configuration/security/kuma-and-av-software.html
+                - title:
+                    en: Distribution of secrets across namespaces
+                    ru: Распространение секретов по пространствам имён
+                  url: /admin/configuration/security/secret-distribution.html
+            - title:
+                en: Platform monitoring
+                ru: Мониторинг платформы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/monitoring/
+                - title:
+                    en: Monitoring configuration
+                    ru: Настройка мониторинга
+                  folders:
+                    - title:
+                        en: Configuring monitoring of network interaction and cluster nodes
+                        ru: Настройка мониторинга сетевого взаимодействия и узлов кластера
+                      url: /admin/configuration/monitoring/configuring/network-and-nodes.html
+                    - title:
+                        en: Writing Prometheus data to longterm storage
+                        ru: Запись данных Prometheus в долговременное хранилище
+                      url: /admin/configuration/monitoring/configuring/longterm-storage.html
+                    - title:
+                        en: Configuring external access
+                        ru: Настройка внешнего доступа
+                      url: /admin/configuration/monitoring/configuring/external-access.html
+                - title:
+                    en: Configuring a system for collecting and storing metrics
+                    ru: Настройка системы сбора и хранения метрик
+                  url: /admin/configuration/monitoring/prometheus.html
+                - title:
+                    en: Cluster SLA Monitoring
+                    ru: Мониторинг SLA кластера
+                  url: /admin/configuration/monitoring/sla.html
+                - title:
+                    en: Setting up alerts
+                    ru: Настройка алертов
+                  folders:
+                    - title:
+                        en: Configuring integrations
+                        ru: Настройка интеграций
+                      url: /admin/configuration/monitoring/alerts-integrations.html
+            - title:
+                en: Logging
+                ru: Логирование
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/logging/
+                - title:
+                    en: Collection and delivery
+                    ru: Сбор и доставка
+                  url: /admin/configuration/logging/delivery.html
+                - title:
+                    en: Short-term storage
+                    ru: Кратковременное хранение
+                  url: /admin/configuration/logging/storage.html
+            - title:
+                en: Multitenancy
+                ru: Мультенантность
+              url: /admin/multitenancy.html
+            - title:
+                en: Backup and restore
+                ru: Резервное копирование и восстановление
+              url: /admin/configuration/backup/backup-and-restore.html
+            - title:
+                en: Assigning namespace labels
+                ru: Назначение лейблов пространствам имён
+              url: /admin/configuration/label-assignment.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
+
+# ------------- Using -------------
+    - title:
+        en: Using
+        ru: Использование
+      folders:
         - title:
-            en: Module development
-            ru: Разработка модуля
+            en: Overview
+            ru: TODO Обзор
+          draft: true
+          url: /user/using-overview.html
+        - title:
+            en: Access
+            ru: Доступ
+          folders:
+          - title:
+              en: Authentication
+              ru: Аутентификация
+            url: /user/access/authentication.html
+          - title:
+              en: Access to the platform
+              ru: TODO Доступ к платформе
+            draft: true
+            url: /user/access-platform.html
+        - title:
+            en: Application scaling and resource management
+            ru: Масштабирование приложений и управление ресурсами
           folders:
             - title:
-                en: Description
-                ru: Описание
-              url: /module-development/
-            - title:
-                en: Module structure
-                ru: Структура
-              url: /module-development/structure/
-            - title:
-                en: Building and publication
-                ru: Сборка и публикация
-              url: /module-development/build/
-            - title:
-                en: Running and verifying in the cluster
-                ru: Запуск и проверка в кластере
-              url: /module-development/run/
-            - title:
-                en: Module dependencies
-                ru: Зависимости модуля
-              url: /module-development/dependencies/
-            - title:
-                en: Versioning
-                ru: Версионирование
-              url: /module-development/versioning/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /module-development/example/
-            - title:
-                en: Development and debugging
-                ru: Разработка и отладка
-              url: /module-development/development/
+                en: Vertical Pod Autoscaling
+                ru: Вертикальное масштабирование
+              url: /user/configuration/app-scaling/vpa.html
         - title:
-            en: Release channels
-            ru: Каналы обновлений
-          url: /deckhouse-release-channels.html
-        - title:
-            en: Supported K8s & OS versions
-            ru: Поддерживаемые версии K8s и ОС
-          url: /supported_versions.html
-        - title:
-            en: Revision comparison
-            ru: Сравнение редакций
-          url: /revision-comparison.html
-        - title:
-            en: Security software settings
-            ru: Настройка ПО безопасности
+            en: Network
+            ru: Сеть
           folders:
             - title:
-                en: SIEM
-                ru: SIEM
+                en: Incoming traffic processing
+                ru: Обработка входящего трафика
               folders:
                 - title:
-                    en: KUMA
-                    ru: KUMA
-                  url: /security/kuma.html
+                    en: Overview
+                    ru: Обзор
+                  url: /user/network/ingress/
+                - title:
+                    en: NLB
+                    ru: NLB
+                  url: /user/network/ingress/nlb.html
+                - title:
+                    en: ALB
+                    ru: ALB
+                  url: /user/network/ingress/alb.html
             - title:
-                en: Security scanners
-                ru: Сканеры безопасности
+                en: Intra-cluster communication
+                ru: Внутрикластерное взаимодействие
+              url: /user/network/intra-cluster.html
+            - title:
+                en: Managing authorization and access to workload with Istio
+                ru: Управление авторизацией и доступом к workload c Istio
+              url: /user/network/authorization-workload-istio.html
+            - title:
+                en: Request routing with Istio
+                ru: Маршрутизация запросов с Istio
+              url: /user/network/request_routing_istio.html
+            - title:
+                en: Enabling Istio for applications
+                ru: Активация Istio для приложений
+              url: /user/network/app_istio_activation.html
+            - title:
+                en: Managing request balancing between service endpoints with Istio
+                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
+              url: /user/network/managing_request_between_service_istio.html
+            - title:
+                en: Locality failover with Istio
+                ru: Locality failover с Istio
+              url: /user/network/locality_failover_istio.html
+            - title:
+                en: Configuring request retries with Istio
+                ru: Настройка retry для запросов с Istio
+              url: /user/network/retry_istio.html
+            - title:
+                en: Configuring resources for istio-proxy sidecars
+                ru: Настройка ресурсов для istio-proxy сайдкаров
+              url: /user/network/istio-sidecar-resource-management.html
+            - title:
+                en: Circuit Breaker
+                ru: Circuit Breaker
+              url: /user/network/circuit-breaker.html
+            - title:
+                en: Canary deployment
+                ru: Canary deployment
+              url: /user/network/canary-deployment.html
+        - title:
+            en: Security
+            ru: Безопасность
+          folders:
+            - title:
+                en: Container image vulnerability scanning
+                ru: Сканирование контейнерных образов на уязвимости
+              url: /user/security/scanning.html
+            - title:
+                en: Using TLS certificates
+                ru: Использование TLS-сертификатов
+              url: /user/security/tls.html
+        - title:
+            en: Interfaces
+            ru: Интерфейсы
+          folders:
+            - title:
+                en: TODO API
+                ru: TODO API
+              draft: true
+              url: /user/api.html
+            - title:
+                en: TODO CLI
+                ru: TODO CLI
+              draft: true
+              url: /user/cli.html
+            - title:
+                en: TODO IaC
+                ru: TODO IaC
+              url: /user/iac.html
+              draft: true
+            - title:
+                en: Web interfaces
+                ru: Веб-интерфейсы
               folders:
                 - title:
-                    en: Common settings
-                    ru: Общие настройки
-                  url: /security_software_setup.html
+                    en: Web UI
+                    ru: Веб-интерфейс платформы
+                  url: /user/web/ui.html
                 - title:
-                    en: Sysctl parameters
-                    ru: Параметры sysctl
-                  url: /security/sysctl.html
+                    en: Grafana
+                    ru: Grafana
+                  url: /user/web/grafana.html
                 - title:
-                    en: KESL
-                    ru: KESL
-                  url: /security/kesl.html
+                    en: Alert management
+                    ru: Управление алертами
+                  url: /user/web/alertmanager.html
+                - title:
+                    en: Kubeconfig generator
+                    ru: Генератор kubeconfig
+                  url: /user/web/kubeconfig.html
+                - title:
+                    en: Downloading Deckhouse utilities
+                    ru: Загрузка утилит Deckhouse
+                  url: /user/web/deckhouse-tools.html
+                - title:
+                    en: Secret management
+                    ru: Управление секретами
+                  url: /user/web/stronghold.html
+                - title:
+                    en: Visualizing cluster network stack
+                    ru: Визуализация сетевого стека кластера
+                  url: /user/web/hubble.html
         - title:
-            en: Alerts
-            ru: Алерты
-          url: /alerts.html
+            en: Multitenancy
+            ru: Мультитенантность
+          url: /user/multitenancy/
         - title:
-            en: Network security settings
-            ru: Настройка сетевых политик
-          url: /network_security_setup.html
+            en: Monitoring
+            ru: Мониторинг
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/monitoring/
+            - title:
+                en: Monitoring settings
+                ru: Настройки мониторинга
+              url: /user/monitoring/app.html
         - title:
-            en: FAQ
-            ru: FAQ
-          url: /deckhouse-faq.html
+            en: Logging settings
+            ru: Настройки логирования
+          url: /user/logging/
+        - title:
+            en: Containerized applications
+            ru: TODO Контейнеризированные приложения
+          draft: true
+          folders:
+            - title:
+                en: Running applications on the platform
+                ru: Запуск приложений на платформе
+              url: /user/running-containerized-applications.html
+            - title:
+                en: Migration from other platforms
+                ru: TODO  Переход с других платформ
+              url: /user/migration-from-other-platforms.html
+              draft: true
+        - title:
+            en: Virtual machines
+            ru: TODO Виртуальные машины
+          url: /user/virtual-machines.html
+          draft: true
+        - title:
+            en: Network capabilities
+            ru: TODO Сетевые возможности
+          draft: true
+          folders:
+            - title:
+                en: Balancing and traffic management
+                ru: Балансировка и управление трафиком
+              url: /user/balancing-and-traffic-management.html
+            - title:
+                en: SSL certificate management
+                ru: Управление сертификатами (SSL)
+              url: /user/certificate-management.html
+            - title:
+                en: Istio-based service-mesh
+                ru: Service-mesh на базе Istio
+              url: /user/istio-based-service-mesh.html
+        - title:
+            en: Catastrophic resistance
+            ru: TODO Катастрофоустойчивость
+          draft: true
+          url: /user/catastrophic-resistance.html
+# ------------- Architecture -------------
+    - title:
+        en: Architecture
+        ru: Архитектура
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /architecture/
+        - title:
+            en: TODO Overview
+            ru: TODO Обзор
+          url: /architecture/architecture-overview.html
+          draft: true
+        - title:
+            en: TODO Installation
+            ru: TODO Установка
+          url: /architecture/installation.html
+          draft: true
         - title:
             en: Modules
             ru: Модули
           folders:
             - title:
-                en: deckhouse
-                ru: deckhouse
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/deckhouse/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/deckhouse/configuration.html
-                - title:
-                    en: Usage
-                    ru: Примеры
-                  url: /modules/deckhouse/usage.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/deckhouse/faq.html
-            - title:
-                en: documentation
-                ru: documentation
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/documentation/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/documentation/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/documentation/configuration.html
-    - title:
-        en: Kubernetes Cluster
-        ru: Кластер Kubernetes
-      folders:
-        - title:
-            en: Description
-            ru: Описание
-          url: /kubernetes.html
-        - title:
-            en: Cloud providers
-            ru: Cloud providers
-          folders:
-            - title:
-                en: Amazon Web Services
-                ru: Amazon Web Services
-              moduleName: cloud-provider-aws
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-aws/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-aws/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-aws/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-aws/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-aws/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-aws/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-aws/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-aws/faq.html
-            - title:
-                en: DVP
-                ru: DVP
-              moduleName: cloud-provider-dvp
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-dvp/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-dvp/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-dvp/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-dvp/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-dvp/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-dvp/cr.html
-            - title:
-                en: Google Cloud Platform
-                ru: Google Cloud Platform
-              moduleName: cloud-provider-gcp
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-gcp/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-gcp/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-gcp/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-gcp/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-gcp/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-gcp/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-gcp/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-gcp/faq.html
-            - title:
-                en: Microsoft Azure
-                ru: Microsoft Azure
-              moduleName: cloud-provider-azure
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-azure/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-azure/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-azure/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-azure/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-azure/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-azure/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-azure/examples.html
-            - title:
-                en: OpenStack
-                ru: OpenStack
-              moduleName: cloud-provider-openstack
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-openstack/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-openstack/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-openstack/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-openstack/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-openstack/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-openstack/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-openstack/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-openstack/faq.html
-            - title:
-                en: Huawei Cloud
-                ru: Huawei Cloud
-              moduleName: cloud-provider-huaweicloud
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-huaweicloud/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-huaweicloud/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-huaweicloud/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-huaweicloud/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-huaweicloud/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-huaweicloud/cr.html
-            - title:
-                en: VMware Cloud Director
-                ru: VMware Cloud Director
-              moduleName: cloud-provider-vcd
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-vcd/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-vcd/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-vcd/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-vcd/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-vcd/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-vcd/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-vcd/examples.html
-                #- title:
-                    #en: FAQ
-                    #ru: FAQ
-                  #url: /modules/cloud-provider-vcd/faq.html
-            - title:
-                en: VMware vSphere
-                ru: VMware vSphere
-              moduleName: cloud-provider-vsphere
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-vsphere/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-vsphere/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-vsphere/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-vsphere/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-vsphere/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-vsphere/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-vsphere/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-vsphere/faq.html
-            - title:
-                en: Yandex Cloud
-                ru: Yandex Cloud
-              moduleName: cloud-provider-yandex
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-yandex/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-yandex/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-yandex/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-yandex/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-yandex/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-yandex/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-yandex/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-yandex/faq.html
-            - title:
-                en: zVirt
-                ru: zVirt
-              moduleName: cloud-provider-zvirt
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-zvirt/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-zvirt/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-zvirt/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-zvirt/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-zvirt/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-zvirt/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cloud-provider-zvirt/faq.html
-            - title:
-                en: Dynamix
-                ru: Базис.DynamiX
-              moduleName: cloud-provider-dynamix
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-dynamix/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-dynamix/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-dynamix/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-dynamix/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-dynamix/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cloud-provider-dynamix/cr.html
-        - title:
-            en: Control plane management
-            ru: Управление control plane
-          moduleName: control-plane-manager
-          folders:
-            - title:
                 en: Description
                 ru: Описание
-              url: /modules/control-plane-manager/
+              url: /architecture/module-development/
             - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/control-plane-manager/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/control-plane-manager/cr.html
+                en: Module structure
+                ru: Структура
+              url: /architecture/module-development/structure/
+            - title:
+                en: Building and publication
+                ru: Сборка и публикация
+              url: /architecture/module-development/build/
+            - title:
+                en: Running and verifying in the cluster
+                ru: Запуск и проверка в кластере
+              url: /architecture/module-development/run/
+            - title:
+                en: Module dependencies
+                ru: Зависимости модуля
+              url: /architecture/module-development/dependencies/
+            - title:
+                en: Versioning
+                ru: Версионирование
+              url: /architecture/module-development/versioning/
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/control-plane-manager/examples.html
+              url: /architecture/module-development/example/
             - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/control-plane-manager/faq.html
+                en: Development and debugging
+                ru: Разработка и отладка
+              url: /architecture/module-development/development/
         - title:
-            en: Node management
-            ru: Управление узлами
-          moduleName: node-manager
+            en: Disaster resilience
+            ru: Катастрофоустойчивость
           folders:
             - title:
-                en: Description
-                ru: Описание
-              url: /modules/node-manager/
+                en: Overview
+                ru: Обзор
+              url: /architecture/disaster-resilience/
             - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/node-manager/examples.html
+                en: Geo-distribution
+                ru: Геораспределённость
+              url: /architecture/disaster-resilience/geo-distribution.html
             - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/node-manager/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/node-manager/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/node-manager/faq.html
+                en: Geo-reserving
+                ru: Георезервирование
+              url: /architecture/disaster-resilience/geo-reserving.html
         - title:
-            en: Container Registry
-            ru: Container Registry
-          moduleName: registry
-          featureStatus: preview
+            en: Updating
+            ru: Обновление
+          url: /architecture/updating.html
+        - title:
+            en: Logging
+            ru: Логирование
           folders:
             - title:
-                en: Description
-                ru: Описание
-              url: /modules/registry/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/registry/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/registry/configuration.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/registry/faq.html
-        - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: node-local-dns
-                ru: node-local-dns
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/node-local-dns/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/node-local-dns/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/node-local-dns/configuration.html
-            - title:
-                en: terraform-manager
-                ru: terraform-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/terraform-manager/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/terraform-manager/configuration.html
-    - title:
-        en: Accessing cluster
-        ru: Доступ к кластеру
-      folders:
-        - title:
-            en: dashboard
-            ru: dashboard
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/dashboard/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/dashboard/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/dashboard/configuration.html
-        - title:
-            en: openvpn
-            ru: openvpn
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/openvpn/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/openvpn/examples.html
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/openvpn/configuration.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/openvpn/faq.html
-    - title:
-        en: Network
-        ru: Сеть
-      folders:
-        - title:
-            en: CNI
-            ru: CNI
-          folders:
-            - title:
-                en: cilium-hubble
-                ru: cilium-hubble
-              folders:
-                - title:
-                    ru: Описание
-                    en: Description
-                  url: /modules/cilium-hubble/
-                - title:
-                    ru: Настройки
-                    en: Configuration
-                  url: /modules/cilium-hubble/configuration.html
-            - title:
-                en: cni-cilium
-                ru: cni-cilium
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-cilium/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/cni-cilium/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/cni-cilium/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cni-cilium/examples.html
-            - title:
-                en: cni-flannel
-                ru: cni-flannel
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-flannel/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/cni-flannel/configuration.html
-            - title:
-                en: cni-simple-bridge
-                ru: cni-simple-bridge
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cni-simple-bridge/
-        - title:
-            en: Load Balancing
-            ru: Балансировка трафика
-          folders:
-            - title:
-                en: ingress-nginx
-                ru: ingress-nginx
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/ingress-nginx/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/ingress-nginx/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/ingress-nginx/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/ingress-nginx/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/ingress-nginx/faq.html
-            - title:
-                en: istio
-                ru: istio
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/istio/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/istio/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/istio/cr.html
-                    - title:
-                        en: "Custom Resources (by istio.io)"
-                        ru: "Custom Resources (от istio.io)"
-                      url: /modules/istio/istio-cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/istio/examples.html
-            - title:
-                en: keepalived
-                ru: keepalived
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/keepalived/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/keepalived/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/keepalived/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/keepalived/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/keepalived/faq.html
-            - title:
-                en: metallb
-                ru: metallb
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/metallb/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/metallb/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/metallb/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/metallb/cr.html
-        - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: kube-dns
-                ru: kube-dns
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/kube-dns/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/kube-dns/configuration.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/kube-dns/examples.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/kube-dns/faq.html
-            - title:
-                en: kube-proxy
-                ru: kube-proxy
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/kube-proxy/
-            - title:
-                en: network-gateway
-                ru: network-gateway
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-gateway/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-gateway/configuration.html
-            - title:
-                en: network-policy-engine
-                ru: network-policy-engine
-              moduleName: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-policy-engine/configuration.html
-            - title:
-                en: service-with-healthchecks
-                ru: service-with-healthchecks
-              featureStatus: experimental
-              moduleName: service-with-healthchecks
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/service-with-healthchecks/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/service-with-healthchecks/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/service-with-healthchecks/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/service-with-healthchecks/examples.html
-    - title:
-        en: Monitoring
-        ru: Мониторинг
-      folders:
-        - title:
-            en: Prometheus & Grafana
-            ru: Prometheus & Grafana
-          url: /modules/prometheus/
-          moduleName: prometheus
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/prometheus/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/prometheus/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/prometheus/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/prometheus/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/prometheus/faq.html
-        - title:
-            en: Monitoring your applications
-            ru: Мониторинг вашего приложения
-          moduleName: monitoring-custom
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/monitoring-custom/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-custom/configuration.html
-        - title:
-            en: Network monitoring
-            ru: Мониторинг сети
-          moduleName: monitoring-ping
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/monitoring-ping/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-ping/configuration.html
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/monitoring-ping/usage.html
-        - title:
-            en: Cluster monitoring
-            ru: Мониторинг кластера
-          moduleName: monitoring-kubernetes
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/monitoring-kubernetes/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-kubernetes/configuration.html
-        - title:
-            en: Control plane monitoring
-            ru: Мониторинг control plane
-          moduleName: monitoring-kubernetes-control-plane
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/monitoring-kubernetes-control-plane/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/monitoring-kubernetes-control-plane/configuration.html
-        - title:
-            en: Extended monitoring
-            ru: Расширенный мониторинг
-          moduleName: extended-monitoring
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/extended-monitoring/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/extended-monitoring/configuration.html
-        - title:
-            en: Logs
-            ru: Логи
-          folders:
-            - title:
-                en: Logs shipment
-                ru: Доставка логов
-              moduleName: log-shipper
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/log-shipper/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/log-shipper/examples.html
-                - title:
-                    en: Advanced Usage
-                    ru: Расширенная конфигурация
-                  url: /modules/log-shipper/advanced_usage.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/log-shipper/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/log-shipper/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/log-shipper/faq.html
-
+                en: Log collection and delivery
+                ru: Сбор и доставка логов
+              url: /architecture/logging/delivery.html
             - title:
                 en: Short-term storage
                 ru: Кратковременное хранение
-              moduleName: loki
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/loki/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/loki/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/loki/configuration.html
+              url: /architecture/logging/storage.html
         - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: operator-prometheus
-                ru: operator-prometheus
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/operator-prometheus/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/operator-prometheus/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/operator-prometheus/cr.html
-            - title:
-                en: okmeter
-                ru: okmeter
-              moduleName: okmeter
-              featureStatus: proprietaryOkmeter
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/okmeter/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/okmeter/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/okmeter/configuration.html
-            - title:
-                en: prometheus-pushgateway
-                ru: prometheus-pushgateway
-              moduleName: prometheus-pushgateway
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/prometheus-pushgateway/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/prometheus-pushgateway/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/prometheus-pushgateway/configuration.html
-            - title:
-                en: Cluster SLA Monitoring
-                ru: Мониторинг SLA кластера
-              moduleName: upmeter
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/upmeter/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/upmeter/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/upmeter/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/upmeter/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/upmeter/faq.html
-    - title:
-        en: Autoscaling & Managing resources
-        ru: Масштабирование и управление ресурсами
-      folders:
+            en: VPA
+            ru: VPA
+          url: /architecture/vpa.html
         - title:
-            en: Scaling by any metric
-            ru: Масштабирование по метрикам
-          moduleName: prometheus-metrics-adapter
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/prometheus-metrics-adapter/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/prometheus-metrics-adapter/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/prometheus-metrics-adapter/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/prometheus-metrics-adapter/cr.html
+            en: Authentication
+            ru: Аутентификация
+          url: /architecture/authentication.html
         - title:
-            en: Vertical Pod autoscaler
-            ru: Вертикальное масштабирование
-          moduleName: vertical-pod-autoscaler
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/vertical-pod-autoscaler/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/vertical-pod-autoscaler/examples.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/vertical-pod-autoscaler/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/vertical-pod-autoscaler/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/vertical-pod-autoscaler/faq.html
+            en: Node management
+            ru: Управление узлами
+          url: /architecture/node.html
         - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: descheduler
-                ru: descheduler
-              moduleName: descheduler
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/descheduler/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/descheduler/examples.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/descheduler/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/descheduler/cr.html
-            - title:
-                en: flow-schema
-                ru: flow-schema
-              moduleName: flow-schema
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/flow-schema/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/flow-schema/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/flow-schema/faq.html
-    - title:
-        en: Security
-        ru: Безопасность
-      folders:
+            en: Monitoring
+            ru: Мониторинг
+          url: /architecture/monitoring/
         - title:
-            en: User authentication
-            ru: User authentication
-          moduleName: user-authn
+            en: Network
+            ru: Сеть
           folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/user-authn/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/user-authn/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/user-authn/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/user-authn/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/user-authn/faq.html
-        - title:
-            en: User authorization
-            ru: User authorization
-          moduleName: user-authz
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/user-authz/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/user-authz/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/user-authz/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/user-authz/cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/user-authz/faq.html
+          - title:
+              en: Cluster architecture with Istio enabled
+              ru: Архитектура кластера с включенным Istio
+            url: /architecture/network/cluster-with-istio.html
+          - title:
+              en: Application service architecture with Istio enabled
+              ru: Архитектура прикладного сервиса с включенным Istio
+            url: /architecture/network/service-with-istio.html
+          - title:
+              en: Caching DNS server in a cluster
+              ru: Кэширующий DNS-сервер в кластере
+            url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy
-            ru: Multitenancy
-          moduleName: multitenancy-manager
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/multitenancy-manager/
-            - title:
-                en: Usage
-                ru: Примеры
-              url: /modules/multitenancy-manager/usage.html
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/multitenancy-manager/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/multitenancy-manager/cr.html
+            ru: Мультитенантность
+          url: /architecture/multitenancy/
         - title:
-            en: Admission Policy
-            ru: Политики безопасности
-          moduleName: admission-policy-engine
+            en: Security
+            ru: Безопасность
           folders:
             - title:
-                en: Description
-                ru: Описание
-              url: /modules/admission-policy-engine/
+                en: Integrity control
+                ru: Контроль целостности
+              url: /architecture/security/integrity-control.html
             - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/admission-policy-engine/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/admission-policy-engine/cr.html
-                - title:
-                    ru: Custom Resources (от Gatekeeper)
-                    en: Custom Resources (by Gatekeeper)
-                  url: /modules/admission-policy-engine/gatekeeper-cr.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/admission-policy-engine/faq.html
+                en: Architecture of security event audit
+                ru: Архитектура аудита событий безопасности
+              url: /architecture/security/runtime-audit.html
         - title:
-            en: Audit
-            ru: Аудит
-          moduleName: runtime-audit-engine
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/runtime-audit-engine/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/runtime-audit-engine/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/runtime-audit-engine/cr.html
-            - title:
-                en: Advanced Usage
-                ru: Расширенная конфигурация
-              url: /modules/runtime-audit-engine/advanced_usage.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/runtime-audit-engine/examples.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/runtime-audit-engine/faq.html
-        - title:
-            en: Other modules
-            ru: Другие модули
-          folders:
-            - title:
-                en: cert-manager
-                ru: cert-manager
-              moduleName: cert-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cert-manager/
-                - title:
-                    en: Usage
-                    ru: Примеры
-                  url: /modules/cert-manager/usage.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cert-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/cert-manager/cr.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/cert-manager/faq.html
-            - title:
-                en: operator-trivy
-                ru: operator-trivy
-              moduleName: operator-trivy
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/operator-trivy/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/operator-trivy/configuration.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /modules/operator-trivy/faq.html
-                - title:
-                    en: "Custom Resources"
-                    ru: "Custom Resources"
-                  url: /modules/operator-trivy/cr.html
+            en: Direct mode architecture (registry)
+            ru: Архитектура режима Direct (registry)
+          url: /architecture/registry-direct-mode.html
     - title:
-        en: Storage
-        ru: Хранилище
-      folders:
-      - title:
-          en: Overview
-          ru: Обзор
-        url: /storage/admin/
-      - title:
-          en: Storage configuration
-          ru: Настройка хранилищ
-        url: /storage/admin/supported-storage.html
-      - title:
-          en: SDS
-          ru: Программно-определяемые хранилища
-        folders:
-          - title:
-              en: Local storage based on LVM
-              ru: Локальное хранилище на основе LVM
-            url: /storage/admin/sds/lvm-local.html
-          - title:
-              en: Replicated storage based on DRBD
-              ru: Реплицируемое хранилище на основе DRBD
-            url: /storage/admin/sds/lvm-replicated.html
-      - title:
-          en: External
-          ru: Внешние хранилища
-        folders:
-          - title:
-              en: Distributed Ceph storage
-              ru: Распределённое хранилище Ceph
-            url: /storage/admin/external/ceph.html
-          - title:
-              en: HPE data storage
-              ru: Хранилище данных HPE
-            url: /storage/admin/external/hpe.html
-          - title:
-              en: Huawei data storage
-              ru: Хранилище данных Huawei
-            url: /storage/admin/external/huawei.html
-          - title:
-              en: NFS data storage
-              ru: Хранилище данных NFS
-            url: /storage/admin/external/nfs.html
-          - title:
-              en: S3-based object storage
-              ru: Объектное хранилище на основе S3
-            url: /storage/admin/external/s3.html
-          - title:
-              en: SCSI-based data storage
-              ru: Хранилище данных на основе протокола SCSI
-            url: /storage/admin/external/scsi.html
-          - title:
-              en: TATLIN.UNIFIED (Yadro) unified storage
-              ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
-            url: /storage/admin/external/yadro.html
-      - title:
-         en: Module settings
-         ru: Настройки модулей
-        folders:
-          - title:
-              en: csi-ceph
-              ru: csi-ceph
-            url: /reference/mc/csi-ceph/
-          - title:
-              en: csi-hpe
-              ru: csi-hpe
-            url: /reference/mc/csi-hpe/
-          - title:
-              en: csi-huawei
-              ru: csi-huawei
-            url: /reference/mc/csi-huawei/
-          - title:
-              en: csi-nfs
-              ru: csi-nfs
-            url: /reference/mc/csi-nfs/
-          - title:
-              en: csi-s3
-              ru: csi-s3
-            url: /reference/mc/csi-s3/
-          - title:
-              en: csi-scsi-generic
-              ru: csi-scsi-generic
-            url: /reference/mc/csi-scsi-generic/
-          - title:
-              en: sds-local-volume
-              ru: sds-local-volume
-            url: /reference/mc/sds-local-volume/
-          - title:
-              en: sds-node-configurator
-              ru: sds-node-configurator
-            url: /reference/mc/sds-node-configurator/
-          - title:
-              en: sds-replicated-volume
-              ru: sds-replicated-volume
-            url: /reference/mc/sds-replicated-volume/
-      - title:
-         en: Custom Resources
-         ru: Custom Resources
-        folders:
-          - title:
-              en: CephClusterAuthentication
-              ru: CephClusterAuthentication
-            url: /reference/cr/cephclusterauthentication/
-          - title:
-              en: CephClusterConnection
-              ru: CephClusterConnection
-            url: /reference/cr/cephclusterconnection/
-          - title:
-              en: CephMetadataBackup
-              ru: CephMetadataBackup
-            url: /reference/cr/cephmetadatabackup/
-          - title:
-              en: CephStorageClass
-              ru: CephStorageClass
-            url: /reference/cr/cephstorageclass/
-          - title:
-              en: HPEStorageClass
-              ru: HPEStorageClass
-            url: /reference/cr/hpestorageconnection/
-          - title:
-              en: HuaweiStorageClass
-              ru: HuaweiStorageClass
-            url: /reference/cr/huaweistorageclass/
-          - title:
-              en: LocalStorageClass
-              ru: LocalStorageClass
-            url: /reference/cr/localstorageclass/
-          - title:
-              en: LVMLogicalVolumeSnapshot
-              ru: LVMLogicalVolumeSnapshot
-            url: /reference/cr/lvmlogicalvolumesnapshot/
-          - title:
-              en: LVMLogicalVolume
-              ru: LVMLogicalVolume
-            url: /reference/cr/lvmlogicalvolume/
-          - title:
-              en: LvmVolumeGroupBackup
-              ru: LvmVolumeGroupBackup
-            url: /reference/cr/lvmvolumegroupbackup/
-          - title:
-              en: LVMVolumeGroupSet
-              ru: LVMVolumeGroupSet
-            url: /reference/cr/lvmvolumegroupset/
-          - title:
-              en: LVMVolumeGroup
-              ru: LVMVolumeGroup
-            url: /reference/cr/lvmvolumegroup/
-          - title:
-              en: NFSStorageClass
-              ru: NFSStorageClass
-            url: /reference/cr/nfsstorageclass/
-          - title:
-              en: ReplicatedStorageMetadataBackup
-              ru: ReplicatedStorageMetadataBackup
-            url: /reference/cr/replicatedstoragemetadatabackup/
-          - title:
-              en: ReplicatedStorageClass
-              ru: ReplicatedStorageClass
-            url: /reference/cr/replicatedstorageclass/
-          - title:
-              en: ReplicatedStoragePool
-              ru: ReplicatedStoragePool
-            url: /reference/cr/replicatedstoragepool/
-          - title:
-              en: S3StorageClass
-              ru: S3StorageClass
-            url: /reference/cr/s3storageclass/
-          - title:
-              en: SCSIDevice
-              ru: SCSIDevice
-            url: /reference/cr/scsidevice/
-          - title:
-              en: SCSIStorageClass
-              ru: SCSIStorageClass
-            url: /reference/cr/scsistorageclass/
-          - title:
-              en: SCSITarget
-              ru: SCSITarget
-            url: /reference/cr/scsitarget/
-          - title:
-              en: YadroTatlinUnifiedStorageClass
-              ru: YadroTatlinUnifiedStorageClass
-            url: /reference/cr/yadrotatlinunifiedstorageclass/
-          - title:
-              en: YadroTatlinUnifiedStorageConnection
-              ru: YadroTatlinUnifiedStorageConnection
-            url: /reference/cr/yadrotatlinunifiedstorageconnection/
-    - title:
-        en: Little things
-        ru: Приятные мелочи
+        en: Reference
+        ru: Справка
       folders:
         - title:
-            en: chrony
-            ru: chrony
-          moduleName: chrony
+            en: API
+            ru: API
           folders:
             - title:
-                en: Description
-                ru: Описание
-              url: /modules/chrony/
+                en: Global configuration
+                ru: Глобальные настройки
+              url: /reference/api/global.html
             - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/chrony/configuration.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/chrony/faq.html
+                en: Custom Resources
+                ru: Custom Resources
+              url: /reference/api/cr.html
         - title:
-            en: namespace-configurator
-            ru: namespace-configurator
-          moduleName: namespace-configurator
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/namespace-configurator/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/namespace-configurator/configuration.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/namespace-configurator/examples.html
+            en: Release channels
+            ru: Каналы обновлений
+          url: /reference/release-channels.html
         - title:
-            en: secret-copier
-            ru: secret-copier
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/secret-copier/
+            en: Supported K8s & OS versions
+            ru: Поддерживаемые версии K8s и ОС
+          url: /reference/supported_versions.html
         - title:
-            en: deckhouse-tools
-            ru: deckhouse-tools
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/deckhouse-tools/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/deckhouse-tools/configuration.html
+            en: Revision comparison
+            ru: Сравнение редакций
+          url: /reference/revision-comparison.html
+        - title:
+            en: Network interaction
+            ru: Сетевое взаимодействие
+          url: /reference/network_interaction.html
+        - title:
+            en: Alerts
+            ru: Алерты
+          url: /reference/alerts.html
+        - title:
+            en: Sysctl parameters
+            ru: Параметры sysctl
+          url: /reference/sysctl.html
+        - title:
+            en: Used software
+            ru: Используемое ПО
+          url: /reference/oss_info.html
+        - title:
+            en: Used directors
+            ru: Используемые директории
+          url: /reference/used_directories.html
     - title:
-        en: Deckhouse CLI (d8)
-        ru: Deckhouse CLI (d8)
+        en: Console utilities
+        ru: Консольные утилиты
       folders:
       - title:
-          en: Overview and installation
-          ru: Описание и установка
-        url: /deckhouse-cli/
-      - title:
-          en: Reference
-          ru: Справка
-        url: /deckhouse-cli/reference/
-    - title:
-        en: Used software
-        ru: Используемое ПО
-      url: /oss_info.html
+          en: Deckhouse CLI (d8)
+          ru: Deckhouse CLI (d8)
+        folders:
+        - title:
+            en: Overview and installation
+            ru: Описание и установка
+          url: /cli/d8/
+        - title:
+            en: Reference
+            ru: Справка
+          url: /cli/d8/reference/
     - title:
         en: Release notes
         ru: История изменений
       url: /release-notes.html
+  # ------------- TEST -------------
+    - title:
+        en: Projects (WIP)
+        ru: Проекты (WIP)
+      draft: true
+      folders:
+        - title:
+            en: Concepts
+            ru: Концепции
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /test/concepts/
+            - title:
+                en: Glossary
+                ru: Глоссарий
+              url: /test/concepts/glossary.html
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/concepts/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/concepts/rbac.html
+        - title:
+            en: Administration
+            ru: Администрирование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/admin/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/admin/rbac.html
+        - title:
+            en: Using
+            ru: Использование
+          folders:
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/user/projects.html
+        - title:
+            en: Architecture
+            ru: Архитектура
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /test/architecture/
+            - title:
+                en: Projects
+                ru: Проекты
+              url: /test/architecture/projects.html
+            - title:
+                en: Role Model
+                ru: Ролевая модель
+              url: /test/architecture/rbac.html

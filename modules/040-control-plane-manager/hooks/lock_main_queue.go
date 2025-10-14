@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -128,14 +129,14 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 	return ds.GetGeneration(), nil
 }
 
-func handleLockMainQueue(input *go_hook.HookInput) error {
+func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
 		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
 
 	// Lock deckhouse main queue while the control-plane is updating.
-	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[int64](input.NewSnapshots, "cpm_ds")
+	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[int64](input.Snapshots, "cpm_ds")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
 	}
@@ -145,7 +146,7 @@ func handleLockMainQueue(input *go_hook.HookInput) error {
 
 	dsGeneration := dsSnaps[0]
 
-	podsSnaps := input.NewSnapshots.Get("cpm_pods")
+	podsSnaps := input.Snapshots.Get("cpm_pods")
 	if len(podsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}

@@ -5,8 +5,8 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/access.h
 
 After the installation is complete, you can connect to the platform in the following ways:
 
-- Directly from the master node
-- Remotely from a pre-configured personal computer
+- From the master node, by connecting to it via SSH.
+- Remotely, by configuring the connection on any personal computer.
 
 ## Connecting to the Platform from the Master Node
 
@@ -24,4 +24,4 @@ sudo -i d8 k get nodes
 
 ## Remote Connection to the Platform
 
-You can set up a remote connection to the cluster. To do this, follow the steps on your personal computer as described in [the instructions](../../platform-management/access-control/user-management.html).
+To configure remote access to the cluster, follow the [steps in the guide](../../platform-management/access-control/user-management.html) and install the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI).

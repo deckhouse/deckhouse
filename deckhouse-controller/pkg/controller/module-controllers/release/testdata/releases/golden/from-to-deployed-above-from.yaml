@@ -1,0 +1,144 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: test-source
+  resourceVersion: "1000"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+  - name: demo
+  modulesCount: 1
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: superseded
+  name: demo-1.68.0
+  resourceVersion: "1002"
+spec:
+  moduleName: demo
+  version: 1.68.0
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: skipped
+  name: demo-1.69.0
+  resourceVersion: "1005"
+spec:
+  moduleName: demo
+  version: 1.69.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: skipped
+  name: demo-1.70.0
+  resourceVersion: "1004"
+spec:
+  moduleName: demo
+  version: 1.70.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: deployed
+  name: demo-1.71.0
+  resourceVersion: "1003"
+spec:
+  moduleName: demo
+  update:
+    versions:
+    - from: "1.67"
+      to: "1.71"
+  version: 1.71.0
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 9m15s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: demo
+  resourceVersion: "1002"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
+  phase: Ready

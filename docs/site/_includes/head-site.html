@@ -21,6 +21,8 @@
 <link href='/assets/css/cards.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/site.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <link href='/assets/css/docs.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/search-v3.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/navigation.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 <!-- scripts -->
 <script type="text/javascript" src="/assets/js/jquery.min.js?v={{ assetHash }}"></script>
@@ -31,6 +33,12 @@
 <script type="text/javascript" src="/assets/js/popper.min.js?v={{ assetHash }}"></script>
 <script type="text/javascript" src="/assets/js/tippy-bundle.umd.min.js?v={{ assetHash }}"></script>
 <script type="text/javascript" src="/assets/js/stickythead.min.js?v={{ assetHash }}"></script>
+
+<!-- Lunr JS for search -->
+<script type="text/javascript" src="/assets/js/lunr/lunr.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.stemmer.support.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.multi.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.ru.js?v={{ assetHash }}"></script>
 
 <script>
   $(document).ready(function() {
@@ -77,6 +85,12 @@
 <script type="text/javascript" src="/assets/js/customscripts.js?v={{ assetHash }}"></script>
 
 <script type="text/javascript" src="/assets/js/table-sticky.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/sidebar-scroll.js?v={{ assetHash }}"></script>
+
+{%- unless site.mode == "module" %}
+<script type="text/javascript" src="/assets/js/feedback.js?v={{ assetHash }}"></script>
+{%- endunless %}
 
 <script>
     $(document).ready(function() {

@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -45,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
@@ -55,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -66,11 +67,7 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 
 	maxModulesLimit = 1500
-
-	metricUpdatingModuleIsNotValid     = "d8_module_updating_module_is_not_valid"
-	metricUpdatingFailedBrokenSequence = "d8_module_updating_broken_sequence"
-	metricModuleUpdatingGroup          = "d8_module_updating_group"
-	serviceName                        = "module-source-controller"
+	serviceName     = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
@@ -80,7 +77,7 @@ func RegisterController(
 	mm moduleManager,
 	edition *d8edition.Edition,
 	dc dependency.Container,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	logger *log.Logger,
 ) error {
@@ -158,7 +155,7 @@ type reconciler struct {
 	dc     dependency.Container
 	logger *log.Logger
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
@@ -228,6 +225,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 		// error can occur on wrong auth only, we don't want to requeue the source until auth is fixed
@@ -238,8 +236,10 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
 		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{}, err
 	}
 	if err == nil {
@@ -263,6 +263,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
 
@@ -393,7 +394,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
 		logger.Debug("download module meta from release channel")
@@ -411,7 +412,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					"registry": source.Spec.Registry.Repo,
 				}
 
-				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			}
 
 			availableModule.Version = "unknown"
@@ -465,7 +466,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				continue
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, policy.Spec.ReleaseChannel, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
 				availableModule.Error = err.Error()

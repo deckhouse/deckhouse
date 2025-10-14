@@ -10,16 +10,16 @@ The example uses the [experimental role-based](./#experimental-role-based-model)
 
 To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
 
-Example of assigning rights to a cluster administrator (User `joe`):
+Example of assigning rights to a cluster administrator (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -54,10 +54,10 @@ Example of assigning rights to a network administrator (User `joe`):
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -171,7 +171,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -273,7 +273,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 1. Create a ServiceAccount, e.g., in the `d8-service-accounts` namespace:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: v1
    kind: ServiceAccount
    metadata:
@@ -294,7 +294,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 1. Grant it the necessary privileges (using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource):
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
    metadata:
@@ -329,14 +329,14 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
      1. Get a Kubernetes cluster CA certificate:
 
         ```shell
-        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
+        d8 k get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
         ```
 
      1. Generate the `cluster` section (the API server's IP address is used for access):
 
         ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+        d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(d8 k get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
@@ -350,8 +350,8 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
      1. Get the CA certificate from the Secret with the certificate that is used for the `api.%s` domain:
 
         ```shell
-        kubectl -n d8-user-authn get secrets -o json \
-          $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+        d8 k -n d8-user-authn get secrets -o json \
+          $(d8 k -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
           | jq -rc '.data."ca.crt" // .data."tls.crt"' \
           | base64 -d > /tmp/ca.crt
         ```
@@ -359,8 +359,8 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
      2. Generate the `cluster` section (an external domain and a CA for access are used):
 
         ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+        d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
@@ -368,23 +368,23 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
    * If a public CA is used. Generate the `cluster` section (an external domain is used for access):
 
      ```shell
-     kubectl config set-cluster $CLUSTER_NAME \
-       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+     d8 k config set-cluster $CLUSTER_NAME \
+       --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
        --kubeconfig=$FILE_NAME
      ```
 
 1. Generate the `user` section using the token from the Secret's ServiceAccount in the kubectl configuration file:
 
    ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+   d8 k config set-credentials $USER_NAME \
+     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 
 1. Generate the context in the kubectl configuration file:
 
    ```shell
-   kubectl config set-context $CONTEXT_NAME \
+   d8 k config set-context $CONTEXT_NAME \
      --cluster=$CLUSTER_NAME --user=$USER_NAME \
      --kubeconfig=$FILE_NAME
    ```
@@ -392,7 +392,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 1. Set the generated context as the default one in the kubectl configuration file:
 
    ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
 ### How to create a user using a client certificate
@@ -514,13 +514,13 @@ To create a user using a client certificate issued through the Kubernetes API, f
 1. Apply the manifest to create a certificate signing request:
   
     ```shell
-    kubectl apply -f csr.yaml
+    d8 k apply -f csr.yaml
     ```
 
 1. Check that the certificate has been approved and issued:
 
     ```shell
-    kubectl get csr demo-client-cert
+    d8 k get csr demo-client-cert
     ```
 
     If the certificate is issued, it will have the value `Approved,Issued` in the `CONDITION` column. Example output:
@@ -533,7 +533,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
     If the certificate is not automatically verified, verify it:
 
     ```shell
-    kubectl certificate approve demo-client-cert
+    d8 k certificate approve demo-client-cert
     ```
 
     Then, confirm that the certificate has been successfully approved.
@@ -541,7 +541,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
 
     ```shell
-    kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
+    d8 k get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
     ```
 
 Now the certificate can be specified in the config file:
@@ -624,10 +624,10 @@ Execute the command below with the following parameters:
 * `user` - the name of the user;
 * `groups` - user groups;
 
-> You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`kubectl -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized).
+> You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`d8 k -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized.
 
 ```shell
-cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+cat  <<EOF | 2>&1 d8 k  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",
@@ -659,7 +659,7 @@ You will see if access is allowed and what role is used:
 If the **multitenancy** mode is enabled in your cluster, you need to perform another check to be sure that the user has access to the namespace:
 
 ```shell
-cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",

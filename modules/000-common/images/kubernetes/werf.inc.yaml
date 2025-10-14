@@ -33,7 +33,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
-fromCacheVersion: "2025-06-07.0"
+fromCacheVersion: "2025-10-10-{{ $full_version | replace "." "-" }}"
 final: false
   {{- if $patch }}
 git:
@@ -72,7 +72,7 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -r .git vendor
+  - rm -r .git vendor hack/tools/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
@@ -100,8 +100,17 @@ shell:
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor
+
+{{- if eq $.SVACE_ENABLED "true" }}
+# we need stat analyse only one kube-api-server
   - |
-  {{- include "image-build.build" (set $ "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"`) | indent 4 }}
+  {{- $buildContext := deepCopy $ -}}
+  {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "%s/kubernetes-api-%s" $.ModuleName $version) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
+{{- end }}
+
+  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
 {{- end }}
 

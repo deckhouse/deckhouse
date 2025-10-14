@@ -57,7 +57,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 * Поддержка стандартных *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
 * Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
 
-Подключить такой вебхук extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](../../../../reference/cr/kubeschedulerwebhookconfiguration.html).
+Подключить такой вебхук extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration).
 
 {% alert level="critical" %}
 При использовании опции `failurePolicy: Fail`, ошибка в работе вебхука приводит к остановке работы планировщика и новые поды не смогут запуститься.

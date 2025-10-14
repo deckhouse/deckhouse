@@ -84,7 +84,6 @@ func (c *AutoConverger) convergerLoop(ctx *convergectx.Context, shutdownCh <-cha
 	for {
 		select {
 		case <-ticker.C:
-			cache.ClearTemporaryDirs()
 			c.runConverge(ctx)
 		case <-shutdownCh:
 			doneCh <- struct{}{}
@@ -114,7 +113,29 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 func (c *AutoConverger) runConverge(ctx *convergectx.Context) {
 	log.InfoLn("Start next converge")
 
-	err := c.runner.RunConverge(ctx)
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		log.ErrorF("Cannot get meta config: %v\n", err)
+		return
+	}
+
+	provider, err := ctx.ProviderGetter()(ctx.Ctx(), metaConfig)
+	if err != nil {
+		log.ErrorF("Cannot get provider: %v\n", err)
+		return
+	}
+
+	defer func() {
+		err = provider.Cleanup()
+		if err != nil {
+			log.ErrorF("Cannot cleanup provider: %v\n", err)
+			// do not return if error clean whole tmp dir
+		}
+
+		cache.ClearTemporaryDirs()
+	}()
+
+	err = c.runner.RunConverge(ctx)
 	if err != nil {
 		log.ErrorF("Converge error: %v\n", err)
 	}

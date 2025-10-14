@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -65,14 +68,19 @@ func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func getHubbleCACert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ca-secret"]
+func getHubbleCACert(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("ca-secret")
 
-	if len(snap) == 0 {
+	if len(snaps) == 0 {
 		return errors.New("secret with hubble CA not found")
 	}
 
-	adm := snap[0].(certificate.Certificate)
+	var adm certificate.Certificate
+	err := snaps[0].UnmarshalTo(&adm)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal ca secret: %w", err)
+	}
+
 	input.Values.Set("ciliumHubble.internal.caCert.cert", adm.Cert)
 	input.Values.Set("ciliumHubble.internal.caCert.key", adm.Key)
 

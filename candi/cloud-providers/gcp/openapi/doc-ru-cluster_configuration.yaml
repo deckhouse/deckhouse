@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -51,7 +51,7 @@ apiVersions:
 
               Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
-            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
               machineType:
                 description: |
@@ -92,7 +92,7 @@ apiVersions:
                 description: |
                   Список дополнительных лейблов.
 
-                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
+                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           zones: &NodeGroupZones_ru
             description: |
                 Список зон, в которых допустимо создавать узлы.
@@ -116,7 +116,7 @@ apiVersions:
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
-                  
+
                     > Доступны только поля `effect`, `key`, `values`.
             additionalNetworkTags:
               description: |
@@ -129,7 +129,7 @@ apiVersions:
 
                 Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
-              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
             zones: *NodeGroupZones_ru
@@ -137,9 +137,9 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard).
+          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/modules/cloud-provider-gcp/layouts.html#standard).
 
-          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat).
+          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-gcp/layouts.html#withoutnat).
       standard:
         description: Настройки для схемы размещения `Standard`.
         properties:

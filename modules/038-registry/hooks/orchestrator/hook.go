@@ -17,6 +17,7 @@ limitations under the License.
 package orchestrator
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -149,7 +150,7 @@ var _ = sdk.RegisterFunc(
 	handle,
 )
 
-func handle(input *go_hook.HookInput) error {
+func handle(ctx context.Context, input *go_hook.HookInput) error {
 	moduleValues := helpers.NewValuesAccessor[Values](input, valuesPath)
 	values := moduleValues.Get()
 
@@ -243,7 +244,7 @@ func handle(input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySwitcher snapshot error: %w", err)
 	}
 
-	inputs.CheckerStatus = checker.GetStatus(input)
+	inputs.CheckerStatus = checker.GetStatus(ctx, input)
 
 	values.Hash, err = helpers.ComputeHash(inputs)
 	if err != nil {
@@ -254,7 +255,7 @@ func handle(input *go_hook.HookInput) error {
 	values.State.RegistrySecret.Config = inputs.RegistrySecret
 
 	// Load checker params
-	values.State.CheckerParams = checker.GetParams(input)
+	values.State.CheckerParams = checker.GetParams(ctx, input)
 
 	// Process the state and update internal values
 	err = values.State.process(input.Logger, inputs)

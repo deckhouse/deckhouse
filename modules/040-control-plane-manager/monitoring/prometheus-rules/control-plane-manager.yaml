@@ -34,7 +34,7 @@
         To resolve this issue, check the status of the `kube-system/d8-control-plane-manager` DaemonSet and its pods by running the following command:
 
         ```bash
-        kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
+        d8 k -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
         ```
   - alert: D8KubernetesVersionIsDeprecated
     for: 10m
@@ -82,7 +82,7 @@
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
 
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
+        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
 
         ```yaml
         - level: Metadata
@@ -95,7 +95,7 @@
         Example of applying an additional audit policy:
 
         ```bash
-        kubectl apply -f - <<EOF
+        d8 k apply -f - <<EOF
         apiVersion: v1
         kind: Secret
         metadata:

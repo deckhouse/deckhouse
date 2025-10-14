@@ -12,10 +12,11 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
-    allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowValueIds:
       - SOURCE_REPO
@@ -23,9 +24,10 @@ config:
       - CLOUD_PROVIDERS_SOURCE_REPO
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
   stapel:
     mount:
       allowBuildDir: true
       allowFromPaths:
         - ~/go-pkg-cache
-        - ~/.docker

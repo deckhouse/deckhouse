@@ -158,7 +158,7 @@ spec:
 
 * Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
 * В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
 В примере представлены настройки провайдера для интеграции с Keycloak:
 
@@ -230,7 +230,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 
@@ -372,7 +372,12 @@ data:
 
 {% endraw %}
 
-## Пример создания статического пользователя
+## Локальная аутентификация
+
+Локальная аутентификация обеспечивает проверку и управление доступом пользователей с возможностью настройки парольной политики, поддержкой двухфакторной аутентификации (2FA) и управлением группами.  
+Реализация соответствует требованиям безопасности ФСТЭК и рекомендациям OWASP, обеспечивая надёжную защиту доступа к кластеру и приложениям без необходимости интеграции с внешними системами аутентификации.
+
+### Создание пользователя
 
 Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
 
@@ -410,7 +415,9 @@ spec:
 
 {% endraw %}
 
-## Пример добавления статического пользователя в группу
+### Добавление пользователя в группу
+
+Пользователи могут быть объединены в группы для управления правами доступа. Пример манифеста ресурса Group для группы:
 
 {% raw %}
 
@@ -428,6 +435,76 @@ spec:
 
 {% endraw %}
 
-## Выдача прав пользователю или группе
+Здесь `members` — список пользователей, которые входят в группу.
+
+### Парольная политика
+
+Настройки парольной политики позволяют контролировать сложность пароля, ротацию и блокировку пользователей:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Fair
+      passwordHistoryLimit: 10
+      lockout:
+        lockDuration: 15m
+        maxAttempts: 3
+      rotation:
+        interval: "30d"
+```
+
+{% endraw %}
+
+Описание полей:
+
+* `complexityLevel` — уровень сложности пароля;
+* `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
+* `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
+  * `lockout.maxAttempts` — лимит неудачных попыток;
+  * `lockout.lockDuration` — длительность блокировки пользователя;
+* `rotation` — настройки ротации паролей:
+  * `rotation.interval` — период обязательной смены пароля.
+
+### Двухфакторная аутентификация (2FA)
+
+2FA позволяет повысить уровень безопасности, требуя ввести код из приложения-аутентификатора TOTP (например, Google Authenticator) при входе.
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    staticUsers2FA:
+      enabled: true
+      issuerName: "awesome-app"
+```
+
+{% endraw %}
+
+Описание полей:
+
+* `enabled` — включает или отключает 2FA для всех статических пользователей;
+* `issuerName` — имя, которое будет отображаться в приложении-аутентификаторе при добавлении аккаунта.
+
+{% alert level="info" %}
+После включения 2FA каждый пользователь должен пройти процесс регистрации в приложении-аутентификаторе при первом входе.
+{% endalert %}
+
+### Выдача прав пользователю или группе
 
 Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).

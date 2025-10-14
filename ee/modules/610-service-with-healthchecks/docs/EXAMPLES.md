@@ -147,7 +147,7 @@ spec:
 Create a Secret to store credentials so that probes can access the database:
 
 ```shell
-kubectl -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
 
 Below is an example of a load balancer manifest for reading:

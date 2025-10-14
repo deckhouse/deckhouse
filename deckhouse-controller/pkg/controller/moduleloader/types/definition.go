@@ -33,6 +33,7 @@ const (
 	DefinitionFile = "module.yaml"
 
 	ExperimentalModuleStage = "Experimental"
+	DeprecatedModuleStage   = "Deprecated"
 )
 
 // Definition of module.yaml file struct
@@ -52,6 +53,48 @@ type Definition struct {
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 	Path           string                         `json:"-" yaml:"-"`
+
+	// Update holds version transition hints that allow skipping step-by-step upgrades.
+	// Example:
+	// update:
+	//   versions:
+	//     - from: 1.67
+	//       to: 1.75
+	//     - from: 1.20
+	//       to: 2.0
+	Update *ModuleUpdate `json:"update,omitempty" yaml:"update,omitempty"`
+}
+
+// ModuleUpdate describes allowed version transitions for a target release version.
+type ModuleUpdate struct {
+	Versions []ModuleUpdateVersion `json:"versions,omitempty" yaml:"versions,omitempty"`
+}
+
+func (a *ModuleUpdate) ToV1Alpha1() *v1alpha1.UpdateSpec {
+	if a == nil {
+		return nil
+	}
+
+	us := new(v1alpha1.UpdateSpec)
+
+	us.Versions = make([]v1alpha1.UpdateConstraint, 0, len(a.Versions))
+
+	for _, ver := range a.Versions {
+		us.Versions = append(us.Versions, v1alpha1.UpdateConstraint{
+			From: ver.From,
+			To:   ver.To,
+		})
+	}
+
+	return us
+}
+
+// ModuleUpdateVersion represents a constraint range.
+// "from" and "to" support major.minor or major.minor.patch.
+// "to" should point to the target release version defined by this module.yaml.
+type ModuleUpdateVersion struct {
+	From string `json:"from" yaml:"from"`
+	To   string `json:"to" yaml:"to"`
 }
 
 type ModuleAccessibility struct {
@@ -222,4 +265,8 @@ func (d *Definition) Labels() map[string]string {
 
 func (d *Definition) IsExperimental() bool {
 	return d.Stage == ExperimentalModuleStage
+}
+
+func (d *Definition) IsDeprecated() bool {
+	return d.Stage == DeprecatedModuleStage
 }

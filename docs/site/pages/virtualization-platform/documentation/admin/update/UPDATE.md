@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/update/update.html
 
 ## Platform update configuration
 
-The platform update is configured in the ModuleConfig resource [`deckhouse`](../../../reference/cr/moduleconfig.html).
+The platform update is configured in the ModuleConfig resource [`deckhouse`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
 
 To view the current configuration of update settings, use the following command:
 
@@ -33,8 +33,8 @@ spec:
 
 The platform supports three update modes:
 
-- **Automatic + no update windows set.** The cluster updates immediately after a new version is available on the corresponding [update channel](/products/virtualization-platform/documentation/about/release-channels.html).
-- **Automatic + update windows set.** The cluster updates during the next available update window after a new version is available on the update channel.
+- **Automatic + no update windows set.** The cluster updates immediately after a new version is available on the corresponding [release channel](/products/virtualization-platform/documentation/about/release-channels.html).
+- **Automatic + update windows set.** The cluster updates during the next available update window after a new version is available on the release channel.
 - **Manual mode.** Updates require [manual actions](./manual-update-mode.html).
 
 Example configuration snippet for enabling automatic platform updates:
@@ -97,11 +97,11 @@ spec:
     releaseChannel: Stable
 ```
 
-- When switching the update channel to a **more stable** one (e.g., from `Alpha` to `EarlyAccess`), Deckhouse performs the following actions:
+- When switching the release channel to a **more stable** one (e.g., from `Alpha` to `EarlyAccess`), Deckhouse performs the following actions:
   - Downloads release data (in this example, from the `EarlyAccess` channel) and compares it with existing `DeckhouseRelease` resources in the cluster:
     - Later releases that have not yet been applied (status `Pending`) are deleted.
-    - If later releases are already applied (status `Deployed`), the release change does not occur. In this case, the platform remains on the current release until a newer release appears in the `EarlyAccess` update channel.
-- When switching the update channel to a **less stable** one (e.g., from `EarlyAccess` to `Alpha`):
+    - If later releases are already applied (status `Deployed`), the release change does not occur. In this case, the platform remains on the current release until a newer release appears in the `EarlyAccess` release channel.
+- When switching the release channel to a **less stable** one (e.g., from `EarlyAccess` to `Alpha`):
   - Deckhouse downloads release data (in this example, from the `Alpha` channel) and compares it with existing `DeckhouseRelease` resources in the cluster.
   - The platform then updates according to the configured update parameters.
 
@@ -122,9 +122,9 @@ To disable the platform update mechanism, remove the `.spec.settings.releaseChan
 
 ## Immediate Update Application
 
-To apply an update immediately, set the annotation `release.deckhouse.io/apply-now: "true"` on the corresponding [DeckhouseRelease](../../../reference/cr/deckhouserelease.html) resource.
+To apply an update immediately, set the annotation `release.deckhouse.io/apply-now: "true"` on the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
 
-> In this case, update windows, [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](../../reference/cr.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after setting the annotation.
+> In this case, update windows, [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](/modules/deckhouse/configuration.html#parameters-update-mode) will be ignored. The update will be applied immediately after setting the annotation.
 
 Example command to set the annotation for bypassing update windows for version `v1.56.2`:
 

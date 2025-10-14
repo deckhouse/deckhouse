@@ -183,53 +183,31 @@ rules:
 			var policy audit.Policy
 			_ = yaml.UnmarshalStrict(data, &policy)
 
-			istiodServiceAccounts := []string{
-				"system:serviceaccount:d8-istio:istiod-v1x21x6",
-				"system:serviceaccount:d8-istio:istiod-v1x19x7",
+			var expectPolicy audit.Policy
+			extraData := []ConfigMapInfo{
+				{
+					ServiceAccounts: []string{
+						"system:serviceaccount:d8-istio:istiod-v1x21x6",
+						"system:serviceaccount:d8-istio:istiod-v1x19x7",
+					},
+				},
 			}
 
-			// All rules, except last nine are dropping rules.
-			for i := 0; i < len(policy.Rules)-9; i++ {
-				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
+			appendBasicPolicyRules(&expectPolicy, extraData)
+			appendVirtualizationPolicyRules(&expectPolicy)
+
+			for i, actualRule := range policy.Rules {
+				// Note: Equal() is not working here as Rule contains array fields with "omitempty" directive and an empty array is not equal to nil.
+				expectedRule := expectPolicy.Rules[i]
+				Expect(actualRule.Level).To(Equal(expectedRule.Level), "Level in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				if len(actualRule.Users) > 0 && len(expectedRule.Users) > 0 {
+					Expect(actualRule.Users).To(Equal(expectedRule.Users), "Users in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				}
+				if len(actualRule.Namespaces) > 0 && len(expectedRule.Namespaces) > 0 {
+					Expect(actualRule.Namespaces).To(Equal(expectedRule.Namespaces), "Namespaces in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				}
 			}
-
-			allServiceAccounts := append(auditPolicyBasicServiceAccounts, istiodServiceAccounts...)
-
-			saRule := policy.Rules[len(policy.Rules)-8]
-			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(saRule.Users).To(Equal(allServiceAccounts))
-
-			namespaceRule := policy.Rules[len(policy.Rules)-6]
-			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
-
-			listRule := policy.Rules[len(policy.Rules)-5]
-			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
 
-	Context("Cluster started with virtualization audit policies", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.enabledModules", []string{"virtualization"})
-			f.BindingContexts.Set(f.KubeStateSet(configmap))
-			f.RunHook()
-		})
-
-		It("controlPlaneManager.internal.auditPolicy must contain proper rules", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
-			var policy audit.Policy
-			_ = yaml.UnmarshalStrict(data, &policy)
-
-			// All rules, except first one are metedata level rules.
-			for i := 1; i < len(policy.Rules); i++ {
-				v := policy.Rules[i]
-				Expect(v.Level).To(Equal(audit.LevelMetadata))
-			}
-
-			vmopRule := policy.Rules[0]
-			Expect(vmopRule.Level).To(Equal(audit.LevelRequestResponse))
-		})
-	})
 })

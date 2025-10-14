@@ -56,6 +56,18 @@ import:
   add: /src
   to: /src
   before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir

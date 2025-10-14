@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-8e6d3533386852e2c517539fda233328ae5d160590273cc5a5bcc7698dcbbe9a",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-28180"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2024-28180 описывает переполнение ресурсов в go-jose, возникающее при попытке распаковать зашифрованные сообщения JWE (JSON Web Encryption - формат JOSE для шифрования полезной нагрузки). Kubernetes не создает и не обрабатывает JWE, используя библиотеку только для подписанных JWT, что подтверждено в обсуждении: https://github.com/kubernetes/kubernetes/pull/123253#issuecomment-1940379993 https://github.com/kubernetes/sig-security/issues/116#issuecomment-2197995745",
+      "timestamp": "2025-10-13T12:24:00.293353Z"
+    }
+  ],
+  "timestamp": "2025-10-13T12:24:00Z"
+}

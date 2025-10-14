@@ -1,4 +1,4 @@
-{{- $version := "v1.13.0-deckhouse.0"}}
+{{- $version := "v1.14.0-deckhouse.0"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
@@ -68,6 +68,8 @@ import:
     add: /pause
     to: /pause
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/auth_server"]

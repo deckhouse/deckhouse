@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -69,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, storageClasses)
 
-func storageClasses(input *go_hook.HookInput) error {
+func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	var provision []gjson.Result
 	if input.Values.Exists("cloudProviderAzure.storageClass.provision") {
 		provision = input.Values.Get("cloudProviderAzure.storageClass.provision").Array()

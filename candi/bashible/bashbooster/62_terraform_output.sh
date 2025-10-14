@@ -19,14 +19,14 @@ bb-get-kubernetes-data-device-from-file-or-secret() {
     cat $file
   else
     # for other cases
-    __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$D8_NODE_HOSTNAME" '.data[$hostname] // empty' | base64 -d
+    __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d
   fi
 }
 
 bb-get-registry-data-device-from-terraform-output() {
   if [ "$RUN_TYPE" = "Normal" ]; then
     # other nodes
-    __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$D8_NODE_HOSTNAME" '.data[$hostname] // empty' | base64 -d
+    __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d
     else
     # for bootstrap first master node
     file="/var/lib/bashible/system_registry_data_device_path"

@@ -86,6 +86,8 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
+	// !! Convert scheme to lowercase to avoid case-sensitive issues
+	scheme = strings.ToLower(scheme)
 	nameOpts := newNameOptions(scheme)
 	newRepo, err := name.NewRepository(strings.TrimRight(newRegistry, "/"), nameOpts...)
 	if err != nil {

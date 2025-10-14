@@ -1,3 +1,5 @@
 dirs:
 - /mount/public/en/modules
 - /mount/public/ru/modules
+- /mount/public/en/search
+- /mount/public/ru/search

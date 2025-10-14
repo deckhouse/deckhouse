@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: authrequest-quota
+  namespace: d8-user-authn
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  hard:
+    count/authrequests.dex.coreos.com: 10000

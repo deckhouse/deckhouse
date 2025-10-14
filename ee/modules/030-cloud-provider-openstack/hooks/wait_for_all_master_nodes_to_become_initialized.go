@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -42,8 +43,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleAllMasterNodes)
 
-func handleAllMasterNodes(input *go_hook.HookInput) error {
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[uninitializedNode](input.NewSnapshots, "nodes")
+func handleAllMasterNodes(_ context.Context, input *go_hook.HookInput) error {
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[uninitializedNode](input.Snapshots, "nodes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
 	}

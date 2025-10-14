@@ -17,6 +17,7 @@ limitations under the License.
 package change_host_address
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -78,19 +79,19 @@ func RegisterHook(appName, namespace string) bool {
 	}, wrapChangeAddressHandler(namespace))
 }
 
-func wrapChangeAddressHandler(namespace string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
+func wrapChangeAddressHandler(namespace string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
 		return changeHostAddressHandler(namespace, input)
 	}
 }
 
 func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error {
-	pods := input.NewSnapshots.Get("pod")
+	pods := input.Snapshots.Get("pod")
 	if len(pods) == 0 {
 		return nil
 	}
 
-	addresses, err := sdkobjectpatch.UnmarshalToStruct[address](input.NewSnapshots, "pod")
+	addresses, err := sdkobjectpatch.UnmarshalToStruct[address](input.Snapshots, "pod")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal pods: %v", err)
 	}

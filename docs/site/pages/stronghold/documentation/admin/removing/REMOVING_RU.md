@@ -37,7 +37,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<REVISION>` — [редакция платформы](../../about/editions.html), например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д;
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../../about/update-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`, указанным при [установке платформы](../install/steps/install.html):
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../../about/release-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`, указанным при [установке платформы](../install/steps/install.html):
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;

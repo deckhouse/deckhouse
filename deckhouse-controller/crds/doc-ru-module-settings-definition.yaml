@@ -18,3 +18,17 @@ spec:
                         description: Версия настроек модуля.
                       schema:
                         description: Схема настроек для данной версии модуля.
+                      conversions:
+                        description: Список правил конверсий для данной версии.
+                        items:
+                          description: Одно правило конверсии с выражениями и описаниями.
+                          properties:
+                            expr:
+                              description: Массив jq выражений для преобразования настроек.
+                            descriptions:
+                              description: Локализованные описания конверсии.
+                              properties:
+                                ru:
+                                  description: Русское описание конверсии.
+                                en:
+                                  description: Английское описание конверсии.

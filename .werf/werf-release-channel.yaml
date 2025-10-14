@@ -16,6 +16,9 @@ shell:
   install:
   - |
     export version="{{ env "CI_COMMIT_REF_NAME" }}"
+    if [[ "${version}" =~ release-([0-9]+\.[0-9]+) ]]; then
+      export version="v${BASH_REMATCH[1]}.0"
+    fi
     # update kubernetes auto version in the release file
     yq eval '.requirements.autoK8sVersion = "{{ .defaultKubernetesVersion }}"' -i /deckhouse/release.yaml
     yq eval '.requirements.k8s = "{{ .kubernetesVersions | first }}"' -i /deckhouse/release.yaml
@@ -27,6 +30,8 @@ shell:
     cat <<"EOF" > /changelog.yaml
     {{ $changelog | nindent 6 }}
     EOF
+    {{ else }}
+    echo "  {}" > /changelog.yaml
     {{ end }}
 git:
 - add: /

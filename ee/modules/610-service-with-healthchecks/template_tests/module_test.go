@@ -65,13 +65,16 @@ debug: true
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
-      add:
-      - NET_RAW
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 - args:
   - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8383
   - --v=2
@@ -115,11 +118,16 @@ debug: true
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 `
 )
 

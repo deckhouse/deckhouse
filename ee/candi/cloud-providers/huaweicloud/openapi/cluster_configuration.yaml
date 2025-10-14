@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -36,6 +36,9 @@ apiVersions:
             flavorName: m1.large
             rootDiskSize: 50
             imageName: "debian-11-genericcloud-amd64-20220911-1135"
+          volumeTypeMap:
+            eu-1a: fast-eu-1a
+            eu-1b: fast-eu-1b
         nodeGroups:
           - name: front
             replicas: 2
@@ -43,9 +46,9 @@ apiVersions:
               flavorName: m1.large
               imageName: "debian-11-genericcloud-amd64-20220911-1135"
               rootDiskSize: 50
-            zones:
-              - eu-1a
-              - eu-1b
+            volumeTypeMap:
+              eu-1a: fast-eu-1a
+              eu-1b: fast-eu-1b
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
     properties:
@@ -224,6 +227,27 @@ apiVersions:
                 Partial contents of the fields.
               properties:
                 <<: *instanceClassProperties
+            volumeTypeMap:
+              description: |
+                A dictionary mapping availability zones to disk types for the group’s worker nodes.
+
+                Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
+
+                If the `rootDiskSize` parameter is specified, the same disk type is used for the VM’s boot disk.
+
+                We recommend using the fastest disk type offered by the provider whenever possible.
+
+                If `volumeTypeMap` is not specified for a node group, the `masterNodeGroup`’s `volumeTypeMap` is used as a fallback for that group.
+
+                If the replicas value exceeds the number of entries in the dictionary, assignment wraps around from the beginning. For example, if `replicas: 5` for the `front` group and the dictionary lists `fast-eu-1a` first and `fast-eu-1b` second, then front-0, front-2, front-4 will use `fast-eu-1a`, while front-1, front-3 will use `fast-eu-1b`.
+              x-examples:
+                - eu-1a: fast-eu-1a
+                  eu-1b: fast-eu-1b
+              type: object
+              minProperties: 1
+              additionalProperties:
+                type: string
+                minLength: 1
       layout:
         description: |
           The layout name.

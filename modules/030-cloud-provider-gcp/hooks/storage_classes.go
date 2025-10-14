@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -67,7 +68,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 }, storageClasses)
 
-func storageClasses(input *go_hook.HookInput) error {
+func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	var excludeStorageClasses []gjson.Result
 
 	if input.Values.Exists("cloudProviderGcp.storageClass.exclude") {

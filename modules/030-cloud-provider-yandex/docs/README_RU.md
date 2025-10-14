@@ -28,20 +28,20 @@ description: "Управление облачными ресурсами в Deck
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
-   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
+   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Его можно узнать с помощью команды:
 
    ```bash
-   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+   d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
 1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
-   ![Группа безопасности по умолчанию](../../images/cloud-provider-yandex/sg-ru-default.png)
+   ![Группа безопасности по умолчанию](images/sg-ru-default.png)
 
 1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-   ![Правила для группы безопасности](../../images/cloud-provider-yandex/sg-ru-rules.png)
+   ![Правила для группы безопасности](images/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 
@@ -107,7 +107,7 @@ description: "Управление облачными ресурсами в Deck
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -131,13 +131,13 @@ description: "Управление облачными ресурсами в Deck
 1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
 
    ```shell
-   $ kubectl -n external-secrets get po
+   $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   $ kubectl -n external-secrets get secretstores.external-secrets.io 
+   $ d8 k -n external-secrets get secretstores.external-secrets.io 
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -151,7 +151,7 @@ description: "Управление облачными ресурсами в Deck
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -180,7 +180,7 @@ description: "Управление облачными ресурсами в Deck
 1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
 
    ```shell
-   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   d8 k -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
    В выводе команды будет содержаться **значение** ключа `password` секрета `lockbox-secret`, созданного ранее:
@@ -200,7 +200,7 @@ description: "Управление облачными ресурсами в Deck
 1. Создайте ресурс `PrometheusRemoteWrite`:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -227,7 +227,7 @@ description: "Управление облачными ресурсами в Deck
 1. Создайте ресурс `GrafanaAdditionalDatasource`:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:

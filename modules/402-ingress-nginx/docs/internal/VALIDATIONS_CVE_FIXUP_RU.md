@@ -13,13 +13,13 @@ curl -sL https://raw.githubusercontent.com/deckhouse/deckhouse/refs/heads/main/m
 После развёртывания фикса необходимо убедиться, что поды `d8-ingress-validation-cve-fixer` запущены:
 
 ```bash
-kubectl -n d8-system get pods -lapp=ingress-validation-cve-fixer
+d8 k -n d8-system get pods -lapp=ingress-validation-cve-fixer
 ```
 
 Также необходимо с помощью команды
 
 ```bash
-kubectl  edit ingressnginxcontrollers.deckhouse.io
+d8 k  edit ingressnginxcontrollers.deckhouse.io
 ```
 
 выставить параметр `spec.validationEnabled` в значение `false` и поочередно перезапустить поды Ingress-nginx контроллера в пространстве имен `d8-ingress-nginx`.
@@ -27,5 +27,5 @@ kubectl  edit ingressnginxcontrollers.deckhouse.io
 После перезапуска можно проверить наличие уязвимых подов командой:
 
 ```bash
-kubectl -n d8-ingress-nginx get pods -lapp=controller -o json | jq -r '.items[] | select(.spec.containers[].args[]? == "--validating-webhook=:8443") | .metadata.name'
+d8 k -n d8-ingress-nginx get pods -lapp=controller -o json | jq -r '.items[] | select(.spec.containers[].args[]? == "--validating-webhook=:8443") | .metadata.name'
 ```

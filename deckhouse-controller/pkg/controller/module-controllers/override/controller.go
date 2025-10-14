@@ -232,20 +232,6 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		needUpdate = true
 	}
 
-	// check if RegistrySpecChanged annotation is set and process it
-	if _, set := mpo.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
-		// if module is enabled - push runModule task in the main queue
-		r.log.Info("apply new registry settings to the module", slog.String("name", mpo.Name))
-		modulePath := filepath.Join(r.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, module.Properties.Source, modulePath); err != nil {
-			r.log.Error("failed to run the module with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
-		}
-		// delete annotation and requeue
-		delete(mpo.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
-		needUpdate = true
-	}
-
 	if needUpdate {
 		if err = r.client.Update(ctx, mpo); err != nil {
 			r.log.Error("failed to update the module pull override", slog.String("name", mpo.Name), log.Err(err))

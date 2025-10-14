@@ -10,7 +10,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -44,7 +44,7 @@ apiVersions:
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы количество было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName:
                 description: |
@@ -66,7 +66,7 @@ apiVersions:
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
 
-                  Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                  Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
@@ -165,7 +165,7 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 configDrive:
@@ -210,10 +210,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standard).
+          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#standard).
         properties:
           bastion:
             description: |
@@ -227,7 +227,7 @@ apiVersions:
                   Тип корневого диска.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
                 properties:
                   flavorName:
                     description: |
@@ -244,7 +244,7 @@ apiVersions:
                     description: |
                       Размер root-диска. Значение указывается в гигабайтах.
 
-                      Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                      Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
                   additionalTags:
                     description: |
                       Дополнительные теги, которые будут присвоены созданному инстансу в дополнение к указанным в конфигурации облачного провайдера.
@@ -256,14 +256,14 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
           externalNetworkName: &externalNetworkName_ru
             description: |
               Имя сети для внешнего взаимодействия.
               Получить список доступных сетей можно командой: `openstack network list`.
       standardWithNoRouter:
         description: |
-          Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#standardwithnorouter).
+          Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#standardwithnorouter).
         properties:
           internalNetworkCIDR:
             <<: *internalNetworkCIDR_ru
@@ -276,7 +276,7 @@ apiVersions:
               Флаг, который указывает, включен ли DHCP в сети, указанной в качестве внешней.
       simple:
         description: |
-          Настройки для схемы размещения [`Simple`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simple).
+          Настройки для схемы размещения [`Simple`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#simple).
         properties:
           externalNetworkName:
             <<: *externalNetworkName_ru
@@ -293,7 +293,7 @@ apiVersions:
               > **Внимание.** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
       simpleWithInternalNetwork:
         description: |
-          Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
+          Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
         properties:
           internalSubnetName:
             description: |
@@ -318,9 +318,9 @@ apiVersions:
               Флаг, который указывает, создавать ли Floating IP на master-узлах.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/environment.html) к API OpenStack.
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-openstack/environment.html) к API OpenStack.
 
-          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/configuration.html#параметры).
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.ru/modules/cloud-provider-openstack/configuration.html#параметры).
         properties:
           authURL:
             description: |

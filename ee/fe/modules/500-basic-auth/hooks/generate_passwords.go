@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -78,7 +79,7 @@ func generateDefaultLocation(password string) []map[string]interface{} {
 	}
 }
 
-func generatePassword(input *go_hook.HookInput) error {
+func generatePassword(_ context.Context, input *go_hook.HookInput) error {
 	// Set values from user controlled configuration.
 	userLocations, ok := input.ConfigValues.GetOk(locationsKey)
 	if ok {
@@ -89,7 +90,7 @@ func generatePassword(input *go_hook.HookInput) error {
 	// No config values. Try to restore generated password from the Secret.
 	// Generate default location if no valid generated password available.
 
-	pass, err := restorePasswordFromSnapshot(input.NewSnapshots.Get(secretBinding))
+	pass, err := restorePasswordFromSnapshot(input.Snapshots.Get(secretBinding))
 	if err != nil {
 		input.Logger.Info("Generate default location for basic auth", log.Err(err))
 		pass = pwgen.AlphaNum(generatedPasswdLength)

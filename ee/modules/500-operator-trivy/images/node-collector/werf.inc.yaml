@@ -6,30 +6,19 @@ import:
     add: /node-collector
     to: /usr/local/bin/node-collector
     before: setup
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
+  - image: tools/procps
+    add: /bin/pgrep
+    to: /usr/bin/pgrep
     before: setup
-    includePaths:
-    - 'ps'
-    - 'pgrep'
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/lib64
-    to: /usr/lib64
+  - image: tools/procps
+    add: /bin/ps
+    to: /usr/bin/ps
     before: setup
-    includePaths:
-    - 'libproc2.so.0*'
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
-final: false
-shell:
-  setup:
-  - apt-get update
-  - apt-get install procps -y
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -51,7 +40,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -67,6 +56,8 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go`) | indent 6 }}
   - chown root:root /node-collector
   - chmod 0700 /node-collector

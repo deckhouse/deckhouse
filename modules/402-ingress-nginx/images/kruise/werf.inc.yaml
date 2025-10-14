@@ -1,8 +1,7 @@
-{{- $version := "1.7.2" }}
-
+{{- $version := "898dc482a0cbf4fa0db214f952319aa5e1229152" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -11,13 +10,14 @@ git:
       install:
         - '**/*'
 secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+  - id: SOURCE_REPO
+    value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
-    - rm -rf /src/tools
+    - git clone $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise.git /src
     - cd /src
+    - git checkout {{ $version }}
+    - rm -rf /src/tools
     - git apply /patches/*.patch --verbose
     - rm -rf /src/.git
 ---
@@ -25,15 +25,15 @@ image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
 shell:
   setup:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
@@ -43,14 +43,19 @@ shell:
     - go build -a -mod=vendor -o /tmp/manager main.go
     - chown -R 64535:64535 /tmp/manager
     - chmod 0700 /tmp/manager
+    # Prepare /tmp directory
+    - mkdir -p /tmp/tmp
+    - chmod 1777 /tmp/tmp
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
- - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-   add: /tmp/manager
-   to: /manager
-   before: setup
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+    add: /tmp/manager
+    to: /manager
+    before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/manager"]

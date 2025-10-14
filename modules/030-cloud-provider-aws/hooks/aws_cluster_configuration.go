@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,6 +30,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 type InternalValues struct {
@@ -96,8 +98,8 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput) error {
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "provider_cluster_configuration")
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.Snapshots, "provider_cluster_configuration")
 	if err != nil {
 		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
 	}
@@ -112,7 +114,8 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
-	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration))
+	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
+		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()))
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}

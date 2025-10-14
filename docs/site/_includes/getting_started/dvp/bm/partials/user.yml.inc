@@ -1,14 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: project-admin-joe
-  namespace: vms
+  name: cluster-admin
 subjects:
 - kind: User
   name: admin@deckhouse.io # для users.deckhouse.io параметр .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: ClusterRole
+  kind: ClusterRoleBinding
   # Роль пользователя
   name: d8:manage:all:admin
   apiGroup: rbac.authorization.k8s.io

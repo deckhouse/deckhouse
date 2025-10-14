@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 MIN_KERNEL="5.8"
 MIN_SYSTEMD="244"
 MAX_RETRIES=10
@@ -57,16 +53,16 @@ function set_labels() {
 
   while true; do
     if (( unsupported )); then
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
     else
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
     fi
     local label_status=$?
 
     if [[ -n $errs ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
     else
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
     local annotate_status=$?
 
@@ -87,7 +83,27 @@ function set_labels() {
 
 function fail_fast() {
   local unsupported=$1
+  local errs=$2
+
   if (( unsupported )); then
+    echo "$errs" | jq -c '.[]' | while read err; do
+        err=$(echo $err | sed 's/"//g')
+        if [ "$err" == "systemd" ]; then
+          bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+        fi
+
+        if [ "$err" == "kernel" ]; then
+          bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+        fi
+
+        if [ "$err" == "cgroupv2" ]; then
+          bb-log-error "required cgroupv2 support"
+        fi
+
+        if [ "$err" == "erofs" ]; then
+          bb-log-error "required erofs kernel module"
+        fi
+    done
     bb-log-error "containerd V2 is not supported"
     exit 1
   fi
@@ -104,10 +120,11 @@ function main() {
   fi
 
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$unsupported" "$errs"
+    set_labels "$unsupported" "$errs" || exit 1
   fi
+
   {{- if eq .cri "ContainerdV2" }}
-  fail_fast "$unsupported"
+  fail_fast "$unsupported" "$errs"
   {{ end }}
 }
 

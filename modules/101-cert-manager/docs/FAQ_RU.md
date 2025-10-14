@@ -97,23 +97,23 @@ title: "Модуль cert-manager: FAQ"
                solverName: yandex-cloud-dns
    ```
 
-### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiСorp Vault для выпуска сертификатов?
+### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiCorp Vault для выпуска сертификатов?
 
-Для выпуска сертификатов с помощью HashiСorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
+Для выпуска сертификатов с помощью HashiCorp Vault, можете использовать [инструкцию](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes).
 
 После конфигурации PKI и [включения авторизации](../../modules/user-authz/) в Kubernetes, нужно:
 - Создать `ServiceAccount` и скопировать ссылку на его `Secret`:
 
   ```shell
-  kubectl create serviceaccount issuer
+  d8 k create serviceaccount issuer
   
-  ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+  ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
 
 - Создать `Issuer`:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Issuer
   metadata:
@@ -138,7 +138,7 @@ title: "Модуль cert-manager: FAQ"
 - Создать ресурс `Certificate` для получения TLS-сертификата, подписанного CA Vault:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Certificate
   metadata:
@@ -167,10 +167,10 @@ title: "Модуль cert-manager: FAQ"
   ```
 
 - В пространстве имён `d8-cert-manager` создайте секрет, содержащий данные файлов сертификатов.
-  Пример создания секрета с помощью команды kubectl:  
+  Пример создания секрета с помощью команды d8 k:  
 
   ```shell
-  kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
+  d8 k create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
   ```
 
   Пример создания секрета из YAML-файла (содержимое файлов сертификатов должно быть закодировано в Base64):  
@@ -205,7 +205,7 @@ title: "Модуль cert-manager: FAQ"
 
 Теперь можно использовать созданный `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse или конкретного компонента.
 
-Например, чтобы использовать `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) (`kubectl edit mc global`):
+Например, чтобы использовать `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-certmanager-clusterissuername) (`d8 k edit mc global`):
 
   ```yaml
   spec:
@@ -228,7 +228,7 @@ title: "Модуль cert-manager: FAQ"
 - Создайте Secret с учетными данными:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: v1
   kind: Secret
   type: Opaque
@@ -243,7 +243,7 @@ title: "Модуль cert-manager: FAQ"
 - Создайте простой `ClusterIssuer` со ссылкой на этот Secret:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: ClusterIssuer
   metadata:
@@ -268,7 +268,7 @@ title: "Модуль cert-manager: FAQ"
 - Закажите сертификаты как обычно, используя созданный `ClusterIssuer`:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Certificate
   metadata:
@@ -344,7 +344,7 @@ spec:
 ## Как посмотреть состояние сертификата?
 
 ```shell
-kubectl -n default describe certificate example-com
+d8 k -n default describe certificate example-com
 ...
 Status:
   Acme:
@@ -382,7 +382,7 @@ Events:
 ## Как получить список сертификатов?
 
 ```shell
-kubectl get certificate --all-namespaces
+d8 k get certificate --all-namespaces
 
 NAMESPACE          NAME                            AGE
 default            example-com                     13m

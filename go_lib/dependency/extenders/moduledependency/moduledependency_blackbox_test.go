@@ -359,6 +359,19 @@ func TestFilter(t *testing.T) {
 			expectedAllow:   false,
 			expectedIsError: true,
 		},
+		{
+			name:       "Optional constraint",
+			moduleName: "moduleWithOptionalConstraint",
+			dependencies: map[string]string{
+				"constraintDep": ">= 1.0.0 !optional",
+			},
+			enabledModules: []string{},
+			versionHelper: func(_ string) (string, error) {
+				return "", nil
+			},
+			expectedAllow:   true,
+			expectedIsError: false,
+		},
 	}
 
 	for _, tt := range tests {

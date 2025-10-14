@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,8 +62,8 @@ func applyConfigSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return sec.Data, nil
 }
 
-func handleConfigRender(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("secrets")
+func handleConfigRender(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("secrets")
 
 	var managers, relabels, scrapes = bytes.NewBuffer(nil), bytes.NewBuffer(nil), bytes.NewBuffer(nil)
 

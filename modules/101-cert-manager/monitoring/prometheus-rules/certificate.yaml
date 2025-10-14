@@ -17,7 +17,7 @@
         To check the certificate details, run the following command:
 
         ```bash
-        kubectl -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
+        d8 k -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
         ```
 
   - alert: CertmanagerCertificateExpired
@@ -37,7 +37,7 @@
         To check the certificate details, run the following command:
 
         ```shell
-        kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
+        d8 k -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
         ```
   - alert: CertmanagerCertificateOrderErrors
     expr: |
@@ -60,5 +60,5 @@
         This can affect certificate ordering and prolongation in the future. For details, check the cert-manager logs using the following command:
 
         ```bash
-        kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager
+        d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager
         ```

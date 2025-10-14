@@ -1,0 +1,376 @@
+/* Search Container Styles */
+.searchV3 {
+  position: relative;
+  z-index: 100;
+}
+
+.searchV3 .container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  position: relative;
+}
+
+.searchV3 .input-wrapper {
+  position: relative;
+  margin-bottom: 0;
+}
+
+.searchV3 .input {
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 5px 35px 5px 10px;
+  border: 2px solid transparent;
+  background-color: #eff3f9;
+  background-image: url(/images/icons/search.svg);
+  background-position: calc(100% - 10px) center;
+  background-repeat: no-repeat;
+  font-size: 14px;
+  font-weight: normal;
+  font-style: normal;
+  font-stretch: normal;
+  color: #00122c;
+  outline: none;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+.searchV3 .input:focus, .searchV3 .input:active {
+  border-color: #4075FF;
+  background: transparent;
+}
+
+.searchV3 .input::placeholder {
+  color: #00122c;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+/* Search Results Container - Right-aligned and properly constrained */
+.searchV3 .results {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  padding: 1.5rem;
+  z-index: 101;
+  width: 70vw;
+  max-width: calc(100vw - 40px);
+}
+
+.searchV3 .results-group {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.searchV3 .results-group-header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 3px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 8px 8px 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+}
+
+.searchV3 .results-group-header::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+  border-radius: 0 0 8px 8px;
+}
+
+/* Search Result Item Styles */
+.searchV3 .result-item {
+  padding: 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.searchV3 .result-item:hover {
+  background-color: #f8fafc;
+  text-decoration: none !important;
+  color: inherit;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Ensure no underlines on any text within search results */
+.searchV3 .result-item * {
+  text-decoration: none !important;
+}
+
+/* Force no underlines on the link element itself */
+.searchV3 .result-item,
+.searchV3 .result-item:visited,
+.searchV3 .result-item:active,
+.searchV3 .result-item:focus {
+  text-decoration: none !important;
+}
+
+.searchV3 .result-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.searchV3 .result-title {
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-decoration: none;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.searchV3 .result-module {
+  color: #059669;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  background: #ecfdf5;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+  letter-spacing: 0.025em;
+  border: 1px solid #a7f3d0;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  margin-right: 0.2rem;
+}
+
+/* Add spacing between multiple result-module blocks */
+.searchV3 .result-module + .result-module {
+  margin-left: 0.2rem;
+}
+
+/* Ensure proper spacing for the last module block */
+.searchV3 .result-module:last-of-type {
+  margin-right: 0;
+}
+
+.searchV3 .result-description {
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  text-decoration: none;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* More Button Styles */
+.searchV3 .more-button {
+  display: inline-block;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.searchV3 .more-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+}
+
+.searchV3 .more-button:active {
+  transform: translateY(0);
+}
+
+.searchV3 .more-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Tile Pagination Button Styles */
+.searchV3 .tile__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+  font-family: inherit;
+}
+
+.searchV3 .tile__pagination:hover {
+  background: #f8fafc;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.searchV3 .tile__pagination:active {
+  transform: translateY(0);
+}
+
+.searchV3 .tile__pagination--descr {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.searchV3 .tile__pagination svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Message and Status Styles */
+.searchV3 .no-results {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.searchV3 .loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  text-align: center;
+  gap: 0.5rem;
+  color: #666;
+}
+
+.searchV3 .spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid #4075FF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Custom Scrollbar for Search Results */
+.searchV3 .results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.searchV3 .results::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.searchV3 .results::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.searchV3 .results::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .searchV3 .results {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    right: 0;
+    left: 0;
+    max-width: calc(100vw - 20px);
+  }
+
+  .searchV3 .results > * {
+    max-width: 100%;
+    max-height: 70vh;
+  }
+
+  .searchV3 .container {
+    padding: 0 0.5rem;
+  }
+
+  .searchV3 .input {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+/* Ensure search results don't affect breadcrumb layout */
+.breadcrumbs-container {
+  position: relative;
+  z-index: 50;
+}
+
+.breadcrumbs-container .searchV3 {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  z-index: 100;
+}
+
+/* Adjust breadcrumb positioning to accommodate search */
+.breadcrumbs__right {
+  margin-right: 320px;
+}
+
+/* Subtle fade effect for page content when search is active */
+.searchV3 .results:not([style*="display: none"]) ~ * {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+/* Ensure search results are above other content */
+.searchV3 .results {
+  z-index: 1001;
+}

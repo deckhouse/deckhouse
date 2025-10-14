@@ -39,7 +39,7 @@ properties:
 
               In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
 
-              Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+              Use the following command to get the certificate: `d8 k -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
@@ -76,7 +76,7 @@ properties:
           type: string
           description: |
             If you plan to use a TCP proxy, then you must configure a certificate on the API server's side for the TCP proxy address. Suppose your API servers use three different addresses (`192.168.0.10`, `192.168.0.11`, and `192.168.0.12`) while the client uses a TCP load balancer (say, `192.168.0.15`). In this case, you have to re-generate the API server certificates:
-            * edit `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
+            * edit `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
             * save the resulting config: `kubeadm config view > kubeadmconf.yaml`;
             * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
@@ -180,7 +180,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     additionalProperties:
@@ -275,7 +275,7 @@ properties:
   controlPlaneConfigurator:
     type: object
     default: {}
-    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module.'
+    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module.'
     properties:
       enabled:
         type: boolean

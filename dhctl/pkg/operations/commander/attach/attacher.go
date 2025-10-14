@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -50,6 +51,9 @@ type Params struct {
 	OnProgressFunc        phases.OnProgressFunc
 	AttachResources       AttachResources
 	ScanOnly              *bool
+	TmpDir                string
+	Logger                log.Logger
+	IsDebug               bool
 }
 
 type AttachResources struct {
@@ -82,10 +86,31 @@ func NewAttacher(params *Params) *Attacher {
 
 func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	kubeClient, metaConfig, err := i.prepare(ctx)
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare cluster attach to commander: %w", err)
 	}
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           i.Params.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           i.Params.Logger,
+		IsDebug:          i.Params.IsDebug,
+	})
+
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger)
+
+	provider, err := i.Params.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = provider.Cleanup()
+		if err != nil {
+			i.Params.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+			return
+		}
+	}()
 
 	stateCache := cache.Global()
 
@@ -174,9 +199,24 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
 
-		metaConfig, err = config.ParseConfigInCluster(ctx, kubeClient)
+		metaConfig, err = config.ParseConfigInCluster(
+			ctx,
+			kubeClient,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
+			),
+		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
+		}
+
+		if _, err := metaConfig.GetFullUUID(); err != nil || metaConfig.UUID == "" {
+			u, err := infrastructurestate.GetClusterUUID(ctx, kubeClient)
+			if err != nil {
+				return err
+			}
+
+			metaConfig.UUID = u
 		}
 
 		cachePath := metaConfig.CachePath()
@@ -228,11 +268,13 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
-		if err != nil {
-			return fmt.Errorf("unable to read ssh private key: %w", err)
+		if len(i.Params.SSHClient.PrivateKeys()) > 0 {
+			sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
+			if err != nil {
+				return fmt.Errorf("unable to read ssh private key: %w", err)
+			}
+			res.SSHPrivateKey = string(sshPrivateKey)
 		}
-		res.SSHPrivateKey = string(sshPrivateKey)
 
 		if metaConfig.ClusterType == config.StaticClusterType {
 			return nil
@@ -333,9 +375,13 @@ func (i *Attacher) check(
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
 			),
 			InfrastructureContext: i.Params.InfrastructureContext,
+			TmpDir:                i.Params.TmpDir,
+			IsDebug:               i.Params.IsDebug,
+			Logger:                i.Params.Logger,
 		})
 
-		res, err = checker.Check(ctx)
+		// provider will cleanup in Attach
+		res, _, err = checker.Check(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to check cluster state: %w", err)
 		}

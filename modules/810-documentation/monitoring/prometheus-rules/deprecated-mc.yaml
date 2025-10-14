@@ -20,5 +20,5 @@
         1. Delete it using the following command:
 
            ```bash
-           kubectl delete mc deckhouse-web
+           d8 k delete mc deckhouse-web
            ```

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -80,11 +82,11 @@ type appPresence struct {
 
 // collectDisabledProbes collects the references of probes (or probe groups) depending on enabled modules
 // and deployed apps in the cluster
-func collectDisabledProbes(input *go_hook.HookInput) error {
+func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 	// Input
 	var (
-		deplyments   = set.NewFromSnapshot(input.NewSnapshots.Get("deployments"))
-		statefulsets = set.NewFromSnapshot(input.NewSnapshots.Get("statefulsets"))
+		deplyments   = set.NewFromSnapshot(input.Snapshots.Get("deployments"))
+		statefulsets = set.NewFromSnapshot(input.Snapshots.Get("statefulsets"))
 	)
 	presence := appPresence{
 		ccm:                deplyments.Has("cloud-controller-manager"),

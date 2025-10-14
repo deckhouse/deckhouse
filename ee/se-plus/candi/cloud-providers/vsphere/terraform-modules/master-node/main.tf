@@ -144,6 +144,7 @@ resource "vsphere_virtual_machine" "master" {
   resource_pool_id = data.vsphere_resource_pool.resource_pool[0].id
   datastore_id     = data.vsphere_datastore.datastore.id
   folder           = var.providerClusterConfiguration.vmFolderPath
+  storage_policy_id = lookup(var.providerClusterConfiguration, "storagePolicyID", "")
 
   firmware = data.vsphere_virtual_machine.template.firmware
   num_cpus = local.master_instance_class.numCPUs

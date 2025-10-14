@@ -17,6 +17,7 @@ limitations under the License.
 package migrate
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -98,9 +99,9 @@ func filterHasLabelHeritageDeckhouse(secret *unstructured.Unstructured) (go_hook
 	return val == "deckhouse", nil
 }
 
-func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
+func removeLabelHeritageDeckhouse(_ context.Context, input *go_hook.HookInput) error {
 	removeLabelIfNeed := func(snapSecretName string) error {
-		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, snapSecretName)
+		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, snapSecretName)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal snapshot %q: %w", snapSecretName, err)
 		}

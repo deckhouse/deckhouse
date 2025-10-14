@@ -23,9 +23,9 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/jonboulle/clockwork"
 	"go.opentelemetry.io/otel"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,11 +33,18 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+)
+
+const (
+	ltsReleaseChannel = "lts"
 )
 
 type ModuleReleaseFetcherConfig struct {
@@ -52,8 +59,9 @@ type ModuleReleaseFetcherConfig struct {
 
 	Source           *v1alpha1.ModuleSource
 	UpdatePolicyName string
+	ReleaseChannel   string
 
-	MetricStorage     metric.Storage
+	MetricStorage     metricsstorage.Storage
 	MetricModuleGroup string
 
 	Logger *log.Logger
@@ -69,6 +77,7 @@ func NewModuleReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetc
 		targetReleaseMeta:        cfg.TargetReleaseMeta,
 		source:                   cfg.Source,
 		updatePolicyName:         cfg.UpdatePolicyName,
+		releaseChannel:           cfg.ReleaseChannel,
 		metricStorage:            cfg.MetricStorage,
 		metricGroupName:          cfg.MetricModuleGroup,
 		logger:                   cfg.Logger,
@@ -86,8 +95,9 @@ type ModuleReleaseFetcher struct {
 
 	source           *v1alpha1.ModuleSource
 	updatePolicyName string
+	releaseChannel   string
 
-	metricStorage   metric.Storage
+	metricStorage   metricsstorage.Storage
 	metricGroupName string
 
 	logger *log.Logger
@@ -101,6 +111,7 @@ func (r *reconciler) fetchModuleReleases(
 	targetReleaseMeta *downloader.ModuleDownloadResult,
 	source *v1alpha1.ModuleSource,
 	updatePolicyName string,
+	releaseChannel string,
 	metricModuleGroup string,
 	opts []cr.Option,
 ) error {
@@ -123,6 +134,7 @@ func (r *reconciler) fetchModuleReleases(
 		TargetReleaseMeta:        targetReleaseMeta,
 		Source:                   source,
 		UpdatePolicyName:         updatePolicyName,
+		ReleaseChannel:           releaseChannel,
 		MetricStorage:            r.metricStorage,
 		MetricModuleGroup:        metricModuleGroup,
 		Logger:                   r.logger.Named("release-fetcher"),
@@ -170,6 +182,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
+	}
+
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
 	}
 
 	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
@@ -232,6 +249,25 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
+		}
+
+		return nil
+	}
+
+	// For LTS channels, skip intermediate versions and create release directly
+	isLTSChannel := strings.EqualFold(f.releaseChannel, ltsReleaseChannel)
+
+	logger.Debug("Checking release channel",
+		slog.String("channel", f.releaseChannel),
+		slog.String("ltsChannel", ltsReleaseChannel),
+		slog.Bool("isLTS", isLTSChannel))
+
+	if isLTSChannel {
+		logger.Debug("LTS channel detected, creating release directly without intermediate versions")
+
+		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "LTS channel - direct release")
+		if err != nil {
+			return fmt.Errorf("create LTS release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
 		return nil
@@ -302,8 +338,34 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				return fmt.Errorf("ensure module release: %w", err)
 			}
 
+			// is ensured module release has from-to mechanism - check previous version for sequence
+			if m.ModuleDefinition.Update != nil &&
+				len(m.ModuleDefinition.Update.Versions) > 0 {
+				err := isUpdatingSequenceWithFromTo(current, f.targetReleaseMeta.ModuleDefinition.Update.Versions)
+				if err != nil {
+					return fmt.Errorf("from-to check from ensured module: not sequential version: %w", err)
+				}
+
+				return nil
+			}
+
 			// if next version is not in sequence with actual
 			if !isUpdatingSequence(current, ver) {
+				// is target module release has from-to mechanism - check previous version for sequence
+				if f.targetReleaseMeta.ModuleDefinition.Update != nil &&
+					len(f.targetReleaseMeta.ModuleDefinition.Update.Versions) > 0 {
+					err := isUpdatingSequenceWithFromTo(current, f.targetReleaseMeta.ModuleDefinition.Update.Versions)
+					if err == nil {
+						logger.Info("from-to check from target module: version is in sequence")
+
+						return nil
+					}
+
+					logger.Warn("from-to check from target module: not sequential version", slog.String("previous", "v"+current.String()), log.Err(err))
+
+					return fmt.Errorf("from-to check from target module: not sequential version: prev 'v%s' next 'v%s': %w", current.String(), ver.String(), err)
+				}
+
 				f.logger.Warn("version sequence is broken", slog.String("previous", "v"+current.String()), slog.String("next", "v"+ver.String()))
 
 				return fmt.Errorf("not sequential version: prev 'v%s' next 'v%s'", current.String(), ver.String())
@@ -317,9 +379,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			metricLabels["version"] = "v" + ver.String()
 
 			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingModuleIsNotValid, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			} else {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailedBrokenSequence, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingBrokenSequence, 1, metricLabels)
 			}
 		}
 
@@ -350,6 +412,37 @@ func isUpdatingSequence(a, b *semver.Version) bool {
 	}
 
 	return true
+}
+
+func isUpdatingSequenceWithFromTo(a *semver.Version, constraints []moduletypes.ModuleUpdateVersion) error {
+	var errs error
+
+	for _, c := range constraints {
+		fromVer, err := semver.NewVersion(c.From)
+		if err != nil {
+			errs = errors.Join(err, fmt.Errorf("parse constraint from '%s': %w", c.From, err))
+
+			continue
+		}
+
+		toVer, err := semver.NewVersion(c.To)
+		if err != nil {
+			errs = errors.Join(err, fmt.Errorf("parse constraint to '%s': %w", c.To, err))
+
+			continue
+		}
+
+		if a.Compare(fromVer) >= 0 && a.Compare(toVer) < 0 {
+			// 'a' is in [from, to) range
+			return nil
+		}
+	}
+
+	if errs != nil {
+		return fmt.Errorf("parse constraint: %w", errs)
+	}
+
+	return nil
 }
 
 func (f *ModuleReleaseFetcher) listModuleReleases(ctx context.Context, moduleName string) ([]*v1alpha1.ModuleRelease, error) {
@@ -440,6 +533,10 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			}
 		}
 
+		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
+			release.Spec.UpdateSpec = meta.ModuleDefinition.Update.ToV1Alpha1()
+		}
+
 		// if it's a first release for a Module, we have to install it immediately
 		// without any update Windows and update.mode manual approval
 		// the easiest way is to check the count or ModuleReleases for this module
@@ -481,6 +578,15 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
 		Weight:     meta.ModuleDefinition.Weight,
 		Changelog:  meta.Changelog,
+	}
+
+	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
+		constraints := make([]v1alpha1.UpdateConstraint, 0, len(meta.ModuleDefinition.Update.Versions))
+		for _, v := range meta.ModuleDefinition.Update.Versions {
+			// Update constraints from module.yaml into ModuleRelease
+			constraints = append(constraints, v1alpha1.UpdateConstraint{From: v.From, To: v.To})
+		}
+		release.Spec.UpdateSpec = &v1alpha1.UpdateSpec{Versions: constraints}
 	}
 
 	if err := f.k8sClient.Update(ctx, release); err != nil {

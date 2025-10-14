@@ -21,13 +21,13 @@
         - Check the pod status:
         
           ```bash
-          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
           ```
 
         - Check the pod logs:
         
           ```bash
-          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
           ```
 
   - alert: D8CertExporterTargetAbsent
@@ -50,13 +50,13 @@
         - Check the pod status:
         
           ```bash
-          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
           ```
 
         - Check the pod logs:
         
           ```bash
-          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
           ```
 
   - alert: D8CertExporterPodIsNotReady
@@ -79,13 +79,13 @@
         1. Retrieve the deployment details:
            
            ```bash
-           kubectl -n d8-monitoring describe deploy x509-certificate-exporter
+           d8 k -n d8-monitoring describe deploy x509-certificate-exporter
            ```
 
         2. Check the pod status and investigate why it's not ready:
         
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter
+           d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter
            ```
 
   - alert: D8CertExporterPodIsNotRunning
@@ -107,11 +107,11 @@
         1. Retrieve the deployment details:
            
            ```bash
-           kubectl -n d8-monitoring describe deploy x509-certificate-exporter
+           d8 k -n d8-monitoring describe deploy x509-certificate-exporter
            ```
 
         2. Check the pod status and investigate why it's not running:
         
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter
+           d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter
            ```

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,7 +62,7 @@ func filterRegistryDataDeviceNodes(obj *unstructured.Unstructured) (go_hook.Filt
 	return node.Name, nil
 }
 
-func handleRegistryDataDeviceNodes(input *go_hook.HookInput) error {
+func handleRegistryDataDeviceNodes(_ context.Context, input *go_hook.HookInput) error {
 	orchestratorTargetMode := registry_const.ToModeType(
 		input.Values.Get("registry.internal.orchestrator.state.target_mode").String())
 
@@ -80,7 +81,7 @@ func handleRegistryDataDeviceNodes(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	nodes := input.Snapshots["nodes_with_data_device"]
+	nodes := input.Snapshots.Get("nodes_with_data_device")
 
 	if len(nodes) == 0 {
 		return fmt.Errorf("No nodes with registry data devices found in the cloud cluster")

@@ -1,0 +1,41 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: test
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: echo
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  name: echo-v0.4.69
+spec:
+  moduleName: echo
+  version: 0.4.69
+  weight: 900
+status:
+  phase: Pending
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: echo
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: echo

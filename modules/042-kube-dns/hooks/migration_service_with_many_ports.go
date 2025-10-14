@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -58,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 1},
 }, patchServiceWithManyPorts)
 
-func patchServiceWithManyPorts(input *go_hook.HookInput) error {
+func patchServiceWithManyPorts(_ context.Context, input *go_hook.HookInput) error {
 	for _, service := range patchServiceData {
 		input.PatchCollector.PatchWithMerge(
 			service.patch,

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -69,10 +70,10 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 	return filteredResult, nil
 }
 
-func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
+func cisBencmarkMetricHandler(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupName)
 
-	snaps := input.NewSnapshots.Get(cisBenchmarkQueue)
+	snaps := input.Snapshots.Get(cisBenchmarkQueue)
 	if len(snaps) == 0 {
 		input.Logger.Error("No CIS benchmark found")
 		return nil

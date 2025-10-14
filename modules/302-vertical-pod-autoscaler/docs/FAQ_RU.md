@@ -7,7 +7,7 @@ title: "Модуль vertical-pod-autoscaler: FAQ"
 После создания кастомного ресурса [VerticalPodAutoscaler](cr.html#verticalpodautoscaler) посмотреть рекомендации VPA можно следующим образом:
 
 ```shell
-kubectl describe vpa my-app-vpa
+d8 k describe vpa my-app-vpa
 ```
 
 В секции `status` отобразятся параметры:

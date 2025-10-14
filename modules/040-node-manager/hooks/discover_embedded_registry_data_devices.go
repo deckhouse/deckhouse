@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"sort"
 	"strings"
 
@@ -69,18 +70,21 @@ func filterRegistryDataDevicesSecret(obj *unstructured.Unstructured) (go_hook.Fi
 	return secret.Data, nil
 }
 
-func handleRegistryDataDevicesSecret(input *go_hook.HookInput) error {
+func handleRegistryDataDevicesSecret(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Exists(embeddedRegistryDataDevicesInternalValuesPath) {
 		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
 	}
 
-	secretData := input.Snapshots[embeddedRegistryDataDevicesSnapshotName]
+	secretData := input.Snapshots.Get(embeddedRegistryDataDevicesSnapshotName)
 	if len(secretData) == 0 {
 		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
 		return nil
 	}
 
-	secretDataStructured := secretData[0].(map[string][]byte)
+	secretDataStructured := map[string][]byte{}
+	if err := secretData[0].UnmarshalTo(&secretDataStructured); err != nil {
+		return err
+	}
 	if len(secretDataStructured) == 0 {
 		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
 		return nil

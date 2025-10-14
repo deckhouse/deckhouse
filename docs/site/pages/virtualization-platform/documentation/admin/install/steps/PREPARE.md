@@ -7,9 +7,9 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/prepare.
 
 Before installing the virtualization platform, you need to plan its parameters:
 
-1. Choose the platform edition and update channel:
+1. Choose the platform edition and release channel:
    - [Platform Editions](../../../about/editions.html);
-   - [Update Channels](../../../about/release-channels.html).
+   - [Release Channels](../../../about/release-channels.html).
 
 1. Determine the IP address subnets:
    - Subnet used by nodes for internal communication;

@@ -1,0 +1,108 @@
+{{- define "main" }}
+
+<div class="breadcrumbs-container">
+  <div class="breadcrumbs__left">
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      {{- partial "breadcrumbs" . }}
+    </ol>
+  </div>
+
+  <!--start search-->
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
+        data-search-index-path="/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        data-search-context='{{ T "search_context_modules" }}'
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
+  </div>
+  <!--end search-->
+  <!--loading search JS-->
+  <script type="text/javascript" src='/assets/js/fuse.min.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}' ></script>
+  <script type="text/javascript" src='/assets/js/search-v3.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}' ></script>
+  <!--end loading search JS-->
+
+</div>
+
+<div class="layout-sidebar">
+  <div class="layout-sidebar__sidebar">
+    {{- partial "sidebar-module" . }}
+  </div>
+  <div class="layout-sidebar__content">
+
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` $.File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
+
+{{- $d8Edition := "" }}
+{{- $moduleStatus := "" }}
+
+{{- range sort $channelsInfo "stability" "desc" }}
+  {{- if eq .code "rock-solid" }}{{ continue }}{{ end }}
+  {{- with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName .code  ) }}
+    {{- if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
+    {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
+  {{- end}}
+{{- end}}
+
+    <div class="docs docs-modules">
+      <div class="docs__wrap-title">
+          <h1 class="docs__title">{{ .Title }}</h1>
+      </div>
+
+      <div class="post-content">
+
+        {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
+         {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
+        {{- end }}
+
+        {{- if $moduleStatus }}
+          {{- $statusKey := replace (lower $moduleStatus) " " "_" -}}
+          {{- if (T (printf "module_alert_%s_long" $statusKey )) }}
+             {{- $level := "warn" -}}
+             {{- if eq $statusKey "general_availability" }}{{ $level = "info" }}{{ end -}}
+             {{- partial "alert" ( dict "level" $level "content" (T (printf "module_alert_%s_long" $statusKey )) ) }}
+          {{- end }}
+       {{- end }}
+
+        {{.Content}}
+
+        {{- if and .IsPage ( or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") (eq .File.ContentBaseName "CONFIGURATION") ) }} {{/* Render module CRDs */}}
+
+          {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+
+          {{- $moduleName := index $_pathElements 1 }}
+          {{- $moduleChannel := index $_pathElements 2 }}
+          {{- if and $moduleName $moduleChannel }}
+            {{- $moduleData := index .Site.Data.modules $moduleName }}
+
+            {{- if and ( reflect.IsMap $moduleData ) (index $moduleData $moduleChannel) }}
+              {{- $type := "" }}
+              {{- if or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR")  }} {{/* Render module CRDs */}}
+                {{- $type = "crds" }}
+              {{- else if eq .File.ContentBaseName "CONFIGURATION" }} {{/* Render module configuration JSONschema */}}
+                {{- $type = "configuration" }}
+              {{- end }}
+              {{- partial "module-resources" (dict "name" $moduleName "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+
+      </div>
+    </div>
+    {{- if ne site.Params.mode "module" }}
+     {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
+    {{ end }}
+  </div>
+
+  <div class="layout-sidebar__sidebar_right">
+           {{- partial "toc" . }}
+  </div>
+</div>
+{{- end }}

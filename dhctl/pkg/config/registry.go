@@ -392,7 +392,6 @@ func (r *RegistryData) Auth() (string, error) {
 		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
 	}
 
-	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
 	err = json.Unmarshal(bytes, &dc)
 	if err != nil {
 		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)

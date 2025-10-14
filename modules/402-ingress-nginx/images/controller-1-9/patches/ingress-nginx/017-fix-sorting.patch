@@ -1,0 +1,26 @@
+diff --git a/internal/ingress/controller/store/objectref.go b/internal/ingress/controller/store/objectref.go
+index 89ea47251..44dfe39e7 100644
+--- a/internal/ingress/controller/store/objectref.go
++++ b/internal/ingress/controller/store/objectref.go
+@@ -112,7 +112,7 @@ func (o *objectRefMap) Reference(ref string) []string {
+ 	if !ok {
+ 		return make([]string, 0)
+ 	}
+-	return consumers.UnsortedList()
++	return sets.List(consumers)
+ }
+ 
+ // ReferencedBy returns all objects referenced by the given object.
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index 7410ce6e0..57131fa6f 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -856,7 +856,7 @@ func buildRateLimitZones(input interface{}) []string {
+ 		}
+ 	}
+ 
+-	return zones.UnsortedList()
++	return sets.List(zones)
+ }
+ 
+ // buildRateLimit produces an array of limit_req to be used inside the Path of

@@ -1,40 +1,30 @@
 ## Patches
 
-### 001-go-mod.patch
-
-Changing Golang version from 1.24 to version 1.23
-
-### 002-client-filters.patch
+### 001-client-filters.patch
 
 With this patch, Dex can authorize requests for specific `OAuth2Client`s based on username and user's groups.
 We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` option to work.
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
-### 003-gitlab-refresh-context.patch
+### 002-gitlab-refresh-context.patch
 
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
 To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
 
-### 004-static-user-groups.patch
+### 003-static-user-groups.patch
 
 Adding group entity to kubernetes authentication.
 
-### 005-2fa.patch
+### 004-2fa.patch
 
 This patch adds support for two-factor authentication (2FA) in Dex.
 It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
 
 Upstream PR: https://github.com/dexidp/dex/pull/3712
 
-### 006-oidc-httpclient-to-context.patch
-
-This patch fixes the issue with the `insecureSkipVerify` and `rootCAs` options which do not work in OIDC connector.
-
-Upstream PR: https://github.com/dexidp/dex/pull/4223
-
-### 007-password-policy.patch
+### 005-password-policy.patch
 
 This patch implements password strength requirements and rotation rules
 for local user accounts. The following features are added:
@@ -44,8 +34,12 @@ for local user accounts. The following features are added:
 3. Password reuse prevention
 4. Account lockout after failed attempts
 
-### 008-password-policy-chore.patch
+### 006-fix-render-error.patch
 
-This adds functionality to configure password policy duration fields with `day` units, such as: `1d`, `30d12h`, etc.
-This patch also includes refactored password complexity checks - making them much simpler.
+This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
 
+### 007-ipv6-host.patch
+
+In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
+
+Upstream PR: https://github.com/dexidp/dex/pull/4363

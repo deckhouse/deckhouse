@@ -196,7 +196,7 @@ spec:
                     description: |-
                       Name of the referent.
 
-                      [More info](https://kubernetes.io/docs/user-guide/identifiers#names).
+                      [More info](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
                     type: string
                 required:
                 - kind
@@ -262,7 +262,7 @@ spec:
                       - `Auto` — currently, Auto and Recreate modes do the same thing. This mode is reserved for the [Pod inplace resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) in Kubernetes.
                       - `Recreate` — this mode allows VPA to modify resource requirements of the running pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (replicas: 1). In this mode, VPA does not recreate pods that were not created by a controller.
                       - `Initial` — VPA modifies pod resources only when pods are started (but not when pods are running).
-                      - `Off` — VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recomendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `kubectl describe vpa <vpa-name>`.
+                      - `Off` — VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recomendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `d8 k describe vpa <vpa-name>`.
                       - `InPlaceOrRecreate` - (beta). Working only from kubernetes 1.33. VPA will attempt non-disruptive resizes first, or fall back to recreation if needed.
                     enum:
                     - "Off"

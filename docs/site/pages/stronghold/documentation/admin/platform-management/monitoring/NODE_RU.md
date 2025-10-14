@@ -1,6 +1,7 @@
 ---
 title: "Мониторинг узлов"
 permalink: ru/stronghold/documentation/admin/platform-management/monitoring/node.html
+lang: ru
 ---
 
 ## Мониторинг
@@ -20,5 +21,5 @@ permalink: ru/stronghold/documentation/admin/platform-management/monitoring/node
 - `d8_node_group_min` — минимальное количество инстансов в группе;
 - `d8_node_group_max` — максимальное количество инстансов в группе;
 - `d8_node_group_up_to_date` — количество узлов в группе в состоянии up-to-date;
-- `d8_node_group_standby` — количество резервных узлов (см. параметр [standby](../../../reference/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе;
+- `d8_node_group_standby` — количество резервных узлов (см. параметр [`standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе);
 - `d8_node_group_has_errors` — единица, если в группе узлов есть какие-либо ошибки.

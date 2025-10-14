@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -111,7 +111,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [machineType, image]
-            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
             properties:
               machineType: &instanceClassMachineType
                 type: string
@@ -180,7 +180,7 @@ apiVersions:
                   type: string
           zones: &NodeGroupZones
             type: array
-            description: | 
+            description: |
               A limited set of zones in which master nodes can be created.
 
               The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
@@ -220,7 +220,7 @@ apiVersions:
                   type: array
                   description: |
                     The same as the `.spec.taints` field of the Node object(https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
-                    
+
                     > Available fields: `effect`, `key`, and `values`.
                   items:
                     type: object
@@ -235,7 +235,7 @@ apiVersions:
             instanceClass:
               required: [machineType, image]
               type: object
-              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
                 machineType: *instanceClassMachineType
                 image: *instanceClassImage
@@ -250,9 +250,9 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard)
+          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/modules/cloud-provider-gcp/layouts.html#standard)
 
-          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat)
+          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/modules/cloud-provider-gcp/layouts.html#withoutnat)
         x-unsafe: true
       standard:
         type: object

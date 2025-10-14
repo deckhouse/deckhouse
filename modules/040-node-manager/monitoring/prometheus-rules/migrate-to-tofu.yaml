@@ -21,19 +21,19 @@
         - Current Terraform version:
 
           ```shell
-          kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
+          d8 k -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
           ```
 
         - Version in the Terraform state:
 
           ```shell
-          kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
+          d8 k -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
           ```
 
         - Check for destructive changes:
 
           ```shell
-          kubectl exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
+          d8 k exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
           ```
 
         To resolve the issue and migrate to OpenTofu manually, follow these steps:
@@ -62,7 +62,7 @@
         2. In the cluster, remove the `commander-agent` module using the following command:
 
            ```shell
-           kubectl delete mc commander-agent
+           d8 k delete mc commander-agent
            ```
 
         3. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run the following command to resolve all destructive changes in the cluster:

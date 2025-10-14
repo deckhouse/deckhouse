@@ -639,7 +639,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "targets": [
         {
           "datasource": {
@@ -1944,7 +1944,9 @@
           ],
           "displayMode": "table",
           "placement": "right",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -2138,6 +2140,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "cores",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -2149,6 +2154,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 2,
                 "pointSize": 5,
@@ -2171,7 +2177,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2246,12 +2253,11 @@
           },
           "gridPos": {
             "h": 9,
-            "w": 12,
+            "w": 8,
             "x": 0,
             "y": 46
           },
           "id": 102,
-          "links": [],
           "options": {
             "legend": {
               "calcs": [],
@@ -3623,7 +3629,9 @@
           ],
           "displayMode": "table",
           "placement": "right",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -4519,7 +4527,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4757,7 +4766,6 @@
             "y": 110
           },
           "id": 154,
-          "links": [],
           "options": {
             "cellHeight": "sm",
             "footer": {
@@ -4770,7 +4778,7 @@
             },
             "showHeader": true
           },
-          "pluginVersion": "10.2.2",
+          "pluginVersion": "10.4.19",
           "targets": [
             {
               "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  kube_persistentvolumeclaim_info{namespace=\"$namespace\"}\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n)",
@@ -4923,7 +4931,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4942,7 +4951,6 @@
             "y": 119
           },
           "id": 157,
-          "links": [],
           "options": {
             "legend": {
               "calcs": [
@@ -4950,7 +4958,9 @@
               ],
               "displayMode": "table",
               "placement": "right",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",

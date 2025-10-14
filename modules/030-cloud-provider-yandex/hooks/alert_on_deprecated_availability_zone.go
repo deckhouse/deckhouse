@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -69,8 +70,8 @@ func filterYandexDeprecatedZoneNodes(obj *unstructured.Unstructured) (go_hook.Fi
 	return node.Labels["node.deckhouse.io/group"], nil
 }
 
-func alertOnNodesInDeprecatedAvailabilityZones(input *go_hook.HookInput) error {
-	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.NewSnapshots.Get(yandexDeprecatedZoneNodesKey))
+func alertOnNodesInDeprecatedAvailabilityZones(_ context.Context, input *go_hook.HookInput) error {
+	nodeGroupsWithDeprecatedZones := set.NewFromSnapshot(input.Snapshots.Get(yandexDeprecatedZoneNodesKey))
 
 	if len(nodeGroupsWithDeprecatedZones) > 0 {
 		requirements.SaveValue(yandexDeprecatedZoneInNodesKey, true)

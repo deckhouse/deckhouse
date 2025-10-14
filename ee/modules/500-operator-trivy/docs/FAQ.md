@@ -7,7 +7,7 @@ description: How to view resources that have not passed CIS compliance checks in
 ## Viewing resources that failed CIS compliance checks
 
 ```bash
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson | 
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson | 
   jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
@@ -17,7 +17,7 @@ By check `id`:
 
 ```bash
 check_id="5.7.3"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson | 
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson | 
   jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
 ```
 
@@ -25,7 +25,7 @@ By check description:
 
 ```bash
 check_desc="Apply Security Context to Your Pods and Containers"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
 ```
 
@@ -47,7 +47,7 @@ You can force a resource rescan in one of the following ways:
 Example command for overwriting the annotation `trivy-operator.aquasecurity.github.io/report-ttl`:
 
 ```bash
-kubectl annotate VulnerabilityReport -n <namespace> <reportName> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
+d8 k annotate VulnerabilityReport -n <namespace> <reportName> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
 
 ## Who has access to scan results
@@ -67,5 +67,5 @@ The operator scans **all resources** located in any namespace labeled with `secu
 To view the scan results of your application, use the Grafana dashboard `Security / Trivy Image Vulnerability Overview`.  
 You can filter the results by the desired namespace and resource.
 
-You can also directly view the [resources](trivy-cr.html) that contain scan results created for each scanned object.  
-Details about naming structure and resource location are available in the [documentation](trivy-cr.html).
+You can also directly view the [resources](cr.html) that contain scan results created for each scanned object.  
+Details about naming structure and resource location are available in the [documentation](cr.html).

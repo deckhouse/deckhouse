@@ -16,66 +16,93 @@ limitations under the License.
 
 // DO NOT EDIT
 // This file was generated automatically with
-// 	go run gen_parse.go -type Node,StatefulSet,Pod,StorageClass,PodPhase,PvcTermination
+// 	go run gen_parse.go -types Node,StatefulSet,Pod,StorageClass,PodPhase,PvcTermination
 //
 // It is used to cast slices of snapshot types. See file types.go
 
 package snapshot
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"fmt"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // ParseNodeSlice parses Node slice from snapshots
-func ParseNodeSlice(rs []go_hook.FilterResult) []Node {
-	ret := make([]Node, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(Node)
+func ParseNodeSlice(rs []sdkpkg.Snapshot) ([]Node, error) {
+	ret := make([]Node, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[Node](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Node: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 
 // ParseStatefulSetSlice parses StatefulSet slice from snapshots
-func ParseStatefulSetSlice(rs []go_hook.FilterResult) []StatefulSet {
-	ret := make([]StatefulSet, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(StatefulSet)
+func ParseStatefulSetSlice(rs []sdkpkg.Snapshot) ([]StatefulSet, error) {
+	ret := make([]StatefulSet, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[StatefulSet](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StatefulSet: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 
 // ParsePodSlice parses Pod slice from snapshots
-func ParsePodSlice(rs []go_hook.FilterResult) []Pod {
-	ret := make([]Pod, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(Pod)
+func ParsePodSlice(rs []sdkpkg.Snapshot) ([]Pod, error) {
+	ret := make([]Pod, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[Pod](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Pod: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 
 // ParseStorageClassSlice parses StorageClass slice from snapshots
-func ParseStorageClassSlice(rs []go_hook.FilterResult) []StorageClass {
-	ret := make([]StorageClass, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(StorageClass)
+func ParseStorageClassSlice(rs []sdkpkg.Snapshot) ([]StorageClass, error) {
+	ret := make([]StorageClass, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[StorageClass](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StorageClass: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 
 // ParsePodPhaseSlice parses PodPhase slice from snapshots
-func ParsePodPhaseSlice(rs []go_hook.FilterResult) []PodPhase {
-	ret := make([]PodPhase, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(PodPhase)
+func ParsePodPhaseSlice(rs []sdkpkg.Snapshot) ([]PodPhase, error) {
+	ret := make([]PodPhase, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[PodPhase](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PodPhase: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 
 // ParsePvcTerminationSlice parses PvcTermination slice from snapshots
-func ParsePvcTerminationSlice(rs []go_hook.FilterResult) []PvcTermination {
-	ret := make([]PvcTermination, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(PvcTermination)
+func ParsePvcTerminationSlice(rs []sdkpkg.Snapshot) ([]PvcTermination, error) {
+	ret := make([]PvcTermination, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[PvcTermination](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PvcTermination: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }

@@ -1,6 +1,6 @@
 ---
 title: "Module registry: usage example"
-description: ""
+description: "Examples for switching between Direct and Unmanaged registry modes in Deckhouse Kubernets Platform, including configuration examples and status monitoring."
 ---
 
 ## Switching to the `Direct` Mode
@@ -11,7 +11,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
 When changing the registry mode or registry parameters, Deckhouse will be restarted.
 {% endalert %}
 
-1. Before switching, perform the [migration to use the registry module](faq.html#how-to-migrate-to-the-registry-module).
+1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -52,7 +52,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
 1. Ensure the [Deckhouse job queue](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse) is empty and contains no errors.
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [deckhouse](../deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -98,7 +98,7 @@ To switch an already running cluster to `Unmanaged` mode, follow these steps:
 Changing the registry mode or its parameters will cause Deckhouse to restart.
 {% endalert %}
 
-1. Before switching, perform the [migration to use the registry module](faq.html#how-to-migrate-to-the-registry-module).
+1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
 
 1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
 
@@ -115,7 +115,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
 
 1. Ensure the [Deckhouse job queue](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse) is empty and contains no errors.
 
-1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [deckhouse](../deckhouse/) module documentation for correct configuration.
+1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 

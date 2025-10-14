@@ -10,15 +10,15 @@ search: releaseChannel, стабилизация релизного канала
 
   Обычно используется набор модулей `Default`, который подходит в большинстве случаев.
 
-  Независимо от используемого набора включенных по умолчанию модулей любой модуль может быть явно включен или выключен в конфигурации Deckhouse (подробнее [про включение и отключение модуля](../../#включение-и-отключение-модуля)).
+  Независимо от используемого набора включенных по умолчанию модулей любой модуль может быть явно включен или выключен в конфигурации Deckhouse (подробнее [про включение и отключение модуля](/products/kubernetes-platform/documentation/v1/admin/configuration/#включение-и-отключение-модуля)).
 - **[Канал обновлений](configuration.html#parameters-releasechannel)**
 
-  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](../../deckhouse-release-channels.html), различающиеся стабильностью и частотой выхода версий. Ознакомьтесь подробнее с тем, [как работает механизм автоматического обновления](../../deckhouse-faq.html#как-работает-автоматическое-обновление-deckhouse) и [как установить желаемый канал обновлений](../../deckhouse-faq.html#как-установить-желаемый-канал-обновлений).
+  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](/products/kubernetes-platform/documentation/v1/reference/release-channels.html), различающиеся стабильностью и частотой выхода версий. Ознакомьтесь подробнее с тем, [как работает механизм автоматического обновления](/products/kubernetes-platform/documentation/v1/architecture/updating.html) и [как установить желаемый канал обновлений](/products/kubernetes-platform/documentation/v1/admin/configuration/update/configuration.html).
 - **[Режим обновлений](configuration.html#parameters-update-mode)** и **[окна обновлений](configuration.html#parameters-update-windows)**
 
   Deckhouse может использовать **ручной** или **автоматический** режим обновлений.
 
-  В ручном режиме обновлений автоматически применяются только важные исправления (patch-релизы), и для перехода на новый релиз Deckhouse требуется [ручное подтверждение](../../cr.html#deckhouserelease-v1alpha1-approved).
+  В ручном режиме обновлений автоматически применяются только важные исправления (patch-релизы), и для перехода на новый релиз Deckhouse требуется [ручное подтверждение](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-approved).
 
   В автоматическом режиме обновлений, если в кластере **не установлены** [окна обновлений](configuration.html#parameters-update-windows), переход на новый релиз Deckhouse осуществляется сразу после его появления на соответствующем канале обновлений. Если же в кластере **установлены** окна обновлений, переход на более свежий релиз Deckhouse начнется в ближайшее доступное окно обновлений после появления новой версии на канале обновлений.
   
@@ -30,10 +30,10 @@ search: releaseChannel, стабилизация релизного канала
 
 ### Просмотр статуса релизов Deckhouse
 
-Список последних релизов в кластере можно получить командной `kubectl get deckhousereleases`. По умолчанию хранятся 10 последних релизов и все будущие.
+Список последних релизов в кластере можно получить командной `d8 k get deckhousereleases`. По умолчанию хранятся 10 последних релизов и все будущие.
 Каждый релиз может иметь один из следующих статусов:
 
-- `Pending` — релиз находится в ожидании, ждет окна обновления, настроек канареечного развертывания и т. д. Подробности можно увидеть с помощью команды `kubectl describe deckhouserelease $name`.
+- `Pending` — релиз находится в ожидании, ждет окна обновления, настроек канареечного развертывания и т. д. Подробности можно увидеть с помощью команды `d8 k describe deckhouserelease $name`.
 - `Deployed` — релиз применен. Это значит, что образ пода Deckhouse уже поменялся на новую версию,
  но при этом процесс обновления всех компонентов кластера идет асинхронно, так как зависит от многих настроек.
 - `Superseded` — релиз устарел и больше не используется.
@@ -63,7 +63,7 @@ search: releaseChannel, стабилизация релизного канала
   Для установки ручного режима обновления необходимо в ModuleConfig `deckhouse` установить параметр [settings.update.mode](configuration.html#parameters-update-mode) в `Manual`:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
   
 - Установить режим автоматического обновления для патч-версий.
@@ -75,7 +75,7 @@ search: releaseChannel, стабилизация релизного канала
   Для установки режима автоматического обновления для патч-версий необходимо в ModuleConfig `deckhouse` установить параметр [settings.update.mode](configuration.html#parameters-update-mode) в `AutoPatch`:
 
   ```shell
-  kubectl patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
+  d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
   ```
 
 - Установить конкретный тег для Deployment `deckhouse` и удалить параметр [releaseChannel](configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
@@ -85,8 +85,8 @@ search: releaseChannel, стабилизация релизного канала
   Пример установки версии `v1.66.3` для DKP EE и удаления параметра `releaseChannel` из конфигурации модуля `deckhouse`:
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
-  kubectl patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
+  d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.66.3
+  d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
 
 ## Priority Classes

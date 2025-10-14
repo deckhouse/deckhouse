@@ -103,7 +103,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -128,9 +128,9 @@ properties:
         description: |
           An array of user groups that can access the OpenVPN admin panel.
 
-          This parameter is used if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled or the [externalAuthentication](#parameters-auth-externalauthentication) parameter is set.
+          This parameter is used if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled or the [externalAuthentication](#parameters-auth-externalauthentication) parameter is set.
 
-          > **Caution!** Note that you must add those groups to the appropriate field in the [DexProvider](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider) config if this module is used together with the user-authn one.
+          > **Caution!** Note that you must add those groups to the appropriate field in the [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider) config if this module is used together with the user-authn one.
       whitelistSourceRanges:
         type: array
         items:
@@ -169,7 +169,7 @@ properties:
           * `CertManager` — the OpenVPN admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           * `CustomCertificate` — the OpenVPN admin panel will use the certificate from the `d8-system` namespace for HTTPS.
           * `Disabled` — in this mode, the OpenVPN admin panel works over HTTP only.
-          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/modules/user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
         properties:
@@ -194,7 +194,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     description: |

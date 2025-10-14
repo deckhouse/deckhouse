@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
@@ -50,10 +51,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateKeypair)
 
-func generateKeypair(input *go_hook.HookInput) error {
+func generateKeypair(_ context.Context, input *go_hook.HookInput) error {
 	var keypair = new(lib.Keypair)
 
-	snaps := input.NewSnapshots.Get("secret")
+	snaps := input.Snapshots.Get("secret")
 	if len(snaps) == 1 {
 		err := snaps[0].UnmarshalTo(keypair)
 		if err != nil {

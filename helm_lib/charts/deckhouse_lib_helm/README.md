@@ -4,7 +4,7 @@
 
 | Table of contents |
 |---|
-| **Admission Client** |
+| **Admission Client Ca** |
 | [helm_lib_admission_webhook_client_ca_certificate](#helm_lib_admission_webhook_client_ca_certificate) |
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
@@ -58,6 +58,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
 | [helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted) |
+| [helm_lib_module_container_security_context_pss_restricted_flexible](#helm_lib_module_container_security_context_pss_restricted_flexible) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_pod_security_context_runtime_default](#helm_lib_module_pod_security_context_runtime_default) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
@@ -115,11 +116,11 @@
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
 
-## Admission Client
+## Admission Client Ca
 
 ### helm_lib_admission_webhook_client_ca_certificate
 
-Renders a ConfigMap with the public CA certificate used to verify client TLS certificates for AdmissionReview requests, ensuring secure mTLS authentication
+ Renders configmap with admission webhook client CA certificate which uses to verify the AdmissionReview requests. 
 
 #### Usage
 
@@ -128,8 +129,8 @@ Renders a ConfigMap with the public CA certificate used to verify client TLS cer
 #### Arguments
 
 list:
--  Template context with .Values, .Chart, etc
--  Namespace where CA configmap will be created
+-  Template context with .Values, .Chart, etc 
+-  Namespace where CA configmap will be created  
 
 ## Api Version And Kind
 
@@ -645,6 +646,21 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_container_security_context_pss_restricted_flexible
+
+ SecurityContext for Deckhouse UID/GID 64535, PSS Restricted 
+ Optional keys: 
+ .ro   – bool, read-only root FS (default true) 
+ .caps – []string, capabilities.add (default empty) 
+ .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .seccompProfile  – bool, disable seccompProfile when false (default true) 
+
+#### Usage
+
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
+
 
 
 ### helm_lib_module_pod_security_context_run_as_user_root

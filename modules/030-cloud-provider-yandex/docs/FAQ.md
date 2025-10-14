@@ -47,11 +47,11 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 ## How to set a custom StorageClass as default?
 
-Specify the StorageClass name in the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
+Specify the StorageClass name in the [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
 Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
 
 ```shell
-kubectl edit mc global
+d8 k edit mc global
 ```
 
 ## Adding CloudStatic nodes to a cluster
@@ -61,7 +61,7 @@ For VMs that you want to add to the cluster as nodes, add the `node-network-cidr
 You can find out the `nodeNetworkCIDR` of the cluster using the command below:
 
 ```shell
-kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
 
 ## How do I create a cluster in a new VPC and set up bastion host to access the nodes?

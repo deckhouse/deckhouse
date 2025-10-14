@@ -71,14 +71,14 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 To access the web interfaces of Deckhouse services, you need to:
 - configure DNS
-- specify [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- specify [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 The *DNS names template* is used to configure Ingress resources of system applications. For example, the name `grafana` is assigned to the Grafana interface. Then, for the template `%s.kube.company.my` Grafana will be available at `grafana.kube.company.my`, etc.
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 
-Run the following command on **the master node** to get the load balancer IP and to configure [template for DNS names](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
+Run the following command on **the master node** to get the load balancer IP and to configure [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}

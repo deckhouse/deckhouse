@@ -512,7 +512,7 @@ class TestGroupValidationWebhook(unittest.TestCase):
                 },
                 {
                     "kind": "Group",
-                    "name": "candi-admins"
+                    "name": "candi-admins-2"
                 }
             ],
             "name": "candi-admins"

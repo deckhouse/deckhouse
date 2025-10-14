@@ -11,4 +11,4 @@ The module works if the `prometheus` module is enabled. Generally, no configurat
 
 ## Parameters
 
-* `highAvailability` — manually enable/disable the high availability mode. By default, this parameter is configured automatically (additional information about the HA mode for modules is available [here](../../deckhouse-configure-global.html#parameters)).
+* `highAvailability` — manually enable/disable the high availability mode. By default, this parameter is configured automatically (additional information about the HA mode for modules is available [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters)).

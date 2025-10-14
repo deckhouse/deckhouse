@@ -42,6 +42,7 @@ const (
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
 	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
+	DeckhouseReleaseAnnotationUpdateInfo            = "release.deckhouse.io/update-info"
 
 	DeckhouseReleaseAnnotationDryrun            = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
@@ -55,8 +56,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
@@ -179,6 +181,11 @@ func (in *DeckhouseRelease) GetModuleName() string {
 	return ""
 }
 
+// GetUpdateSpec returns the optional update spec of the related release
+func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
+	return nil
+}
+
 type DeckhouseReleaseSpec struct {
 	Version       string            `json:"version,omitempty"`
 	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
@@ -206,8 +213,7 @@ func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return DeckhouseReleaseGVK
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // DeckhouseReleaseList is a list of DeckhouseRelease resources
 type DeckhouseReleaseList struct {

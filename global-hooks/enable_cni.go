@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -112,15 +113,15 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return nil, nil
 }
 
-func enableCni(input *go_hook.HookInput) error {
+func enableCni(_ context.Context, input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
-	cniNameSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cni_name")
+	cniNameSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cni_name")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_name snapshot: %w", err)
 	}
 
-	deckhouseMCSnap := input.NewSnapshots.Get("deckhouse_mc")
+	deckhouseMCSnap := input.Snapshots.Get("deckhouse_mc")
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {

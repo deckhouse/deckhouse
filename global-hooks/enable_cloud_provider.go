@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -87,8 +88,8 @@ func applyClusterConfigForProviderFilter(obj *unstructured.Unstructured) (go_hoo
 	return "", nil
 }
 
-func enableCloudProvider(input *go_hook.HookInput) error {
-	cloudConfigSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cloud_config")
+func enableCloudProvider(_ context.Context, input *go_hook.HookInput) error {
+	cloudConfigSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cloud_config")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cloud_config snapshot: %w", err)
 	}

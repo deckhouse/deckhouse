@@ -10,6 +10,9 @@ layout: default
     </div>
     <div class="layout-sidebar__content">
       {{ content }}
+      {%- if page.feedback != false %}
+       {%- include feedback.html %}
+      {%- endif %}
     </div>
     <div class="layout-sidebar__sidebar_right">
       {%- include toc_in_sidebar.html %}

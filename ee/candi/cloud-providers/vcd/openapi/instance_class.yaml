@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/) module).
+            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/) module).
           required:
             - spec
           properties:
@@ -50,6 +50,7 @@ spec:
                 template:
                   description: |
                     Path of the template OVA that is to be used. Consists of organization (optional), catalog, template name or template identifier.
+                    If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -65,6 +66,16 @@ spec:
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
                   x-doc-examples: [internal]
                   type: string
+                additionalMetadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every node VM, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the VCDProviderClusterConfiguration spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+
+                    > **Warning.** Changing the `additionalMetadata` will cause the recreation of CloudEphemeral NodeGroups referring the VCDInstanceClass.
             status:
               type: object
               properties:

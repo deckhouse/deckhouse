@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -79,7 +80,7 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func migrateServiceAccounts(input *go_hook.HookInput) error {
+func migrateServiceAccounts(_ context.Context, input *go_hook.HookInput) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -92,7 +93,7 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	for serviceAccount, err := range sdkobjectpatch.SnapshotIter[ServiceAccountInfo](input.NewSnapshots.Get("istio_serviceaccounts")) {
+	for serviceAccount, err := range sdkobjectpatch.SnapshotIter[ServiceAccountInfo](input.Snapshots.Get("istio_serviceaccounts")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'istio_serviceaccounts' snapshot: %w", err)
 		}

@@ -111,11 +111,11 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../../../reference/cr/parameters-highavailability.html). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [`highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
-1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
-1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для кластера с одним master-узлом.
+1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-с-одним-master-узлом) для кластера с одним master-узлом.
 
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
@@ -128,10 +128,10 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 p queue main
    ```
 
-1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](masters.html#добавление-master-узла).
 
 ## Восстановление объекта Kubernetes из резервной копии etcd
 
@@ -146,7 +146,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 В примере:
 
-- `etcd-snapshot.bin` — файл с [резервной копией](#как-сделать-бэкап-etcd-вручную) данных etcd (snapshot);
+- `etcd-snapshot.bin` — файл с [резервной копией](#резервное-копирование-вручную-с-помощью-deckhouse-cli) данных etcd (snapshot);
 - `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
 1. Запустите под с временным экземпляром etcd.
@@ -183,14 +183,14 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 - Установите актуальное имя образа etcd:
 
   ```shell
-  IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
+  IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
   sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
   ```
 
 - Создайте под:
 
   ```shell
-  kubectl create -f etcd.pod.yaml
+  d8 k create -f etcd.pod.yaml
   ```
 
 Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
@@ -200,8 +200,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Пример:
 
 ```shell
-kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+d8 k cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 ```
 
 В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
@@ -209,7 +209,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```console
-~ # kubectl -n default exec -it etcdrestore -- sh
+~ # d8 k -n default exec -it etcdrestore -- sh
 / # chmod +x /usr/bin/etcdhelper
 / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
 / # etcd &
@@ -220,7 +220,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```console
-~ # kubectl -n default exec -it etcdrestore -- sh
+~ # d8 k -n default exec -it etcdrestore -- sh
 / # mkdir /tmp/restored_yaml
 / # cd /tmp/restored_yaml
 /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done

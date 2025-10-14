@@ -21,12 +21,12 @@ MetalLB in L2 mode allows ordering Service with `LoadBalancer` type, the operati
 - The node selected as the leader for the "public" IP becomes a "bottleneck", with no possibility of horizontal scaling.
 - If the balancer node fails, all current connections will be dropped while switching to a new balancing node that will be selected as the leader.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_en.pdf"></div>
+<div data-presentation="presentations/basics_metallb_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
 
 This module helps to overcome these limitations. It introduces a new resource, MetalLoadBalancerClass, which allows associating a group of nodes with an IP address pool using a `nodeSelector`. Afterward, a standard Service resource of type `LoadBalancer` can be created, specifying the name of the corresponding MetalLoadBalancerClass. Additionally, annotations can be used to define the required number of IP addresses for L2 advertisement.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_l2balancer_en.pdf"></div>
+<div data-presentation="presentations/basics_metallb_l2balancer_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1FYbc7jUhvJFy8x592ihm644i0qpeQSJFUc4Ly2coWFQ/ --->
 
 Thus:

@@ -9,11 +9,11 @@ description: "Описание схем размещения и взаимоде
 
 Создается внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
 
-> **Внимание!**
+> **Внимание.**
 > Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
 > Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 
-![resources](../../images/cloud-provider-openstack/openstack-standard.png)
+![resources](images/openstack-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
@@ -110,15 +110,15 @@ provider:
 один — в публичную сеть, другой — во внутреннюю сеть. Данная схема размещения должна использоваться, если необходимо, чтобы
 все узлы кластера были доступны напрямую.
 
-> **Внимание!**
+> **Внимание.**
 > В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
-сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
-virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
+сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal Loadbalancer, у которого
+Virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 >
-> **Внимание!**
+> **Внимание.**
 > В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании `OpenStackInstanceClass` в кластере.
 
-![resources](../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
+![resources](images/openstack-standardwithnorouter.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
@@ -197,12 +197,12 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-> **Внимание!**
+> **Внимание.**
 > В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
 сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
 virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 
-![resources](../../images/cloud-provider-openstack/openstack-simple.png)
+![resources](images/openstack-simple.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:
@@ -277,11 +277,11 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-> **Внимание!**
+> **Внимание.**
 > В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
 > Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в `OpenStackClusterConfiguration` для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
 
-![resources](../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
+![resources](images/openstack-simplewithinternalnetwork.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10917&t=IvETjbByf1MSQzcm-0 --->
 
 Пример конфигурации схемы размещения:

@@ -257,6 +257,14 @@ import:
   add: /usr/bin/rev
   to: /usr/bin/rev
   before: install
+- image: tools/diffutils
+  add: /usr/bin/diff
+  to: /usr/bin/diff
+  before: install
+- image: tools/procps
+  add: /bin/ps
+  to: /bin/ps
+  before: install
 shell:
   install:
   {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}

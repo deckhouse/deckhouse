@@ -31,13 +31,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
+             d8 k describe cert -m {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate has expired.
@@ -58,13 +58,13 @@ alerts:
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
+             d8 k describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
       summary: |
         Certificate is expiring soon.
@@ -81,7 +81,7 @@ alerts:
         To check the certificate details, run the following command:
 
         ```shell
-        kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
+        d8 k -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
         ```
       summary: |
         Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
@@ -98,7 +98,7 @@ alerts:
         To check the certificate details, run the following command:
 
         ```bash
-        kubectl -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
+        d8 k -n <NAMESPACE> describe certificate <CERTIFICATE-NAME>
         ```
       summary: |
         Certificate will expire soon.
@@ -115,7 +115,7 @@ alerts:
         This can affect certificate ordering and prolongation in the future. For details, check the cert-manager logs using the following command:
 
         ```bash
-        kubectl -n d8-cert-manager logs -l app=cert-manager -c cert-manager
+        d8 k -n d8-cert-manager logs -l app=cert-manager -c cert-manager
         ```
       summary: |
         Cert-manager couldn't order a certificate.
@@ -130,7 +130,7 @@ alerts:
         For details, refer to the logs of the agent:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
       summary: |
         Over 50% of all known endpoints aren't ready in agent {{ $labels.namespace }}/{{ $labels.pod }}.
@@ -160,13 +160,13 @@ alerts:
         1. Check the logs of the agent:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+           d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
            ```
 
         1. Verify the agent's health status:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
+           d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
            ```
 
         1. Compare the metrics with those of a neighboring agent.
@@ -185,7 +185,7 @@ alerts:
         For details, refer to the logs of the agent:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
       summary: |
         Agent {{ $labels.namespace }}/{{ $labels.pod }} fails to import policies.
@@ -200,7 +200,7 @@ alerts:
         For details, refer to the logs of the agent:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
       summary: |
         Agent {{ $labels.namespace }}/{{ $labels.pod }} can't reach some of the node health endpoints.
@@ -326,19 +326,19 @@ alerts:
         1. Print the job details:
 
            ```bash
-           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
            ```
 
         1. Check the job status:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
            ```
 
         1. Check the status of pods created by the job:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
            ```
       summary: |
         Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
@@ -374,19 +374,19 @@ alerts:
         1. Print the job details:
 
            ```bash
-           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
            ```
 
         1. Check the job status:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
            ```
 
         1. Check the status of pods created by the job:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
            ```
       summary: |
         Pods set in CronJob {{$labels.namespace}}/{{$labels.job_name}} haven't been created.
@@ -458,10 +458,10 @@ alerts:
         To list all PodMonitors in the Deckhouse namespace, run the following command:
 
         ```bash
-        kubectl get podmonitors --all-namespaces -l heritage!=deckhouse
+        d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Deckhouse namespace contains PodMonitors not created by Deckhouse.
       severity: "9"
@@ -479,10 +479,10 @@ alerts:
         To list all ServiceMonitors in the Deckhouse namespace, run the following command:
 
         ```bash
-        kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse
+        d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
       severity: "9"
@@ -500,13 +500,13 @@ alerts:
         1. Verify that the module's components are up and running:
 
            ```bash
-           kubectl get pods -n d8-admission-policy-engine
+           d8 k get pods -n d8-admission-policy-engine
            ```
 
         2. Check logs for issues, such as missing constraint templates or incomplete CRD creation:
 
            ```bash
-           kubectl logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
+           d8 k logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
            ```
       summary: |
         Admission-policy-engine module hasn't been bootstrapped for 10 minutes.
@@ -523,7 +523,7 @@ alerts:
         To resolve the issue, check if the `bashible-apiserver` Pods are up-to-date and running:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager get pods -l app=bashible-apiserver
+        d8 k -n d8-cloud-instance-manager get pods -l app=bashible-apiserver
         ```
       summary: |
         Bashible-apiserver has been locked for too long.
@@ -534,7 +534,7 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   kubectl -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not ready:\n\n   ```bash\n   kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
+      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   d8 k -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not ready:\n\n   ```bash\n   d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
       summary: |
         The x509-certificate-exporter pod isn't ready.
       severity: "8"
@@ -544,7 +544,7 @@ alerts:
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
-      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   kubectl -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not running:\n\n   ```bash\n   kubectl -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
+      description: "Steps to resolve:\n\n1. Retrieve the deployment details:\n   \n   ```bash\n   d8 k -n d8-monitoring describe deploy x509-certificate-exporter\n   ```\n\n2. Check the pod status and investigate why it's not running:\n\n   ```bash\n   d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter\n   ```\n"
       summary: |
         The x509-certificate-exporter pod isn't running.
       severity: "8"
@@ -560,13 +560,13 @@ alerts:
         - Check the pod status:
 
           ```bash
-          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
           ```
 
         - Check the pod logs:
 
           ```bash
-          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
           ```
       summary: |
         There is no x509-certificate-exporter target in Prometheus.
@@ -583,13 +583,13 @@ alerts:
         - Check the pod status:
 
           ```bash
-          kubectl -n d8-monitoring get pod -l app=x509-certificate-exporter
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
           ```
 
         - Check the pod logs:
 
           ```bash
-          kubectl -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
           ```
       summary: |
         Prometheus can't scrape x509-certificate-exporter metrics.
@@ -752,17 +752,25 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Steps to troubleshoot:
+        This happened because there were several sources for configuring CNI parameters in the cluster, and ModuleConfig did not have the highest priority previously.
 
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+        To resolve this issue, the following steps should be taken:
+
+        1. Find the ConfigMap `d8-system/desired-cni-moduleconfig` in the cluster, which contains the actual ModuleConfig settings.
 
            ```bash
-           kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+           d8 k -n d8-system get configmap desired-cni-moduleconfig -o yaml
            ```
 
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
+        2. Apply this prepared ModuleConfig to the cluster. This will not cause any actual reconfigurations in the cluster and is completely safe.
+
+        3. Once the parameters in "ModuleConfig" match those used in the cluster:
+             - this alert will be resolved,
+             - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source of truth.
+
+        4. After that, you can add the desired parameters to the ModuleConfig CNI and they will be applied immediately.
       summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
+        The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
@@ -776,7 +784,7 @@ alerts:
         To resolve this issue, check the status of the `kube-system/d8-control-plane-manager` DaemonSet and its pods by running the following command:
 
         ```bash
-        kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
+        d8 k -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
         ```
       summary: |
         Controller pod isn't running on node {{ $labels.node }}.
@@ -795,10 +803,10 @@ alerts:
         To list all PrometheusRules in the Deckhouse namespace, run the following command:
 
         ```bash
-        kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse
+        d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
         ```
 
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
       summary: |
         Deckhouse namespace contains PrometheusRules not created by Deckhouse.
       severity: "9"
@@ -808,7 +816,7 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   kubectl -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   kubectl edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   kubectl edit mc <MODULE_NAME>\n   ```\n"
+      description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   d8 k -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   d8 k edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   d8 k edit mc <MODULE_NAME>\n   ```\n"
       summary: |
         Deckhouse configuration is invalid.
       severity: "5"
@@ -822,7 +830,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Deckhouse is unable to delete the {{ $labels.module }} module.
@@ -837,7 +845,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Deckhouse is unable to discover modules.
@@ -852,7 +860,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Deckhouse is unable to run the {{ $labels.hook }} global hook.
@@ -867,7 +875,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Deckhouse is unable to start the {{ $labels.module }} module.
@@ -882,7 +890,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Deckhouse is unable to run the {{ $labels.module }}/{{ $labels.hook }} module hook.
@@ -922,7 +930,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         The {{ $labels.hook }} Deckhouse global hook is crashing too frequently.
@@ -966,10 +974,10 @@ alerts:
         1. Check the current release channel used in the cluster:
 
            ```bash
-           kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
+           d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
       summary: |
         Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
@@ -985,7 +993,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook is crashing too frequently.
@@ -1002,7 +1010,7 @@ alerts:
         To resolve this issue, remove the label from the module release using the following command:
 
         ```bash
-        kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        d8 k label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
         ```
 
         A new suitable policy will be detected automatically.
@@ -1015,7 +1023,7 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n \n```bash\nkubectl get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
+      description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n\n```bash\nd8 k get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
       summary: |
         Module configuration failed for module {{ $labels.module }}.
       severity: "5"
@@ -1053,7 +1061,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Excessive Deckhouse restarts detected.
@@ -1070,7 +1078,7 @@ alerts:
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         The {{ $labels.queue }} Deckhouse queue is stuck with {{ $value }} pending task(s).
@@ -1101,7 +1109,7 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
+      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
       summary: |
         Possible API server connection error in the client-go informer.
       severity: "5"
@@ -1127,7 +1135,7 @@ alerts:
         To resolve this issue, defragment the etcd database by running the following command:
 
         ```bash
-        kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+        d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
           --cacert /etc/kubernetes/pki/etcd/ca.crt \
           --cert /etc/kubernetes/pki/etcd/ca.crt \
           --key /etc/kubernetes/pki/etcd/ca.key \
@@ -1280,7 +1288,7 @@ alerts:
         To resolve this issue and stop the alert, run the following command:
 
         ```bash
-        kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
+        d8 k annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
         ```
       summary: |
         The ModuleConfig annotation for allowing module disabling is set.
@@ -1297,7 +1305,7 @@ alerts:
         To investigate the issue, review the exporter's logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         The image-availability-exporter has crashed.
@@ -1316,13 +1324,13 @@ alerts:
         1. Retrieve the deployment details:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           d8 k -n d8-monitoring describe deploy image-availability-exporter
            ```
 
         2. Check the pod status and investigate why it isn't `Ready`:
 
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring describe pod -l app=image-availability-exporter
            ```
       summary: |
         The image-availability-exporter pod is not ready.
@@ -1341,13 +1349,13 @@ alerts:
         1. Retrieve the deployment details:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           d8 k -n d8-monitoring describe deploy image-availability-exporter
            ```
 
         2. Check the pod status and investigate why it isn't running:
 
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring describe pod -l app=image-availability-exporter
            ```
       summary: |
         The image-availability-exporter pod is not running.
@@ -1366,13 +1374,13 @@ alerts:
         1. Check the pod status:
 
            ```bash
-           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring get pod -l app=image-availability-exporter
            ```
 
         1. Check the pod logs:
 
            ```bash
-           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
            ```
       summary: |
         The image-availability-exporter target is missing from Prometheus.
@@ -1391,13 +1399,13 @@ alerts:
         1. Check the pod status:
 
            ```bash
-           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring get pod -l app=image-availability-exporter
            ```
 
         1. Check the pod logs:
 
            ```bash
-           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
            ```
       summary: |
         Prometheus can't scrape metrics of image-availability-exporter.
@@ -1417,10 +1425,10 @@ alerts:
         ### Namespace-wide configuration
         # `istio.io/rev=vXYZ`: Use a specific revision.
         # `istio-injection=enabled`: Use the global revision.
-        kubectl get ns {{$labels.namespace}} --show-labels
+        d8 k get ns {{$labels.namespace}} --show-labels
 
         ### Pod-wide configuration
-        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
         ```
       summary: |
         There are pods with Istio data plane version {{$labels.version}}, but desired version is {{$labels.desired_version}}.
@@ -1439,7 +1447,7 @@ alerts:
         To identify orphaned pods, run the following command:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        d8 k -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       summary: |
         The control plane version for pods with injected sidecars isn't installed.
@@ -1458,7 +1466,7 @@ alerts:
         To check the status of the control plane pods, run the following command:
 
         ```
-        kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+        d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
         ```
       summary: |
         Additional control plane isn't working.
@@ -1476,11 +1484,11 @@ alerts:
 
         1. Restart affected pods and use the following PromQL query to get a full list:
 
-           ```promql
+           ```prometheus
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         There are pods with data plane version different from the control plane version.
       severity: "8"
@@ -1496,7 +1504,7 @@ alerts:
         To identify the affected pods, run the following command:
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        d8 k -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       summary: |
         Detected pods with Istio sidecars but istio-injection isn't configured.
@@ -1512,7 +1520,7 @@ alerts:
 
         Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
 
-        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         The installed Istio version has been deprecated.
       severity: undefined
@@ -1533,10 +1541,10 @@ alerts:
         ### Namespace-wide configuration
         # `istio.io/rev=vXYZ`: Use a specific revision.
         # `istio-injection=enabled`: Use the global revision.
-        kubectl get ns {{$labels.namespace}} --show-labels
+        d8 k get ns {{$labels.namespace}} --show-labels
 
         ### Pod-wide configuration
-        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
         ```
       summary: |
         Desired control plane version isn't installed.
@@ -1561,7 +1569,7 @@ alerts:
         ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
-        REMOTE_CLUSTER_UUID="$(kubectl get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+        REMOTE_CLUSTER_UUID="$(d8 k get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
         TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-federation --ttl 1h)"
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
@@ -1582,7 +1590,7 @@ alerts:
         To check the status of the control plane pods, run the following command:
 
         ```bash
-        kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+        d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
         ```
       summary: |
         Global control plane isn't working.
@@ -1607,7 +1615,7 @@ alerts:
         ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
-        REMOTE_CLUSTER_UUID="$(kubectl get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+        REMOTE_CLUSTER_UUID="$(d8 k get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
         TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-multicluster --ttl 1h)"
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
@@ -1644,7 +1652,7 @@ alerts:
         To investigate the issue, check the operator logs:
 
         ```bash
-        kubectl -n d8-istio logs -l app=operator,revision={{$labels.revision}}
+        d8 k -n d8-istio logs -l app=operator,revision={{$labels.revision}}
         ```
       summary: |
         The istio-operator is unable to reconcile Istio control plane setup.
@@ -1661,7 +1669,7 @@ alerts:
         To identify the affected pods, run the following command:
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
+        d8 k -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
         ```
       summary: |
         Detected pods without Istio sidecars but with istio-injection configured.
@@ -1712,7 +1720,7 @@ alerts:
         - Defragment the etcd database by running the following command:
 
           ```bash
-          kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+          d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
             --cacert /etc/kubernetes/pki/etcd/ca.crt \
             --cert /etc/kubernetes/pki/etcd/ca.crt \
             --key /etc/kubernetes/pki/etcd/ca.key \
@@ -1760,7 +1768,7 @@ alerts:
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
 
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
+        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
 
         ```yaml
         - level: Metadata
@@ -1773,7 +1781,7 @@ alerts:
         Example of applying an additional audit policy:
 
         ```bash
-        kubectl apply -f - <<EOF
+        d8 k apply -f - <<EOF
         apiVersion: v1
         kind: Secret
         metadata:
@@ -1817,19 +1825,19 @@ alerts:
         1. Check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
 
            ```shell
-           kubectl -n d8-log-shipper get daemonsets --selector=app=log-shipper
+           d8 k -n d8-log-shipper get daemonsets --selector=app=log-shipper
            ```
 
         1. Check the state of the `d8-log-shipper/log-shipper-agent` pods:
 
            ```shell
-           kubectl -n d8-log-shipper get pods --selector=app=log-shipper-agent
+           d8 k -n d8-log-shipper get pods --selector=app=log-shipper-agent
            ```
 
         1. If you know where the DaemonSet should be scheduled, run the following command to identify the problematic nodes:
 
            ```shell
-           kubectl -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           d8 k -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
            ```
       summary: |
         The log-shipper-agent pods can't be scheduled in the cluster.
@@ -1843,7 +1851,7 @@ alerts:
       description: |-
         Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
 
-        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
+        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
       summary: |
         Authorization parameters required for the ClusterLogDestination resource.
       severity: "9"
@@ -1861,7 +1869,7 @@ alerts:
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
         ```
       summary: |
         The log-shipper-agent pods can't collect logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
@@ -1880,7 +1888,7 @@ alerts:
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
         ```
       summary: |
         The log-shipper-agent pods can't send logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
@@ -1897,7 +1905,7 @@ alerts:
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
+        d8 k -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
         ```
       summary: |
         The log-shipper-agent pods are dropping logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
@@ -2003,7 +2011,7 @@ alerts:
         Check the logs for details:
 
         ```bash
-        kubectl -n d8-metallb logs daemonset/speaker -c speaker
+        d8 k -n d8-metallb logs daemonset/speaker -c speaker
         ```
       summary: |
         MetalLB BGP session is down.
@@ -2020,7 +2028,7 @@ alerts:
         To find the cause of the issue, review the controller logs:
 
         ```bash
-        kubectl -n d8-metallb logs deploy/controller -c controller
+        d8 k -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
         The MetalLB configuration hasn't been loaded.
@@ -2037,7 +2045,7 @@ alerts:
         To find the cause of the issue, review the controller logs:
 
         ```bash
-        kubectl -n d8-metallb logs deploy/controller -c controller
+        d8 k -n d8-metallb logs deploy/controller -c controller
         ```
       summary: |
         MetalLB is running on a stale configuration.
@@ -2086,6 +2094,39 @@ alerts:
         The metallb ModuleConfig settings are outdated.
       severity: "5"
       markupFormat: markdown
+    - name: D8ModuleOutdatedByMajorVersion
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To check the module releases status, run the following command:
+
+        ```bash
+        kubectl get mr -l module={{ $labels.moduleName }}
+        ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
+
+        To approve the module major release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```{{ end }}
+      summary: |
+        Module {{ $labels.moduleName }} is running {{ $labels.majorReleaseDepth }} major versions behind.
+      severity: "9"
+      markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
@@ -2098,8 +2139,8 @@ alerts:
         To modify `quota-backend-bytes`, set the `controlPlaneManager.etcd.maxDbSize` parameter. Before setting a new value, check the current database usage on every control plane node by running:
 
         ```
-        for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
-          kubectl -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
+        for pod in $(d8 k get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+          d8 k -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
             --cacert /etc/kubernetes/pki/etcd/ca.crt \
             --cert /etc/kubernetes/pki/etcd/ca.crt \
             --key /etc/kubernetes/pki/etcd/ca.key \
@@ -2144,19 +2185,19 @@ alerts:
         - Current Terraform version:
 
           ```shell
-          kubectl -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
+          d8 k -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
           ```
 
         - Version in the Terraform state:
 
           ```shell
-          kubectl -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
+          d8 k -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
           ```
 
         - Check for destructive changes:
 
           ```shell
-          kubectl exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
+          d8 k exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
           ```
 
         To resolve the issue and migrate to OpenTofu manually, follow these steps:
@@ -2185,7 +2226,7 @@ alerts:
         2. In the cluster, remove the `commander-agent` module using the following command:
 
            ```shell
-           kubectl delete mc commander-agent
+           d8 k delete mc commander-agent
            ```
 
         3. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run the following command to resolve all destructive changes in the cluster:
@@ -2214,19 +2255,19 @@ alerts:
         1. Check events associated with `kruise-controller-manager` in the `d8-ingress-nginx` namespace. Look for issues related to node failures or memory shortages (OOM events):
 
            ```bash
-           kubectl -n d8-ingress-nginx get events | grep kruise-controller-manager
+           d8 k -n d8-ingress-nginx get events | grep kruise-controller-manager
            ```
 
         2. Analyze the controller's pod descriptions to identify restarted containers and possible causes. Pay attention to exit codes and other details:
 
            ```bash
-           kubectl -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager
+           d8 k -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager
            ```
 
         3. In case the `kruise` container has restarted, get a list of relevant container logs to identify any meaningful errors:
 
            ```bash
-           kubectl -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise
+           d8 k -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise
            ```
       summary: |
         Too many Kruise controller restarts detected.
@@ -2254,7 +2295,7 @@ alerts:
 
         1. Get a list of affected nodes by running the following Prometheus query:
 
-           ```promql
+           ```prometheus
            kube_node_info{os_image=~"Ubuntu 18.04.*|Debian GNU/Linux 10.*|CentOS Linux 7.*"}
            ```
 
@@ -2324,13 +2365,13 @@ alerts:
         - Check the expected configuration checksum for the NodeGroup:
 
           ```shell
-          kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
+          d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
           ```
 
         - Check the current configuration checksum on the Node:
 
           ```shell
-          kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
+          d8 k get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
           ```
 
         - View Bashible logs on the Node:
@@ -2348,9 +2389,9 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/modules/node-manager/) module.
 
-        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
+        To resolve this issue, follow the [instructions](https://deckhouse.io/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -2385,6 +2426,43 @@ alerts:
         node-local-dns success cache is being frequently evicted.
       severity: "6"
       markupFormat: markdown
+    - name: D8NodeLocalDNSForwardMaxConcurrentRejects
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        More than 20 queries were rejected within the last 5 minutes on node `{{$labels.node}}`
+        because the max concurrent query limit was reached.
+      summary: |
+        The forward plugin is rejecting DNS queries due to max concurrency limit.
+      severity: "5"
+      markupFormat: default
+    - name: D8NodeLocalDNSKubeforwardRequestLatencyP95High
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/kubeforward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
+        exceeded 300 milliseconds over the last 5 minutes.
+        This may indicate slow upstreams, network issues, or DNS overload on this node.
+      summary: |
+        High DNS request latency in kubeforward (p95 &gt; 300ms).
+      severity: "4"
+      markupFormat: default
+    - name: D8NodeLocalDNSUpstreamHealthcheckFailed
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
+        As a result, all upstreams were considered unhealthy.
+      summary: |
+        Too many upstream health check failures in forward plugin.
+      severity: "5"
+      markupFormat: default
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -2423,10 +2501,10 @@ alerts:
         To list all services labeled with `prometheus-custom-target`, run the following command:
 
         ```bash
-        kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target
+        d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Services with the prometheus-custom-target label are being used for metric collection.
       severity: "9"
@@ -2444,7 +2522,7 @@ alerts:
         To list all services labeled with `prometheus-target`, run the following command:
 
         ```bash
-        kubectl get service --all-namespaces --show-labels | grep prometheus-target
+        d8 k get service --all-namespaces --show-labels | grep prometheus-target
         ```
       summary: |
         Services with the prometheus-target label are being used for metric collection.
@@ -2525,13 +2603,13 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```
       summary: |
         The prometheus-operator Pod is NOT Ready.
@@ -2552,13 +2630,13 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```
       summary: |
         The prometheus-operator Pod is NOT Running.
@@ -2577,7 +2655,7 @@ alerts:
         To resolve the issue, analyze the Deployment details:
 
         ```shell
-        kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+        d8 k -n d8-operator-prometheus describe deployment prometheus-operator
         ```
       summary: |
         Prometheus-operator target is missing in Prometheus.
@@ -2600,13 +2678,13 @@ alerts:
         1. Analyze the Deployment details:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
 
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```
       summary: |
         Prometheus is unable to scrape prometheus-operator metrics.
@@ -2622,35 +2700,10 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
-      markupFormat: markdown
-    - name: D8RuntimeAuditEngineNotScheduledInCluster
-      sourceFile: ee/modules/650-runtime-audit-engine/monitoring/prometheus-rules/runtime-audit-engine.yaml
-      moduleUrl: 650-runtime-audit-engine
-      module: runtime-audit-engine
-      edition: ee
-      description: |
-        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
-
-        Troubleshooting steps:
-
-        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
-
-           ```shell
-           kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
-           ```
-
-        2. Get a list of nodes where Pods are not in the Ready state:
-
-           ```shell
-           kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-           ```
-      summary: |
-        Runtime-audit-engine Pods cannot be scheduled.
-      severity: "4"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -2680,7 +2733,7 @@ alerts:
         To investigate the cause, check the PersistentVolumeClaim phase:
 
         ```shell
-        kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
+        d8 k -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
         ```
 
         If your cluster doesn't have a disk provisioning system,
@@ -3038,13 +3091,13 @@ alerts:
         - Check the DaemonSet status:
 
           ```shell
-          kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
+          d8 k -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
           ```
 
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
+          d8 k -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
       summary: |
         One or more upmeter-agent Pods are NOT Running.
@@ -3065,13 +3118,13 @@ alerts:
         1. Delete the PVC and restart the `upmeter` Pod:
 
            ```shell
-           kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+           d8 k -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
            ```
 
         1. Check the status of the created PVC:
 
            ```shell
-           kubectl -n d8-upmeter get pvc
+           d8 k -n d8-upmeter get pvc
            ```
       summary: |
         Upmeter disk usage exceeds 80%.
@@ -3098,7 +3151,7 @@ alerts:
         1. Check the `upmeter-agent` logs:
 
            ```shell
-           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
+           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
            ```
 
         2. Ensure the control plane is operating normally.
@@ -3106,7 +3159,7 @@ alerts:
         3. Delete stale ConfigMaps manually:
 
            ```shell
-           kubectl -n d8-upmeter delete cm -l heritage=upmeter
+           d8 k -n d8-upmeter delete cm -l heritage=upmeter
            ```
       summary: |
         Garbage ConfigMaps from the basic probe are not being cleaned up.
@@ -3133,7 +3186,7 @@ alerts:
         1. Check the `upmeter-agent` logs:
 
            ```shell
-           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
            ```
 
         2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
@@ -3141,7 +3194,7 @@ alerts:
         3. Delete stale Deployments manually:
 
            ```shell
-           kubectl -n d8-upmeter delete deployment -l heritage=upmeter
+           d8 k -n d8-upmeter delete deployment -l heritage=upmeter
            ```
       summary: |
         Garbage Deployments from the controller-manager probe are not being cleaned up.
@@ -3152,7 +3205,7 @@ alerts:
       moduleUrl: 500-upmeter
       module: upmeter
       edition: ce
-      description: "The average number of probe-created namespaces per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up namespaces created by the `control-plane/namespace` probe.  \nThere should not be more of these namespaces than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale namespaces left from older `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"namespace\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale namespaces manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete ns -l heritage=upmeter\n   ```\n"
+      description: "The average number of probe-created namespaces per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up namespaces created by the `control-plane/namespace` probe.  \nThere should not be more of these namespaces than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale namespaces left from older `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"namespace\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale namespaces manually:\n\n   ```shell\n   d8 k -n d8-upmeter delete ns -l heritage=upmeter\n   ```\n"
       summary: |
         Garbage namespaces from the namespace probe are not being cleaned up.
       severity: "9"
@@ -3162,7 +3215,7 @@ alerts:
       moduleUrl: 500-upmeter
       module: upmeter
       edition: ce
-      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   kubectl -n d8-upmeter delete pods -l upmeter-probe=scheduler\n   ```\n"
+      description: "The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.\n\n`upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  \nThere should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.\n\nThis may indicate:\n\n- A problem with the `kube-apiserver`.\n- Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.\n\nTroubleshooting steps:\n\n1. Check `upmeter-agent` logs:\n\n   ```shell\n   d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group==\"control-plane\" and .probe == \"scheduler\") | [.time, .level, .msg] | @tsv'\n   ```\n\n2. Ensure the control plane is operating normally.\n\n3. Delete stale Pods manually:\n\n   ```shell\n   d8 k -n d8-upmeter delete pods -l upmeter-probe=scheduler\n   ```\n"
       summary: |
         Garbage Pods from the scheduler probe are not being cleaned up.
       severity: "9"
@@ -3189,7 +3242,7 @@ alerts:
         1. Check the `upmeter-agent` logs:
 
            ```shell
-           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
            ```
 
         2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
@@ -3197,7 +3250,7 @@ alerts:
         3. Delete stale Pods manually:
 
            ```shell
-           kubectl -n d8-upmeter delete pods -l upmeter-probe=controller-manager
+           d8 k -n d8-upmeter delete pods -l upmeter-probe=controller-manager
            ```
       summary: |
         Garbage Pods from the controller-manager probe are not being cleaned up.
@@ -3224,7 +3277,7 @@ alerts:
         1. Check `upmeter-agent` logs:
 
            ```shell
-           kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
+           d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
            ```
 
         2. Check that the control plane and `cert-manager` are operating normally.
@@ -3232,8 +3285,8 @@ alerts:
         3. Delete stale certificates and Secrets manually:
 
            ```shell
-           kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
-           kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
+           d8 k -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
+           d8 k -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- d8 k -n d8-upmeter delete secret
            ```
       summary: |
         Garbage Secrets from the cert-manager probe are not being cleaned up.
@@ -3263,7 +3316,7 @@ alerts:
         To investigate the cause, check the logs:
 
         ```shell
-        kubectl -n d8-upmeter logs -f upmeter-0 upmeter
+        d8 k -n d8-upmeter logs -f upmeter-0 upmeter
         ```
       summary: |
         Upmeter server is restarting too frequently.
@@ -3282,13 +3335,13 @@ alerts:
         - Check the StatefulSet status:
 
           ```shell
-          kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status
+          d8 k -n d8-upmeter get statefulset upmeter -o json | jq .status
           ```
 
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
+          d8 k -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
       summary: |
         One or more Upmeter server Pods are NOT Running.
@@ -3314,7 +3367,7 @@ alerts:
         To list all the PVs, run the following command:
 
         ```shell
-        kubectl get pv | grep disk-smoke-mini
+        d8 k get pv | grep disk-smoke-mini
         ```
       summary: |
         Unnecessary smoke-mini PersistentVolumes detected in the cluster.
@@ -3335,7 +3388,7 @@ alerts:
         To view all `UpmeterHookProbe` objects, run the following command:
 
         ```shell
-        kubectl get upmeterhookprobes.deckhouse.io
+        d8 k get upmeterhookprobes.deckhouse.io
         ```
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
@@ -3495,9 +3548,9 @@ alerts:
         Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
 
         ```bash
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
         ```
 
         and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
@@ -3519,7 +3572,7 @@ alerts:
         - There is a network issue preventing access to the registry.
 
         Please check:
-        1. ModuleSource configurations: `kubectl get modulesources`.
+        1. ModuleSource configurations: `d8 k get modulesources`.
         2. Registry accessibility and credentials.
         3. Module availability in the configured registries.
 
@@ -3527,14 +3580,14 @@ alerts:
 
         ```bash
         # Check ModuleSource status
-        kubectl get modulesources
+        d8 k get modulesources
 
         # Check available modules in all sources
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
 
         # Check Deckhouse logs for more details
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
       summary: |
         Migrated module {{ $labels.module_name }} not found in registry.
@@ -3604,13 +3657,13 @@ alerts:
         To check the details, run the following command:
 
         ```bash
-        kubectl describe DeckhouseRelease {{ $labels.name }}
+        d8 k describe DeckhouseRelease {{ $labels.name }}
         ```
 
         To approve the disruptive update, run the following command:
 
         ```bash
-        kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
+        d8 k annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
         ```
       summary: |
         Deckhouse release disruption approval required.
@@ -3627,7 +3680,7 @@ alerts:
         To check the details, run the following command:
 
         ```bash
-        kubectl describe DeckhouseRelease {{ $labels.name }}
+        d8 k describe DeckhouseRelease {{ $labels.name }}
         ```
       summary: |
         Deckhouse release requirements haven't been met.
@@ -3644,7 +3697,7 @@ alerts:
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
@@ -3661,7 +3714,7 @@ alerts:
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
@@ -3678,7 +3731,7 @@ alerts:
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
       summary: |
         A new Deckhouse release is awaiting manual approval.
@@ -3695,7 +3748,7 @@ alerts:
         To check the notification webhook address, run the following command:
 
         ```bash
-        kubectl get mc deckhouse -o yaml
+        d8 k get mc deckhouse -o yaml
         ```
       summary: |
         Deckhouse release notification webhook hasn't been sent.
@@ -3905,26 +3958,10 @@ alerts:
         Possible options to resolve the issue:
 
         * Build the kernel with [BTF type information](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
-        * [Disable ebpf_exporter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
+        * [Disable ebpf_exporter](https://deckhouse.io/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
       summary: |
         The BTF module required for ebpf_exporter is missing from the kernel.
       severity: "8"
-      markupFormat: markdown
-    - name: ExtendedMonitoringDeprecatatedAnnotation
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/deprecated-annotation.yaml
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the deprecated annotation `extended-monitoring.flant.com/enabled` is used in the cluster.
-
-        Steps to resolve:
-
-        1. Check the `d8_deprecated_legacy_annotation` metric in Prometheus for a list of all detected usages.
-        1. Migrate to the `extended-monitoring.deckhouse.io/enabled` label.
-      summary: |
-        Deprecated annotation is used in the cluster.
-      severity: "4"
       markupFormat: markdown
     - name: ExtendedMonitoringTargetDown
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/self.yaml
@@ -3940,20 +3977,20 @@ alerts:
         * CPU overloads and container throttling.
         * `500` errors on Ingress.
         * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
-        * [Other alerts](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/) associated with this exporter.
+        * [Other alerts](https://deckhouse.io/modules/extended-monitoring/) associated with this exporter.
 
         To resolve this issue, investigate its possible causes:
 
         1. Print detailed information about the `extended-monitoring-exporter` deployment:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy extended-monitoring-exporter
+           d8 k -n d8-monitoring describe deploy extended-monitoring-exporter
            ```
 
         2. Print detailed information about the pods associated with the `extended-monitoring-exporter`:
 
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter
+           d8 k -n d8-monitoring describe pod -l app=extended-monitoring-exporter
            ```
       summary: |
         Extended monitoring is unavailable.
@@ -4003,6 +4040,23 @@ alerts:
         File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
+    - name: GeoIPDownloadErrorDetected
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The controller `{{ $labels.controller }}` failed to download the GeoIP database.
+
+        **Reason:** `{{ $labels.reason }}`
+
+        **Type:** `{{ $labels.type }}`
+
+        If this issue persists, investigate network connectivity or database availability.
+      summary: |
+        GeoIP DB download error in controller {{ $labels.controller }}.
+      severity: "4"
+      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -4013,7 +4067,7 @@ alerts:
 
         To list all deprecated alert rules, use the following expression:
 
-        ```promql
+        ```prometheus
         sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
         ```
 
@@ -4032,7 +4086,7 @@ alerts:
 
         To list all deprecated panel intervals, use the following expression:
 
-        ```promql
+        ```prometheus
         sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
         ```
 
@@ -4051,7 +4105,7 @@ alerts:
 
         To list all potentially outdated plugins, use the following expression:
 
-        ```promql
+        ```prometheus
         sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
         ```
 
@@ -4071,7 +4125,7 @@ alerts:
       description: |
         To list all affected resources, run the following Prometheus query:
 
-        ```promql
+        ```prometheus
         max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1
         ```
 
@@ -4090,7 +4144,7 @@ alerts:
       description: |
         To list all affected resources, run the following Prometheus query:
 
-        ```promql
+        ```prometheus
         max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2
         ```
 
@@ -4299,7 +4353,7 @@ alerts:
       description: |
         The etcd cluster has too few members, increasing the risk of failure if another member becomes unavailable.
         To resolve this issue, check the status of etcd Pods:
-        ```bash kubectl -n kube-system get pod -l component=etcd ```
+        ```bash d8 k -n kube-system get pod -l component=etcd ```
       summary: |
         Insufficient members in the etcd cluster.
       severity: "4"
@@ -4311,7 +4365,7 @@ alerts:
       edition: ce
       description: |
         To resolve this issue, check the status of the etcd Pods:
-        ```bash kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }} ```
+        ```bash d8 k -n kube-system get pod -l component=etcd | grep {{ $labels.node }} ```
       summary: |
         The etcd cluster member running on node {{ $labels.node }} has lost the leader.
       severity: "4"
@@ -4326,13 +4380,13 @@ alerts:
         1. Check the status of the etcd Pods:
 
            ```bash
-           kubectl -n kube-system get pod -l component=etcd
+           d8 k -n kube-system get pod -l component=etcd
            ```
 
         1. Review Prometheus logs:
 
            ```bash
-           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
            ```
       summary: |
         There is no etcd target in Prometheus.
@@ -4348,13 +4402,13 @@ alerts:
         1. Check the status of the etcd Pods:
 
            ```bash
-           kubectl -n kube-system get pod -l component=etcd
+           d8 k -n kube-system get pod -l component=etcd
            ```
 
         1. Review Prometheus logs:
 
            ```bash
-           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
            ```
       summary: |
         Prometheus is unable to scrape etcd metrics.
@@ -4591,7 +4645,7 @@ alerts:
         To resolve the issue, review the container logs:
 
         ```bash
-        kubectl -n kube-system logs {{$labels.pod}}
+        d8 k -n kube-system logs {{$labels.pod}}
         ```
       summary: |
         Critical errors found in CoreDNS.
@@ -4610,19 +4664,19 @@ alerts:
         1. Check the DaemonSet's status:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}
+           d8 k -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}
            ```
 
         2. Analyze the DaemonSet's description:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}
+           d8 k -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}
            ```
 
         3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match `Current Number of Nodes Scheduled`, check the DaemonSet's `updateStrategy`:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'
+           d8 k -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'
            ```
 
            If `updateStrategy` is set to `OnDelete`, the DaemonSet is updated only when pods are deleted.
@@ -4647,7 +4701,7 @@ alerts:
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
         No available replicas remaining in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
@@ -4673,7 +4727,7 @@ alerts:
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
         The number of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} exceeds the threshold.
@@ -4792,13 +4846,13 @@ alerts:
         1. Check the `kube-state-metrics` pods:
 
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=kube-state-metrics
+           d8 k -n d8-monitoring describe pod -l app=kube-state-metrics
            ```
 
         2. Check the deployment logs:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy kube-state-metrics
+           d8 k -n d8-monitoring describe deploy kube-state-metrics
            ```
       summary: |
         Kube-state-metrics isn't working in the cluster.
@@ -4864,7 +4918,7 @@ alerts:
         To list affected services, run the following command:
 
         ```bash
-        kubectl get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
+        d8 k get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
         ```
 
         Steps to troubleshoot:
@@ -4915,7 +4969,7 @@ alerts:
         1. Delete it using the following command:
 
            ```bash
-           kubectl delete mc deckhouse-web
+           d8 k delete mc deckhouse-web
            ```
       summary: |
         Deprecated deckhouse-web ModuleConfig detected.
@@ -4945,17 +4999,28 @@ alerts:
         To specify the update policy in the module configuration, run the following command:
 
         ```bash
-        kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
 
         After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
 
         ```bash
-        kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
       summary: |
         Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
+      markupFormat: markdown
+    - name: ModuleIsDeprecated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
+      summary: |
+        Module {{ $labels.module }} is deprecated.
+      severity: "9"
       markupFormat: markdown
     - name: ModuleIsInMaintenanceMode
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -4968,7 +5033,7 @@ alerts:
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
 
         ```bash
-        kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
       summary: |
         Module {{ $labels.moduleName }} is running in maintenance mode.
@@ -4985,7 +5050,7 @@ alerts:
         To check the requirements, run the following command:
 
         ```bash
-        kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
+        d8 k  get mr {{ $labels.name }} -o json | jq .spec.requirements
         ```
       summary: |
         A new release for module {{ $labels.moduleName }} has been blocked due to unmet requirements.
@@ -5003,7 +5068,7 @@ alerts:
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
         Module {{ $labels.moduleName }} is {{ $labels.versionLag }} or more minor versions behind the latest available release.
@@ -5021,7 +5086,7 @@ alerts:
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
         Module {{ $labels.moduleName }} is 2 minor versions behind the latest available release.
@@ -5039,7 +5104,7 @@ alerts:
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
         Module {{ $labels.moduleName }} is 1 minor version behind the latest available release.
@@ -5056,7 +5121,7 @@ alerts:
         To approve the module release, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
       summary: |
         A new release for module {{ $labels.moduleName }} is awaiting manual approval.
@@ -5075,13 +5140,13 @@ alerts:
         1. Migrate the NAT instance. To get `providerClusterConfiguration.withNATInstance`, run the following command:
 
            ```bash
-           kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+           d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
            ```
 
            - If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in `providerClusterConfiguration`, remove them using the following command:
 
              ```bash
-             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+             d8 p edit provider-cluster-configuration
              ```
 
            - If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in `providerClusterConfiguration`, change them to the appropriate values.
@@ -5091,7 +5156,7 @@ alerts:
              To change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress`, run the following command:
 
              ```bash
-             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+             d8 p edit provider-cluster-configuration
              ```
 
         1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine. You may have to change the container registry address to do that. After that, perform the converge.
@@ -5099,8 +5164,8 @@ alerts:
            - Get the appropriate edition and version of Deckhouse:
 
              ```bash
-             DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
-             DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
+             DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
+             DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
              echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
              ```
 
@@ -5121,13 +5186,13 @@ alerts:
            - Get the route table name:
 
              ```bash
-             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
              ```
 
            - Get the NAT instance name:
 
              ```bash
-             kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
              ```
 
            - Get the NAT instance internal IP address:
@@ -5158,13 +5223,13 @@ alerts:
         1. Check the controller logs:
 
            ```bash
-           kubectl -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller
+           d8 k -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller
            ```
 
         2. Find the most recently created Ingress in the cluster:
 
            ```bash
-           kubectl get ingress --all-namespaces --sort-by="metadata.creationTimestamp"
+           d8 k get ingress --all-namespaces --sort-by="metadata.creationTimestamp"
            ```
 
         3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
@@ -5185,13 +5250,13 @@ alerts:
         1. Check the DaemonSet's status:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}
+           d8 k -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}
            ```
 
         2. Analyze the DaemonSet's description:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}
+           d8 k -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}
            ```
 
         3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
@@ -5211,13 +5276,13 @@ alerts:
         List of unavailable pods:
 
         ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
 
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
         No available replicas remaining in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
@@ -5236,13 +5301,13 @@ alerts:
         List of unavailable pods:
 
         ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
 
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
         Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
@@ -5261,6 +5326,20 @@ alerts:
         Too many NGINX Ingress restarts detected.
       severity: "4"
       markupFormat: markdown
+    - name: NginxIngressProfilingIsEnabled
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        This may increase memory consumption, slow down request processing, and the process may run as root.
+        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
+        To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+      summary: |
+        Warning: Profiling mode is enabled in the NGINX Ingress Controller &quot;{{ $labels.controller_name }}&quot;.
+      severity: "4"
+      markupFormat: markdown
     - name: NginxIngressProtobufExporterHasErrors
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
@@ -5272,7 +5351,7 @@ alerts:
         To resolve the issue, check the Ingress controller's logs:
 
         ```bash
-        kubectl -n d8-ingress-nginx logs $(kubectl -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
+        d8 k -n d8-ingress-nginx logs $(d8 k -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
         ```
       summary: |
         The Ingress NGINX sidecar container with protobuf_exporter has {{ $labels.type }} errors.
@@ -5289,7 +5368,7 @@ alerts:
         To verify the certificate, run the following command:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
         ```
 
         The site at `https://{{ $labels.host }}` is not accessible.
@@ -5308,7 +5387,7 @@ alerts:
         To verify the certificate, run the following command:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
+        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
         ```
       summary: |
         Certificate is expiring soon.
@@ -5323,9 +5402,14 @@ alerts:
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+        To find which `IngressNginxController` resources have the annotation, use the following command:
+        ```shell
+        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
+        ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
-      severity: "3"
+      severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
@@ -5495,7 +5579,7 @@ alerts:
         1. Identify the nodes that need to be migrated by running the following command:
 
            ```bash
-           kubectl get node -l "topology.kubernetes.io/zone=ru-central1-c"
+           d8 k get node -l "topology.kubernetes.io/zone=ru-central1-c"
            ```
 
         2. Migrate your nodes, disks, and load balancers to one of the supported zones: `ru-central1-a`, `ru-central1-b`, or `ru-central1-d`. Refer to the [Yandex migration guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) for detailed instructions.
@@ -5676,7 +5760,7 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, received initial approval, and started the update.  \nHowever, it encountered a stage that may cause downtime and requires manual disruption approval, because the NodeGroup is configured with `disruptions.approvalMode: Manual`.\n\nTo resolve the issue, ensure the Node is ready for unsafe updates (drained) and grant disruption approval by annotating the Node with `update.node.deckhouse.io/disruption-approved=`.\n\n**Caution**:\n\n- Nodes in manual mode aren't drained automatically.\n- Do not drain master nodes.\n\n1. To drain the Node and grant the update approval, run the following command:\n\n   ```shell\n   kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&\n     kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=\n   ```\n\n2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:\n\n   ```shell\n   while kubectl get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has(\"update.node.deckhouse.io/approved\")' > /dev/null; do sleep 1; done\n   kubectl uncordon {{ $labels.node }}\n   ```\n\nIf the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.\nConsider temporarily switching to automatic disruption approval (`disruptions.approvalMode: Automatic`).\n"
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, received initial approval, and started the update.  \nHowever, it encountered a stage that may cause downtime and requires manual disruption approval, because the NodeGroup is configured with `disruptions.approvalMode: Manual`.\n\nTo resolve the issue, ensure the Node is ready for unsafe updates (drained) and grant disruption approval by annotating the Node with `update.node.deckhouse.io/disruption-approved=`.\n\n**Caution**:\n\n- Nodes in manual mode aren't drained automatically.\n- Do not drain master nodes.\n\n1. To drain the Node and grant the update approval, run the following command:\n\n   ```shell\n   d8 k drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&\n     d8 k annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=\n   ```\n\n2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:\n\n   ```shell\n   while d8 k get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has(\"update.node.deckhouse.io/approved\")' > /dev/null; do sleep 1; done\n   d8 k uncordon {{ $labels.node }}\n   ```\n\nIf the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.\nConsider temporarily switching to automatic disruption approval (`disruptions.approvalMode: Automatic`).\n"
       summary: |
         Node {{ $labels.node }} requires disruption approval to proceed with the update.
       severity: "8"
@@ -5692,7 +5776,7 @@ alerts:
         To get more details, run the following:
 
         ```shell
-        kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
+        d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
         ```
 
         Error message: {{ $labels.message }}
@@ -5705,7 +5789,7 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, started the update, and reached a step that could cause downtime.  \nIt is currently stuck in the draining process while waiting for automatic disruption approval.\n\nTo get more details, run the following:\n\n```shell\nkubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'\n```\n"
+      description: "Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` has detected a new update, requested and received approval, started the update, and reached a step that could cause downtime.  \nIt is currently stuck in the draining process while waiting for automatic disruption approval.\n\nTo get more details, run the following:\n\n```shell\nd8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'\n```\n"
       summary: |
         Node {{ $labels.node }} is stuck in draining.
       severity: "6"
@@ -5745,13 +5829,13 @@ alerts:
         1. Find the `node-exporter` Pod running on the affected node:
 
            ```bash
-           kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
+           d8 k -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
            ```
 
         2. Describe the `node-exporter` Pod:
 
            ```bash
-           kubectl -n d8-monitoring describe pod <POD_NAME>
+           d8 k -n d8-monitoring describe pod <POD_NAME>
            ```
 
         3. Verify that the kubelet is running on node `{{ $labels.node }}`.
@@ -5788,9 +5872,9 @@ alerts:
         To resolve the time synchronization issues:
 
         - Fix network errors:
-          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
           - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
       summary: |
         Clock on the node {{$labels.node}} is drifting.
       severity: "5"
@@ -5808,13 +5892,13 @@ alerts:
         - To cordon the node:
 
           ```bash
-          kubectl cordon {{ $labels.node }}
+          d8 k cordon {{ $labels.node }}
           ```
 
         - To drain the node (if draining has been running for more than 20 minutes):
 
           ```bash
-          kubectl drain {{ $labels.node }}
+          d8 k drain {{ $labels.node }}
           ```
 
         The was likely caused by the scheduled maintenance of that node.
@@ -5833,20 +5917,20 @@ alerts:
         1. Check if the chrony pod is running on the node by executing the following command:
 
            ```bash
-           kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
+           d8 k -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
            ```
 
         2. Verify the chrony daemon's status by executing the following command:
 
            ```bash
-           kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
+           d8 k -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
            ```
 
         3. Resolve the time synchronization issues:
            - Fix network errors:
-             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
              - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
       summary: |
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
@@ -5862,11 +5946,11 @@ alerts:
         Check the certificate information and make sure it actually expires:
 
         ```shell
-        kubectl -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        d8 k -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
 
         Renew or delete the expired certificate.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
       summary: |
         OpenVPN client certificate expired for {{ $labels.client }}
       severity: "4"
@@ -5880,12 +5964,12 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
         View certificate details to display the exact expiration date:
 
         ```shell
-        kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
         OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
@@ -5900,12 +5984,12 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
         View certificate details to display the exact expiration date:
 
         ```shell
-        kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
         ```
       summary: |
         OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
@@ -5916,7 +6000,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "OpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
+      description: |-
+        OpenVPN CA certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+
+        The hook should rotate CA and server certificates before expiry.
       summary: |
         OpenVPN CA certificate has expired.
       severity: "4"
@@ -5926,7 +6021,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "\nOpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
+      description: |-
+        OpenVPN CA certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+
+        The hook should rotate CA and server certificates before expiry.
       summary: |
         OpenVPN CA certificate will expire tomorrow
       severity: "4"
@@ -5936,7 +6042,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```               "
+      description: |-
+        The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+        Renew the CA certificate if necessary.
+        After renewing the certificate, **you will need to reissue all client and server certificates**.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN CA certificate expires in less than 7 days.
       severity: "5"
@@ -5946,7 +6063,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```                              "
+      description: |-
+        The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+        Renew the CA certificate if necessary.
+        After renewing the certificate, **you will need to reissue all client and server certificates**.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN CA certificate expires in less than 30 days.
       severity: "5"
@@ -5956,7 +6084,17 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN server certificate has expired.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires.\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
+      description: |-
+        The OpenVPN server certificate has expired.
+
+        OpenVPN server certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+        Check the certificate information and make sure it actually expires.
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN server certificate has expired.
       severity: "4"
@@ -5966,7 +6104,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN server certificate is set to expire in less than 1 day.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires:\n\n```shell\nkubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
+      description: |-
+        The OpenVPN server certificate is set to expire in less than 1 day.
+
+        OpenVPN server certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+        Check the certificate information and make sure it actually expires:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN server certificate will expire tomorrow.
       severity: "4"
@@ -5983,7 +6132,7 @@ alerts:
 
         - Run the following Prometheus query:
 
-          ```promql
+          ```prometheus
           count by (violating_namespace, violating_kind, violating_name, violation_msg) (
             d8_gatekeeper_exporter_constraint_violations{
               violation_enforcement="deny",
@@ -6085,7 +6234,7 @@ alerts:
 
         - Run the following Prometheus query:
 
-          ```promql
+          ```prometheus
           count by (violating_namespace, violating_name, violation_msg) (
             d8_gatekeeper_exporter_constraint_violations{
               violation_enforcement="deny",
@@ -6116,13 +6265,13 @@ alerts:
         1. Identify all pods with this state:
 
            ```bash
-           kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'
+           d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'
            ```
 
         2. Identify all affected nodes:
 
            ```bash
-           kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c
+           d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c
            ```
 
         3. Restart kubelet on each node:
@@ -6133,6 +6282,20 @@ alerts:
       summary: |
         Incorrect state of Pod {{ $labels.namespace }}/{{ $labels.pod }} running on node {{ $labels.node }}.
       severity: undefined
+      markupFormat: markdown
+    - name: PrometheusDirectAccessDeprecated
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |
+        The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
+        This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
+
+        To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
+      summary: |
+        Deprecated Ingress with direct Prometheus access found in cluster.
+      severity: "6"
       markupFormat: markdown
     - name: PrometheusDiskUsage
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-storage.yaml
@@ -6145,10 +6308,10 @@ alerts:
         To check the current usage, run the following command:
 
         ```shell
-        kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
+        d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
 
-        Consider expanding disk size following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size).
+        Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).
       summary: |
         Prometheus disk usage exceeds 95%.
       severity: "4"
@@ -6195,7 +6358,7 @@ alerts:
       description: |-
         Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
 
-        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md) instead.
+        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/implemented/202212-scrape-config.md) instead.
       summary: |
         AdditionalScrapeConfigs from Secrets will be deprecated soon.
       severity: "8"
@@ -6242,7 +6405,7 @@ alerts:
 
         - Run the following Prometheus query:
 
-          ```promql
+          ```prometheus
           count by (violating_namespace, violating_kind, violating_name, violation_msg) (
             d8_gatekeeper_exporter_constraint_violations{
               violation_enforcement="deny",
@@ -6517,7 +6680,6 @@ modules-having-alerts:
     - operator-prometheus
     - prometheus
     - registry
-    - runtime-audit-engine
     - secret-copier
     - terraform-manager
     - upmeter

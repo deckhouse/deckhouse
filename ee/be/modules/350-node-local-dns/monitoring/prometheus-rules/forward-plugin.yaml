@@ -1,0 +1,25 @@
+- name: d8.node-local-dns.forward
+  rules:
+    - alert: D8NodeLocalDNSUpstreamHealthcheckFailed
+      expr: increase(coredns_forward_healthcheck_broken_total{job="node-local-dns"}[5m]) > 10
+      for: 2m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        summary: "Too many upstream health check failures in `forward` plugin."
+        description: |
+          The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
+          As a result, all upstreams were considered unhealthy.
+
+    - alert: D8NodeLocalDNSForwardMaxConcurrentRejects
+      expr: increase(coredns_forward_max_concurrent_rejects_total{job="node-local-dns"}[5m]) > 20
+      for: 1m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        summary: "The `forward` plugin is rejecting DNS queries due to max concurrency limit."
+        description: |
+          More than 20 queries were rejected within the last 5 minutes on node `{{$labels.node}}`
+          because the max concurrent query limit was reached.

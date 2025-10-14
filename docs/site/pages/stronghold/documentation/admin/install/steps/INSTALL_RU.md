@@ -11,21 +11,22 @@ lang: ru
 ### Файл конфигурации установки
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
-- [InitConfiguration](../../../../reference/cr/initconfiguration.html) — начальные параметры [конфигурации платформы](../#конфигурация-deckhouse). С этой конфигурацией платформа запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate) и другие.
+- [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — начальные параметры конфигурации платформы. С этой конфигурацией платформа запустится после установки.
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
+  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), используемый [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass), параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и другие.
+
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
 
   > Использовать ресурс ClusterConfiguration в конфигурации необходимо, только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- ModuleConfig — набор ресурсов, содержащих параметры конфигурации [встроенных модулей платформы](../).
+- ModuleConfig — набор ресурсов, содержащих параметры конфигурации встроенных модулей платформы.
 
-Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей, использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [nodeSelector](/products/stronghold/reference/mc.html#prometheus-parameters-nodeselector).
+  Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей, использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector).
 
 {% offtopic title="Пример файла конфигурации установки (config.yaml)..." %}
 
@@ -80,74 +81,57 @@ YAML-файл ресурсов установки содержит манифе�
 
 Файл необязателен, но может быть полезен для дополнительной настройки кластера после установки платформы. С его помощью можно создать Ingress-контроллер, дополнительные группы узлов, ресурсы конфигурации, настройки прав и пользователей и т.д.
 
-**Внимание!** В файле ресурсов установки нельзя использовать [ModuleConfig](../../../../reference/cr/moduleconfig.html) для **встроенных** модулей. Используйте для них [файл конфигурации](#файл-конфигурации-установки).
+**Внимание!** В файле ресурсов установки нельзя использовать ModuleConfig для **встроенных** модулей. Используйте для них [файл конфигурации](#файл-конфигурации-установки).
 
 {% offtopic title="Пример файла ресурсов (resources.yaml)..." %}
 
 ```yaml
-# Создать группу из двух рабочих узлов
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  disruptions:
-    approvalMode: Manual
-  nodeType: Static
-  staticInstances:
-    count: 2
----
-# SSH-ключ, для доступа к рабочим узлам для автоматизированной установки
-apiVersion: deckhouse.io/v1alpha2
-kind: SSHCredentials
-metadata:
-  name: worker-key
-spec:
-  # Имя технического ползователя, созданного на этапе подготовки узлов платформы
-  user: install-user
-  # Закрытый ключ, созданный на этапе подготовки узлов платформы, кодированный в base64 формате
-  privateSSHKey: ZXhhbXBsZQo=
----
-apiVersion: deckhouse.io/v1alpha2
-kind: StaticInstance
-metadata:
-  name: worker-01
-  labels:
-    role: worker
-spec:
-  # Адрес первого рабочего узла
-  address: 192.88.99.10
-  credentialsRef:
-    kind: SSHCredentials
-    name: worker-key
----
-apiVersion: deckhouse.io/v1alpha2
-kind: StaticInstance
-metadata:
-  name: worker-01
-  labels:
-    role: worker
-spec:
-  # Адрес второго рабочего узла
-  address: 192.88.99.20
-  credentialsRef:
-    kind: SSHCredentials
-    name: worker-key
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: virtualization
+  name: global
 spec:
+  version: 1
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          clusterIssuerName: selfsigned
+        mode: CertManager
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
   enabled: true
   settings:
-    dvcr:
-      storage:
-        persistentVolumeClaim:
-          size: 10G
-        type: PersistentVolumeClaim
-    virtualMachineCIDRs:
-      - 192.168.10.0/24
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: secrets-store-integration
+spec:
+  enabled: true
   version: 1
 ---
 apiVersion: deckhouse.io/v1
@@ -185,13 +169,23 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
 ```
 
 {% endofftopic %}
 
 ## Установка платформы
 
-> При установке платформы, отличной от [редакции](../../../about/editions.html) Community Edition, из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
+> При установке платформы, отличной от [редакции Community Edition](../../../about/editions.html), из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
 >
 > ```shell
 > docker login -u license-token registry.deckhouse.io
@@ -204,12 +198,13 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 где:
+
 - `<REVISION>` — [редакция](../../../about/editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как:
   - SSH-ключи доступа;
   - файл конфигурации;
   - файл ресурсов и т. д.
-- `<RELEASE_CHANNEL>` — [канал обновлений](../../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../../about/release-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *Early Access*;
@@ -296,65 +291,45 @@ moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
 
-## Установка систем хранения
+## Установка модуля cilium
 
-Для корректного функционирования платформы необходимо установить одну или несколько систем хранения. Они предоставляют возможности:
+Для получения информации по установке и настройке модуля обратитесь к документации [модуля `cni-cilium`](/modules/cni-cilium/).
 
-- постоянного хранения системных данных платформы (метрики, логи, образы);
-- хранения дисков и образов виртуальных машин.
+## Установка модуля Strognhold
 
-Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [Настройка хранилищ](../../platform-management/storage/supported-storage.html).
-
-## Установка модуля Сilium
-
-Для получения информации по установке и настройке модуля, обратитесь к разделу [Настройки Cilium](/products/stronghold/reference/mc.html#cni-cilium).
-
-## Установка модуля виртуализации
-
-Для обеспечения возможностей виртуализации (создание виртуальных машин, образов, дисков и так далее), необходимо включить
-модуль виртуализации. Чтобы сделать это, создайте ресурс ModuleConfig `virtualization`, предварительно указав, какой
-StorageClass следует использовать:
+Для обеспечения возможностей хранилища секретов, необходимо включить модуль Stronghold.
+Чтобы сделать это, создайте ресурс ModuleConfig `stronghold`.
 
 ```shell
-# Укажите имя своего ресурса StorageClass.
-STORAGE_CLASS_NAME=replicated-storage-class
 
-# Создайте ModuleConfig `virtualization`.
+# Создайте ModuleConfig `stronghold`.
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
- name: virtualization
+  name: stronghold
 spec:
- enabled: false
- settings:
-   dvcr:
-     storage:
-       type: PersistentVolumeClaim
-       persistentVolumeClaim:
-         size: 50G
-         storageClassName: ${STORAGE_CLASS_NAME}
-   virtualMachineCIDRs:
-     - 10.66.10.0/24
-     - 10.66.20.0/24
-     - 10.66.30.0/24
- version: 1
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
 EOF
 ```
 
-После создания ресурса ModuleConfig `virtualization` дождитесь выполнения заданий из очереди:
+После создания ресурса ModuleConfig `stronghold` дождитесь выполнения заданий из очереди:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 p queue main
 
 # Queue 'main': length 0, status: 'waiting for task 1m1s'
 ```
 
-Если все выполнено правильно, после включения модуля появится Namespase `d8-virtualization`:
+Если все выполнено правильно, после включения модуля появится Namespase `d8-stronghold`:
 
 ```bash
-d8 k get ns d8-virtualization
+d8 k get ns d8-stronghold
 
 # NAME                STATUS   AGE
-# d8-virtualization   Active   1h
+# d8-stronghold   Active   1h
 ```

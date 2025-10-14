@@ -20,5 +20,5 @@
         To list all services labeled with `prometheus-target`, run the following command:
         
         ```bash
-        kubectl get service --all-namespaces --show-labels | grep prometheus-target
+        d8 k get service --all-namespaces --show-labels | grep prometheus-target
         ```

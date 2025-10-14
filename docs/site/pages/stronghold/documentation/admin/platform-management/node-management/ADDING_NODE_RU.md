@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый Custom Resource [NodeGroup](../../../../reference/cr/nodegroup.html) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый Custom Resource [NodeGroup](/modules/node-manager/cr.html#nodegroup). Параметр [`nodeType`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -38,7 +38,7 @@ lang: ru
 
 ### Добавление статического узла с помощью Cluster API Provider Static
 
-Пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
+Пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](node-group.html#настройка-узла-через-caps):
 
 **Выделите сервер с установленной ОС**, настройте сетевую связанность и т. п., при необходимости установите специфические пакеты ОС и добавьте точки монтирования, которые потребуются на узле.
 
@@ -161,7 +161,7 @@ worker   Static   1       1       1                                             
 
 Для примера разберём задачу распределения 3 статических узлов по 2 NodeGroup: 1 узел добавим в группу worker и 2 узла в группу front.
 
-1. Подготовьте необходимые ресурсы (3 сервера) и создайте для них ресурсы SSHCredentials, аналогично п.1 и п.2 [предыдущего примера](#с-помощью-cluster-api-provider-static).
+1. Подготовьте необходимые ресурсы (3 сервера) и создайте для них ресурсы SSHCredentials, аналогично п.1 и п.2 [предыдущего примера](#добавление-статического-узла-с-помощью-cluster-api-provider-static).
 
 1. Создайте в кластере два ресурса NodeGroup:
 
@@ -282,7 +282,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
-> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
+> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-вытеснить-drbd-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
 
 1. Удалите узел из кластера Kubernetes:
 
@@ -340,15 +340,15 @@ StaticInstance, находящийся в состоянии `Pending`, можн
 
 ### Как мигрировать статический узел, настроенный вручную, под управление CAPS?
 
-Необходимо выполнить [очистку узла](#как-вручную-очистить-статический-узел), затем [добавить](#как-добавить-статический-узел-в-кластер-cluster-api-provider-static) узел под управление CAPS.
+Необходимо выполнить [очистку узла](#как-зачистить-узел-для-последующего-ввода-в-кластер), затем [добавить](#добавление-статического-узла-с-помощью-cluster-api-provider-static) узел под управление CAPS.
 
 ### Как изменить NodeGroup у статического узла?
 
 <span id='как-изменить-nodegroup-у-статического-узла'><span>
 
-Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+Если узел находится под управлением [CAPS](node-group.html#настройка-узла-через-caps), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
 
-Если статический узел был добавлен в кластер [вручную](./#работа-со-статическими-узлами), то для перемещения его в другую NodeGroup необходимо изменить лейбл с именем группы и удалить лейбл с ролью:
+Если статический узел был добавлен в кластер [вручную](#добавление-статического-узла-вручную), то для перемещения его в другую NodeGroup необходимо изменить лейбл с именем группы и удалить лейбл с ролью:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -389,4 +389,4 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Например, перезагрузка узла требуется в Astra Linux при изменении параметра sysctl: `kernel.yama.ptrace_scope` (результат работы команды `astra-ptrace-lock enable/disable`).
 
-Режим перезагрузки определяется полем disruptions в секции параметров [disruptions](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.
+Режим перезагрузки определяется полем disruptions в секции параметров [`disruptions`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.

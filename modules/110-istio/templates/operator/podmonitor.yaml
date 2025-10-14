@@ -18,14 +18,18 @@ spec:
     matchNames:
     - d8-{{ $.Chart.Name }}
   podMetricsEndpoints:
+    {{- if eq $version "1.25" }}
+  - port: https-metrics
+    scheme: https
+    bearerTokenSecret:
+      key: token
+      name: prometheus-token
+    tlsConfig: # TODO https://github.com/deckhouse/deckhouse/issues/1487
+      insecureSkipVerify: true
+    {{- else}}
   - port: http-metrics
     scheme: http
-    #scheme: https # TODO https://github.com/deckhouse/deckhouse/issues/1487
-    #bearerTokenSecret:
-    #  name: "prometheus-token"
-    #  key: "token"
-    #tlsConfig:
-    #  insecureSkipVerify: true
+    {{- end }}
     relabelings:
     - targetLabel: job
       replacement: istio-operator

@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -190,7 +190,7 @@ cloudProviderYandex:
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  metricName,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 		})
@@ -212,7 +212,7 @@ cloudProviderYandex:
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  metricName,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 		})
@@ -234,13 +234,13 @@ cloudProviderYandex:
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  metricName,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   metricName,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{"name": "d8-nat-instance", "zone": "ru-central1-c"},
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Group:  metricName,
 			}))
 

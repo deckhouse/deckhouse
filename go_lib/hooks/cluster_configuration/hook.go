@@ -17,6 +17,7 @@ limitations under the License.
 package cluster_configuration
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,9 +30,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
+type Config struct {
+	PreparatorProvider config.MetaConfigPreparatorProvider
+}
+
+func NewConfig(preparatorProvider config.MetaConfigPreparatorProvider) Config {
+	return Config{
+		PreparatorProvider: preparatorProvider,
+	}
+}
+
 type Handler func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error
 
-func RegisterHook(handler Handler) bool {
+func RegisterHook(handler Handler, c Config) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 		Kubernetes: []go_hook.KubernetesConfig{
@@ -50,8 +61,8 @@ func RegisterHook(handler Handler) bool {
 				FilterFunc: applyProviderClusterConfigurationSecretFilter,
 			},
 		},
-	}, func(input *go_hook.HookInput) error {
-		return clusterConfiguration(input, handler)
+	}, func(ctx context.Context, input *go_hook.HookInput) error {
+		return clusterConfiguration(ctx, input, handler, c)
 	})
 }
 
@@ -65,14 +76,14 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler Handler, hookConfig Config) error {
 	var (
 		metaCfg               *config.MetaConfig
 		providerDiscoveryData *unstructured.Unstructured
 		secretFound           bool
 	)
 
-	snaps := input.NewSnapshots.Get("provider_cluster_configuration")
+	snaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(snaps) > 0 {
 		secretFound = true
 		var secret = new(v1.Secret)
@@ -82,7 +93,7 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
 		}
 
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
-			m, err := config.ParseConfigFromData(string(clusterConfigurationYAML))
+			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 			}

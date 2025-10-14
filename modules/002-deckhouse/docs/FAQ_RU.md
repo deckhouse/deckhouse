@@ -7,7 +7,7 @@ title: "Модуль deckhouse: FAQ"
 1. Зайдите внутрь пода Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
    ```
 
 1. Выберите, на каком узле запустить kube-bench.
@@ -15,19 +15,19 @@ title: "Модуль deckhouse: FAQ"
    * Запуск на случайном узле:
 
      ```shell
-     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl create -f -
+     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k create -f -
      ```
 
    * Запуск на конкретном узле, например на control-plane:
 
      ```shell
-     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
+     curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | d8 k create -f -
      ```
 
 1. Проверьте результат выполнения:
 
    ```shell
-   kubectl logs job.batch/kube-bench
+   d8 k logs job.batch/kube-bench
    ```
 
 {% alert level="warning" %}
@@ -41,9 +41,7 @@ title: "Модуль deckhouse: FAQ"
 1. Выполните следующую команду, чтобы собрать необходимые данные:
 
    ```sh
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
-     -- deckhouse-controller collect-debug-info \
-     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
@@ -154,7 +152,7 @@ title: "Модуль deckhouse: FAQ"
 Выполните следующую команду:
 
 ```shell
-kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
+d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
 Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
@@ -164,7 +162,7 @@ kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 Выполните следующую команду:
 
 ```shell
-kubectl debug node/mynode -it --image=ubuntu
+d8 k debug node/mynode -it --image=ubuntu
 ```
 
 Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).

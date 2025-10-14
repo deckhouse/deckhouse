@@ -53,8 +53,8 @@ function prepare_environment() {
   root_wd="/deckhouse/testing/cloud_layouts/"
   export cwd="/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/"
 
-  export AWS_ACCESS_KEY_ID="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")"
-  export AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")"
+  export AWS_ACCESS_KEY_ID="$LAYOUT_AWS_ACCESS_KEY"
+  export AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY"
   export KUBERNETES_VERSION="$KUBERNETES_VERSION"
   export CRI="$CRI"
   export LAYOUT="$LAYOUT"
@@ -85,10 +85,16 @@ function prepare_environment() {
 
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
-    # Then switch deploment to DECKHOUSE_IMAGE_TAG.
-    export DEV_BRANCH="${INITIAL_IMAGE_TAG}"
-    export SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
-    echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
+    # Then update cluster to DECKHOUSE_IMAGE_TAG.
+    # NOTE: currently only release branches are supported for updating.
+    if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
+      DEV_BRANCH="${INITIAL_IMAGE_TAG}"
+      SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
+      update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+      echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
+    else
+      echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
+    fi
   fi
 
   # shellcheck disable=SC2016
@@ -177,6 +183,42 @@ EOF
   cat $kubectl_config_file
 }
 
+# update_release_channel changes the release-channel image to given tag
+function update_release_channel() {
+  crane copy "$1/release-channel:$2" "$1/release-channel:beta"
+}
+
+# trigger_deckhouse_update sets the release channel for the cluster, prompting it to upgrade to the next version.
+function trigger_deckhouse_update() {
+  >&2 echo "Setting Deckhouse release channel to Beta."
+  if ! kubectl patch mc/deckhouse -p '{"spec": {"settings": {"releaseChannel": "Beta"}}}' --type=merge ; then
+    >&2 echo "Cannot change Deckhouse release channel."
+    return 1
+  fi
+}
+
+# wait_update_ready checks if the cluster is ready for updating.
+function wait_update_ready() {
+  expectedVersion="$1"
+  testRunAttempts=20
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check DeckhouseRelease..."
+    deployedVersion="$(kubectl get deckhouserelease -o 'jsonpath={.items[?(@.status.phase=="Deployed")].spec.version}')"
+    if [[ "${expectedVersion}" == "${deployedVersion}" ]]; then
+      return 0
+    elif [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  write_deckhouse_logs
+
+  return 1
+}
+
 # wait_deckhouse_ready check if deckhouse Pod become ready.
 function wait_deckhouse_ready() {
   testRunAttempts=60
@@ -186,7 +228,7 @@ function wait_deckhouse_ready() {
       return 0
     fi
 
-    if [[ $i < $testRunAttempts ]]; then
+    if [[ $i -lt $testRunAttempts ]]; then
       >&2 echo -n "  Deckhouse Pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
       sleep 30
     else
@@ -308,6 +350,16 @@ function main() {
 
     wait_cluster_ready)
       wait_cluster_ready || exitCode=$?
+    ;;
+
+    trigger_deckhouse_update)
+      if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+        echo "Starting Deckhouse update..."
+        trigger_deckhouse_update || return $?
+        wait_update_ready "${SWITCH_TO_IMAGE_TAG}"|| return $?
+        wait_deckhouse_ready || return $?
+        wait_cluster_ready || return $?
+      fi
     ;;
 
     cleanup)

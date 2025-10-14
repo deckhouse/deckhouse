@@ -26,6 +26,7 @@ type Config struct {
 	BasicAuth   map[string]string `json:"basicAuth"`
 	BearerToken string            `json:"bearerToken"`
 	TLSConfig   TLSConfig         `json:"tlsConfig"`
+	Headers     map[string]string `json:"headers"`
 }
 
 // TLSConfig is the spec in the RemoteWrite CRD

@@ -76,6 +76,15 @@ variable "region" {
   type    = string
 }
 
+variable "additional_disks" {
+  type = list(object({
+    name   = string
+    hash   = string
+    md5_id = string
+  }))
+  default = []
+}
+
 variable "root_disk" {
   type = object({
     name = string
@@ -160,6 +169,7 @@ locals {
     },
     {
       "rootDiskHash" = var.root_disk.hash,
+      "additionalDisksHash" = local.additional_disks_hashes
     },
   )
 

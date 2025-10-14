@@ -84,6 +84,25 @@ spec:
                       x-doc-examples: ["latest"]
                       items:
                         type: string
+                    disallowedTolerations:
+                      type: array
+                      description: |
+                        Deny Pods that have tolerations from the ones in the specified list.
+
+                        See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                            enum: [Exists, Equal]
+                          value:
+                            type: string
+                          effect:
+                            type: string
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
                     requiredLabels:
                       type: object
                       description: |

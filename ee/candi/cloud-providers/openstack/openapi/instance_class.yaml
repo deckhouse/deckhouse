@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module).
+            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
@@ -80,7 +80,7 @@ spec:
                 rootDiskSize:
                   description: |
                     The size of a root disk (in gigabytes).
-                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/modules/cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
                   x-doc-examples: [20]
                   type: integer
                   x-doc-required: false

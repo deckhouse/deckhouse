@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -70,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, operatorRevisionsToInstallDiscovery)
 
-func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
+func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookInput) error {
 	var operatorVersionsToInstall = make([]string, 0)
 	var unsupportedRevisions = make([]string, 0)
 
@@ -81,7 +82,7 @@ func operatorRevisionsToInstallDiscovery(input *go_hook.HookInput) error {
 		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
 	}
 
-	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.NewSnapshots.Get("istiooperators")) {
+	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.Snapshots.Get("istiooperators")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'istiooperators' snapshot: %w", err)
 		}

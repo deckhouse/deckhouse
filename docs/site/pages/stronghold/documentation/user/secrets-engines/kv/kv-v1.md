@@ -73,7 +73,7 @@ allows for writing keys with arbitrary values.
    Success! Data deleted (if it existed) at: kv/my-secret
    ```
 
-You can also use [Stronghold's password policy](/docs/concepts/password-policies) feature to generate arbitrary values.
+You can also use Stronghold's password policy feature to generate arbitrary values.
 
 1. Write a password policy:
 
@@ -139,9 +139,3 @@ Key                 Value
 my-value            s3cr3t
 ttl                 30m
 ```
-
-## API
-
-The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api-docs/secret/kv/kv-v1) for more
-details.

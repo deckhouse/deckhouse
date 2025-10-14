@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,7 +28,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, enableExtendedMonitoring)
 
-func enableExtendedMonitoring(input *go_hook.HookInput) error {
+func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error {
 	d8SystemPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{

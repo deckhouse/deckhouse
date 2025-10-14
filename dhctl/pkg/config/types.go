@@ -22,8 +22,6 @@ import (
 const (
 	CloudClusterType  = "Cloud"
 	StaticClusterType = "Static"
-	ProviderVCD       = "VCD"
-	ProviderYandex    = "Yandex"
 )
 
 type SchemaIndex struct {
@@ -56,21 +54,6 @@ type ClusterConfigCloudSpec struct {
 
 type MasterNodeGroupSpec struct {
 	Replicas int `json:"replicas"`
-}
-
-type YandexMasterNodeGroupSpec struct {
-	Replicas      int `json:"replicas"`
-	InstanceClass struct {
-		ExternalIPAddresses []string `json:"externalIPAddresses"`
-	} `json:"instanceClass"`
-}
-
-type YandexNodeGroupSpec struct {
-	Name          string `json:"name"`
-	Replicas      int    `json:"replicas"`
-	InstanceClass struct {
-		ExternalIPAddresses []string `json:"externalIPAddresses"`
-	} `json:"instanceClass"`
 }
 
 type TerraNodeGroupSpec struct {
@@ -122,11 +105,6 @@ type RegistryProxyModeProperties struct {
 
 type RegistryDetachedModeProperties struct {
 	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
-}
-
-type VCDProviderConfig struct {
-	Server   string `json:"server"`
-	Insecure bool   `json:"insecure,omitempty"`
 }
 
 type VCDProviderInfo struct {

@@ -8,3 +8,8 @@ variable "organization" {
 variable "vapp_name" {
   type = string
 }
+
+variable "metadata" {
+  type    = map(string)
+  default = {}
+}

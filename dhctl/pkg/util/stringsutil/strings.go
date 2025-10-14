@@ -60,3 +60,11 @@ func Sha256Encode(input string) string {
 
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
+
+func Sha256EncodeBytes(input []byte) string {
+	hasher := sha256.New()
+
+	hasher.Write(input)
+
+	return fmt.Sprintf("%x", hasher.Sum(nil))
+}

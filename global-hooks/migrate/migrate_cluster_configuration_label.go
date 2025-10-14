@@ -22,6 +22,7 @@ TODO: remove after deckhouse 1.68
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -53,8 +54,8 @@ func filterName(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetLabels(), nil
 }
 
-func handleClusterConfigurationLabel(input *go_hook.HookInput) error {
-	snap, err := sdkobjectpatch.UnmarshalToStruct[map[string]string](input.NewSnapshots, "clusterConfiguration")
+func handleClusterConfigurationLabel(_ context.Context, input *go_hook.HookInput) error {
+	snap, err := sdkobjectpatch.UnmarshalToStruct[map[string]string](input.Snapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}

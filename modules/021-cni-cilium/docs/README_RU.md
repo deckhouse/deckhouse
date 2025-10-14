@@ -11,7 +11,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 1. Поды `HostPort` связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
 1. Для обеспечения стабильной работы `cni-cilium` на узлах кластера отключите Elastic Agent или ограничьте доступ этого агента к серверу управления Elastic. В состав Elastic Agent входит компонент Elastic Endpoint, который использует технологию Extended Berkeley Packet Filter (eBPF) на узлах кластера и может удалять критически важные eBPF-программы, необходимые для корректной работы `cni-cilium`. Детальная информация и обсуждение проблемы доступны в публикациях проектов [Cilium](https://github.com/cilium/cilium/issues/28433) и [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202).
 1. Требования к ядру:
-   * ядро Linux версии не ниже `5.8` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../istio/), [openvpn](../openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/).
+   * ядро Linux версии не ниже `5.8` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../istio/), [openvpn](../openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/modules/{% else %}..{% endif %}/node-local-dns/).
 1. Совместимость с ОС:
    * Ubuntu:
      * несовместим с версией 18.04;
@@ -31,7 +31,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
   * если в `Service` указан `externalTrafficPolicy: Local`, то трафик будет передаваться и балансироваться только в те целевые поды, которые запущены на том же узле, на который этот трафик пришел. Если целевой под не запущен на этом узле, то трафик будет отброшен.
   * если в `Service` указан `externalTrafficPolicy: Cluster`, то трафик будет передаваться и балансироваться во все целевые поды в кластере. При этом, если целевые поды находятся на других узлах, то при передаче трафика на них будет произведен SNAT (IP-адрес источника будет заменен на InternalIP узла).
 
-   ![Схема потоков данных SNAT](../../images/cni-cilium/snat.png)
+   ![Схема потоков данных SNAT](images/snat.png)
 
 * `DSR` - (Direct Server Return) — метод, при котором весь входящий трафик проходит через балансировщик нагрузки, а весь исходящий трафик обходит его. Такой метод используется вместо `SNAT`. Часто ответы имеют много больший размер чем запросы и `DSR` позволяет значительно увеличить общую пропускную способность схемы:
   * если в `Service` указан `externalTrafficPolicy: Local`, то поведение абсолютно аналогично `kube-proxy` и `bpfLB` в режиме `SNAT`.
@@ -41,7 +41,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
     * исходящий трафик пойдет прямо с узла, на котором был запущен целевой под;
     * IP-адрес источника будет заменен на внешний IP-адрес узла, на которую изначально пришел входящий запрос.
 
-   ![Схема потоков данных DSR](../../images/cni-cilium/dsr.png)
+   ![Схема потоков данных DSR](images/dsr.png)
 
 {% alert level="warning" %}
 В случае использования режима `DSR` и `Service` с `externalTrafficPolicy: Cluster` требуются дополнительные настройки сетевого окружения.

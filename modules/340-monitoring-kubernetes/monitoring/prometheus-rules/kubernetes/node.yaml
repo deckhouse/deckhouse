@@ -1,7 +1,7 @@
 - name: kubernetes.node
   rules:
   - alert: CPUStealHigh
-    expr: max by (node) (irate(node_cpu_seconds_total{mode="steal"}[30m]) * 100) > 10
+    expr: max by (node) (irate(node_cpu_seconds_total{mode="steal", tier="cluster"}[30m]) * 100) > 10
     for: 30m
     labels:
       severity_level: "4"
@@ -34,19 +34,19 @@
         1. Find the `node-exporter` Pod running on the affected node:
         
            ```bash
-           kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
+           d8 k -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
            ```
 
         2. Describe the `node-exporter` Pod:
         
            ```bash
-           kubectl -n d8-monitoring describe pod <POD_NAME>
+           d8 k -n d8-monitoring describe pod <POD_NAME>
            ```
 
         3. Verify that the kubelet is running on node `{{ $labels.node }}`.
 
   - alert: NodeConntrackTableFull
-    expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 70 )
+    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 70 )
     for: 5m
     labels:
       severity_level: "4"
@@ -65,7 +65,7 @@
         To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
 
   - alert: NodeConntrackTableFull
-    expr: max by (node) ( node_nf_conntrack_entries / node_nf_conntrack_entries_limit * 100 > 95 )
+    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 95 )
     for: 1m
     labels:
       severity_level: "3"
@@ -101,22 +101,22 @@
         - To cordon the node:
         
           ```bash
-          kubectl cordon {{ $labels.node }}
+          d8 k cordon {{ $labels.node }}
           ```
 
         - To drain the node (if draining has been running for more than 20 minutes):
         
           ```bash
-          kubectl drain {{ $labels.node }}
+          d8 k drain {{ $labels.node }}
           ```
 
         The was likely caused by the scheduled maintenance of that node.
 
   - alert: NodeSUnreclaimBytesUsageHigh
     expr: |
-      max by (node) (predict_linear(node_memory_SUnreclaim_bytes[2h], 43200) > node_memory_MemTotal_bytes * 0.25)
+      max by (node) (predict_linear(node_memory_SUnreclaim_bytes{tier="cluster"}[2h], 43200) > node_memory_MemTotal_bytes{tier="cluster"} * 0.25)
       and
-      max by (node) (node_memory_SUnreclaim_bytes > node_memory_MemTotal_bytes * 0.1)
+      max by (node) (node_memory_SUnreclaim_bytes{tier="cluster"} > node_memory_MemTotal_bytes{tier="cluster"} * 0.1)
     for: 20m
     labels:
       severity_level: "4"
@@ -144,7 +144,7 @@
         For further details, refer to the [issue](https://github.com/deckhouse/deckhouse/issues/2152).
 
   - alert: NodeTCPMemoryExhaust
-    expr: max by (node) (node_sockstat_TCP_mem_bytes > node_sysctl_net_ipv4_tcp_mem{index="2"} * 4096 * 0.90)
+    expr: max by (node) (node_sockstat_TCP_mem_bytes{tier="cluster"} > node_sysctl_net_ipv4_tcp_mem{index="2", tier="cluster"} * 4096 * 0.90)
     for: 1m
     labels:
       severity_level: "6"

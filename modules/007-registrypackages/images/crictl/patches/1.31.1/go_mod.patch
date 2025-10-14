@@ -1,18 +1,24 @@
 diff --git a/go.mod b/go.mod
-index eccb4b8f..a3912616 100644
+index eccb4b8f..98ee3080 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,8 +1,6 @@
+@@ -1,12 +1,12 @@
  module sigs.k8s.io/cri-tools
  
 -go 1.22.0
--
++go 1.23.0
+ 
 -toolchain go1.22.1
-+go 1.24.2
++toolchain go1.24.2
  
  require (
  	github.com/distribution/reference v0.6.0
-@@ -21,10 +19,10 @@ require (
+-	github.com/docker/docker v27.1.1+incompatible
++	github.com/docker/docker v28.0.0+incompatible
+ 	github.com/docker/go-units v0.5.0
+ 	github.com/google/uuid v1.6.0
+ 	github.com/invopop/jsonschema v0.12.0
+@@ -21,10 +21,10 @@ require (
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.28.0
  	go.opentelemetry.io/otel/sdk v1.28.0
  	go.opentelemetry.io/otel/trace v1.28.0
@@ -27,29 +33,44 @@ index eccb4b8f..a3912616 100644
  	google.golang.org/grpc v1.65.0
  	google.golang.org/protobuf v1.34.2
  	gopkg.in/yaml.v3 v3.0.1
-@@ -88,7 +86,7 @@ require (
+@@ -87,8 +87,8 @@ require (
+ 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
  	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
  	golang.org/x/mod v0.20.0 // indirect
- 	golang.org/x/oauth2 v0.21.0 // indirect
+-	golang.org/x/oauth2 v0.21.0 // indirect
 -	golang.org/x/sync v0.8.0 // indirect
++	golang.org/x/oauth2 v0.27.0 // indirect
 +	golang.org/x/sync v0.12.0 // indirect
  	golang.org/x/time v0.3.0 // indirect
  	golang.org/x/tools v0.24.0 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
 diff --git a/go.sum b/go.sum
-index a61b196c..373ecca6 100644
+index a61b196c..12737d5e 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -26,8 +26,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
+ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+ github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5QvfrDyIgxBk=
+ github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
+-github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
+-github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v28.0.0+incompatible h1:Olh0KS820sJ7nPsBKChVhk5pzqcwDR15fumfAd/p9hM=
++github.com/docker/docker v28.0.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
+ github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
+ github.com/emicklei/go-restful/v3 v3.11.0 h1:rAQeMHw1c7zTmncogyy8VvRZwtkmkZ4FxERmMY4rD+g=
 @@ -177,28 +177,28 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
 -golang.org/x/net v0.28.0 h1:a9JDOJc5GMUJ0+UDqmLT86WiEy7iWyIhz8gz8E4e5hE=
 -golang.org/x/net v0.28.0/go.mod h1:yqtgsTWOOnlGLG9GFRrK3++bGOUEkNBoHZc8MEDWPNg=
+-golang.org/x/oauth2 v0.21.0 h1:tsimM75w1tF/uws5rbeHzIWxEqElMehnc+iW793zsZs=
+-golang.org/x/oauth2 v0.21.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
 +golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
 +golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
- golang.org/x/oauth2 v0.21.0 h1:tsimM75w1tF/uws5rbeHzIWxEqElMehnc+iW793zsZs=
- golang.org/x/oauth2 v0.21.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
++golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

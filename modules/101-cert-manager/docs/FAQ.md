@@ -109,14 +109,14 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/user
 - Create a service account and copy its secret reference:
 
   ```shell
-  kubectl create serviceaccount issuer
-  ISSUER_SECRET_REF=$(kubectl get serviceaccount issuer -o json | jq -r ".secrets[].name")
+  d8 k create serviceaccount issuer
+  ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
   ```
 
 - Create an Issuer:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Issuer
   metadata:
@@ -140,7 +140,7 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/user
 - Create a Certificate resource, to get a TLS certificate, which is issued by Vault CA:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Certificate
   metadata:
@@ -170,10 +170,10 @@ Follow the steps below to use a custom or interim CA:
 
 - In the `d8-cert-manager` namespace, create a secret containing certificate file data.
 
-  An example of creating a secret with kubectl:
+  An example of creating a secret with d8 k:
 
   ```shell
-  kubectl create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
+  d8 k create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
   ```
 
   An example of creating a secret from a YAML file (the contents of the certificate files must be Base64-encoded):
@@ -208,7 +208,7 @@ Follow the steps below to use a custom or interim CA:
 
 You can now use the created `ClusterIssuer` to issue certificates for all Deckhouse components or a particular component.
 
-For example, to issue certificates for all Deckhouse components, specify the `ClusterIssuer` name in the [ClusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`kubectl edit mc global`):
+For example, to issue certificates for all Deckhouse components, specify the `ClusterIssuer` name in the [ClusterIssuerName](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`d8 k edit mc global`):
 
   ```yaml
   spec:
@@ -230,7 +230,7 @@ For example, you can create your own `ClusterIssuer` for a [route53](https://aws
 - Create a Secret with credentials:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: v1
   kind: Secret
   type: Opaque
@@ -245,7 +245,7 @@ For example, you can create your own `ClusterIssuer` for a [route53](https://aws
 - Create a simple `ClusterIssuer` with reference to that secret:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: ClusterIssuer
   metadata:
@@ -270,7 +270,7 @@ For example, you can create your own `ClusterIssuer` for a [route53](https://aws
 - Order certificates as usual, using created `ClusterIssuer`:
 
   ```shell
-  kubectl apply -f - <<EOF
+  d8 k apply -f - <<EOF
   apiVersion: cert-manager.io/v1
   kind: Certificate
   metadata:
@@ -346,7 +346,7 @@ spec:
 ## How do I check the certificate status?
 
 ```shell
-# kubectl -n default describe certificate example-com
+d8 k -n default describe certificate example-com
 ...
 Status:
   Acme:
@@ -384,7 +384,7 @@ Events:
 ## How do I get a list of certificates?
 
 ```shell
-# kubectl get certificate --all-namespaces
+d8 k get certificate --all-namespaces
 NAMESPACE          NAME                            AGE
 default            example-com                     13m
 ```

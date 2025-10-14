@@ -73,12 +73,18 @@ func RunDocChangesValidation(info *DiffInfo) (exitCode int) {
 	return exitCode
 }
 
-var possibleDocRootsRe = regexp.MustCompile(`modules/[^/]+/docs/|docs/(site|documentation)/pages`)
+var possibleDocRootsRe = regexp.MustCompile(`modules/[^/]+/docs/|docs/(site|documentation)/pages/`)
+var excludedDocPathsRe = regexp.MustCompile(`docs/site/pages/(stronghold|code|virtualization-platform)`)
 var docsDirAllowedFileRe = regexp.MustCompile(`modules/[^/]+/docs/(CLUSTER_CONFIGURATION|CONFIGURATION|CR|ISTIO-CR|FAQ|README|USAGE|EXAMPLES|ADVANCED_USAGE)(_RU)?.md`)
 var docsDirFileRe = regexp.MustCompile(`/docs/[^/]+.md`)
 
 func checkDocFile(fName string, diffInfo *DiffInfo) (msg Message) {
 	if !possibleDocRootsRe.MatchString(fName) {
+		return NewSkip(fName, "")
+	}
+
+	// Exclude specific paths
+	if excludedDocPathsRe.MatchString(fName) {
 		return NewSkip(fName, "")
 	}
 

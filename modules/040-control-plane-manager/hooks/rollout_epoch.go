@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/binary"
 	"math/rand"
 	"time"
@@ -38,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 const tenDaysInSeconds = 864000
 
-func handleRolloutEpoch(input *go_hook.HookInput) error {
+func handleRolloutEpoch(_ context.Context, input *go_hook.HookInput) error {
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
 	seed := binary.BigEndian.Uint64([]byte(clusterUUID))

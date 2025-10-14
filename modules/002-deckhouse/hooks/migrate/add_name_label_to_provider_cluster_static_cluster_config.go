@@ -17,6 +17,7 @@ limitations under the License.
 package migrate
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -80,9 +81,9 @@ func filterHasNotLabelName(secret *unstructured.Unstructured) (go_hook.FilterRes
 	return false, nil
 }
 
-func addLabelName(input *go_hook.HookInput) error {
+func addLabelName(_ context.Context, input *go_hook.HookInput) error {
 	addLabelFn := func(snapSecretName string) error {
-		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, snapSecretName)
+		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, snapSecretName)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal snapshot %q: %w", snapSecretName, err)
 		}

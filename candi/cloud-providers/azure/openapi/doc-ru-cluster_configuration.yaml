@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -20,10 +20,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [Standard](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/layouts.html#standard).
+          Настройки для схемы размещения [Standard](https://deckhouse.ru/modules/cloud-provider-azure/layouts.html#standard).
         properties:
           natGatewayPublicIpCount:
             description: |
@@ -97,7 +97,7 @@ apiVersions:
               ```
           instanceClass:
             description: |
-              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/modules/cloud-provider-azure/cr.html#azureinstanceclass).
             properties: &instanceClassProperties_ru
               machineSize:
                 description: |
@@ -195,7 +195,7 @@ apiVersions:
                     > Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/modules/cloud-provider-azure/cr.html#azureinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       tags:
@@ -205,7 +205,7 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/environment.html) к API Azure.
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-azure/environment.html) к API Azure.
         properties:
           location:
             description: |

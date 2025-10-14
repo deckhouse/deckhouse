@@ -36,6 +36,7 @@ import (
 const (
 	taskCalculatorServiceName = "task-calculator"
 	maxMinorVersionDiffForLTS = 10
+	deckhouseModuleName       = "" // Empty string indicates Deckhouse release (not a module)
 )
 
 type TaskCalculator struct {
@@ -56,13 +57,12 @@ func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logg
 		releaseChannel: releaseChannel,
 	}
 }
-
-func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+func NewModuleReleaseTaskCalculator(k8sclient client.Client, releaseChannel string, logger *log.Logger) *TaskCalculator {
 	return &TaskCalculator{
 		k8sclient:      k8sclient,
 		listFunc:       listModuleReleases,
 		log:            logger,
-		releaseChannel: "",
+		releaseChannel: releaseChannel,
 	}
 }
 
@@ -74,10 +74,26 @@ const (
 	Process
 )
 
+// String returns the string representation of TaskType
+func (t TaskType) String() string {
+	switch t {
+	case Skip:
+		return "skip"
+	case Await:
+		return "await"
+	case Process:
+		return "process"
+	default:
+		return "unknown"
+	}
+}
+
 type Task struct {
 	TaskType TaskType
 	Message  string
 
+	IsMajor  bool
+	IsFromTo bool
 	IsPatch  bool
 	IsSingle bool
 	IsLatest bool
@@ -91,9 +107,27 @@ type ReleaseInfo struct {
 	Version *semver.Version
 }
 
+// inner structure to save inner logic
+type releaseInfo struct {
+	IndexInReleaseList int
+	Name               string
+	Version            *semver.Version
+}
+
+func (ri *releaseInfo) RemapToReleaseInfo() *ReleaseInfo {
+	if ri == nil {
+		return nil
+	}
+
+	return &ReleaseInfo{
+		Name:    ri.Name,
+		Version: ri.Version,
+	}
+}
+
 // ReleaseQueueDepthDelta represents the difference between deployed and latest releases
 type ReleaseQueueDepthDelta struct {
-	Major int // Major versions delta, not used right now, for future usage
+	Major int // Major versions delta
 	Minor int // Minor versions delta
 	Patch int // Patch versions delta
 }
@@ -137,6 +171,25 @@ func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
 	return 0
 }
 
+// GetMajorReleaseDepth returns the major version difference for monitoring and alerting purposes.
+// This method provides a dedicated metric for tracking major version updates separately from
+// minor and patch updates due to their potentially breaking nature.
+//
+// Major release depth calculation logic:
+//   - If major version differences exist: return the major delta count
+//   - If no major differences exist: return 0 (up to date on major version)
+//
+// Examples:
+//   - Delta{Major: 2, Minor: 3, Patch: 1} → Returns: 2 (2 major versions behind)
+//   - Delta{Major: 1, Minor: 0, Patch: 0} → Returns: 1 (1 major version behind)
+//   - Delta{Major: 0, Minor: 5, Patch: 2} → Returns: 0 (up to date on major version)
+func (d *ReleaseQueueDepthDelta) GetMajorReleaseDepth() int {
+	if d == nil || d.Major <= 0 {
+		return 0
+	}
+	return d.Major
+}
+
 // calculateReleaseQueueDepthDelta computes the version gap between the currently deployed release
 // and the latest available release. This delta is used for monitoring, alerting, and metrics
 // to understand how far behind the deployed version is from the latest available version.
@@ -175,7 +228,7 @@ func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
 //	Latest: 1.67.8
 //	Result: { Major: 0, Minor: 0, Patch: 3 }
 //	Explanation: Same major.minor (1.67), 3 patch versions difference (5→8)
-func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleaseInfo *ReleaseInfo) *ReleaseQueueDepthDelta {
+func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleaseInfo *releaseInfo) *ReleaseQueueDepthDelta {
 	delta := &ReleaseQueueDepthDelta{}
 
 	if deployedReleaseInfo == nil || len(releases) == 0 {
@@ -220,7 +273,9 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	return delta
 }
 
-const ltsReleaseChannel = "lts"
+const (
+	ltsReleaseChannel = "lts"
+)
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
@@ -233,11 +288,79 @@ func isPatchRelease(a, b *semver.Version) bool {
 	return false
 }
 
-// CalculatePendingReleaseTask calculate task with information about current reconcile
+// CalculatePendingReleaseTask determines the appropriate action for a pending release within
+// the context of all available releases. This is the main orchestration function that evaluates
+// release precedence, version constraints, and deployment readiness to produce a task decision.
 //
-// calculating flow:
-// 1) find forced release. if current release has a lower version - skip
-// 2) find deployed release. if current release has a lower version - skip
+// Decision Flow Architecture:
+//  1. Validation: Ensure release is in pending state
+//  2. Force Release Check: Handle administratively forced releases
+//  3. Deployed Release Analysis: Consider currently deployed version
+//  4. Constraint Evaluation: Check for version jumping opportunities
+//  5. Sequential Logic: Apply standard version progression rules
+//  6. Neighbor Analysis: Determine if release should process or wait
+//
+// Task Types Returned:
+//   - Skip: Release should be bypassed (superseded by force/deployed/newer release)
+//   - Await: Release must wait for dependencies (previous releases, constraints)
+//   - Process: Release is ready for deployment
+//
+// Key Features:
+//   - Version Jumping: Supports constraint-based skipping of intermediate releases
+//   - Channel-aware Logic: Different rules for LTS vs regular channels
+//   - Major Version Control: Special handling for 0→1 transitions vs breaking changes
+//   - Queue Depth Calculation: Provides metrics for monitoring and alerting
+//   - Force Release Priority: Administrative overrides take precedence
+//
+// Version Progression Rules:
+//  1. FORCE RELEASE: Always takes precedence, skips any lower versions
+//  2. DEPLOYED VERSION: Cannot deploy older than currently deployed
+//  3. MAJOR VERSION RESTRICTIONS:
+//     - 0→1: Allowed (development to stable transition)
+//     - 1→2+: Blocked (requires manual intervention)
+//  4. MINOR VERSION LIMITS:
+//     - Regular channels: Sequential (+1 minor at a time)
+//     - LTS channels: Up to +10 minor versions allowed
+//  5. PATCH VERSIONS: No restrictions, highest patch wins
+//
+// Constraint-Based Version Jumping:
+//
+//	When update constraints are present, releases can jump to specified endpoints:
+//	- Deployed: 1.67.5, Constraint: {from: "1.67", to: "1.70"}
+//	- Result: Direct jump to 1.70.x (highest patch), skipping 1.68.x, 1.69.x
+//	- Endpoint releases are processed as minor updates (not patches)
+//
+// Examples:
+//
+//	Scenario 1 - Force Release Override:
+//	Input: Pending v1.68.0, Force v1.70.0 exists
+//	Result: Skip (v1.68.0 < v1.70.0)
+//
+//	Scenario 2 - Sequential Minor Update:
+//	Input: Pending v1.68.0, Deployed v1.67.5, No constraints
+//	Result: Process (valid +1 minor progression)
+//
+//	Scenario 3 - Major Version Block:
+//	Input: Pending v2.0.0, Deployed v1.67.5
+//	Result: Await (major version jump requires manual approval)
+//
+//	Scenario 4 - Constraint Jumping:
+//	Input: Pending v1.70.0, Deployed v1.67.5, Constraint: {from: "1.67", to: "1.70"}
+//	Result: Process (constraint allows jumping to v1.70.0)
+//
+//	Scenario 5 - Patch Priority:
+//	Input: Pending v1.67.3, Next v1.67.5 exists
+//	Result: Skip (higher patch available)
+//
+// Queue Depth Calculation:
+//   - Counts releases between current and latest (max 3 for alerting)
+//   - Used for monitoring release lag and alert thresholds
+//   - Includes current release in count (off-by-one correction)
+//
+// Channel-Specific Behavior:
+//   - Regular Channels: Strict +1 minor version progression
+//   - LTS Channels: Allow up to +10 minor version jumps for stability
+//   - All Channels: No restrictions on patch version progression
 func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, release v1alpha1.Release) (*Task, error) {
 	ctx, span := otel.Tracer(taskCalculatorServiceName).Start(ctx, "calculatePendingReleaseTask")
 	defer span.End()
@@ -313,6 +436,33 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
 	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
 	isPatch := true
+	isMajor := false
+
+	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
+	if deployedReleaseInfo != nil {
+		isMajor := release.GetVersion().Major() > deployedReleaseInfo.Version.Major()
+		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
+
+		if endpointIdx >= 0 {
+			logger.Debug("from-to release found", slog.String("constraint_endpoint_version", "v"+releases[endpointIdx].GetVersion().String()))
+		}
+
+		// If current release is the endpoint, process it.
+		// And if current is after endpoint – proceed with normal flow below
+		if releaseIdx == endpointIdx {
+			logger.Debug("processing as endpoint due to update constraints")
+
+			return &Task{
+				TaskType:            Process,
+				IsPatch:             false,
+				IsMajor:             isMajor,
+				IsFromTo:            true,
+				IsLatest:            endpointIdx == len(releases)-1,
+				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+				QueueDepth:          queueDepthDelta,
+			}, nil
+		}
+	}
 
 	// check previous release
 	// only for awaiting purpose
@@ -337,12 +487,12 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				return &Task{
 					TaskType:            Await,
 					Message:             msg,
-					DeployedReleaseInfo: deployedReleaseInfo,
+					DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 					QueueDepth:          queueDepthDelta,
 				}, nil
 			}
 
-			// logic for equal major versions
+			// logic for equal major versions (unless constraints endpoint is ahead)
 			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
 				// here we have only Deployed phase releases in prevRelease
 				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
@@ -360,13 +510,15 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					return &Task{
 						TaskType:            Await,
 						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo,
+						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
 
+				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 				// it must await if deployed release has minor version more than acceptable LTS channel limitation
-				if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+				// For modules, skip this check (allow any minor version jump)
+				if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
 					msg := fmt.Sprintf(
 						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
 						prevRelease.GetVersion().Original(),
@@ -378,7 +530,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					return &Task{
 						TaskType:            Await,
 						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo,
+						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
@@ -397,8 +549,9 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 					return &Task{
 						TaskType:            Await,
+						IsMajor:             isMajor,
 						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo,
+						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
@@ -428,7 +581,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				TaskType:            Process,
 				IsPatch:             isPatch,
 				IsLatest:            isLatestRelease,
-				DeployedReleaseInfo: deployedReleaseInfo,
+				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 				QueueDepth:          queueDepthDelta,
 			}, nil
 		}
@@ -449,7 +602,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		TaskType:            Process,
 		IsLatest:            isLatestRelease,
 		IsPatch:             isPatch,
-		DeployedReleaseInfo: deployedReleaseInfo,
+		DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 		QueueDepth:          queueDepthDelta,
 	}, nil
 }
@@ -458,9 +611,171 @@ func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([
 	return p.listFunc(ctx, p.k8sclient, moduleName)
 }
 
+// findConstraintEndpointIndex locates the best constraint endpoint for version jumping.
+// This function orchestrates the constraint evaluation process by:
+//  1. Scanning all pending releases with update constraints (highest priority first)
+//  2. Delegating constraint validation to getFirstCompliantRelease()
+//  3. Selecting the highest valid endpoint across all constraint sources
+//
+// Search Strategy:
+//   - Examines releases in reverse order (latest first) to prioritize newer constraints
+//   - Only considers pending releases that come after the deployed release
+//   - Aggregates results from multiple constraint sources within the same module
+//
+// Example:
+//
+//	Release A (v1.70.0): constraints [{from: "1.67", to: "1.69"}] → endpoint at index 5
+//	Release B (v1.75.0): constraints [{from: "1.67", to: "1.72"}] → endpoint at index 8
+//	Result: index 8 (highest endpoint wins)
+func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo, logEntry *log.Logger) int {
+	compliantRelease := -1
+
+	// Pick constraints from the highest pending release that has them.
+	// compliant release can not be lower or equal deployed
+	for i := len(releases) - 1; i > deployed.IndexInReleaseList; i-- {
+		r := releases[i]
+
+		if r.GetPhase() != v1alpha1.ModuleReleasePhasePending {
+			continue
+		}
+
+		if r.GetUpdateSpec() == nil || len(r.GetUpdateSpec().Versions) == 0 {
+			continue
+		}
+
+		releaseIndex := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, r.GetVersion(), logEntry)
+		if releaseIndex > compliantRelease {
+			compliantRelease = releaseIndex
+		}
+	}
+
+	return compliantRelease
+}
+
+// getFirstCompliantRelease determines the index of the highest patch release that satisfies
+// update constraints for version jumping. This function is the core logic for finding valid
+// constraint endpoints that allow skipping intermediate releases.
+//
+// The function implements a constraint-based release selection algorithm that:
+// 1. Validates each constraint against the deployed version and target release
+// 2. Ensures deployed version falls within the constraint range [from, to)
+// 3. Finds the highest patch version within the target major.minor specified by "to"
+// 4. Returns the index of the best matching release for constraint-based jumping
+//
+// Constraint Validation Rules:
+//   - Deployed version must be >= constraint.from (inclusive lower bound)
+//   - Deployed version must be < constraint.to (exclusive upper bound)
+//   - Target release (constraintedReleaseVersion) must match constraint.to major.minor
+//   - Only considers releases that come after the deployed release in the sorted list
+//
+// Selection Logic:
+//   - Searches for releases with same major.minor as constraint.to
+//   - Prefers the highest index (latest patch) within the target version
+//   - Updates bestIdx only when finding a higher index than previously found
+//   - Handles multiple constraints by selecting the highest valid endpoint
+//
+// Examples:
+//
+//	Scenario 1 - Single constraint match:
+//	Deployed: 1.67.5 (index 2)
+//	Constraint: {from: "1.67", to: "1.70"}
+//	Releases: [..., 1.70.0 (index 5), 1.70.1 (index 6), 1.70.3 (index 7), ...]
+//	Result: index 7 (highest patch in 1.70.x series)
+//
+//	Scenario 2 - Multiple constraints, highest wins:
+//	Deployed: 1.67.5
+//	Constraints: [{from: "1.67", to: "1.69"}, {from: "1.67", to: "1.72"}]
+//	Releases: [..., 1.69.2 (index 5), 1.72.0 (index 8), ...]
+//	Result: index 8 (1.72.0 is higher than 1.69.2)
+//
+//	Scenario 3 - No valid constraints:
+//	Deployed: 1.75.0
+//	Constraint: {from: "1.67", to: "1.70"}  // deployed > constraint range
+//	Result: -1 (no valid constraint match)
+func (p *TaskCalculator) getFirstCompliantRelease(
+	releases []v1alpha1.Release,
+	constraints []v1alpha1.UpdateConstraint,
+	deployed *releaseInfo,
+	constraintedReleaseVersion *semver.Version,
+	logEntry *log.Logger,
+) int {
+	bestIdx := -1
+
+	// Check each constraint for inclusion of deployed version
+	for _, c := range constraints {
+		logEntry.Debug("constrains found",
+			slog.String("from_ver", c.From),
+			slog.String("to_ver", c.To),
+		)
+
+		toVer, err := semver.NewVersion(c.To)
+		if err != nil {
+			logEntry.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
+
+			continue
+		}
+
+		if constraintedReleaseVersion.Major() != toVer.Major() ||
+			constraintedReleaseVersion.Minor() != toVer.Minor() {
+			logEntry.Debug("skip constraint because major or minor version does not match to constrainted release version",
+				slog.String("from_ver", c.From),
+				slog.String("to_ver", c.To),
+				slog.String("constrainted_release_version", "v"+constraintedReleaseVersion.String()),
+			)
+			continue
+		}
+
+		fromVer, err := semver.NewVersion(c.From)
+		if err != nil {
+			logEntry.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
+
+			continue
+		}
+
+		// if deployed version is lower than "from" constraint
+		if deployed.Version.Compare(fromVer) < 0 {
+			logEntry.Debug("skip from constraint because deployed version is lower", slog.String("from_version", "v"+fromVer.String()))
+
+			continue
+		}
+
+		// if deployed version is greater or equal "to" constraint
+		if deployed.Version.Compare(toVer) >= 0 {
+			logEntry.Debug("skip to constraint because deployed version higher or equal", slog.String("to_version", "v"+toVer.String()))
+
+			continue
+		}
+
+		// starting scan index must be more than deployed index and already calculated compliant index
+		startScanIdx := deployed.IndexInReleaseList
+		if startScanIdx < bestIdx {
+			startScanIdx = bestIdx
+		}
+
+		// Find highest patch within target minor/major
+		for i := startScanIdx; i < len(releases); i++ {
+			rv := releases[i].GetVersion()
+
+			// trying to get first version with the same Major and Minor version as "to" constraint
+			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
+				if bestIdx < i {
+					bestIdx = i
+					logEntry.Debug("found most suitable index for from-to releaseleap",
+						slog.String("suitable_version", "v"+releases[bestIdx].GetVersion().String()),
+						slog.String("from_ver", c.From),
+						slog.String("to_ver", c.To),
+					)
+				}
+			}
+		}
+	}
+
+	return bestIdx
+}
+
 // getFirstReleaseInfoByPhase
 // releases slice must be sorted asc
-func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *ReleaseInfo {
+func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *releaseInfo {
 	idx := slices.IndexFunc(releases, func(a v1alpha1.Release) bool {
 		return a.GetPhase() == phase
 	})
@@ -471,23 +786,25 @@ func getFirstReleaseInfoByPhase(releases []v1alpha1.Release, phase string) *Rele
 
 	filteredDR := releases[idx]
 
-	return &ReleaseInfo{
-		Name:    filteredDR.GetName(),
-		Version: filteredDR.GetVersion(),
+	return &releaseInfo{
+		IndexInReleaseList: idx,
+		Name:               filteredDR.GetName(),
+		Version:            filteredDR.GetVersion(),
 	}
 }
 
 // getLatestForcedReleaseInfo
 // releases slice must be sorted asc
-func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *ReleaseInfo {
-	for _, release := range slices.Backward(releases) {
+func getLatestForcedReleaseInfo(releases []v1alpha1.Release) *releaseInfo {
+	for idx, release := range slices.Backward(releases) {
 		if !release.GetForce() {
 			continue
 		}
 
-		return &ReleaseInfo{
-			Name:    release.GetName(),
-			Version: release.GetVersion(),
+		return &releaseInfo{
+			IndexInReleaseList: idx,
+			Name:               release.GetName(),
+			Version:            release.GetVersion(),
 		}
 	}
 
@@ -512,15 +829,18 @@ func listDeckhouseReleases(ctx context.Context, c client.Client, _ string) ([]v1
 
 func listModuleReleases(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error) {
 	releases := new(v1alpha1.ModuleReleaseList)
-	err := c.List(ctx, releases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName})
-	if err != nil {
+	// Do not rely on label presence; list all and filter by spec.moduleName
+	if err := c.List(ctx, releases); err != nil {
 		return nil, fmt.Errorf("get module releases: %w", err)
 	}
 
 	result := make([]v1alpha1.Release, 0, len(releases.Items))
-
-	for _, release := range releases.Items {
-		result = append(result, &release)
+	for i := range releases.Items {
+		rel := &releases.Items[i]
+		if rel.GetModuleName() != moduleName {
+			continue
+		}
+		result = append(result, rel)
 	}
 
 	return result, nil

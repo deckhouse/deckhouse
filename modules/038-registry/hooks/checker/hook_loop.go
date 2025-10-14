@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -119,14 +120,14 @@ var _ = sdk.RegisterFunc(
 			},
 		},
 	},
-	func(input *go_hook.HookInput) error {
+	func(ctx context.Context, input *go_hook.HookInput) error {
 		var err error
 
 		stateAccessor := helpers.NewValuesAccessor[stateModel](input, valuesStatePath)
 		state := stateAccessor.Get()
 
 		inputs := inputsModel{
-			Params: GetParams(input),
+			Params: GetParams(ctx, input),
 		}
 		inputs.ImagesInfo.Repo = input.Values.Get(registryBaseValuesPath).String()
 		inputs.ImagesInfo.DeckhouseImages, err = helpers.SnapshotToSingle[deckhouseImagesModel](input, deckhouseDeploymentSnapName)
@@ -134,7 +135,7 @@ var _ = sdk.RegisterFunc(
 			return fmt.Errorf("cannot get deckhouse deployment snapshot: %w", err)
 		}
 
-		inputs.ImagesInfo.ModulesImagesDigests, err = getModulesImagesDigests(input)
+		inputs.ImagesInfo.ModulesImagesDigests, err = getModulesImagesDigests(ctx, input)
 		if err != nil {
 			return fmt.Errorf("cannot get modules images: %w", err)
 		}
@@ -149,7 +150,7 @@ var _ = sdk.RegisterFunc(
 	},
 )
 
-func getModulesImagesDigests(input *go_hook.HookInput) (map[string]string, error) {
+func getModulesImagesDigests(_ context.Context, input *go_hook.HookInput) (map[string]string, error) {
 	moduleNames, err := helpers.SnapshotToList[string](input, modulesSnapName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get modules snapshot: %w", err)

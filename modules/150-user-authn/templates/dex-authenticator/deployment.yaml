@@ -9,20 +9,32 @@ memory: 25Mi
 {{- end }}
 
 {{- $context := . }}
-{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $baseName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
+  {{- $truncated := (index $info "truncated") }}
+  {{- $hash := (index $info "hash") }}
+  {{- $secretName := (default (printf "dex-authenticator-%s" $crd.name) (index $info "secretName")) }}
   {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ $crd.name }}-dex-authenticator
+  name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
+  {{- $vpaLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $vpaLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $vpaLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $vpaLabels) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: {{ $crd.name }}-dex-authenticator
+    name: {{ $baseName }}
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -44,9 +56,14 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ $crd.name }}-dex-authenticator
+  name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
+  {{- $pdbLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $pdbLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $pdbLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $pdbLabels) | nindent 2 }}
 spec:
   minAvailable: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}1{{ else }}0{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}{{ end }}
   selector:
@@ -57,9 +74,14 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $crd.name }}-dex-authenticator
+  name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
+  {{- $depLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $depLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $depLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $depLabels) | nindent 2 }}
 spec:
   replicas: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}2{{ else }}1{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}{{ end }}
   revisionHistoryLimit: 2
@@ -105,8 +127,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}
-        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc
+        - {{ $baseName }}.{{ $crd.namespace }}
+        - {{ $baseName }}.{{ $crd.namespace }}.svc
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -141,7 +163,7 @@ spec:
         - --set-authorization-header=true
     {{- end }}
         - --set-xauthrequest
-        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} audience:server:client_id:kubernetes{{- end }}
+        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} federated:id audience:server:client_id:kubernetes{{- end }}
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
@@ -172,12 +194,12 @@ spec:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.name }}
+              name: {{ $secretName }}
               key: client-secret
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.name }}
+              name: {{ $secretName }}
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt

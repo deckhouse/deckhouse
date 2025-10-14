@@ -124,19 +124,19 @@ Features of the configurations listed in the table above:
       <td>Monitoring node</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>System node</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
     </tr>
     <tr>
       <td rowspan="6" style="width: 45%;">
@@ -161,21 +161,21 @@ Features of the configurations listed in the table above:
     </tr>
     <tr>
       <td>Monitoring node</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">6</td>
+      <td style="text-align: center;">12</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>System node</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">12</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">4</td>
+      <td style="text-align: center;">8</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
@@ -184,13 +184,16 @@ Features of the configurations listed in the table above:
       <td>Master node</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;">160</td>
     </tr>
   </tbody>
 </table>
 
-* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements.
+{% alert %}
+* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB.
+* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
+{% endalert %}
 
 ### Single master node cluster
 
@@ -200,7 +203,7 @@ Such clusters lack fault tolerance. We highly advise you against using this kind
 
 In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight workloads.
 
-The [Getting Started guide](../gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32GB of RAM, and 60GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
+The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single master node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 60 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
 With this configuration, a load of 2500 RPS on a typical web application (e.g., a static Nginx page) consisting of 30 pods, and incoming traffic of 24 Mbps will result in approximately the following resource consumption figures:
 

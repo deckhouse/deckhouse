@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -78,8 +79,8 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func handleL2LBServices(input *go_hook.HookInput) error {
-	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
+func handleL2LBServices(_ context.Context, input *go_hook.HookInput) error {
+	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.Snapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
 		totalIPs := len(ips)
@@ -93,7 +94,7 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 		}
 
 		var service *ServiceUpdaterInfo
-		for svc, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.NewSnapshots.Get("services")) {
+		for svc, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.Snapshots.Get("services")) {
 			if err != nil {
 				continue
 			}

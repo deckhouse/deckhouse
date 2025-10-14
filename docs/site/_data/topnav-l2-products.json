@@ -14,7 +14,7 @@
         },
         {
           "title": "Documentation",
-          "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+          "url": "/products/kubernetes-platform/documentation/v1/",
           "target": "",
           "rel": "doc"
         },
@@ -27,6 +27,12 @@
         {
           "title": "Guides",
           "url": "/products/kubernetes-platform/guides/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Modules",
+          "url": "/modules/",
           "target": "",
           "rel": ""
         }
@@ -135,12 +141,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Documentation",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },
@@ -179,6 +179,26 @@
           "rel": ""
         },
         {
+          "title": "Возможности",
+          "url": "/products/kubernetes-platform/features/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "title": "Обзор",
+              "url": "/products/kubernetes-platform/features/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "title": "Наблюдаемость",
+              "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            }
+          ]
+        },
+        {
           "title": "ФСТЭК-редакция",
           "url": "/products/kubernetes-platform/certified-security-edition/",
           "target": "",
@@ -192,7 +212,7 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/documentation/v1/deckhouse-overview.html",
+          "url": "/products/kubernetes-platform/documentation/v1/",
           "target": "",
           "rel": "doc"
         },
@@ -205,6 +225,12 @@
         {
           "title": "Руководства",
           "url": "/products/kubernetes-platform/guides/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Модули",
+          "url": "/modules/",
           "target": "",
           "rel": ""
         }
@@ -325,12 +351,6 @@
           "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
-        },
-        {
-          "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/delivery-kit/stable/",
-          "target": "",
-          "rel": "doc"
         }
       ]
     },

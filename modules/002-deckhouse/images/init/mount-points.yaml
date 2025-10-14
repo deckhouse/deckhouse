@@ -3,3 +3,4 @@ dirs:
   - /var/run
   - /hooks
   - /.kube
+  - /deckhouse

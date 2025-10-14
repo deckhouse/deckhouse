@@ -13,7 +13,7 @@ overview of the various terminologies and their concepts. The idea of Identity
 is to maintain the clients who are recognized by Stronghold. As such, Stronghold provides
 an identity management solution through the **Identity secrets engine**. For
 more information about the Identity secrets engine and how it is used, refer to
-the [Identity Secrets Engine](/docs/secrets/identity) documentation.
+the [Identity Secrets Engine](../secrets-engines/identity/) documentation.
 
 ## Entities and aliases
 
@@ -28,7 +28,7 @@ For example, a user with accounts in both GitHub and LDAP can be mapped to a
 single entity in Stronghold with two aliases, one of type GitHub and one of type
 LDAP.
 
-![Entity  overview](/img/stronghold-identity-doc-1.png)
+![Entity  overview](/images/stronghold/identity-doc-1.png)
 
 However, if both aliases are created on the same auth mount, such as
 a Github mount, both aliases cannot be mapped to the same entity. The aliases can
@@ -36,8 +36,8 @@ have the same auth type, as long as the auth mounts are different, and
 still be associated to the same entity. The diagrams below illustrate both valid
 and invalid scenarios.
 
-![Valid Alias Mapping](/img/stronghold-identity-doc-4.png)
-![Invalid Alias Mapping](/img/stronghold-identity-doc-5.png)
+![Valid Alias Mapping](/images/stronghold/identity-doc-4.png)
+![Invalid Alias Mapping](/images/stronghold/identity-doc-5.png)
 
 When a client authenticates via any credential backend (except the Token
 backend), Stronghold creates a new entity. It attaches a new alias to it if a
@@ -60,8 +60,6 @@ permissions to the token on top of the existing policies on the token. If the
 token presented on the API request contains an identifier for the entity and if
 that entity has a set of policies on it, then the token will be capable of
 performing actions allowed by the policies on the entity as well.
-
-![Entity policies](/img/stronghold-identity-doc-2.png)
 
 This is a paradigm shift in terms of _when_ the policies of the token get
 evaluated. Before identity, the policy names on the token were immutable (not
@@ -142,7 +140,7 @@ entity ID is being evaluated for the policies that it has access to, policies
 that are inherited due to group memberships are granted along with the policies
 on the entity itself.
 
-![Identity overview](/img/stronghold-identity-doc-3.png)
+![Identity overview](/images/stronghold/identity-doc-3.png)
 
 ## Group hierarchical permissions
 
@@ -168,4 +166,4 @@ group and has an alias that maps to the group in LDAP. If the user is removed
 from the group in LDAP, that change gets reflected in Stronghold only upon the
 subsequent login or renewal operation.
 
-For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/docs/secrets/identity).
+For information about Identity Secrets Engine, refer to [Identity Secrets Engine](../secrets-engines/identity/).

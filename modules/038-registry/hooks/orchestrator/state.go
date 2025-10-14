@@ -305,7 +305,7 @@ func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 
 	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process checkper on upstream: %w", err)
+		return fmt.Errorf("cannot process checker on upstream: %w", err)
 	}
 
 	if !checkerReady {

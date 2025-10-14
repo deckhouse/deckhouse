@@ -17,6 +17,7 @@ limitations under the License.
 package tls_certificate
 
 import (
+	"context"
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -46,7 +47,7 @@ func TestDefaultSANs(t *testing.T) {
 	f := DefaultSANs(orig)
 
 	patchableValues1 := testGetClusterDomainValues(t, "example1.com")
-	res1 := f(&go_hook.HookInput{Values: patchableValues1})
+	res1 := f(context.TODO(), &go_hook.HookInput{Values: patchableValues1})
 
 	require.Equal(t, []string{
 		"conversion-webhook-handler.d8-system.svc",
@@ -54,7 +55,7 @@ func TestDefaultSANs(t *testing.T) {
 	}, res1)
 
 	patchableValues2 := testGetClusterDomainValues(t, "example2.com")
-	res2 := f(&go_hook.HookInput{Values: patchableValues2})
+	res2 := f(context.TODO(), &go_hook.HookInput{Values: patchableValues2})
 
 	require.Equal(t, []string{
 		"conversion-webhook-handler.d8-system.svc",

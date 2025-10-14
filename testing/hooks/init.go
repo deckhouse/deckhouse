@@ -42,7 +42,6 @@ import (
 	"github.com/flant/kube-client/fake"
 	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
 	"github.com/go-openapi/spec"
@@ -65,6 +64,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -882,8 +882,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	patchableConfigValues, err := sdkpatchablevalues.NewPatchableValues(convigValues)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
-	newformattedSnapshots := make(go_hook.NewSnapshots, len(hec.BindingContexts.BindingContexts))
+	newformattedSnapshots := make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
 
 	for _, bCtx := range hec.BindingContexts.BindingContexts {
 		for snapBindingName, snaps := range bCtx.Snapshots {
@@ -897,7 +896,6 @@ func (hec *HookExecutionConfig) RunGoHook() {
 					continue
 				}
 
-				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
 				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}
 		}
@@ -919,8 +917,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.PatchCollector = patchCollector
 
 	hookInput := &go_hook.HookInput{
-		Snapshots:        formattedSnapshots,
-		NewSnapshots:     newformattedSnapshots,
+		Snapshots:        newformattedSnapshots,
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
@@ -939,7 +936,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		}
 	}
 
-	hec.GoHookError = hec.GoHook.Run(hookInput)
+	hec.GoHookError = hec.GoHook.Run(context.Background(), hookInput)
 
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()

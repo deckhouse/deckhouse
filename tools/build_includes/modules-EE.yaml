@@ -104,6 +104,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/se-plus/modules/030-csi-vsphere
+  to: /deckhouse/modules/030-csi-vsphere
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   stageDependencies:
@@ -331,11 +336,6 @@
         - '**/*'
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/650-runtime-audit-engine
-  to: /deckhouse/modules/650-runtime-audit-engine
   stageDependencies:
     install:
         - '**/*'

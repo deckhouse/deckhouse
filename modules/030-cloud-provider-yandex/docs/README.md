@@ -28,20 +28,20 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the `prefix` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
 
    ```bash
-   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+   d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
 1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
 
-   ![The default security group](../../images/cloud-provider-yandex/sg-en-default.png)
+   ![The default security group](images/sg-en-default.png)
 
 1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-   ![Rules for the security group](../../images/cloud-provider-yandex/sg-en-rules.png)
+   ![Rules for the security group](images/sg-en-rules.png)
 
 1. Delete the rule that allows for any **inbound** traffic (in the screenshot above it has already been deleted), and save the changes.
 
@@ -106,7 +106,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) with the `sa-creds` secret in it:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -130,13 +130,13 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. Check the status of the External Secrets Operator and the secrets store you created:
 
    ```shell
-   $ kubectl -n external-secrets get po
+   $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   $ kubectl -n external-secrets get secretstores.external-secrets.io 
+   $ d8 k -n external-secrets get secretstores.external-secrets.io 
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -150,7 +150,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -179,7 +179,7 @@ The instructions below are meant to be viewed as a *Quick Start* guide. To use i
 1. Make sure that the new `k8s-secret` key contains the `lockbox-secret` value:
 
    ```shell
-   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   d8 k -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
    The output of the command should contain the **value** of the `password` key of the `lockbox-secret` created earlier:
@@ -199,7 +199,7 @@ This integration lets you use the [Yandex Managed Service for Prometheus](https:
 1. Create a `PrometheusRemoteWrite` resource:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -226,7 +226,7 @@ More details about this feature can be found in [Yandex Cloud documentation](htt
 1. Create a `GrafanaAdditionalDatasource` resource:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:

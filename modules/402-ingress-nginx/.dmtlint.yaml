@@ -10,10 +10,6 @@ linters-settings:
       readiness-probe:
         - kind: DaemonSet
           name: failover-cleaner
-      read-only-root-filesystem:
-        - kind: DaemonSet
-          name: failover-cleaner
-          container: failover-cleaner
   templates:
     exclude-rules:
       vpa:

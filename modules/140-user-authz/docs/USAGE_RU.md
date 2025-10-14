@@ -16,10 +16,10 @@ title: "Модуль user-authz: примеры конфигурации"
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -48,16 +48,16 @@ roleRef:
 
 Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
 
-Пример назначения прав сетевому администратору (User `joe`):
+Пример назначения прав сетевому администратору (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -171,7 +171,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -273,7 +273,7 @@ spec:
 1. Создайте ServiceAccount, например в пространстве имён `d8-service-accounts`:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: v1
    kind: ServiceAccount
    metadata:
@@ -294,7 +294,7 @@ spec:
 1. Дайте необходимые ServiceAccount-права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
    metadata:
@@ -329,14 +329,14 @@ spec:
      1. Получите сертификат CA-кластера Kubernetes:
 
         ```shell
-        kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
+        d8 k get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
         ```
 
      1. Сгенерируйте секцию `cluster` (используется IP-адрес API-сервера для доступа):
 
         ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+        d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(d8 k get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
@@ -350,8 +350,8 @@ spec:
      1. Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
         ```shell
-        kubectl -n d8-user-authn get secrets -o json \
-          $(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+        d8 k -n d8-user-authn get secrets -o json \
+          $(d8 k -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
           | jq -rc '.data."ca.crt" // .data."tls.crt"' \
           | base64 -d > /tmp/ca.crt
         ```
@@ -359,8 +359,8 @@ spec:
      2. Сгенерируйте секцию `cluster` (используется внешний домен и CA для доступа):
 
         ```shell
-        kubectl config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+        d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
+          --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
@@ -368,23 +368,23 @@ spec:
    * Если используется публичный CA. Сгенерируйте секцию `cluster` (используется внешний домен для доступа):
 
      ```shell
-     kubectl config set-cluster $CLUSTER_NAME \
-       --server=https://$(kubectl -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+     d8 k config set-cluster $CLUSTER_NAME \
+       --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
        --kubeconfig=$FILE_NAME
      ```
 
 1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
 
    ```shell
-   kubectl config set-credentials $USER_NAME \
-     --token=$(kubectl -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+   d8 k config set-credentials $USER_NAME \
+     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 
 1. Сгенерируйте контекст в файле конфигурации kubectl:
 
    ```shell
-   kubectl config set-context $CONTEXT_NAME \
+   d8 k config set-context $CONTEXT_NAME \
      --cluster=$CLUSTER_NAME --user=$USER_NAME \
      --kubeconfig=$FILE_NAME
    ```
@@ -392,7 +392,7 @@ spec:
 1. Установите сгенерированный контекст как используемый по умолчанию в файле конфигурации kubectl:
 
    ```shell
-   kubectl config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
+   d8 k config use-context $CONTEXT_NAME --kubeconfig=$FILE_NAME
    ```
 
 ### Создание пользователя с помощью клиентского сертификата
@@ -514,13 +514,13 @@ EOF
 1. Примените манифест, чтобы создать запрос на подпись сертификата:
   
     ```shell
-    kubectl apply -f csr.yaml
+    d8 k apply -f csr.yaml
     ```
 
 1. Убедитесь, что сертификат подтвержден:
 
     ```shell
-    kubectl get csr demo-client-cert
+    d8 k get csr demo-client-cert
     ```
 
     Если сертификат подтвержден, в колонке `CONDITION` у него будет значение `Approved,Issued`. Пример вывода:
@@ -533,7 +533,7 @@ EOF
     Если сертификат не подтвердился автоматически, подтвердите его:
 
     ```shell
-    kubectl certificate approve demo-client-cert
+    d8 k certificate approve demo-client-cert
     ```
 
     После этого убедитесь, что сертификат подтвержден.
@@ -541,7 +541,7 @@ EOF
 1. Извлеките закодированный сертификат из CSR с именем `demo-client-cert`, декодируйте его из Base64 и сохраните в файл (в этом примере — `myuser.crt`), созданный на шаге 2:
 
     ```shell
-    kubectl get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
+    d8 k get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
     ```
 
 Полученный сертификат необходимо указать в конфигурационном файле:
@@ -624,10 +624,10 @@ spec:
 * `user` — имя пользователя;
 * `groups` — группы пользователя.
 
-> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex — `kubectl -n d8-user-authn logs -l app=dex` (видны только при авторизации).
+> При совместном использовании с модулем `user-authn` группы и имя пользователя можно посмотреть в логах Dex — `d8 k -n d8-user-authn logs -l app=dex` (видны только при авторизации).
 
 ```shell
-cat  <<EOF | 2>&1 kubectl  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
+cat  <<EOF | 2>&1 d8 k  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",
@@ -659,7 +659,7 @@ EOF
 Если в кластере включён режим **multi-tenancy**, нужно выполнить ещё одну проверку, чтобы убедиться, что у пользователя есть доступ в пространство имён:
 
 ```shell
-cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
+cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
 {
   "apiVersion": "authorization.k8s.io/v1",
   "kind": "SubjectAccessReview",

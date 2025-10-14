@@ -1,31 +1,6 @@
 linters-settings:
   container:
     exclude-rules:
-      read-only-root-filesystem:
-        - kind: DaemonSet
-          name: agent
-          container: apply-sysctl-overwrites
-        - kind: DaemonSet
-          name: agent
-          container: cilium-agent
-        - kind: DaemonSet
-          name: agent
-          container: clean-cilium-state
-        - kind: DaemonSet
-          name: agent
-          container: clearing-unnecessary-iptables
-        - kind: DaemonSet
-          name: agent
-          container: config
-        - kind: DaemonSet
-          name: agent
-          container: install-cni-binaries
-        - kind: DaemonSet
-          name: agent
-          container: mount-bpf-fs
-        - kind: DaemonSet
-          name: agent
-          container: mount-cgroup
       liveness-probe:
         - kind: DaemonSet
           name: safe-agent-updater

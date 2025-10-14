@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"log/slog"
 	"strings"
 
@@ -70,21 +71,21 @@ func policyCode(name string) float64 {
 	}
 }
 
-func setDefaultPolicy(input *go_hook.HookInput) error {
-	policy := getDefaultPolicy(input)
+func setDefaultPolicy(ctx context.Context, input *go_hook.HookInput) error {
+	policy := getDefaultPolicy(ctx, input)
 	input.Values.Set("admissionPolicyEngine.podSecurityStandards.defaultPolicy", policy)
 	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_policy")
 	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy", policyCode(policy), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_policy"))
 	return nil
 }
 
-func getDefaultPolicy(input *go_hook.HookInput) string {
+func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 	// default policy is set explicitly - nothing to do here
 	if policy := input.ConfigValues.Get("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String(); policy != "" {
 		return policy
 	}
 
-	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_data")
+	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "install_data")
 	if err != nil {
 		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
 		return "Privileged"

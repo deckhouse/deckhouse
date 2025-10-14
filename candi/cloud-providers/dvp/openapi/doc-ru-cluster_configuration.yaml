@@ -9,7 +9,7 @@ apiVersions:
         Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду [`dhctl converge`](../../deckhouse-faq.html#изменение-конфигурации).
@@ -109,7 +109,7 @@ apiVersions:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
 
-                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../reference/api/global.html#parameters-modules-storageclass).
                     image:
                       description: |
                         Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
@@ -121,6 +121,28 @@ apiVersions:
                           description: |
                             Имя образа, который будет использоваться для создания корневого диска.
                             > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+                additionalDisks:
+                  description: |
+                    Параметры дополнительных дисков виртуальной машины.
+
+                    Каждый элемент массива описывает отдельный дополнительный диск.
+                    Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                  type: array
+                  items:
+                    type: object
+                    required: [size, storageClass]
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Размер дополнительного диска.
+                        example: 10Gi
+                      storageClass:
+                        type: string
+                        description: |
+                          Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                        example: ceph-pool-r2-csi-rbd-immediate
                 etcdDisk:
                   description: |
                     Указание настроек для диска данных etcd.
@@ -132,7 +154,7 @@ apiVersions:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания диска данных etcd.
 
-                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
                 additionalLabels:
                   description: |
                     Дополнительные метки.
@@ -180,11 +202,33 @@ apiVersions:
                 properties:
                   virtualMachine: *instanceClassVirtualMachine
                   rootDisk: *instanceClassRootDisk
+                  additionalDisks:
+                    description: |
+                      Параметры дополнительных дисков виртуальной машины.
+
+                      Каждый элемент массива описывает отдельный дополнительный диск.
+                      Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                    type: array
+                    items:
+                      type: object
+                      required: [size, storageClass]
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Размер дополнительного диска.
+                          example: 10Gi
+                        storageClass:
+                          type: string
+                          description: |
+                            Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                          example: ceph-pool-r2-csi-rbd-immediate
         layout:
           description: |
             Название схемы размещения.
 
-            [Подробнее о возможных схемах размещения провайдера](../cloud-provider-dvp/layouts.html).
+            [Подробнее о возможных схемах размещения провайдера](/modules/cloud-provider-dvp/layouts.html).
         region:
           description: |
             Название региона.

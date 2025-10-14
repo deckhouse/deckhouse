@@ -44,7 +44,7 @@ spec:
       disruptionApprovalMode: Manual
 ```
 
-В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление платформы (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](../../../reference/cr/deckhouserelease.html).
+В этом режиме необходимо подтверждать каждое минорное потенциально опасное (disruptive) обновление платформы (без учета patch-версий) с помощью аннотации `release.deckhouse.io/disruption-approved=true` на соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
 
 Пример подтверждения минорного потенциально опасного обновления платформы `v1.36.4`:
 

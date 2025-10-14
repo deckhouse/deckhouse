@@ -28,22 +28,12 @@ controlling the access of tokens that are already issued.
 
 **NOTE:** This secrets engine will be mounted by default. This secrets engine
 cannot be disabled or moved. For more conceptual overview on identity, refer to
-the [Identity](/docs/concepts/identity) documentation.
+the [Identity](../../concepts/identity.html) documentation.
 
 {% endalert %}
 
 The Stronghold Identity secrets engine supports several different features. Each
 one is individually documented on its own page.
 
-- [Identity tokens](/docs/secrets/identity/identity-token)
-- [OIDC Identity Provider](/docs/secrets/identity/oidc-provider)
-
-## API
-
-The Identity secrets engine has a full HTTP API. Please see the
-[Identity secrets engine API](/api-docs/secret/identity) for more
-details.
-
-Additionally, Stronghold can be configured as an OIDC identity provider. Please see
-the [OIDC identity provider API](/api-docs/secret/identity/oidc-provider) for
-more details.
+- [Identity tokens](token.html)
+- [OIDC Identity Provider](oidc-provider.html)

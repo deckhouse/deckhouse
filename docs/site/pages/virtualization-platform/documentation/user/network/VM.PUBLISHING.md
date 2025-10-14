@@ -244,7 +244,7 @@ To publish a virtual machine service via Ingress, you need to create the followi
 
 To enable authentication through `Dex` for your application, follow these steps:
 
-1. Create a custom resource [DexAuthenticator](../../../reference/cr/dexauthenticator.html). This will create an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) connected to `Dex`. After the `DexAuthenticator` custom resource is created, the required objects such as Deployment, Service, Ingress, and Secret will appear in the specified `namespace`.
+1. Create a custom resource [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator). This will create an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) connected to `Dex`. After the `DexAuthenticator` custom resource is created, the required objects such as Deployment, Service, Ingress, and Secret will appear in the specified `namespace`.
 
    Example of a `DexAuthenticator` resource:
 

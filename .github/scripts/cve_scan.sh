@@ -57,7 +57,6 @@ send_report() {
     --retry-all-errors \
     https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
     -H "accept: application/json" \
-    -H "Content-Type: multipart/form-data"  \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
     -F "auto_create_context=True" \
     -F "minimum_severity=Info" \
@@ -69,7 +68,7 @@ send_report() {
     -F "push_to_jira=false" \
     -F "file=@${2}" \
     -F "product_type_name=DKP" \
-    -F "product_name=Deckhouse" \
+    -F "product_name=${3}" \
     -F "scan_date=${date_iso}" \
     -F "engagement_name=${1}" \
     -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
@@ -189,12 +188,20 @@ for d8_tag in "${d8_tags[@]}"; do
   # Additional images to scan
   declare -a additional_images=("${d8_image}"
                 "${d8_image}/install"
-                "${d8_image}/install-standalone"
                 )
   for additional_image in "${additional_images[@]}"; do
     additional_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
-    digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.deckhouse += { ($i): ($s) }')
+    # if it is deckhouse-oss - add it as deckhouse-controller module
+    if [ "${additional_image_name}" == "deckhouse-oss" ]; then
+      digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '."deckhouse-controller" += { ($i): ($s) }')
+    elif [ "${additional_image_name}" == "install" ]; then
+      digests=$(echo "${digests}"|jq --arg i "${additional_image_name}" --arg s "${d8_tag}" '.dhctl += { ($i): ($s) }')
+    fi
   done
+
+  echo "=============================================="
+  echo "The following images will be scanned:"
+  echo "${digests}"
 
   for module in $(jq -rc 'to_entries[]' <<< "${digests}"); do
     MODULE_NAME=$(jq -rc '.key' <<< "${module}")
@@ -238,9 +245,6 @@ for d8_tag in "${d8_tags[@]}"; do
     for module_image in $(jq -rc '.value | to_entries[]' <<<"${module}"); do
       IMAGE_NAME="$(jq -rc '.key' <<< ${module_image})"
       IMAGE_HASH="$(jq -rc '.value' <<< ${module_image})"
-      if [[ "${IMAGE_NAME}" == "trivy" ]]; then
-        continue
-      fi
       # Set flag if additional image to use tag instead of hash
       additional_image_detected=false
       for image_item in "${additional_images[@]}"; do
@@ -265,8 +269,8 @@ for d8_tag in "${d8_tags[@]}"; do
         trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       fi
 
-      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
-      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json"
+      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}"
+      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}"
     done
   done
 done

@@ -4,26 +4,6 @@ layout: sidebar
 <div class="docs">
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
-        {%- if page.comparable and site.mode != 'module' %}
-        <div class="btn-group compare">
-            <a href='{{ page.url | prepend: "compare" | true_relative_url }}' class="btn btn_o" target="_blank">
-                Compare
-            </a>
-        </div>
-        <script>
-            $(document).ready(function(){
-                if (window.location.hostname.match(/flant.com|localhost/)) {
-                    $('.compare').addClass('active');
-                }
-                // Shows warning the viewing documentation about unreleased version
-                if (window.location.pathname.indexOf('/latest/') !== -1) {
-                  console.log("Latest");
-                  $('#notice-latest-doc-version-block').addClass('active');
-                }
-            });
-
-        </script>
-        {%- endif %}
     </div>
 
     <div class="post-content">
@@ -64,5 +44,9 @@ layout: sidebar
         {%- endif %}
 
     </div>
+
+    {%- if page.showPrevNextButton %}
+      {%- include navigation.html -%}
+    {%- endif %}
 
 </div>

@@ -62,7 +62,6 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 			return
 		default:
 		}
-
 		matchedPods, err := p.ListMatchedPods()
 		if err != nil {
 			fmt.Printf("podObserver(s2): list matched Pods: %v\n", err)
@@ -72,6 +71,10 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 		} else {
 			if len(matchedPods) == 0 {
 				fmt.Printf("podObserver(s2): no pods to wait, unlock inhibitors and exit\n")
+				err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(p.NodeName)
+				if err != nil {
+					fmt.Printf("podObserver(s2): update Node condition: %v\n", err)
+				}
 				close(p.StopInhibitorsCh)
 				return
 			}

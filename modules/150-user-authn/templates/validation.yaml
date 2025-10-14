@@ -44,7 +44,7 @@ spec:
         operations:  ["CREATE", "UPDATE"]
         resources:   ["users"]
   validations:
-    - expression: "object.spec.password == oldObject.spec.password"
+    - expression: "oldObject == null || object.spec.password == oldObject.spec.password"
       message: "password policy is enabled, user password field cannot be changed manually"
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}

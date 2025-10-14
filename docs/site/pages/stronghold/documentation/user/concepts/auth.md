@@ -9,14 +9,14 @@ description: >-
 
 Authentication in Stronghold is the process by which user or machine supplied
 information is verified against an internal or external system. Stronghold supports
-multiple [auth methods](/docs/auth) including GitHub,
+multiple auth methods including GitHub,
 LDAP, AppRole, and more. Each auth method has a specific use case.
 
 Before a client can interact with Stronghold, it must _authenticate_ against an
 auth method. Upon authentication, a token is generated. This token is
 conceptually similar to a session ID on a website. The token may have attached
 policy, which is mapped at authentication time. This process is described in
-detail in the [policies concepts](/docs/concepts/policies) documentation.
+detail in the [policies concepts](policy.html) documentation.
 
 ## Auth methods
 
@@ -47,7 +47,7 @@ access, although some backends do support MFA.
 
 ## Tokens
 
-There is an [entire page dedicated to tokens](/docs/concepts/tokens),
+There is an [entire page dedicated to tokens](tokens.html),
 but it is important to understand that authentication works by verifying
 your identity and then generating a token to associate with that identity.
 
@@ -59,7 +59,7 @@ the API you'll have to do this manually.
 This token given for authentication with any backend can also be used
 with the full set of token commands, such as creating new sub-tokens,
 revoking tokens, and renewing tokens. This is all covered on the
-[token concepts page](/docs/concepts/tokens).
+[token concepts page](tokens.html).
 
 ## Authenticating
 
@@ -98,7 +98,7 @@ be used.
 ## Auth leases
 
 Just like secrets, identities have
-[leases](/docs/concepts/lease) associated with them. This means that
+[leases](lease.html) associated with them. This means that
 you must reauthenticate after the given lease period to continue accessing
 Stronghold.
 

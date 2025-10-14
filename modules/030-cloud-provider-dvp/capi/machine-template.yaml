@@ -33,6 +33,13 @@ spec:
       {{- if .nodeGroup.instanceClass.rootDisk.size }}
       rootDiskSize: {{ .nodeGroup.instanceClass.rootDisk.size | quote }}
       {{- end }}
+      {{- if .nodeGroup.instanceClass.additionalDisks }}
+      additionalDisks:
+      {{- range $disk := .nodeGroup.instanceClass.additionalDisks }}
+        - size: {{ $disk.size | quote }}
+          storageClass: {{ $disk.storageClass | quote }}
+      {{- end }}
+      {{- end }}
       {{- if .nodeGroup.instanceClass.virtualMachine.bootloader }}
       bootloader: {{ .nodeGroup.instanceClass.virtualMachine.bootloader | quote }}
       {{- end }}

@@ -111,14 +111,14 @@ func dockerConfigBySecret(secret *corev1.Secret) (*dockerConfig, error) {
 	return config, nil
 }
 
-func handleTrivyProviderSecrets(input *go_hook.HookInput, dc dependency.Container) error {
+func handleTrivyProviderSecrets(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	if !input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool() {
 		return nil
 	}
 
 	cfg := valueDockerConfig{Auths: make(map[string]authConfig)}
 
-	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[dockerConfig](input.NewSnapshots, "trivy_provider_secrets")
+	authSnaps, err := sdkobjectpatch.UnmarshalToStruct[dockerConfig](input.Snapshots, "trivy_provider_secrets")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal trivy_provider_secrets snapshot: %w", err)
 	}

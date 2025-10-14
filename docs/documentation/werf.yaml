@@ -9,6 +9,7 @@
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
 project: deckhouse-web
 configVersion: 1
 ---
@@ -19,8 +20,7 @@ configVersion: 1
 {{- include "parse_base_images_map" . }}
 ---
 {{- $context := . }}
-{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
----

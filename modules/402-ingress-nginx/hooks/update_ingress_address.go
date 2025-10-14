@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -24,6 +27,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type loadBalancerService struct {
@@ -71,13 +76,12 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 	return nil, nil
 }
 
-func updateIngressAddress(input *go_hook.HookInput) error {
-	snaps := input.Snapshots["ingress-loadbalancer-service"]
-	for _, snap := range snaps {
-		if snap == nil {
-			continue
+func updateIngressAddress(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("ingress-loadbalancer-service")
+	for svc, err := range sdkobjectpatch.SnapshotIter[loadBalancerService](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ingress-loadbalancer-service' snapshots: %w", err)
 		}
-		svc := snap.(loadBalancerService)
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
 				"loadBalancer": map[string]interface{}{

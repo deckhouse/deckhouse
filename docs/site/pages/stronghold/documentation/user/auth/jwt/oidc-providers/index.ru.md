@@ -7,11 +7,11 @@ description: OIDC provider configuration quick starts
 
 В этом разделе собраны шаги высокоуровневые шаги по настройке  OIDC
 для различных провайдеров. Для получения более общей информации об использовании и работе
-см. документацию по методам [Stronghold JWT/OIDC](../../jwt/).
+см. документацию по методам [Stronghold JWT/OIDC](../../oidc.html).
 
 Провайдеры OIDC часто очень гибко настраиваются, и вам следует ознакомиться с их рекомендуемыми настройками и лучшими практиками.
 Руководства, перечисленные ниже, позволят вам начать работу.
 
-- [Gitlab](gitlab)
-- [Keycloak](keycloak)
-- [Kubernetes](kubernetes)
+- [Gitlab](gitlab.html)
+- [Keycloak](keycloak.html)
+- [Kubernetes](kubernetes.html)

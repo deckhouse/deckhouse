@@ -44,6 +44,7 @@ const labels = {
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
   'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
+  'e2e/use/k8s/1.34': { type: 'e2e-use', ver: '1.34' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
@@ -72,6 +73,9 @@ const labels = {
   'deploy/web/test2': { type: 'deploy-web', env: 'test2' },
   'deploy/web/test3': { type: 'deploy-web', env: 'test3' },
   'deploy/web/test4': { type: 'deploy-web', env: 'test4' },
+  'deploy/web/test5': { type: 'deploy-web', env: 'test5' },
+  'deploy/web/test6': { type: 'deploy-web', env: 'test6' },
+  'deploy/web/test7': { type: 'deploy-web', env: 'test7' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow

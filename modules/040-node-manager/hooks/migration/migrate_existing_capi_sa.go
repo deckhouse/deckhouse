@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -79,7 +80,7 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func migrateServiceAccounts(input *go_hook.HookInput) error {
+func migrateServiceAccounts(_ context.Context, input *go_hook.HookInput) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -95,7 +96,7 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	snaps := input.NewSnapshots.Get("capi_sa")
+	snaps := input.Snapshots.Get("capi_sa")
 	if len(snaps) == 0 {
 		return nil
 	}

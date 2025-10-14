@@ -36,8 +36,6 @@ const (
 
 	ModuleSourceAnnotationForceDelete      = "modules.deckhouse.io/force-delete"
 	ModuleSourceAnnotationRegistryChecksum = "modules.deckhouse.io/registry-spec-checksum"
-
-	ModuleSourceAnnotationDefault = "modules.deckhouse.io/default-source"
 )
 
 var (
@@ -55,21 +53,11 @@ var (
 
 var _ runtime.Object = (*ModuleSource)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleSourceList is a list of ModuleSource resources
-type ModuleSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleSource `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleSource source
 type ModuleSource struct {
@@ -116,10 +104,12 @@ type AvailableModule struct {
 	Overridden bool   `json:"overridden,omitempty"`
 }
 
-func (s *ModuleSource) IsDefault() bool {
-	if len(s.Annotations) == 0 {
-		return false
-	}
+// +kubebuilder:object:root=true
 
-	return s.Annotations[ModuleSourceAnnotationDefault] == "true"
+// ModuleSourceList is a list of ModuleSource resources
+type ModuleSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSource `json:"items"`
 }

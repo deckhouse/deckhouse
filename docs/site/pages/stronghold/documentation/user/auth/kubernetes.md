@@ -84,7 +84,7 @@ management tool.
   ```
 
 1. Use the `/config` endpoint to configure Stronghold to talk to Kubernetes. Use
-  `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
+  `d8 k cluster-info` to validate the Kubernetes host address and TCP port.
   For the list of available configuration options, please see the
   [API documentation](/api-docs/auth/kubernetes).
 
@@ -169,10 +169,9 @@ table summarizes the options, each of which is explained in more detail below.
 {% alert level="info" %}
 
 **Note:** By default, Kubernetes currently extends the lifetime of admission
-injected service account tokens to a year to help smooth the transition to short-lived tokens. If you would like to disable this, set [--service-account-extend-token-expiration=false][k8s-extended-tokens] for `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See [here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
+injected service account tokens to a year to help smooth the transition to short-lived tokens. If you would like to disable this, set [--service-account-extend-token-expiration=false](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options) for `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See [this section](jwt/oidc-providers/kubernetes.html#specifying-ttl-and-audience) for an example.
 
 {% endalert %}
-[k8s-extended-tokens]: <https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options>
 
 #### Use local service account token as the reviewer JWT
 
@@ -201,7 +200,7 @@ bindings on the set of service accounts you want to be able to authenticate with
 Stronghold. Each client of Stronghold would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl create clusterrolebinding myapp-client-auth-delegator \
+d8 k create clusterrolebinding myapp-client-auth-delegator \
   --clusterrole=system:auth-delegator \
   --group=group1 \
   --serviceaccount=default:svcaccount1 \
@@ -215,7 +214,7 @@ and use that as the `token_reviewer_jwt`. In this example, the `myapp` service
 account would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl apply -f - <<EOF
+d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -238,7 +237,7 @@ JWT tokens Kubernetes generates can also be verified using Kubernetes as an OIDC
 provider. The JWT auth method documentation has [instructions][k8s-jwt-auth] for
 setting up JWT auth with Kubernetes as the OIDC provider.
 
-[k8s-jwt-auth]: /docs/auth/jwt/oidc-providers/kubernetes
+[k8s-jwt-auth]: jwt/oidc-providers/kubernetes.html
 
 This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
@@ -266,7 +265,7 @@ unable to check this value directly, you can run the following and look for the
 
 ```bash
 echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
-  | kubectl create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
+  | d8 k create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
   | jq -r '.status.token' \
   | cut -d . -f2 \
   | base64 -d
@@ -276,7 +275,7 @@ Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
+d8 k get --raw /.well-known/openid-configuration | jq -r .issuer
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:
@@ -289,7 +288,7 @@ d8 stronghold write auth/kubernetes/config \
 
 ## Configuring kubernetes
 
-This auth method accesses the [Kubernetes TokenReview API][k8s-tokenreview] to
+This auth method accesses the Kubernetes TokenReview API to
 validate the provided JWT is still valid. Kubernetes should be running with
 `--service-account-lookup`. This is defaulted to true from Kubernetes 1.7.
 Otherwise deleted tokens in Kubernetes will not be properly revoked and
@@ -315,10 +314,3 @@ subjects:
     name: myapp-auth
     namespace: default
 ```
-
-## API
-
-The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api-docs/auth/kubernetes) for more details.
-
-[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io

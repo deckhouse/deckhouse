@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/
@@ -31,7 +31,7 @@ shell:
     - chmod 0755 ./protobuf_exporter
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/protobuf_exporter
@@ -43,6 +43,7 @@ git:
   stageDependencies:
     install:
       - '**/*.yaml'
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/protobuf_exporter", "-server.telemetry-address", "127.0.0.1:9090", "-server.exporter-address", "127.0.0.1:9091" , "-mappings", "/etc/protobuf_exporter/mappings.yaml"]

@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -193,7 +194,7 @@ spec:
 `
 
 	t.Run("Standard Static", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(clusterConfig + initConfig)
+		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
 
 		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
@@ -211,7 +212,7 @@ spec:
 	})
 
 	t.Run("Without init configuration", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(clusterConfig)
+		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
 
 		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
@@ -235,7 +236,7 @@ spec:
 	})
 
 	t.Run("Static with StaticClusterConfig", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig)
+		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig, DummyPreparatorProvider())
 		require.NoError(t, err)
 
 		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
@@ -254,7 +255,7 @@ spec:
 
 	t.Run("Module config", func(t *testing.T) {
 		t.Run("Global valid", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigGlobalValid)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalValid, DummyPreparatorProvider())
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 1)
@@ -263,12 +264,12 @@ spec:
 		})
 
 		t.Run("Global invalid", func(t *testing.T) {
-			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigGlobalInvalid)
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalInvalid, DummyPreparatorProvider())
 			require.Error(t, err)
 		})
 
 		t.Run("Module valid", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonValid)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonValid, DummyPreparatorProvider())
 
 			require.NoError(t, err)
 
@@ -278,24 +279,24 @@ spec:
 		})
 
 		t.Run("Module invalid", func(t *testing.T) {
-			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonInvalid)
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonInvalid, DummyPreparatorProvider())
 			require.Error(t, err)
 		})
 
 		t.Run("Module without enabled field", func(t *testing.T) {
-			_, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutEnabled)
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutEnabled, DummyPreparatorProvider())
 			require.Error(t, err)
 		})
 
 		t.Run("Module without settings", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + moduleConfigCommonWithoutSettings)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutSettings, DummyPreparatorProvider())
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ResourcesYAML, 0)
 		})
 
 		t.Run("Unknown module should move into resources", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + unknownModuleConfig)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+unknownModuleConfig, DummyPreparatorProvider())
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -305,7 +306,7 @@ spec:
 
 	t.Run("Config with another k8s resources eg configMap", func(t *testing.T) {
 		t.Run("Should move another resources into resourcesYAML", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + configMapAndInstanceClass)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+configMapAndInstanceClass, DummyPreparatorProvider())
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -336,7 +337,7 @@ spec:
 		})
 
 		t.Run("Should move resourcesYAML", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(clusterConfig + initConfig + staticConfig + ngWithTemplating)
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+ngWithTemplating, DummyPreparatorProvider())
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -361,7 +362,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 	imagesDigestsJSON = "./mocks/images_digests.json"
 	app.VersionFile = "./mocks/version"
 	t.Run("parse wildcard", func(t *testing.T) {
-		metaConfig, err := LoadConfigFromFile([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 		require.Equal(t, "registry.deckhouse.io", metaConfig.Registry.Data.Address)

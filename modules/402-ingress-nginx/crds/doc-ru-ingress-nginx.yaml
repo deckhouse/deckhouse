@@ -324,7 +324,7 @@ spec:
 
                     По умолчанию используется самоподписанный сертификат.
 
-                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate).
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
                   properties:
                     secretRef:
                       description: |
@@ -761,7 +761,7 @@ spec:
 
                     По умолчанию используется самоподписанный сертификат.
 
-                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Чтобы указать сертификат для Ingress-ресурсов модулей Deckhouse, используйте глобальный параметр [`modules.https.customCertificate`](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate).
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Чтобы указать сертификат для Ingress-ресурсов модулей Deckhouse, используйте глобальный параметр [`modules.https.customCertificate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
                   properties:
                     secretRef:
                       description: |
@@ -788,4 +788,17 @@ spec:
                     - "журналы на уровне трассировки с подробным пошаговым контекстом."
                   description: |
                     Определяет уровень логирования для журналов Ingress-контроллера.
+                nginxProfilingEnabled:
+                  type: boolean
+                  description: |
+                    Включает профилирование NGINX с помощью Valgrind.
+                    Отчет об анализе памяти сохраняется в каталоге `/var/log/valgrind` на хосте.
+                    При включении Valgrind создает файл с именем `memcheck.${timestamp}.log`.
 
+                    После завершения отладки не забудьте отключить режим профилирования!
+
+                    Отчет содержит информацию о поведении процесса, включая возможные утечки памяти.
+
+                    > **Внимание.** Включение этой опции значительно увеличивает использование памяти и замедляет обработку запросов HTTP/HTTPS процессом NGINX.
+
+                    > **Внимание.** Когда включена опция, под контроллера ingress-nginx запускается в привилегированном режиме.

@@ -68,14 +68,6 @@ The response will contain the token at `auth.client_token`:
 }
 ```
 
-{% alert level="info" %}
-
-**Application Integration:** See the [Code Example](#code-example) section
-for a code snippet demonstrating the authentication with Stronghold using the
-AppRole auth method.
-
-{% endalert %}
-
 ## Configuration
 
 Auth methods must be configured in advance before users or machines can
@@ -222,7 +214,7 @@ full set of client credentials (RoleID and SecretID) in order to create the
 entry, even if these are then distributed via different paths. However, in Pull
 mode, even though the RoleID must be known in order to distribute it to the
 client, the SecretID can be kept confidential from all parties except for the
-final authenticating client by using [Response Wrapping](/docs/concepts/response-wrapping).
+final authenticating client by using [response wrapping](../concepts/response-wrapping.html).
 
 Push mode is available for App-ID workflow compatibility, which in some
 specific cases is preferable, but in most cases Pull mode is more secure and
@@ -238,39 +230,3 @@ more constraint parameters to support varied set of Apps. Some constraints will
 not require a credential, but still enforce constraints for login. For
 example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
-
-## User lockout
-
-If a user provides bad credentials several times in quick succession,
-Stronghold will stop trying to validate their credentials for a while, instead returning immediately
-with a permission denied error. We call this behavior "user lockout". The time for which
-a user will be locked out is called “lockout duration”. The user will be able to login after the lockout
-duration has passed. The number of failed login attempts after which the user is locked out is called
-“lockout threshold”. The lockout threshold counter is reset to zero after a few minutes without login attempts,
-or upon a successful login attempt. The duration after which the counter will be reset to zero
-after no login attempts is called "lockout counter reset". This can defeat both automated and targeted requests
-i.e, user-based password guessing attacks as well as automated attacks.
-
-The user lockout feature is enabled by default. The default values for "lockout threshold" is 5 attempts,
-"lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
-
-The user lockout feature can be disabled as follows:
-
-- It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
-- It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
-  parameter within `user_lockout` stanza in configuration file.
-  Please see [user lockout configuration](/docs/configuration/user-lockout#user_lockout-stanza) for more details.
-- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/docs/commands/auth/tune)
-  or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details.
-
-{% alert level="warning" %}
-
-**NOTE**: This feature is only supported by the userpass, ldap, and approle auth methods.
-
-{% endalert %}
-
-## API
-
-The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](/api-docs/auth/approle) for more
-details.

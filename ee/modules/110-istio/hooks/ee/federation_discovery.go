@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -113,7 +114,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(federationDiscovery))
 
-func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
@@ -126,7 +127,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	federations, err := sdkobjectpatch.UnmarshalToStruct[IstioFederationDiscoveryCrdInfo](input.NewSnapshots, "federations")
+	federations, err := sdkobjectpatch.UnmarshalToStruct[IstioFederationDiscoveryCrdInfo](input.Snapshots, "federations")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal federations snapshot: %w", err)
 	}

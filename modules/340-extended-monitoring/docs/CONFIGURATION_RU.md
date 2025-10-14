@@ -8,15 +8,15 @@ force_searchable: true
 Чтобы включить экспортирование extended-monitoring метрик, нужно указать в пространстве имён лейбл `extended-monitoring.deckhouse.io/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый);
 - добавить в описание `.gitlab-ci.yml` (kubectl patch/create);
-- добавить вручную (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
+- добавить вручную (`d8 k label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
 - настроить через [namespace-configurator](../namespace-configurator/) модуль.
 
 Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном пространстве имён в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-объекты) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
 
-К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
+К Kubernetes-объектам `threshold.extended-monitoring.deckhouse.io/что-то свое` можно добавить любые другие лейблы с указанным значением. Пример: `d8 k label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 В таком случае значение из лейбла заменит значение по умолчанию.
 
-Если вы хотите переопределить значения threshold для всех объектов в определенном пространстве имен, вы можете установить лейбл `threshold.extended-monitoring.deckhouse.io/` на уровне namespace. Например: `kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`.
+Если вы хотите переопределить значения threshold для всех объектов в определенном пространстве имен, вы можете установить лейбл `threshold.extended-monitoring.deckhouse.io/` на уровне namespace. Например: `d8 k label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`.
 Это заменит значение по умолчанию для всех объектов namespace, для которых еще не установлен этот лейбл.
 
 Слежение за объектом можно отключить индивидуально, поставив на него лейбл `extended-monitoring.deckhouse.io/enabled=false`. Соответственно, отключатся и лейблы по умолчанию, а также все алерты, привязанные к лейблам.

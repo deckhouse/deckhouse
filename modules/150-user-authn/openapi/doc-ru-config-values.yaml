@@ -18,7 +18,7 @@ properties:
 
               В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
 
-              Получить выпущенный сертификат можно следующей командой: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+              Получить выпущенный сертификат можно следующей командой: `d8 k -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
           global:
@@ -45,7 +45,7 @@ properties:
         masterURI:
           description: |
             Если планируется использовать TCP-прокси, для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет через TCP-балансер (например, `192.168.0.15`), необходимо перегенерировать сертификаты для API-серверов:
-            * отредактировать `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
+            * отредактировать `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
             * сохранить получившийся конфиг: `kubeadm config view > kubeadmconf.yaml`;
             * удалить старые сертификаты API-сервера: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * перевыпустить новые сертификаты: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
@@ -68,7 +68,7 @@ properties:
       complexityLevel:
         description: |
           Уровень сложности пароля.
-          
+
           В зависимости от уровня сложности к паролю предъявляются следующие минимальные требования:
 
           - `None` — 1 символ.
@@ -117,7 +117,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
@@ -146,7 +146,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — Dex/kubeconfig-generator будет работать по HTTPS, используя сертификат из namespace `d8-system`;
           - `Disabled` — Dex/kubeconfig-generator будет работать только по HTTP;
-          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -162,7 +162,7 @@ properties:
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   controlPlaneConfigurator:
-    description: 'Настройки параметров для модуля автоматической настройки `kube-apiserver` [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/).'
+    description: 'Настройки параметров для модуля автоматической настройки `kube-apiserver` [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/).'
     properties:
       enabled:
         description: 'Использовать ли `control-plane-manager` для настройки OIDC в `kube-apiserver`.'

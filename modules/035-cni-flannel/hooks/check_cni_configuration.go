@@ -17,8 +17,11 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -37,12 +40,15 @@ import (
 )
 
 const (
-	cniConfigurationSettledKey = "cniConfigurationSettled"
-	checkCNIConfigMetricName   = "cniMisconfigured"
-	checkCNIConfigMetricGroup  = "d8_check_cni_conf"
-	desiredCNIModuleConfigName = "desired-cni-moduleconfig"
-	cni                        = "flannel"
-	cniName                    = "cni-" + cni
+	cniConfigurationSettledKey        = "cniConfigurationSettled"
+	checkCNIConfigMetricName          = "cniMisconfigured"
+	checkCNIConfigMetricGroup         = "d8_check_cni_conf"
+	desiredCNIModuleConfigName        = "desired-cni-moduleconfig"
+	cni                               = "flannel"
+	cniName                           = "cni-" + cni
+	cniConfigurationIsNotSettled      = true
+	cniConfigurationIsSettled         = false
+	cniConfigSourcePriorityAnnotation = "network.deckhouse.io/cni-configuration-source-priority"
 )
 
 type flannelConfigStruct struct {
@@ -55,9 +61,11 @@ type ciliumConfigStruct struct {
 }
 
 type cniSecretStruct struct {
-	CNI     string
-	Flannel flannelConfigStruct
-	Cilium  ciliumConfigStruct
+	CreationTimestamp                 time.Time
+	CniConfigSourcePriorityFlagExists bool
+	CNI                               string
+	Flannel                           flannelConfigStruct
+	Cilium                            ciliumConfigStruct
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -91,7 +99,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// Return nil if
-	// error occurred while json parse
+	// an error occurred while JSON parse
 	// or d8-cni-configuration secret does not contain key "cni"
 	// or value of key "cni" not in [cni-cilium, cni-flannel, cni-simple-bridge]
 	secret := &v1.Secret{}
@@ -100,9 +108,17 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 		return nil, fmt.Errorf("cannot convert incoming object to Secret: %v", err)
 	}
 	cniSecret := cniSecretStruct{}
+
+	// get creation timestamp from secret
+	cniSecret.CreationTimestamp = secret.CreationTimestamp.Time
+
+	// Check if the secret has the annotation "network.deckhouse.io/cni-configuration-source-priority"
+	_, exists := secret.Annotations[cniConfigSourcePriorityAnnotation]
+	cniSecret.CniConfigSourcePriorityFlagExists = exists
+
 	cniBytes, ok := secret.Data["cni"]
 	if !ok {
-		// d8-cni-configuration secret does not contain "cni" field
+		// d8-cni-configuration secret does not contain the "cni" field
 		return nil, nil
 	}
 	cniSecret.CNI = string(cniBytes)
@@ -139,15 +155,163 @@ func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
 	}
-	if mc.Spec.Enabled == nil || !*mc.Spec.Enabled {
-		return nil, nil
-	}
 
 	return mc, nil
 }
 
-func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
-	switch miss {
+func checkCni(_ context.Context, input *go_hook.HookInput) error {
+	// Clear a metrics and reqKey
+	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
+	requirements.RemoveValue(cniConfigurationSettledKey)
+
+	// Get existing secret.
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.Snapshots, "cni_configuration_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
+	}
+
+	// If secret does not exist, then we are already using a new logic de facto: the parameters in the MC have priority.
+	// So there is nothing to do.
+	if len(cniSecrets) == 0 {
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// If the secret has the annotation "network.deckhouse.io/cni-configuration-source-priority", so there is nothing to do.
+	if cniSecrets[0].CniConfigSourcePriorityFlagExists {
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// If secret does not contain config for current cni, then we are already using a new logic de facto: the parameters in the MC have priority.
+	// - add an annotation to the secret
+	cniSecret := cniSecrets[0]
+	if cniSecret.CNI != cni {
+		annotateSecret(input)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// Get existing MC.
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.Snapshots, "deckhouse_cni_mc")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
+
+	// Prepare a template for the desiredCNIModuleConfig, which is empty and explicitly enabled.
+	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleConfig",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cniName,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled:  ptr.To(true),
+			Version:  1,
+			Settings: v1alpha1.SettingsValues{},
+		},
+	}
+	// If the MC exists, use its Settings to generate the desired MC.
+	if len(cniModuleConfigs) != 0 {
+		cniModuleConfig := cniModuleConfigs[0]
+		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
+	}
+	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
+	// Skip if in the secret key "flannel" does not exist or empty.
+	secretMatchesMC := true
+	if cniSecret.Flannel != (flannelConfigStruct{}) {
+		switch cniSecret.Flannel.PodNetworkMode {
+		case "host-gw":
+			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
+			if !ok || value.String() != "HostGW" {
+				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				secretMatchesMC = false
+			}
+		case "vxlan":
+			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
+			if !ok || value.String() != "VXLAN" {
+				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
+				secretMatchesMC = false
+			}
+		case "":
+			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
+			if !ok || value.String() != "HostGW" {
+				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
+				secretMatchesMC = false
+			}
+		default:
+			input.Logger.Warn("An unknown flannel podNetworkMode was specified in the d8-cni-configuration secret, so the default cni podNetworkMode will be used instead.", slog.String("specified podNetworkMode", cniSecret.Flannel.PodNetworkMode))
+		}
+	}
+
+	// If MC does not exist, then we should
+	// - add an annotation to the secret (to activate new_logic)
+	// - create the desired MC, which was generated based on the secret.
+	if len(cniModuleConfigs) == 0 {
+		annotateSecret(input)
+		createDesiredModuleConfig(input, desiredCNIModuleConfig)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// If MC exist, but is explicitly disabled, it means that CNI is in the process of disabling, there is nothing to do.
+	if cniModuleConfigs[0].Spec.Enabled != nil && !*cniModuleConfigs[0].Spec.Enabled {
+		return nil
+	}
+
+	if cniModuleConfigs[0].Spec.Enabled == nil {
+		secretMatchesMC = false
+	}
+
+	// If the secret matches MC, then we should
+	// - add an annotation to the secret (to activate new_logic)
+	if secretMatchesMC {
+		annotateSecret(input)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// Let's check if the cluster has already been bootstrapped.
+	clusterIsBootstrapped := input.Values.Get("global.clusterIsBootstrapped").Bool()
+
+	// If the cluster is not yet bootstrapped, then we should
+	// - add an annotation to the secret (to activate new_logic)
+	if !clusterIsBootstrapped {
+		annotateSecret(input)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// Let's check what was created earlier: MC(+10m) or Secret.
+	if cniSecret.CreationTimestamp.After(cniModuleConfigs[0].CreationTimestamp.Time.Add(10 * time.Minute)) {
+		annotateSecret(input)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// If the cluster is already bootstrapped and the secret was created earlier than MC, then we should
+	// - generate desired MC based on secret
+	// - create cm based on desired MC
+	// - fire alert
+	err = createConfigMapWithDesiredModuleConfig(input, desiredCNIModuleConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create config map with desired module config: %w", err)
+	}
+	setMetricAndRequirementsValue(input, cniConfigurationIsNotSettled)
+	return nil
+}
+
+func setMetricAndRequirementsValue(input *go_hook.HookInput, isCniMisconfigured bool) {
+	switch isCniMisconfigured {
 	// misconfigure detected
 	case true:
 		input.MetricsCollector.Set(checkCNIConfigMetricName, 1,
@@ -166,121 +330,39 @@ func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
 	}
 }
 
-func checkCni(input *go_hook.HookInput) error {
-	// Clear a metrics and reqKey
-	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
-	requirements.RemoveValue(cniConfigurationSettledKey)
-	needUpdateMC := false
+func annotateSecret(input *go_hook.HookInput) {
+	secretPatch := map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
+			},
+		},
+	}
+	input.PatchCollector.PatchWithMerge(secretPatch, "v1", "Secret", "kube-system", "d8-cni-configuration")
+}
 
-	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+func createDesiredModuleConfig(input *go_hook.HookInput, desiredCNIModuleConfig *v1alpha1.ModuleConfig) {
+	input.PatchCollector.CreateOrUpdate(desiredCNIModuleConfig)
+}
+
+func createConfigMapWithDesiredModuleConfig(input *go_hook.HookInput, desiredCNIModuleConfig *v1alpha1.ModuleConfig) error {
+	desiredCNIModuleConfigYAML, err := yaml.Marshal(*desiredCNIModuleConfig)
 	if err != nil {
-		setCNIMiscMetricAndReq(input, false)
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-		return nil
+		return fmt.Errorf("cannot marshal desired CNI moduleConfig, err: %w", err)
 	}
-	// Let's check secret.
-	// Secret d8-cni-configuration does not exist or exist but contain nil.
-	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	if len(cniSecrets) == 0 {
-		setCNIMiscMetricAndReq(input, false)
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-		return nil
-	}
-
-	// Secret d8-cni-configuration exist but key "cni" does not equal "flannel".
-	// This means that the current CNI module is enabled and configured via mc, nothing to do.
-	cniSecret := cniSecrets[0]
-	if cniSecret.CNI != cni {
-		setCNIMiscMetricAndReq(input, false)
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-		return nil
-	}
-
-	// Secret d8-cni-configuration exist, key "cni" eq "flannel".
-
-	// Prepare desiredCNIModuleConfig
-	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
+	data := map[string]string{cniName + "-mc.yaml": string(desiredCNIModuleConfigYAML)}
+	cm := &v1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ModuleConfig",
-			APIVersion: "deckhouse.io/v1alpha1",
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: cniName,
+			Name:      desiredCNIModuleConfigName,
+			Namespace: "d8-system",
 		},
-		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:  ptr.To(true),
-			Version:  1,
-			Settings: v1alpha1.SettingsValues{},
-		},
+		Data: data,
 	}
-
-	deckhouseCniMCs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
-	}
-	// Let's check what mc exist and explicitly enabled.
-	if len(deckhouseCniMCs) == 0 {
-		needUpdateMC = true
-	} else {
-		cniModuleConfig := deckhouseCniMCs[0]
-		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
-	}
-
-	// Skip comparison if in secret d8-cni-configuration key "flannel" does not exist or empty.
-	if cniSecret.Flannel != (flannelConfigStruct{}) {
-		// Secret d8-cni-configuration exist, key "cni" eq "flannel" and key "flannel" does not empty.
-		// Let's compare secret with module configuration.
-		switch cniSecret.Flannel.PodNetworkMode {
-		case "host-gw":
-			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
-				needUpdateMC = true
-			}
-		case "vxlan":
-			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-			if !ok || value.String() != "VXLAN" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
-				needUpdateMC = true
-			}
-		case "":
-			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-			if !ok || value.String() != "HostGW" {
-				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
-				needUpdateMC = true
-			}
-		default:
-			setCNIMiscMetricAndReq(input, true)
-			input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-			return fmt.Errorf("unknown flannel podNetworkMode %s", cniSecret.Flannel.PodNetworkMode)
-		}
-	}
-
-	if needUpdateMC {
-		desiredCNIModuleConfigYAML, err := yaml.Marshal(*desiredCNIModuleConfig)
-		if err != nil {
-			return fmt.Errorf("cannot marshal desired CNI moduleConfig, err: %w", err)
-		}
-		data := map[string]string{cniName + "-mc.yaml": string(desiredCNIModuleConfigYAML)}
-		cm := &v1.ConfigMap{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ConfigMap",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      desiredCNIModuleConfigName,
-				Namespace: "d8-system",
-			},
-			Data: data,
-		}
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
-		input.PatchCollector.CreateOrUpdate(cm)
-		setCNIMiscMetricAndReq(input, true)
-		return nil
-	}
-
-	// All configuration settled, nothing to do.
-	setCNIMiscMetricAndReq(input, false)
 	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+	input.PatchCollector.CreateOrUpdate(cm)
 	return nil
 }

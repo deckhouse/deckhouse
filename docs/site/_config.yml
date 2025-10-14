@@ -94,6 +94,8 @@ defaults:
       product_code: kubernetes-platform
       search_bage_enabled: true
       lang: en
+      showPrevNextButton: true
+      feedback: true
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -148,61 +150,4 @@ defaults:
       search_bage_enabled: true
       sidebar: stronghold
       sitemap_include: false
-  - scope:
-      path: "modules_ru"
-      type: "pages"
-    values:
-      lang: ru
-  - scope:
-      path: "*/030-cloud-provider-dynamix"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/030-cloud-provider-vcd"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/462-loki"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/500-operator-trivy"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/650-runtime-audit-engine"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/500-okmeter"
-      type: "pages"
-    values:
-      featureStatus: proprietaryOkmeter
-  - scope:
-      path: "*/500-openvpn"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/610-service-with-healthchecks"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/160-multitenancy-manager"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/038-registry"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
 timezone: Europe/Moscow
-

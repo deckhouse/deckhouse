@@ -64,11 +64,8 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
-      rewrite ^/(en|ru)/?$ /$1/platform/ redirect;
-      rewrite ^/modules/(.+) /en/modules/$1 redirect;
-      rewrite ^/(ru|en)/modules$ /$1/modules/ permanent;
       # The old naming
-      rewrite ^/(ru|en)/(platform/)?modules/[0-9]+-([^/]+/.*)$ /$1/platform/modules/$3 redirect;
+      #rewrite ^/(ru|en)/(platform/)?modules/[0-9]+-([^/]+/.*)$ /$1/platform/modules/$3 redirect;
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   {{- if .Values.documentation.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"

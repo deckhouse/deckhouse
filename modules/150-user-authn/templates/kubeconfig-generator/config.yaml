@@ -68,6 +68,7 @@ clusters:
   short_description: "{{ $cluster.description }}"
   scopes:
   - audience:server:client_id:kubernetes
+  - federated:id
 
   k8s_ca_pem: {{ $cluster.masterCA | quote }}
 {{- end }}
