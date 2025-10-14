@@ -50,7 +50,3 @@ spec:
   - www.example.com
   - admin.example.com
 ```
-
-{% alert level="info" %}
-Пример создания самоподписанного сертификата вручную, без использования утилиты `cert-manager`, доступен в разделе [FAQ](../../deckhouse-faq.html#как-сгенерировать-самоподписанный-сертификат).
-{% endalert %}

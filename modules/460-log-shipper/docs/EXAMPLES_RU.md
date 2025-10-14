@@ -166,7 +166,7 @@ spec:
 
 ## Добавление Loki в Deckhouse Grafana
 
-Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](../../modules/prometheus/cr.html#grafanaadditionaldatasource).
+Вы можете работать с Loki из встроенной в Deckhouse Grafana. Достаточно добавить [**GrafanaAdditionalDatasource**](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 
 ```yaml
 apiVersion: deckhouse.io/v1

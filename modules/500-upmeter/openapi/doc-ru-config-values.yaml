@@ -36,7 +36,7 @@ properties:
             description: |
               Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
 
-              Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+              Используется, если включен модуль [`user-authn`](/modules/user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -66,7 +66,7 @@ properties:
             description: |
               Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
 
-              Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+              Используется, если включен модуль [`user-authn`](/modules/user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.

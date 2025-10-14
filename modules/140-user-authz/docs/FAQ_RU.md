@@ -12,7 +12,7 @@ title: "Модуль user-authz: FAQ"
 
 Чтобы ограничить права пользователя конкретными пространствами имён в экспериментальной ролевой модели, используйте в `RoleBinding` [use-роль](./#use-роли) с соответствующим уровнем доступа. [Пример...](usage.html#пример-назначения-административных-прав-пользователю-в-рамках-пространства-имён).
 
-В текущей ролевой модули используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).
+В текущей ролевой модули используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [`ClusterAuthorizationRule`](/modules/user-authz/cr.html#clusterauthorizationrule).
 
 ## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
 

@@ -12,7 +12,7 @@ apiVersions:
         d8 s edit provider-cluster-configuration
         ```
 
-        > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду [`dhctl converge`](../../deckhouse-faq.html#изменение-конфигурации).
+        > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду `dhctl converge`.
       x-doc-search: |
         ProviderClusterConfiguration
       properties:

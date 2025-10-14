@@ -97,7 +97,7 @@ apiVersions:
 
           **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
-          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](../modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
+          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
         default: "cluster.local"
       defaultCRI:
         type: string

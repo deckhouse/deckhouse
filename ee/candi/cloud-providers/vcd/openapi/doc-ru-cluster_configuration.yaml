@@ -13,7 +13,7 @@ apiVersions:
         d8 s edit provider-cluster-configuration
         ```
 
-        > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+        > После изменения параметров узлов необходимо выполнить команду dhctl converge, чтобы изменения вступили в силу.
       properties:
         masterNodeGroup:
           description: |

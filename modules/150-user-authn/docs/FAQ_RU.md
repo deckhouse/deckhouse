@@ -123,7 +123,7 @@ title: "Модуль user-authn: FAQ"
 
 ### Настройка kube-apiserver
 
-С помощью функций модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [control-plane-manager](/modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 

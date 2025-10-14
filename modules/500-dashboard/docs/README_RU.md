@@ -5,7 +5,7 @@ webIfaces:
 - name: dashboard
 ---
 
-Устанавливает Web UI Kubernetes Dashboard для ручного управления кластером, который интегрирован с модулями [user-authn](../../modules/user-authn/) и [user-authz](../../modules/user-authz/) (доступ в кластер осуществляется от имени пользователя и с учетом его прав).
+Устанавливает Web UI Kubernetes Dashboard для ручного управления кластером, который интегрирован с модулями [user-authn](/modules/user-authn/) и [user-authz](/modules/user-authz/) (доступ в кластер осуществляется от имени пользователя и с учетом его прав).
 
 Kubernetes Dashboard предоставляет следующие возможности:
 

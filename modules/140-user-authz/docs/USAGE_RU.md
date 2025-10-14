@@ -593,7 +593,7 @@ spec:
 
 Режим multi-tenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
-Работа в режиме multi-tenancy требует включения плагина авторизации Webhook и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/control-plane-manager/), никаких ручных действий не требуется.
+Работа в режиме multi-tenancy требует включения плагина авторизации Webhook и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](/modules/control-plane-manager/), никаких ручных действий не требуется.
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 

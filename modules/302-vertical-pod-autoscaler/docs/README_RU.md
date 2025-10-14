@@ -39,7 +39,7 @@ Vertical Pod Autoscaler (VPA) — это инфраструктурный сер
 
 VPA состоит из 3 компонентов:
 
-- `Recommender` — мониторит настоящее (делая запросы в Metrics API, который реализован в модуле [`prometheus-metrics-adapter`](../../modules/prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и памяти для контейнеров.
+- `Recommender` — мониторит настоящее (делая запросы в Metrics API, который реализован в модуле [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/)) и прошлое потребление ресурсов (делая запросы в Trickster перед Prometheus) и предоставляет рекомендации по CPU и памяти для контейнеров.
 - `Updater` — проверяет, что у подов с VPA выставлены корректные ресурсы, если нет — убивает эти поды, чтобы контроллер пересоздал поды с новыми resource requests.
 - `Admission Plugin` — задает resource requests при создании новых подов (контроллером или из-за активности Updater'а).
 
