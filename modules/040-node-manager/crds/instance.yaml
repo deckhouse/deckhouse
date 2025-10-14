@@ -45,16 +45,6 @@ spec:
                         The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                       type: string
                       enum:
-                        - OpenStackInstanceClass
-                        - GCPInstanceClass
-                        - VsphereInstanceClass
-                        - AWSInstanceClass
-                        - YandexInstanceClass
-                        - AzureInstanceClass
-                        - VCDInstanceClass
-                        - ZvirtInstanceClass
-                        - DynamixInstanceClass
-                        - HuaweiCloudInstanceClass
                         - DVPInstanceClass
                     name:
                       description: |

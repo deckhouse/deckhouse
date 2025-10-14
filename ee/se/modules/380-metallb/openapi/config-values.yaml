@@ -132,7 +132,7 @@ properties:
 
             An optional parameter.
 
-            The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+            The format is `matchLabels` or `matchExpressions`.
           properties:
             matchExpressions:
               type: array

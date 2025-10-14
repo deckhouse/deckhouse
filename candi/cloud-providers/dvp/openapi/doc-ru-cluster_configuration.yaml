@@ -170,7 +170,6 @@ apiVersions:
                   Набор зон, в которых могут быть созданы узлы.
 
                   Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
-                  [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
                   > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
@@ -181,15 +180,15 @@ apiVersions:
                     description: |
                       Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если ресурсы это поддерживают).
 
-                      Аналогично [стандартному полю `metadata.labels`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      Аналогично стандартному полю `metadata.labels`.
 
                       Если вы меняете лейблы в рабочем кластере, после применения изменений пересоздайте все машины.
                   annotations:
                     description: |
-                      Аналогично [стандартному полю `metadata.annotations`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      Аналогично стандартному полю `metadata.annotations`.
                   taints:
                     description: |
-                      Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                      Аналогично полю `.spec.taints` из объекта Node.
 
                       > Доступны только поля `effect`, `key`, `values`.
               instanceClass:

@@ -106,7 +106,7 @@ properties:
           Эта опция полезна для повышения безопасности, так как требует дополнительного шага проверки при авторизации.
       issuerName:
         description: |
-          Имя издателя для токенов двухфакторной аутентификации (2FA). Это имя отображается пользователям в приложении для 2FA (например, Google Authenticator).
+          Имя издателя для токенов двухфакторной аутентификации (2FA). Это имя отображается пользователям в приложении для 2FA.
           Используется для идентификации источника токенов и может быть настроено в соответствии с вашими предпочтениями.
   idTokenTTL:
     description: |
@@ -160,7 +160,7 @@ properties:
             description: |
               Имя Secret'а в namespace `d8-system`, который будет использоваться для Dex/kubeconfig-generator.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   controlPlaneConfigurator:
     description: 'Настройки параметров для модуля автоматической настройки `kube-apiserver` [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/).'
     properties:

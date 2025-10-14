@@ -16,7 +16,7 @@ properties:
     description: |
       The Deckhouse [bundle](../../#module-bundles) defines a set of modules enabled by default.
       - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs.
-      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
+      - `Managed` — the bundle aimed at clusters managed by cloud providers.
       - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
     default: "Default"
 

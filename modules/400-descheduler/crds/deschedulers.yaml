@@ -503,7 +503,7 @@ spec:
 
                         **Over utilized node** — A node whose resource usage exceeds at least one of the threshold values specified in the [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) section.
 
-                        Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is based on pod requests and limits, not actual consumption.
+                        Node resource usage takes into account extended resources and is based on pod requests and limits, not actual consumption.
                       properties:
                         enabled:
                           type: boolean
@@ -570,7 +570,7 @@ spec:
 
                         > In GKE, you cannot configure the default scheduler, but you can use the `optimize-utilization` strategy or deploy a second custom scheduler.
 
-                        Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is based on pod requests and limits, not actual consumption.
+                        Node resource usage takes into account extended resources and is based on pod requests and limits, not actual consumption.
                       properties:
                         enabled:
                           type: boolean
@@ -615,7 +615,7 @@ spec:
                     removePodsViolatingNodeAffinity:
                       type: object
                       description: |-
-                        The strategy makes sure all pods violating [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) are eventually removed from nodes.
+                        The strategy makes sure all pods violating node affinity are eventually removed from nodes.
 
                         Essentially, depending on the settings of the parameter [nodeAffinityType](#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype), the strategy temporarily implement the rule `requiredDuringSchedulingIgnoredDuringExecution` of the pod's node affinity as the rule `requiredDuringSchedulingRequiredDuringExecution`, and the rule `preferredDuringSchedulingIgnoredDuringExecution` as the rule `preferredDuringSchedulingPreferredDuringExecution`.
                       properties:
@@ -633,7 +633,7 @@ spec:
                     removePodsViolatingInterPodAntiAffinity:
                       type: object
                       description: |-
-                        The strategy ensures that pods violating [inter-pod affinity and anti-affinity rules](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) are evicted from nodes.
+                        The strategy ensures that pods violating inter-pod affinity and anti-affinity rules are evicted from nodes.
                       properties:
                         enabled:
                           type: boolean

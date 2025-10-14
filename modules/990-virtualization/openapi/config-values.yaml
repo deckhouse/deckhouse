@@ -79,7 +79,7 @@ properties:
             description: |
               The name of the secret in the `d8-system` namespace to use with CDI upload proxy.
 
-              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              This secret must have the kubernetes.io/tls format.
   dvcr:
     type: object
     description: |

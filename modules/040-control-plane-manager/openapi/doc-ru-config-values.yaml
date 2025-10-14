@@ -38,7 +38,7 @@ properties:
               Этот вариант полезен при переходе от одного API издателя к другому.
       admissionPlugins:
         description: |
-          Список включенных дополнительных [admission-плагинов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+          Список включенных дополнительных admission-плагинов.
 
           **Обратите внимание**, что, помимо включенных по умолчанию в Kubernetes admission-плагинов, также всегда включены (без возможности отключения) следующие admission-плагины:
           - `ExtendedResourceToleration`;
@@ -147,7 +147,7 @@ properties:
               Путь к директории. Действует только в случае `output: "File"`.
       encryptionEnabled:
         description: |
-          Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Включает режим encrypting secret data at rest.
 
           Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
           > **Важно!** Этот режим нельзя отключить!

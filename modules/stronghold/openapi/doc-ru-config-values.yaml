@@ -52,7 +52,7 @@ properties:
             description: |
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для Stronghold.
 
-              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате TLS.
   license:
     description: |
       Лицензионный ключ Stronghold EE. Оставьте пустым, чтобы использовать Stronghold CE

@@ -59,11 +59,11 @@ spec:
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+                    The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
                     If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:

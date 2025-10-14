@@ -21,7 +21,7 @@ spec:
                   description: |
                     Определяет `tolerations` для подов с keepalived.
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                   items:
                     properties:
                       effect:

@@ -63,7 +63,7 @@ spec:
                     allowPrivilegeEscalation:
                       description: |
                         Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
-                        
+
                         **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
                     allowedProcMount:
                       description: Разрешает монтирование `/proc` для контейнеров.
@@ -159,7 +159,7 @@ spec:
                                 description: Максимальное значение диапазона.
                     readOnlyRootFilesystem:
                       description: |
-                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в [документации Kubernetes](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core).
+                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`).
                     automountServiceAccountToken:
                       description: Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
                     seccompProfiles:
@@ -205,7 +205,7 @@ spec:
                     allowedServiceTypes:
                       description: Список разрешенных типов сервисов.
                     blockWildcardDomains:
-                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.                      
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.
                     verifyImageSignatures:
                       description: |
                         Список политик проверки подписи образов контейнеров.
@@ -252,12 +252,11 @@ spec:
                             matchLabels:
                               description: Список лейблов, которые должно иметь пространство имен.
                             matchExpressions:
-                              description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для пространств имен.
+                              description: Список условий лейблов для пространств имен.
                     labelSelector:
                       description: |
                         Указывает селектор лейблов для фильтрации подов.
 
-                        Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь под.

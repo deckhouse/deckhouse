@@ -141,7 +141,7 @@ spec:
                   description: |-
                     If specified the `dex-authenticator` pods tolerations.
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     properties:
                       effect:
@@ -327,7 +327,7 @@ spec:
                   description: |-
                     If specified the `dex-authenticator` pods tolerations.
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     properties:
                       effect:

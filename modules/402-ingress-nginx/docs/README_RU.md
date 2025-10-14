@@ -12,14 +12,7 @@ description: "Балансировка и терминация трафика HT
 Трафик к `ingress-nginx` может быть отправлен несколькими способами:
 
 - напрямую без внешнего балансировщика;
-- через внешний LoadBalancer, в том числе поддерживаются:
-  - Qrator,
-  - Cloudflare,
-  - AWS LB,
-  - GCE LB,
-  - ACS LB,
-  - Yandex LB,
-  - OpenStack LB.
+- через внешний LoadBalancer.
 
 ## Терминация HTTPS
 

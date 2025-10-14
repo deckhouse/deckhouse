@@ -56,24 +56,6 @@ spec:
                       bb-flag-set reboot
                     }
                     ```
-
-                    Пример использования параметров proxy, указанных в ресурсе ClusterConfiguration:
-
-                    ```shell
-                    bb-set-proxy
-                    curl -I https://google.com
-                    bb-unset-proxy
-                    ```
-
-                    ```shell
-                    test-function-with-proxy() {
-                      bb-set-proxy
-                      trap bb-unset-proxy RETURN
-                      curl -I https://google.com
-                    }
-
-                    test-function-with-proxy
-                    ```
                 weight:
                   description: Очередность выполнения шага конфигурации.
                 nodeGroups:

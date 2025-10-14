@@ -265,7 +265,7 @@ spec:
 
                         **Избыточно нагруженный узел** — узел, использование ресурсов которого больше **хотя бы одного** из пороговых значений, заданных в секции параметров [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds).
 
-                        Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
+                        Использование ресурсов узла учитывает extended-ресурсы и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
                       properties:
                         enabled:
                           description: Делает стратегию активной.
@@ -303,7 +303,7 @@ spec:
 
                         > В GKE нельзя настроить конфигурацию планировщика по умолчанию, но можно использовать стратегию `optimize-utilization` или развернуть второй пользовательский планировщик.
 
-                        Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
+                        Использование ресурсов узла учитывает extended-ресурсы и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
                       properties:
                         enabled:
                           description: Делает стратегию активной.
@@ -327,7 +327,7 @@ spec:
                           description: Делает стратегию активной.
                     removePodsViolatingNodeAffinity:
                       description: |-
-                        Стратегия гарантирует, что все поды, которые нарушают [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity), в конечном счете будут удалены с узлов.
+                        Стратегия гарантирует, что все поды, которые нарушают правила node affinity, в конечном счете будут удалены с узлов.
 
                         По сути, в зависимости от настроек параметра [nodeAffinityType](#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype),
                         стратегия превращает правило `requiredDuringSchedulingIgnoredDuringExecution` node affinity пода в правило `requiredDuringSchedulingRequiredDuringExecution`, а правило `preferredDuringSchedulingIgnoredDuringExecution` в правило `preferredDuringSchedulingPreferredDuringExecution`.
@@ -338,7 +338,7 @@ spec:
                             description: Определяет список используемых правил node affinity.
                     removePodsViolatingInterPodAntiAffinity:
                       description: |-
-                        Стратегия гарантирует, что поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), будут удалены с узлов.
+                        Стратегия гарантирует, что поды, нарушающие правила inter-pod affinity и anti-affinity, будут удалены с узлов.
 
                         Такая ситуация может возникнуть, если правила антипривязки для подов `podB` и `podC` создаются после того, как они уже запущены на узле.
                       properties:

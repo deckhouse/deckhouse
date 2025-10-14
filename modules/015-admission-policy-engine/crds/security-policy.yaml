@@ -251,7 +251,7 @@ spec:
                         type: string
                     allowedServiceTypes:
                       type: array
-                      description: The list of allowed [service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+                      description: The list of allowed service types.
                       x-doc-examples: [["LoadBalancer", "ClusterIP"]]
                       items:
                         type: string
@@ -370,7 +370,7 @@ spec:
                                 description: Max ID value.
                     readOnlyRootFilesystem:
                       type: boolean
-                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
+                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the Kubernetes documentation for more details.
                     automountServiceAccountToken:
                       type: boolean
                       description: Allows pods to run with `automountServiceAccountToken` enabled.
@@ -550,7 +550,7 @@ spec:
                           description: |
                             Specifies the label selector to filter namespaces.
 
-                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            You can get more info in the documentation.
                           anyOf:
                             - required: [ matchLabels ]
                             - required: [ matchExpressions ]
@@ -594,7 +594,7 @@ spec:
                       description: |
                         Specifies the label selector to filter Pods with.
 
-                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        You can get more into here.
                       anyOf:
                         - required:
                             - matchLabels

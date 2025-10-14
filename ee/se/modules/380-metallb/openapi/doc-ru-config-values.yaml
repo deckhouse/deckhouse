@@ -64,7 +64,7 @@ properties:
 
             Опциональный параметр.
 
-            Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+            Формат — `matchLabels` или `matchExpressions`.
         password:
           description: |
             Пароль аутентификации для BGP-маршрутизаторов, использующих TCP MD5-аутентифицированные сессии.

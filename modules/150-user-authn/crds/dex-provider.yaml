@@ -56,7 +56,6 @@ spec:
                       description: 'OIDC issuer application secret key.'
                     issuer:
                       type: string
-                      x-doc-examples: ['https://accounts.google.com']
                       description: |
                         Canonical URL of the provider, also used for configuration discovery.
                         This value MUST match the value returned in the provider config discovery.

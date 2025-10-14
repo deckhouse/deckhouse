@@ -18,8 +18,8 @@ spec:
   enabled: true
   settings:
     externalTargets:
-    - name: google-primary
-      host: 8.8.8.8
+    - name: primary
+      host: 77.88.4.4
     - name: yaru
       host: ya.ru
     - host: youtube.com

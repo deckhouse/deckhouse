@@ -39,7 +39,7 @@ properties:
             description: |
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для модуля observability.
 
-              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате TLS.
   grafana:
     description: Настройки для Grafana.
     properties:

@@ -1131,8 +1131,8 @@ spec:
                             You can express size as a plain integer or as a fixed-point number using one of these quantity suffixes: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
 
                             More about resource quantity:
-                            - [kubernetes quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
-                            - [memory resource units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
+                            - kubernetes quantity
+                            - memory resource units
                           x-doc-examples: ["512Mi", 268435488]
                           anyOf:
                             - type: integer

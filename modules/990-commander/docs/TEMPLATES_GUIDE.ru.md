@@ -157,15 +157,6 @@ YAML используется синтаксис go template и набор фу�
   * [Схема входных параметров](#схема-параметров-кластера-и-записи-инвентаря)
 * Размещение
   * [Статические ресурсы](https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration)
-  * [Yandex Cloud](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/cluster_configuration.html)
-  * [OpenStack](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html)
-  * [VMware vSphere](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-vsphere/cluster_configuration.html)
-  * [VMware Cloud Director](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-vcd/cluster_configuration.html)
-  * [Amazon Web Services](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html)
-  * [Google Cloud Platform](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-gcp/cluster_configuration.html)
-  * [Microsoft Azure](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cluster_configuration.html)
-  * [zVirt](https://deckhouse.ru/documentation/v1/modules/cloud-provider-zvirt/cluster_configuration.html)
-  * [Базис.DynamiX](https://deckhouse.ru/documentation/v1/modules/cloud-provider-dynamix/cluster_configuration.html)
 * Kubernetes
   * [ClusterConfiguration](https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration)
 * Доступ в реестр контейнеров

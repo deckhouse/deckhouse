@@ -24,6 +24,7 @@ fi
 # (https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/   -> /modules/
 # customAlertmanagerConfig удалить лишние ресиверы
 # cert-manager - route53
+# AWS, google, azure, digitalocean, hetzner, openstack
 # github/gitlab
 # ссылки на github.com, kubernetes.io, helm.sh и другие внешние ресурсы
 # Cloud

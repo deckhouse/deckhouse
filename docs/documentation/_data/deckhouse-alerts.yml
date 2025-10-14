@@ -6228,7 +6228,7 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+        You have configured Pod Security Standards, and one or more running pods are violating these standards.
 
         To identify violating pods:
 

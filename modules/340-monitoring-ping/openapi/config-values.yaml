@@ -16,8 +16,6 @@ properties:
           description: Monitoring record name.
     x-doc-example: |
       ```yaml
-      - name: google-primary
-        host: 8.8.8.8
       - name: yaru
         host: ya.ru
       - host: youtube.com

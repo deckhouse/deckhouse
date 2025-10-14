@@ -12,20 +12,20 @@ properties:
       Если значение не указано или указано `false`, будет использоваться автоматика.
   cloudflareAPIToken:
     description: |
-      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS-зонам.
+      API Tokens позволяют использовать ключи, привязанные к определенным DNS-зонам.
 
       Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
 
       Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
       находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      TXT-записей для домена ACME DNS01 Challenge Provider.
   cloudflareGlobalAPIKey:
     description: |
       Cloudflare Global API key для управления DNS-записями.
 
       Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
       находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+      TXT-записей для домена ACME DNS01 Challenge Provider.
   cloudflareEmail:
     description: |
       Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
@@ -33,7 +33,7 @@ properties:
     description: |
       Access Key ID пользователя с необходимыми правами.
 
-      [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
+      Amazon Route53 IAM Policy
       для управления доменными записями домена.
   route53SecretAccessKey:
     description: |
@@ -43,8 +43,7 @@ properties:
       Access Token от Digital Ocean API, который можно создать в разделе `API`.
   cloudDNSServiceAccount:
     description: |
-      Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
-      из того же проекта с ролью Администратора DNS.
+      Service Account из того же проекта с ролью Администратора DNS.
   email:
     description: |
       Email проекта, на который LetsEncrypt будет слать уведомления.
@@ -66,12 +65,12 @@ properties:
     type: string
     x-examples: ["nginx"]
     description: |
-      Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).
+      Имя `ingressClass` используемого для подтверждения владения доменом методом ACME HTTP-01.
       Если параметр не указан, то используется `ingressClass` по умолчанию.
 
   recursiveSettings:
     description: |
-      Параметры использования рекурсивных DNS-серверов, которые применяются для проверки существования записи в DNS, перед запуском процесса подтверждения владения доменом методом [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/).
+      Параметры использования рекурсивных DNS-серверов, которые применяются для проверки существования записи в DNS, перед запуском процесса подтверждения владения доменом методом ACME DNS-01.
     x-examples:
       - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
         useOnlyRecursive: true

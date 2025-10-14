@@ -120,11 +120,11 @@ spec:
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+                    The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
                     If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
-                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    **Format**: the standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:
@@ -377,7 +377,7 @@ spec:
                   description: |
                     The section with the Ingress controller parameters.
 
-                    You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
+                    You can specify any supported parameter in it in the `key: value (string)` format.
 
                     > **Caution.** An erroneous option may lead to the failure of the ingress controller;
 
@@ -729,7 +729,7 @@ spec:
 
                     If the parameter is omitted or set to `false`, all the possible tolerations are [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) applied the module's Pods.
 
-                    Use the format of a standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                    Use the format of a standard toleration list. Instance pods inherit this field as is.
                   items:
                     type: object
                     properties:
@@ -1035,7 +1035,7 @@ spec:
                   description: |
                     The section with the Ingress controller parameters.
 
-                    You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
+                    You can specify any supported parameter in it in the `key: value (string)` format.
 
                     > **Caution!** An erroneous option may lead to the failure of the ingress controller;
 

@@ -34,7 +34,7 @@ spec:
 
                     Если значение не указано или указано `false`, будет использоваться автоматика.
 
-                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
                   description: |
                     Секция настроек для инлета `LoadBalancer`.

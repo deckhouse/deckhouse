@@ -316,16 +316,6 @@ spec:
                             The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                           type: string
                           enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
                             - DVPInstanceClass
                         name:
                           description: |
@@ -352,7 +342,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -362,13 +352,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
@@ -994,7 +984,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -1004,13 +994,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                         - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
@@ -1314,7 +1304,6 @@ spec:
           x-doc-examples:
           - |
               ```yaml
-              # NodeGroup for cloud nodes in AWS.
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
               metadata:
@@ -1322,13 +1311,10 @@ spec:
               spec:
                 nodeType: CloudEphemeral
                 cloudInstances:
-                  zones:
-                    - eu-west-1a
-                    - eu-west-1b
                   minPerZone: 1
                   maxPerZone: 2
                   classReference:
-                    kind: AWSInstanceClass
+                    kind: DVPInstanceClass
                     name: test
                 nodeTemplate:
                   labels:
@@ -1843,16 +1829,6 @@ spec:
                             The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
                           type: string
                           enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
                             - DVPInstanceClass
                         name:
                           description: |
@@ -1879,7 +1855,7 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.labels` field.
                       x-doc-examples:
                       - environment: production
                         app: warp-drive-ai
@@ -1889,13 +1865,13 @@ spec:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        Similar to the standard `metadata.annotations` field.
                       x-doc-examples:
                       - ai.fleet.com/discombobulate: "true"
                     taints:
                       type: array
                       description: |
-                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+                        Similar to the `.spec.taints` field of the Node object.
 
                         > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
@@ -2143,7 +2119,7 @@ spec:
                       description: |
                         Management of resource reservation for system daemons on a node.
 
-                        More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                        More info in the Kubernetes documentation.
                       properties:
                         mode:
                           type: string
@@ -2192,7 +2168,7 @@ spec:
 
                         In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
 
-                        For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                        For more information, see the Kubernetes documentation.
                       properties:
                         enabled:
                           type: boolean
@@ -2221,7 +2197,7 @@ spec:
                             - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
                             - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
 
-                            More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                            More information can be found in the Kubernetes documentation.
                           enum:
                             - None
                             - BestEffort

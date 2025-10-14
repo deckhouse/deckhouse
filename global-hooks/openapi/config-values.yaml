@@ -13,7 +13,7 @@ properties:
 
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
-        * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+        * If the value is not specified, the default StorageClass set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
   defaultClusterStorageClass:
@@ -48,7 +48,7 @@ properties:
         type: string
         default: nginx
         description: |
-          The class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+          The class name of the Ingress controller (IngressClass) used for Deckhouse modules.
 
           If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
         x-examples: [ "nginx" ]
@@ -144,7 +144,7 @@ properties:
                 description: |
                   The name of the secret in the `d8-system` namespace to use with Deckhouse modules.
 
-                  This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                  This secret must have the kubernetes.io/tls format.
                 default: "false"
       resourcesRequests:
         description: |
@@ -183,6 +183,6 @@ properties:
         description: |
           The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
-            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+            * If the value is not specified, the default StorageClass set in the cluster is used.
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.

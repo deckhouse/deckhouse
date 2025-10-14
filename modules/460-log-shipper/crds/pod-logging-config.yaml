@@ -49,7 +49,7 @@ spec:
                   description: |
                     Specifies the label selector to filter Pods.
 
-                    You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                    You can get more into here.
                   anyOf:
                     - required:
                         - matchLabels

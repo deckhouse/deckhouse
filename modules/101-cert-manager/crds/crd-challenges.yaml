@@ -218,7 +218,7 @@ spec:
                               description: when specifying ClientID and ClientSecret then this field is also needed
                               type: string
                         cloudDNS:
-                          description: Use the Google Cloud DNS API to manage DNS01 challenge records.
+                          description: Use Cloud DNS API to manage DNS01 challenge records.
                           type: object
                           required:
                             - project

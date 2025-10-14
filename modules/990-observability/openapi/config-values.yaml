@@ -72,7 +72,7 @@ properties:
             description: |
               The name of the secret in the `d8-system` namespace to use with the observability module.
 
-              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              This secret must have the kubernetes.io/tls format.
             default: "false"
   grafana:
     type: object

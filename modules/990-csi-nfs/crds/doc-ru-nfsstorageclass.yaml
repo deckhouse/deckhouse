@@ -56,12 +56,12 @@ spec:
                   description: |
                     Задаёт режим поведения при удалении PersistentVolumeClaim (PVC). Допустимые значения:
                     - `Delete` — при удалении PVC также удаляется связанный PersistentVolume (PV) и соответствующие данные на NFS-сервере.
-                    - `Retain` — при удалении PVC связанные PersistentVolume и данные на NFS-сервере не удаляются и требуют ручного удаления пользователем. Подробнее [в документации Kubernetes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+                    - `Retain` — при удалении PVC связанные PersistentVolume и данные на NFS-сервере не удаляются и требуют ручного удаления пользователем.
                 volumeBindingMode:
                   description: |
                     Задаёт режим создания тома. Допустимые значения:
                     - `Immediate` — том создаётся сразу после создания PVC.
-                    - `WaitForFirstConsumer` — том создаётся только при первом использовании PVC со стороны пода. Подробнее [в документации Kubernetes](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
+                    - `WaitForFirstConsumer` — том создаётся только при первом использовании PVC со стороны пода.
                 workloadNodes:
                   type: object
                   minProperties: 1

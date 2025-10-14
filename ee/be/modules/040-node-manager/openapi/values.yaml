@@ -108,7 +108,7 @@ properties:
             taints:
               type: array
               description: |
-                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                Similar to the `.spec.taints` field of the Node object.
 
                 **Caution!** Only `effect`, `key`, `value` fields are available.
               items:

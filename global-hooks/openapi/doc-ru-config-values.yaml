@@ -6,7 +6,7 @@ properties:
 
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
-        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+        * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
   defaultClusterStorageClass:
@@ -32,7 +32,7 @@ properties:
     properties:
       ingressClass:
         description: |
-          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+          Имя класса Ingress-контроллера (IngressClass), используемый для модулей Deckhouse.
 
           Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех модулей. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
       publicDomainTemplate:
@@ -81,7 +81,7 @@ properties:
                 description: |
                   Имя Secret'а в пространстве имен `d8-system`, который будет использоваться модулями Deckhouse.
 
-                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Указанный Secret должен быть в формате kubernetes.io/tls.
       resourcesRequests:
         description: |
           Количество ресурсов (CPU и памяти), выделяемых для работы компонентов Deckhouse, работающих на каждом узле кластера (обычно это DaemonSet'ы, например `cni-flannel`, `monitoring-ping`).
@@ -102,6 +102,6 @@ properties:
         description: |
           Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
-            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+            * Если значение не указано, то используется StorageClass по умолчанию, установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
             * Этот параметр применяется в процессе включения модуля.

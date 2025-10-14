@@ -543,9 +543,6 @@ spec:
 
                             Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
 
-                            Подробнее об указании ресурсов:
-                            - [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/);
-                            - [единицы ресурсов памяти](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
                     memory:
                       properties:
                         maxEvents:

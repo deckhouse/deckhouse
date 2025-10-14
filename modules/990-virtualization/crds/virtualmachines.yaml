@@ -171,7 +171,7 @@ spec:
 
                 topologySpreadConstraints:
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) as in the pod parameter `spec.topologySpreadConstraints` in Kubernetes.
+                    The same as in the pod parameter `spec.topologySpreadConstraints` in Kubernetes.
 
                   items:
                     properties:
@@ -225,7 +225,7 @@ spec:
 
                 affinity:
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) as in the pod parameter `spec.affinity` in Kubernetes;
+                    The same as in the pod parameter `spec.affinity` in Kubernetes;
 
                     The `affinity` setting details are exactly matching the documentation source above. The only difference are the names of several parameters. The following alternative names are used:
                     * `podAffinity` -> `virtualMachineAndPodAffinity`
@@ -773,18 +773,18 @@ spec:
                   additionalProperties:
                     type: string
                   description: |
-                    [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) as in the pod parameter `spec.nodeSelector` in Kubernetes.
+                    The same as in the pod parameter `spec.nodeSelector` in Kubernetes.
                   type: object
 
                 priorityClassName:
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the pod parameter `spec.priorityClassName` in Kubernetes.
+                    The same as in the pod parameter `spec.priorityClassName` in Kubernetes.
                   type: string
 
                 tolerations:
                   type: array
                   description: |
-                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pod  parameter `spec.tolerations` in Kubernetes.
+                    The same as in the pod  parameter `spec.tolerations` in Kubernetes.
 
                   items:
                     type: object

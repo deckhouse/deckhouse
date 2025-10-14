@@ -22,7 +22,7 @@ properties:
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
               > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
             properties:
@@ -52,7 +52,7 @@ properties:
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+              Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
               > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
             properties:
@@ -150,7 +150,7 @@ properties:
                 description: |
                   Имя Secret'а в namespace `d8-system`, который будет использоваться для smoke-mini.
 
-                  Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Secret должен быть в формате TLS.
   disabledProbes:
     description: |
       Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в веб-интерфейсе.
@@ -195,7 +195,7 @@ properties:
             description: |
               Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для webui/status.
 
-              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате TLS.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

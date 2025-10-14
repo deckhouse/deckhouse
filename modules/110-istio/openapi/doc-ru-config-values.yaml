@@ -198,7 +198,7 @@ properties:
               Режим работы с репликами:
               - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (/reference/api/global.html#parameters-highavailability));
               - `Static` — режим, где количество реплик указывается явно (параметр [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas));
-              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
+              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью HPA на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
           static:
             description: |
               Параметры управления репликами и масштабированием в режиме Static.
@@ -451,7 +451,7 @@ properties:
             description: |
               Имя Secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
@@ -462,7 +462,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:

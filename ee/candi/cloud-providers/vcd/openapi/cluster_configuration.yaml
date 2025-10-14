@@ -169,7 +169,7 @@ apiVersions:
                     description: |
                       A list of labels to attach to cluster resources.
 
-                      The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      The same as the `metadata.labels` standard field.
                     x-examples:
                       - environment: production
                         app: warp-drive-ai
@@ -178,7 +178,7 @@ apiVersions:
                   annotations:
                     type: object
                     description: |
-                      The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      The same as the `metadata.annotations` standard field.
                     x-examples:
                       - ai.fleet.com/discombobulate: "true"
                     additionalProperties:
@@ -186,7 +186,7 @@ apiVersions:
                   taints:
                     type: array
                     description: |
-                      The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                      The same as the `.spec.taints` field of the Node object.
 
                       > Available fields: `effect`, `key`, and `values`.
                     x-examples:

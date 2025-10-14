@@ -22,7 +22,7 @@ title: "Модуль cert-manager: FAQ"
 Чтобы издать сертификаты на доменное имя через Let's Encrypt, сервис требует осуществить подтверждение владения доменом.
 `Cert-manager` поддерживает несколько методов для такого подтверждения при использовании `ACME`(Automated Certificate Management Environment):
 * `HTTP-01` — `cert-manager` создаст временный Pod в кластере, который будет слушать на определенном URL для подтверждения владения доменом. Для его работы необходимо иметь возможность направлять внешний трафик на этот Pod, обычно через `Ingress`.
-* `DNS-01` —  `cert-manager` делает TXT-запись в DNS для подтверждения владения доменом. У `cert-manager` есть встроенная поддержка популярных провайдеров DNS: AWS Route53, Google Cloud DNS, Cloudflare и т.д. Полный перечень доступен [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/).
+* `DNS-01` —  `cert-manager` делает TXT-запись в DNS для подтверждения владения доменом. У `cert-manager` есть встроенная поддержка популярных провайдеров DNS.
 
 {% alert level="danger" %}
 Метод `HTTP-01` не поддерживает выпуск wildcard-сертификатов.
@@ -30,11 +30,6 @@ title: "Модуль cert-manager: FAQ"
 
 Поставляемые `ClusterIssuers`, издающие сертификаты через Let's Encrypt, делятся на два типа:
 1. `ClusterIssuer,` специфичные для используемого cloud-провайдера.  
-Добавляются автоматически, при заполнении [настроек модуля](./configuration.html) связанных с cloud-провайдером. Поддерживают метод `DNS-01`.
-   * `clouddns`
-   * `cloudflare`
-   * `digitalocean`
-   * `route53`
 1. `ClusterIssuer` использующие метод `HTTP-01`.  
    Добавляются автоматически, если их создание не отключено в [настройках модуля](./configuration.html#parameters-disableletsencrypt).
    * `letsencrypt`
@@ -171,7 +166,6 @@ title: "Модуль cert-manager: FAQ"
 Если вы не хотите хранить учетные данные конфигурации Deckhouse (например, по соображениям безопасности), можете создать
 свой собственный `ClusterIssuer` / `Issuer`.
 
-Пример создания собственного `ClusterIssuer` для сервиса [route53](https://aws.amazon.com/route53/):
 - Создайте Secret с учетными данными:
 
   ```shell
@@ -180,10 +174,10 @@ title: "Модуль cert-manager: FAQ"
   kind: Secret
   type: Opaque
   metadata:
-    name: route53
+    name: XXX
     namespace: default
   data:
-    secret-access-key: {{ "MY-AWS-ACCESS-KEY-TOKEN" | b64enc | quote }}
+    secret-access-key: {{ "MY-ACCESS-KEY-TOKEN" | b64enc | quote }}
   EOF
   ```
 
@@ -194,20 +188,20 @@ title: "Модуль cert-manager: FAQ"
   apiVersion: cert-manager.io/v1
   kind: ClusterIssuer
   metadata:
-    name: route53
+    name: XXX
     namespace: default
   spec:
     acme:
       server: https://acme-v02.api.letsencrypt.org/directory
       privateKeySecretRef:
-        name: route53-tls-key
+        name: tls-key
       solvers:
       - dns01:
-          route53:
+          <solver>:
             region: us-east-1
-            accessKeyID: {{ "MY-AWS-ACCESS-KEY-ID" }}
+            accessKeyID: {{ "MY-ACCESS-KEY-ID" }}
             secretAccessKeySecretRef:
-              name: route53
+              name: XXX
               key: secret-access-key
   EOF
   ```
@@ -224,7 +218,7 @@ title: "Модуль cert-manager: FAQ"
   spec:
     secretName: example-com-tls
     issuerRef:
-      name: route53
+      name: XXX
     commonName: www.example.com 
     dnsNames:
     - www.example.com

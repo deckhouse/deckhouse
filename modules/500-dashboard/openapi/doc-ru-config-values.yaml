@@ -11,7 +11,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
 
@@ -64,7 +64,7 @@ properties:
         properties:
           secretName:
             description: |
-              Имя секрета (Secret) в пространстве имен `d8-system`, которое будет использоваться дашборд. Cекрет должен быть в формате [tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+              Имя секрета (Secret) в пространстве имен `d8-system`, которое будет использоваться дашборд. Cекрет должен быть в формате tls).
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.

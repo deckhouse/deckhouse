@@ -5,7 +5,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress external-auth, работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:
@@ -65,7 +65,7 @@ properties:
             description: |
               Имя Secret’а в пространстве имен d8-system, который будет использоваться для веб-интерфейса.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   postgres:
     properties:
       mode:

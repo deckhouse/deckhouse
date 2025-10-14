@@ -42,7 +42,7 @@ properties:
             description: |
               Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса загрузки модуля CDI.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   dvcr:
     description: |
       Параметры, для настройки deckhouse virtualization container registry.

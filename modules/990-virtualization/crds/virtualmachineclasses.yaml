@@ -330,7 +330,7 @@ spec:
                   type: array
                 tolerations:
                   description: |-
-                    Tolerations are the same as `spec.tolerations` for [pods](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                    Tolerations are the same as `spec.tolerations` for pods.
                     These tolerations will be merged with the tolerations specified in the VirtualMachine resource. VirtualMachine tolerations have a higher priority.
                   items:
                     description: |-

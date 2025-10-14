@@ -243,19 +243,19 @@ apiVersions:
                         type: string
                       description: |
                         Allows a virtual machine to be assigned to specified DVP nodes.
-                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes Pods.
+                        The same as in the `spec.nodeSelector` parameter for Kubernetes Pods.
                       type: object
 
                     priorityClassName:
                       description: |
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) as in the `spec.priorityClassName` parameter for Kubernetes Pods.
+                        The same as in the `spec.priorityClassName` parameter for Kubernetes Pods.
                       type: string
 
                     tolerations:
                       type: array
                       description: |
                         Allows setting tolerations for virtual machines for a DVP node.
-                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes Pods.
+                        The same as in the `spec.tolerations` parameter in Kubernetes Pods.
                       items:
                         type: object
                         description: ""
@@ -409,7 +409,7 @@ apiVersions:
                     description: |
                       A list of labels to attach to all cluster resources (if supported by the resources).
 
-                      The same as the [standard `metadata.labels` field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      The same as the standard `metadata.labels` field.
 
                       When modifying labels in the running cluster, make sure re-create all the machines to apply the new labels.
                     x-doc-example: |
@@ -423,7 +423,7 @@ apiVersions:
                   annotations:
                     type: object
                     description: |
-                      The same as the [standard `metadata.annotations` field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      The same as the standard `metadata.annotations` field.
                     x-doc-example: |
                       ```yaml
                       annotations:
@@ -434,7 +434,7 @@ apiVersions:
                   taints:
                     type: array
                     description: |
-                      The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                      The same as the `.spec.taints` field of the Node object.
 
                       > Only the `effect`, `key`, and `values` fields are available.
                     x-doc-example: |
@@ -489,8 +489,6 @@ apiVersions:
           type: string
           description: |
             Layout name.
-
-            [Read more about possible provider layouts](/modules/cloud-provider-aws/dvp/layouts.html).
           enum: [Standard]
 
         region:

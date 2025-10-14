@@ -144,7 +144,7 @@ spec:
                   description: |
                     Defines the behavior when a PersistentVolumeClaim (PVC) is deleted. Two values are allowed:
                     - `Delete` — when the PVC is deleted, the associated PersistentVolume (PV) and corresponding data on the NFS server are also deleted.
-                    - `Retain` — when the PVC is deleted, the associated PersistentVolume and data on the NFS server are not deleted and require manual removal by the user. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+                    - `Retain` — when the PVC is deleted, the associated PersistentVolume and data on the NFS server are not deleted and require manual removal by the user. See more in the Kubernetes documentation.
                   enum:
                     - Delete
                     - Retain
@@ -156,7 +156,7 @@ spec:
                   description: |
                     Defines the volume binding mode. The following values are allowed:
                     - `Immediate` — the volume is provisioned immediately after the PersistentVolumeClaim (PVC) is created.
-                    - `WaitForFirstConsumer` — the volume is provisioned only when the PVC is first used by a pod. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
+                    - `WaitForFirstConsumer` — the volume is provisioned only when the PVC is first used by a pod. See more in the Kubernetes documentation.
                   enum:
                     - Immediate
                     - WaitForFirstConsumer

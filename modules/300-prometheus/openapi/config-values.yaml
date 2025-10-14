@@ -48,7 +48,7 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress external-auth mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
           > External authentication is enabled automatically if the [user-authn](/modules/user-authn/) module is enabled.
         properties:
@@ -204,7 +204,7 @@ properties:
             description: |
               The name of the secret in the `d8-system` namespace to use with Grafana/Prometheus.
 
-              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+              This secret must have the kubernetes.io/tls format.
             default: "false"
   vpa:
     type: object

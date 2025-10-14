@@ -189,7 +189,6 @@ search: grafana разработка графиков
 
 ```shell
 listOfDomains="
-google.com
 mycompany.com
 "
 

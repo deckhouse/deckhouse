@@ -213,10 +213,6 @@ spec:
 
 Чтобы добавить новый статический узел (выделенная ВМ, bare-metal-сервер и т. п.) в кластер вручную, выполните следующие шаги:
 
-1. Для [CloudStatic-узлов](../node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
-   - [Для AWS](/modules/cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для GCP](/modules/cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
-   - [Для YC](/modules/cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
 1. Используйте существующий или создайте новый ресурс [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в ресурсе NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 

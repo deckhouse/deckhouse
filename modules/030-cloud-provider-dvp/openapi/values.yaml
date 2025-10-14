@@ -217,19 +217,19 @@ properties:
                           type: string
                         description: |
                           Allows VM to be assigned to specified DVP nodes.
-                          [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) as in the pods `spec.nodeSelector` parameter in Kubernetes;
+                          The same as in the pods `spec.nodeSelector` parameter in Kubernetes;
                         type: object
 
                       priorityClassName:
                         description: |
-                          [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)  as in the pods `spec.priorityClassName` parameter in Kubernetes;
+                          The same  as in the pods `spec.priorityClassName` parameter in Kubernetes;
                         type: string
 
                       tolerations:
                         type: array
                         description: |
                           Allows you to set tolerations for VM for a DVP node.
-                          [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods `spec.tolerations` parameter in Kubernetes;
+                          The same as in the pods `spec.tolerations` parameter in Kubernetes;
                         items:
                           type: object
                           description: ""
@@ -342,7 +342,7 @@ properties:
                       description: |
                         A list of labels to attach to cluster resources.
 
-                        The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        The same as the `metadata.labels` standard field.
                       x-examples:
                         - environment: production
                           app: warp-drive-ai
@@ -351,7 +351,7 @@ properties:
                     annotations:
                       type: object
                       description: |
-                        The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                        The same as the `metadata.annotations` standard field.
                       x-examples:
                         - ai.fleet.com/discombobulate: "true"
                       additionalProperties:
@@ -359,7 +359,7 @@ properties:
                     taints:
                       type: array
                       description: |
-                        The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+                        The same as the `.spec.taints` field of the Node object.
 
                         > **Caution!** Only the `effect`, `key`, `values`  fields are available.
                       x-examples:

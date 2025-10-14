@@ -55,12 +55,12 @@ spec:
                   description: |-
                     Определяет `nodeSelector` для подов `dex-authenticator`.
 
-                    **Формат**: стандартный список [nodeSelector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). Поды инстанса унаследуют это поле как есть.
+                    **Формат**: стандартный список nodeSelector. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                      Определяет `tolerations` для подов `dex-authenticator`.
 
-                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                     **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                   items:
                     properties:
                       effect:
@@ -182,7 +182,7 @@ spec:
                   description: |-
                      Определяет tolerations для подов `dex-authenticator`.
 
-                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                     **Формат**: стандартный список toleration. Поды инстанса унаследуют это поле как есть.
                   items:
                     properties:
                       effect:

@@ -90,7 +90,6 @@ spec:
                     description: |-
                       Имя связанного объекта.
 
-                      Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names).
                 type: object
               updatePolicy:
                 description: |-

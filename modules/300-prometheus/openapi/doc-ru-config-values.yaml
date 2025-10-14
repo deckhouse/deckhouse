@@ -32,7 +32,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modules/user-authn/).
         properties:
@@ -127,7 +127,7 @@ properties:
             description: |
               Имя Secret'а в namespace `d8-system`, который будет использоваться для Grafana/Prometheus.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате kubernetes.io/tls.
   vpa:
     description: |
       Настройки VPA для подов.

@@ -16,7 +16,7 @@ spec:
               properties:
                 affinity:
                   description: |
-                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity), как и в параметре подов `spec.affinity` в Kubernetes.
+                    По аналогии, как и в параметре подов `spec.affinity` в Kubernetes.
 
                     Настройка `affinity` полностью аналогична приведённой выше документации, за исключением названий некоторых параметров. Используются следующие аналоги:
 
@@ -413,7 +413,7 @@ spec:
                         Объём оперативной памяти.
                 nodeSelector:
                   description: |
-                    [По аналогии](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) c параметром подов `spec.nodeSelector` в Kubernetes.
+                    По аналогии c параметром подов `spec.nodeSelector` в Kubernetes.
                 osType:
                   description: |
                     Параметр позволяет выбрать тип используемой ОС, для которой будет создана ВМ с оптимальным набором необходимых виртуальных устройств и параметров.
@@ -422,7 +422,7 @@ spec:
                     * `Generic` — для других типов ОС.
                 priorityClassName:
                   description: |
-                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) с параметром подов `spec.priorityClassName` в Kubernetes.
+                    По аналогии с параметром подов `spec.priorityClassName` в Kubernetes.
                 provisioning:
                   description: |
                     Блок описания сценария начальной инициализации ВМ.
@@ -482,7 +482,7 @@ spec:
                     Период ожидания после подачи сигнала о прекращении работы ВМ (`SIGTERM`), по истечении которого работа ВМ принудительно завершается.
                 tolerations:
                   description: |
-                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) с параметром подов `spec.tolerations` в Kubernetes.
+                    По аналогии с параметром подов `spec.tolerations` в Kubernetes.
                   items:
                     description: ""
                     properties:
@@ -498,7 +498,7 @@ spec:
                         description: ""
                 topologySpreadConstraints:
                   description: |
-                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) с параметром подов `spec.topologySpreadConstraints` в Kubernetes.
+                    По аналогии с параметром подов `spec.topologySpreadConstraints` в Kubernetes.
                   items:
                     properties:
                       labelSelector:

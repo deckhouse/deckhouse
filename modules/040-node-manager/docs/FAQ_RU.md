@@ -1139,51 +1139,6 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
-## Как использовать NodeGroup с приоритетом?
-
-С помощью параметра [priority](cr.html#nodegroup-v1-spec-cloudinstances-priority) кастомного ресурса `NodeGroup` можно задавать порядок заказа узлов в кластере.
-Например, можно сделать так, чтобы сначала заказывались узлы типа *spot-node*, а если они закончились — обычные узлы. Или чтобы при наличии ресурсов в облаке заказывались узлы большего размера, а при их исчерпании — узлы меньшего размера.
-
-Пример создания двух `NodeGroup` с использованием узлов типа spot-node:
-
-```yaml
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker-spot
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker-spot
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 50
-  nodeType: CloudEphemeral
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AWSInstanceClass
-      name: worker
-    maxPerZone: 5
-    minPerZone: 0
-    priority: 30
-  nodeType: CloudEphemeral
-```
-
-В приведенном выше примере, `cluster-autoscaler` сначала попытается заказать узел типа *_spot-node*. Если в течение 15 минут его не получится добавить в кластер, NodeGroup `worker-spot` будет поставлен на паузу (на 20 минут) и `cluster-autoscaler` начнет заказывать узлы из NodeGroup `worker`.
-Если через 30 минут в кластере возникнет необходимость развернуть еще один узел, `cluster-autoscaler` сначала попытается заказать узел из NodeGroup `worker-spot` и только потом — из NodeGroup `worker`.
-
-После того как NodeGroup `worker-spot` достигнет своего максимума (5 узлов в примере выше), узлы будут заказываться из NodeGroup `worker`.
-
-Шаблоны узлов (labels/taints) для NodeGroup `worker` и `worker-spot` должны быть одинаковыми, или как минимум подходить для той нагрузки, которая запускает процесс увеличения кластера.
-
 ## Как интерпретировать состояние группы узлов?
 
 **Ready** — группа узлов содержит минимально необходимое число запланированных узлов с состоянием `Ready` для всех зон.

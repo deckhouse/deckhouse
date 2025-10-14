@@ -89,7 +89,7 @@ spec:
                       description: |
                         Deny Pods that have tolerations from the ones in the specified list.
 
-                        See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                        See more in the Kubernetes documentation.
                       items:
                         type: object
                         properties:
@@ -244,7 +244,7 @@ spec:
                           description: |
                             Specifies the label selector to filter namespaces.
 
-                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            You can get more info in the documentation.
                           anyOf:
                             - required: [ matchLabels ]
                             - required: [ matchExpressions ]
@@ -288,7 +288,7 @@ spec:
                       description: |
                         Specifies the label selector to filter Pods with.
 
-                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        You can get more into here.
                       anyOf:
                         - required:
                             - matchLabels
