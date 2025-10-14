@@ -73,10 +73,10 @@ remove_labels:
   uses: {!{ index (ds "actions") "ssh-agent" }!}
   with:
     ssh-private-key: |
-      ${{ secrets.CVE_TESTS_SSH_PRIVATE_KEY }}
+      ${{ steps.secrets.outputs.CVE_TESTS_SSH_PRIVATE_KEY }}
 - name: Add ssh_known_hosts
   run: |
-    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ secrets.CVE_TESTS_REPO_GIT }})
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.CVE_TESTS_REPO_GIT }})
     echo "::add-mask::$HOST"
     IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
     for IP in $IPS; do
@@ -101,12 +101,13 @@ remove_labels:
 {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/DefectDojo/Dev/URL" "URL" "DD_DEV_URL" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/CODEOWNERS_REPO_TOKEN" "CODEOWNERS_REPO_TOKEN" "CODEOWNERS_REPO_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "DEV_REGISTRY_URL" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "PROD_READ_REGISTRY" "DECKHOUSE_REGISTRY_READ_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "PROD_READ_REGISTRY_USER" "DECKHOUSE_REGISTRY_READ_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "PROD_READ_REGISTRY_PASSWORD" "DECKHOUSE_REGISTRY_READ_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Trivy_CVE_Scan_CI_Secrets" "CVE_TESTS_REPO_GIT" "CVE_TESTS_REPO_GIT" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{ tmpl.Exec "import_secrets" $secrets }!}
   
 - name: Set scan target type
@@ -152,9 +153,9 @@ remove_labels:
     PROD_REGISTRY_PASSWORD: ${{steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_PASSWORD}}
     TRIVY_BIN_VERSION: "v0.63.0"
     TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
-    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
-    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+    TRIVY_DB_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
+    TRIVY_JAVA_DB_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
     SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   run: |
     echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${SOURCE_TAG}..."
