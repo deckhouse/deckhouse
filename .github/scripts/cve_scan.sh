@@ -57,7 +57,6 @@ send_report() {
     --retry-all-errors \
     https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
     -H "accept: application/json" \
-    -H "Content-Type: multipart/form-data" \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
     -F "auto_create_context=True" \
     -F "minimum_severity=Info" \
