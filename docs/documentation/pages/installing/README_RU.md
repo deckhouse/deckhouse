@@ -627,7 +627,7 @@ echo "$MYRESULTSTRING"
 
    - `--source` — адрес источника хранилища образов Deckhouse Kubernetes Platform.
    - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен.
-   - `--license` — параметр для указания лицензионного ключа для аутентификации в официальном хранилище образов (лицензионного ключа Deckhouse Kubernetes Platform).
+   - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном хранилище образов.
    - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform.
    - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
