@@ -1,5 +1,0 @@
----
-title: "Custom Resources"
----
-
-<!-- SCHEMA -->

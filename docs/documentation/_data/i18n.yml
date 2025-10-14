@@ -182,8 +182,8 @@ common:
     en: Search for guides...
     ru: Поиск гайдов...
   search_context_dkpdocs_and_modules:
-    en: The search is performed throughout DKP documentation and modules.
-    ru: Поиск выполняется по всей документации DKP и модулям.
+    en: The search is performed throughout documentation and modules.
+    ru: Поиск выполняется по всей документации и модулям.
   search_context_modules:
     en: The search is performed throughout modules, excluding the DKP documentation.
     ru: Поиск выполняется по всем модулям, не включая документацию DKP.

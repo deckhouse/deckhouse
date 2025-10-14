@@ -383,6 +383,18 @@ entries:
                     en: Custom Resources
                     ru: Custom Resources
                   url: /modules/runtime-audit-engine/cr.html
+            - title:
+                en: Advanced usage
+                ru: Расширенная конфигурация
+              url: /modules/runtime-audit-engine/advanced_usage.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/runtime-audit-engine/examples.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/runtime-audit-engine/faq.html
         - title:
             en: secret-copier
             ru: secret-copier
