@@ -7,7 +7,7 @@
   {{- end }}
 
 # Check whether pod is ready or the annotation on it allows scarping unready pods
-- sourceLabels: [{{ $label }}, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_allows_unready_pods]
+- sourceLabels: [{{ $label }}, __meta_kubernetes_{{ $scrapeType }}_annotation_prometheus_deckhouse_io_allow_unready_pods]
   regex: ^(.*)true(.*)$
   action: keep
 
