@@ -79,6 +79,8 @@ env:
 permissions:
   contents: read
   id-token: write
+  issues: read
+  pull-requests: read
 
 jobs:
   started_at:
@@ -235,10 +237,6 @@ jobs:
   check_e2e_labels:
     name: Check e2e labels
     runs-on: "regular"
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
     outputs:
 
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
