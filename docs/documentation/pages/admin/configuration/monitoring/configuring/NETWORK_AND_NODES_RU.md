@@ -1,6 +1,6 @@
 ---
 title: "Настройка мониторинга сетевого взаимодействия и узлов кластера"
-permalink: ru/admin/configuration/monitoring/configuring/network-and-pods.html
+permalink: ru/admin/configuration/monitoring/configuring/network-and-nodes.html
 lang: ru
 ---
 
