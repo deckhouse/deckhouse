@@ -1,0 +1,4 @@
+dirs:
+- /lib/modules
+files:
+- /run/xtables.lock

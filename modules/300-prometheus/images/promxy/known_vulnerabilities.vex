@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-29ee29150ad2b251ccdee6c203c52b31b355dd476df45ac4f10de08d24ac9ee6",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2025-10-10T19:56:32.366855+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2023-40577"
+      },
+      "timestamp": "2025-10-10T19:55:13.989715+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/alertmanager@v0.24.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2023-40577 представляет собой stored XSS в веб-интерфейсе Alertmanager через endpoint /api/v1/alerts, который позволяет выполнить произвольный JavaScript код при наличии прав на POST запросы к этому endpoint. Promxy использует библиотеку prometheus/alertmanager только для работы с правилами алертинга (alerting/recording rules), но не предоставляет веб-интерфейс Alertmanager и не экспонирует endpoint /api/v1/alerts для приема алертов. Promxy является read-only прокси для агрегации метрик из нескольких Prometheus серверов и выполнения PromQL запросов. Уязвимый код в UI компоненте Alertmanager не используется и не доступен через Promxy. Для эксплуатации CVE-2023-40577 требуется доступ к веб-интерфейсу Alertmanager, которого в Promxy нет, следовательно уязвимость не может быть эксплуатирована."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "timestamp": "2025-10-10T19:55:05.575924+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2025-54410 связана с работой демона Docker (dockerd) при использовании firewalld - при перезагрузке firewalld не восстанавливаются iptables правила изоляции bridge сетей между контейнерами. Promxy является Go-бинарем, который выступает агрегирующим прокси для Prometheus и использует библиотеку github.com/docker/docker только как зависимость Go модуля. Promxy не запускает Docker daemon, не управляет контейнерами и не создает bridge сети. Уязвимый код находится в функциях управления сетями Docker daemon (libnetwork/iptables/firewalld.go), которые никогда не вызываются в контексте работы Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в рамках использования Promxy."
+    }
+  ]
+}

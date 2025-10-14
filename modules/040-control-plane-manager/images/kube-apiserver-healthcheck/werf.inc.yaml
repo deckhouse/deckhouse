@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: 2025-06-11
 import:
 - image: common/pause
   add: /pause
@@ -10,12 +11,15 @@ import:
   add: /src/kube-apiserver-healthcheck
   to: /usr/local/bin/kube-apiserver-healthcheck
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: 2025-06-11
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -31,7 +35,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
-  - chown 64535:64535 kube-apiserver-healthcheck
+  - chown 0:64535 kube-apiserver-healthcheck
   - chmod 0700 kube-apiserver-healthcheck
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

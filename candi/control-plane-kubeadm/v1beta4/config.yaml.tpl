@@ -59,7 +59,7 @@ apiServer:
     {{- if eq .apiserver.auditLog.output "File" }}
     - name: kube-audit-log
       hostPath: "{{ .apiserver.auditLog.path }}"
-      mountPath: "{{ .apiserver.auditLog.path }}"
+      mountPath: /var/log/kube-audit
       readOnly: false
       pathType: DirectoryOrCreate
     {{- end }}
@@ -92,7 +92,7 @@ apiServer:
       value: json
     {{- if eq .apiserver.auditLog.output "File" }}
     - name: audit-log-path
-      value: "{{ .apiserver.auditLog.path }}/audit.log"
+      value: "/var/log/kube-audit/audit.log"
     - name: audit-log-truncate-enabled
       value: "true"
     - name: audit-log-maxage
@@ -144,6 +144,10 @@ apiServer:
     {{ if .apiserver.auditWebhookURL }}
     - name: audit-webhook-config-file
       value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
+    {{- end }}
+    {{- if .apiserver.secretEncryptionKey }}
+    - name: encryption-provider-config
+      value: /etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
     {{- end }}
     - name: profiling
       value: "false"

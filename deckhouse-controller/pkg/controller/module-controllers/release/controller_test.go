@@ -32,7 +32,6 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +61,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
 )
 
@@ -909,10 +909,10 @@ type: Opaque
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		restartCheckTicker:   time.NewTicker(3 * time.Second),
-		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
+		metricStorage:        metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(logger)),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
-		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
+		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(logger)), releaseUpdater.ModuleReleaseBlockedMetricName),
 		exts:           extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 

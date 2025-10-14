@@ -31,7 +31,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса IngressNginxController описаны [в документации](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller).
+Подробности о возможностях конфигурации ресурса IngressNginxController описаны [в документации](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
 ### Терминация HTTPS
 

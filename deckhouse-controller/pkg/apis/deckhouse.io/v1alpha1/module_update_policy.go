@@ -48,21 +48,10 @@ var (
 
 var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
-type ModuleUpdatePolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleUpdatePolicy `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleUpdatePolicy source
 type ModuleUpdatePolicy struct {
@@ -74,8 +63,6 @@ type ModuleUpdatePolicy struct {
 
 	Spec ModuleUpdatePolicySpec `json:"spec"`
 }
-
-// +k8s:deepcopy-gen=true
 
 type ModuleUpdatePolicySpec struct {
 	Update                ModuleUpdatePolicySpecUpdate          `json:"update"`
@@ -90,6 +77,16 @@ type ModuleUpdatePolicySpecUpdate struct {
 
 type ModuleUpdatePolicySpecReleaseSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
+type ModuleUpdatePolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleUpdatePolicy `json:"items"`
 }
 
 // Update mode consts

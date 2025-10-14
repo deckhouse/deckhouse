@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -423,7 +424,7 @@ status:
 
 		Expect(metrics).ToNot(BeEmpty())
 
-		Expect(metrics[0].Action).To(Equal("expire"))
+		Expect(metrics[0].Action).To(Equal(operation.ActionExpireMetrics))
 		Expect(metrics[0].Group).To(Equal(etcdBackendBytesGroup))
 	}
 
@@ -432,7 +433,7 @@ status:
 
 		Expect(metrics).ToNot(BeEmpty())
 
-		Expect(metrics[0].Action).To(Equal("expire"))
+		Expect(metrics[0].Action).To(Equal(operation.ActionExpireMetrics))
 		Expect(metrics[0].Group).To(Equal(etcdBackendBytesGroup))
 
 		found := false

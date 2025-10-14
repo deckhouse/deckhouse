@@ -58,6 +58,8 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
+git:
+{{- include "image mount points" . }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}

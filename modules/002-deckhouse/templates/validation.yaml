@@ -89,7 +89,7 @@ spec:
         operator: In
         values:
         - "deckhouse"
-      - key: maintenance.deckhouse.io/no-resource-reconcillation
+      - key: maintenance.deckhouse.io/no-resource-reconciliation
         operator: NotIn
         values:
         - ""

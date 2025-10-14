@@ -1,4 +1,4 @@
-2461
+2510
 1GB
 2GB
 5XX
@@ -34,6 +34,7 @@ allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
 allowVolumeExpansion
+amd
 AMD
 ami
 AMIs
@@ -55,8 +56,8 @@ APIVersion
 app
 apparmor
 AppArmor
-app’s
 apps
+app’s
 Aps
 aren
 argocd
@@ -264,8 +265,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMap’s
 ConfigMaps
+ConfigMap’s
 configOverrides
 configs
 configurator
@@ -341,6 +342,7 @@ Daemonsets
 DaemonSets
 dapp
 dappdeps
+darwin
 dashboard
 datacenter
 Datacenter
@@ -407,8 +409,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfile’s
 Dockerfiles
+Dockerfile’s
 dockerignore
 dockersamples
 documentation
@@ -538,6 +540,7 @@ GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
 GeeseFS
+GELF
 Gemfile
 geo
 geohash
@@ -580,7 +583,7 @@ Habr
 hardcoded
 HardPodAntiAffinity
 HashiCorp
-HashiСorp
+HashiCorp
 hasn
 hdd
 healthcheck
@@ -644,6 +647,7 @@ imageRepo
 imagesRepo
 img
 inbox
+indices
 InfrastructureAccident
 InfrastructureMaintenance
 ing
@@ -747,6 +751,7 @@ KeyValue
 Kiali
 KiB
 KLLRCODA
+Klog
 kruise
 Kruise
 kube
@@ -952,6 +957,7 @@ NGINX’s
 NIC
 NICs
 NLB
+Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -960,7 +966,6 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
-Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1229,7 +1234,9 @@ RSA
 rtt
 RTT
 ru
+rulefiles
 RuleGroup
+ruleSelector
 RWO
 RWX
 S3
@@ -1239,6 +1246,7 @@ SAML
 SANs
 SASL
 SBOM
+schedulable
 SchedulingDisabled
 schemas
 SCM
@@ -1386,7 +1394,10 @@ syscall
 syscalls
 sysctl
 sysctls
+syslog
+syslog
 Syslog
+SysLog
 Sysprep
 SysprepRef
 systemd
@@ -1482,6 +1493,7 @@ versioning
 VersionItems
 VerticalPodAutoscaler
 vg
+vhost
 VictoriaMetrics
 VictorOps
 VictorOpsConfig
@@ -1504,6 +1516,7 @@ VK
 VLAN
 vm
 VM
+vmagent
 VMs
 VMware
 VMX
@@ -1567,6 +1580,7 @@ wildcards
 Wildcards
 withCredentials
 WithNAT
+WithNatInstance
 WithNATInstance
 WithoutNAT
 WORKDIR
@@ -1591,6 +1605,8 @@ YC
 YCloud
 yml
 YouTube
+zabbix
+Zabbix
 ZFS
 zipkin
 Zipkin
@@ -1687,6 +1703,7 @@ ZvirtInstanceClass
 биндятся
 блокирующе
 блокчейном
+буквенно
 бутстрап
 бутстрапа
 бутстрапится
@@ -1719,6 +1736,7 @@ ZvirtInstanceClass
 версионирования
 версионированной
 версионировать
+визуализированы
 Визуализировать
 визуализируются
 виртуализацией
@@ -1748,8 +1766,12 @@ ZvirtInstanceClass
 Гб
 Гбит
 геораспределенном
+гипервизор
+гипервизора
 гипервизорами
 гипервизорах
+гипервизоре
+гипервизоров
 гипервизором
 гиперконвергентной
 гитерминизм
@@ -1774,6 +1796,10 @@ ZvirtInstanceClass
 деактивации
 деактивировать
 дедуплицировать
+декларативно
+декларативное
+декларативность
+декларативный
 декхауса
 демо
 деплое
@@ -1799,6 +1825,7 @@ ZvirtInstanceClass
 журналирования
 журналировать
 зависимостоей
+задействуются
 задеплоенное
 задеплоенных
 задеплоим
@@ -1876,8 +1903,12 @@ ZvirtInstanceClass
 компонентa
 компонента
 конвержа
+консистентного
 консистентности
 консистентность
+консистентный
+консистентными
+консистентных
 контеинер
 контеинеризации
 контеинеризация
@@ -1888,6 +1919,7 @@ ZvirtInstanceClass
 контролллер
 контролллера
 конфиг
+конфига
 конфигами
 конфиге
 конфиги
@@ -2004,7 +2036,10 @@ ZvirtInstanceClass
 неинтерактивном
 некоммитнутые
 некоммитнутыми
+неконсистентному
 неконсистентности
+неконсистентный
+неконсистентными
 неконфиденциальный
 неконфиденциальных
 ненагруженные
@@ -2029,7 +2064,10 @@ ZvirtInstanceClass
 ОK
 ов
 оверпровижининг
+оверселлинг
+оверселлинга
 одностраничных
+однострочник
 одноузлового
 ООМ
 опциональные
@@ -2054,6 +2092,7 @@ ZvirtInstanceClass
 парсер
 парсера
 парсеров
+парсинг
 парсинга
 парсинге
 парсит
@@ -2067,6 +2106,7 @@ ZvirtInstanceClass
 патча
 патчем
 патчи
+патчится
 патчить
 Перебалансировке
 Перевыкат
@@ -2091,6 +2131,7 @@ ZvirtInstanceClass
 Переиспользование
 переиспользовании
 переиспользования
+переиспользовать
 переиспользоваться
 перенаправление
 перенаправления
@@ -2130,6 +2171,7 @@ ZvirtInstanceClass
 поддоменами
 поддомены
 подкомандой
+Подмонтирован
 подмонтированы
 подресурс
 подселять
@@ -2159,6 +2201,7 @@ ZvirtInstanceClass
 применятся
 примонтировав
 примонтированные
+примонтированный
 примонтированных
 примонтируем
 приоритизация
@@ -2190,6 +2233,7 @@ ZvirtInstanceClass
 раскопировано
 распарсены
 распарсить
+рассинхронизации
 ребут
 реверт
 Ревью
@@ -2285,6 +2329,7 @@ ZvirtInstanceClass
 сервисах
 сервисов
 сервисы
+синтаксисы
 скачался
 скачаться
 скейлить
@@ -2313,11 +2358,14 @@ ZvirtInstanceClass
 созависимые
 Создайте
 сокет
+сокетам
+сокетами
+сокете
 сокетов
 сокету
 сокеты
 соотвествущая
-соответcтвующий
+соответствующий
 соответствующий
 Сохраняеем
 спецзаголовки
@@ -2406,6 +2454,7 @@ ZvirtInstanceClass
 хост
 хоста
 хостам
+хостами
 хосте
 хостнейм
 хостов

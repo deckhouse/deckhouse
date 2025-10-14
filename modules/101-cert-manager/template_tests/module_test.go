@@ -144,6 +144,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
 - key: node.kubernetes.io/not-ready
@@ -210,6 +213,9 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
@@ -301,6 +307,9 @@ podAntiAffinity:
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists
 - key: node.kubernetes.io/not-ready
@@ -367,6 +376,9 @@ podAntiAffinity:
 - key: drbd.linbit.com/lost-quorum
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
 - effect: NoSchedule
   key: node.deckhouse.io/uninitialized
   operator: Exists

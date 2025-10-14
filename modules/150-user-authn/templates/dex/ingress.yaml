@@ -38,7 +38,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
-    nginx.ingress.kubernetes.io/limit-rpm: "20"
+    nginx.ingress.kubernetes.io/limit-rpm: "1000"
     # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.
     nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
     # Send alert only if dex doesn't work at all (resolves issue #204).

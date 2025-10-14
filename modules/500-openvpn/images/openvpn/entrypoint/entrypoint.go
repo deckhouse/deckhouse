@@ -68,7 +68,7 @@ func main() {
 
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to init iptables handler: %v", err)
 	}
 
 	nat := &iptablesRule{
@@ -100,44 +100,40 @@ func main() {
 
 	err = insertUnique(iptablesMgr, nat)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to update iptables nat rules: %v", err)
 	}
 
 	err = insertUnique(iptablesMgr, manglePreroutingSetMark)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to update iptables prerouting set mark rules: %v", err)
 	}
 
 	err = insertUnique(iptablesMgr, manglePreroutingRestoreMark)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to update iptables prerouting restore mark rules: %v", err)
 	}
 
 	err = insertUnique(iptablesMgr, mangleOutputRestoreMark)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to update iptables output restore mark rules: %v", err)
 	}
 
 	rule := netlink.NewRule()
 	rule.Table = routeTable
 	rule.Priority = 1
 	rule.Mark = routeTable
-	err = netlink.RuleAdd(rule)
-
-	if err != nil {
+	if err = netlink.RuleAdd(rule); err != nil {
 		if !os.IsExist(err) {
-			log.Fatal(err)
+			log.Fatalf("failed to add new netlink rule: %v", err)
 		}
 	}
 
-	err = mknodDevNetTun()
-	if err != nil {
-		log.Fatal(err)
+	if err = mknodDevNetTun(); err != nil {
+		log.Fatalf("failed to mknod: %v", err)
 	}
 
-	err = netLinkCreateTuntap(devTunName, 1400)
-	if err != nil {
-		log.Fatal(err)
+	if err = netLinkCreateTuntap(devTunName, 1400); err != nil {
+		log.Fatalf("failed to create tuntap: %v", err)
 	}
 
 	routeAdd(network, devTunName, routeTable)
@@ -171,7 +167,7 @@ func main() {
 	cmd := exec.Command("/usr/sbin/openvpn", args...)
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to get stdout pipe: %v", err)
 	}
 	scanner := bufio.NewScanner(cmdReader)
 	go func() {
@@ -180,10 +176,10 @@ func main() {
 		}
 	}()
 	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to start the command: %v", err)
 	}
 	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to wait for the command: %v", err)
 	}
 }
 
@@ -241,24 +237,27 @@ func netLinkCreateTuntap(name string, mtu int) error {
 		LinkAttrs: linkAttrs,
 		Mode:      unix.IFF_TUN,
 	}
-	err := netlink.LinkAdd(l)
-	if err != nil {
-		return err
+	if err := netlink.LinkAdd(l); err != nil {
+		return fmt.Errorf("failed to add the link: %w", err)
 	}
 
 	link, _ := netlink.LinkByName(linkAttrs.Name)
-	return netlink.LinkSetUp(link)
+	if err := netlink.LinkSetUp(link); err != nil {
+		return fmt.Errorf("failed to set the link up: %w", err)
+	}
+
+	return nil
 }
 
 func routeAdd(dstNet string, linkName string, table int) {
 	dstIPNet, err := parseIPNet(dstNet)
 	if err != nil {
-		log.Fatal("error parse IPNet: ", err)
+		log.Fatalf("error parse IPNet: %v", err)
 	}
 
 	link, err := netlink.LinkByName(linkName)
 	if err != nil {
-		log.Fatal("error find LinkByName: ", err)
+		log.Fatalf("error find LinkByName: %v", err)
 	}
 	route := netlink.Route{Dst: dstIPNet, Table: table, LinkIndex: link.Attrs().Index}
 	err = netlink.RouteAdd(&route)

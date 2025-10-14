@@ -1,16 +1,16 @@
 diff --git a/pkg/util/fieldindex/register.go b/pkg/util/fieldindex/register.go
-index 39ea11b3..820770e3 100644
+index c594e3ca..e312c901 100644
 --- a/pkg/util/fieldindex/register.go
 +++ b/pkg/util/fieldindex/register.go
-@@ -21,7 +21,6 @@ import (
- 	"sync"
+@@ -28,7 +28,6 @@ import (
  
  	appsv1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
+ 	appsv1beta1 "github.com/openkruise/kruise/apis/apps/v1beta1"
 -	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
+ )
  
- 	batchv1 "k8s.io/api/batch/v1"
- 	v1 "k8s.io/api/core/v1"
-@@ -65,11 +64,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
+ const (
+@@ -66,11 +65,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
  		if err = c.IndexField(context.TODO(), &v1.PersistentVolumeClaim{}, IndexNameForOwnerRefUID, ownerIndexFunc); err != nil {
  			return
  		}
@@ -22,13 +22,19 @@ index 39ea11b3..820770e3 100644
  		// pod name
  		if err = indexPodNodeName(c); err != nil {
  			return
-@@ -78,24 +72,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
+@@ -79,30 +73,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
  		if err = indexJob(c); err != nil {
  			return
  		}
 -		// broadcastjob owner
 -		if utildiscovery.DiscoverObject(&appsv1alpha1.BroadcastJob{}) {
 -			if err = indexBroadcastCronJob(c); err != nil {
+-				return
+-			}
+-		}
+-		// broadcastjob owner for v1beta1
+-		if utildiscovery.DiscoverObject(&appsv1beta1.BroadcastJob{}) {
+-			if err = indexBroadcastCronJobV1Beta1(c); err != nil {
 -				return
 -			}
 -		}

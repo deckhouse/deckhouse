@@ -5,10 +5,11 @@
 {{- $_ := set $options "memory" .nodeGroup.instanceClass.virtualMachine.memory.size -}}
 {{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDisk.size -}}
 {{- $_ := set $options "rootDiskStorageClass" .nodeGroup.instanceClass.rootDisk.storageClass -}}
-{{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.virtualMachine.bootloader -}}
+{{- $_ := set $options "vmBootloader" .nodeGroup.instanceClass.virtualMachine.bootloader -}}
 {{- $_ := set $options "cores" .nodeGroup.instanceClass.virtualMachine.cpu.cores -}}
 {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction -}}
 {{- $_ := set $options "osImageRefKind" .nodeGroup.instanceClass.rootDisk.image.kind -}}
-{{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.rootDisk.image.name -}}
+{{- $_ := set $options "rootDiskImageName" .nodeGroup.instanceClass.rootDisk.image.name -}}
+{{- $_ := set $options "additionalDisks" .nodeGroup.instanceClass.additionalDisks -}}
 
 {{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

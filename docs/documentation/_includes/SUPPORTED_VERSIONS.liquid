@@ -1,5 +1,5 @@
 {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
-<link href='assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='../assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign osVersions = site.data.supported_versions.bashible | sort %}
 {%- assign k8sVersions = site.data.supported_versions.k8s  %}

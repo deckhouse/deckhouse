@@ -21,7 +21,6 @@ PROTOC_GEN_GO_VERSION = 1.32
 PROTOC_GEN_GO_GROC_VERSION = 1.3
 
 # Build versions
-GO_VERSION=1.19.3
 GOARCH=amd64
 
 DHCTL_BIN_NAME=bin/dhctl
@@ -38,6 +37,10 @@ endif
 
 ifndef D8_VERSION
 	D8_VERSION = local
+endif
+
+ifndef RPP_SIGN_CHECK
+	RPP_SIGN_CHECK = false
 endif
 
 # Set platform for deps
@@ -109,13 +112,28 @@ generate: protoc
 	go generate ./...
 
 build: check-vars
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags="-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)"  -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build-test: check-vars
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test: check-vars
-	go test -p 1 ./...
+	@echo "Warning! For passing ./pkg/infrastructureprovider/ you should prepare /dhctl-tests dir with opentofu and terraform binaries and yandex and gcp plugins and /deckhouse dir with cloud providers config. Or add SKIP_PROVIDER_TEST=true env for skip. Or use make test-skip-cloud-providers "
+	@echo "Warning! For passing all ./pkg/infrastructureprovider/ you should set YANDEX_CLOUD_CONFIG and GCP_CLOUD_CONFIG See check-cloud-providers-vars target"
+	go test -v -p 1 ./...
+
+test-skip-cloud-providers: check-vars
+	SKIP_PROVIDER_TEST=true go test -v -p 1 ./...
+
+check-cloud-providers-vars:
+	@[ "${YANDEX_CLOUD_CONFIG}" ] || ( echo "YANDEX_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with yandex without-nat layout"; exit 1 )
+	@[ "${GCP_CLOUD_CONFIG}" ] || ( echo "GCP_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with gcp without-nat layout"; exit 1 )
+
+test-cloud-providers: check-vars check-cloud-providers-vars
+	go test -v -p 1 ./pkg/infrastructureprovider/...
+
+test-race: check-vars
+	go test -race -p 1 ./...
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy

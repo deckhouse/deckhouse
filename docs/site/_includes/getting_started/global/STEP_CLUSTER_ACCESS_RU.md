@@ -66,14 +66,14 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
-- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 *Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
-На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
+На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
 
 {% raw %}

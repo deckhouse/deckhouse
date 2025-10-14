@@ -24,7 +24,6 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/shell-operator/pkg/metric"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -49,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -60,9 +60,6 @@ const (
 
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
-
-	obsoleteConfigMetricGroup = "obsoleteVersion_%s"
-	moduleConflictMetricGroup = "module_%s_at_conflict"
 )
 
 func RegisterController(
@@ -70,7 +67,7 @@ func RegisterController(
 	mm moduleManager,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
@@ -128,7 +125,7 @@ type reconciler struct {
 	edition         *d8edition.Edition
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
-	metricStorage   metric.Storage
+	metricStorage   metricsstorage.Storage
 	configValidator *configtools.Validator
 	exts            *extenders.ExtendersStack
 	logger          *log.Logger
@@ -247,7 +244,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -316,6 +313,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
 	}
 
+	if module.IsDeprecated() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
+	}
+
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
@@ -369,7 +370,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				return ctrl.Result{}, err
 			}
 			// fire alert at Conflict
-			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
+			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
 				"moduleName": module.Name,
 			})
 		}
@@ -396,14 +397,15 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, moduleConfig.Name)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// clear conflict metrics
-	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {

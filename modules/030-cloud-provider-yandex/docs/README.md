@@ -28,7 +28,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the `prefix` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
@@ -37,11 +37,11 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the *Security Groups* section. You should see a single security group labeled `Default`.
 
-   ![The default security group](../../images/cloud-provider-yandex/sg-en-default.png)
+   ![The default security group](images/sg-en-default.png)
 
 1. Create rules as described in [Yandex Cloud instructions](https://cloud.yandex.com/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-   ![Rules for the security group](../../images/cloud-provider-yandex/sg-en-rules.png)
+   ![Rules for the security group](images/sg-en-rules.png)
 
 1. Delete the rule that allows for any **inbound** traffic (in the screenshot above it has already been deleted), and save the changes.
 

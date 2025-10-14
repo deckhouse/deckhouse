@@ -17,12 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -79,7 +79,7 @@ spec:
 		Name:   "d8_node_group_node_with_deprecated_availability_zone",
 		Value:  ptr.To(1.0),
 		Labels: map[string]string{"node_group": "system-c"},
-		Action: "set",
+		Action: operation.ActionGaugeSet,
 	}
 
 	Context("With Nodes on deprecated ru-central1-c zone", func() {

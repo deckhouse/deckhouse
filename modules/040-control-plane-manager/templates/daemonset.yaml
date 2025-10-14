@@ -278,6 +278,7 @@ spec:
 {{- end }}
 {{- range $name, $imageDigest := $images }}
       - name: {{ index $imageHolders $name }}
+        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause

@@ -17,12 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -515,7 +515,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 			Expect(m[1].Labels["node"]).Should(Equal("unmanaged-wor-ker"))
 		})
 	})

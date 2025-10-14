@@ -50,6 +50,11 @@ systemctl stop kubelet.service
 pkill containerd-shim
 
 for i in $(mount -t tmpfs | grep /var/lib/kubelet | cut -d " " -f3); do umount $i ; done
+for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+
+if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+  chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+fi
 
 rm -rf /etc/systemd/system/bashible.*
 rm -rf /etc/systemd/system/sysctl-tuner.*
@@ -72,6 +77,7 @@ rm -rf /etc/cni
 rm -rf /var/lib/cni
 rm -rf /var/lib/etcd
 rm -rf /opt/cni
+rm -rf /opt/containerd
 rm -rf /opt/deckhouse
 rm -rf /var/lib/bashible
 rm -rf /etc/containerd

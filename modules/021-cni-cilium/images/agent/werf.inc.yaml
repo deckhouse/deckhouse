@@ -184,8 +184,8 @@ import:
   before: install
 - image: tools/coreutils-v9.7
   before: setup
-  add: /usr/bin/
-  to: /usr/bin/
+  add: /usr/bin
+  to: /usr/bin
   includePaths:
   - env
   - ls
@@ -218,8 +218,8 @@ import:
   to: /usr/bin/curl
 - image: tools/bash-v5.2.37
   before: setup
-  add: /usr/bin/
-  to: /usr/bin/
+  add: /usr/bin
+  to: /usr/bin
   includePaths:
   - bash
   - sh
@@ -228,8 +228,8 @@ import:
   add: /usr/bin/find
 - image: tools/gawk-v5.3.2
   before: setup
-  add: /usr/bin/
-  to: /usr/bin/
+  add: /usr/bin
+  to: /usr/bin
   includePaths:
   - awk
   - gawk
@@ -399,7 +399,7 @@ import:
   - libedit.so.0
   - libedit.so.0.0.75
   - libedit.so.3
-- image: libs/ncurses-v6.5
+- image: libs/ncurses-v6_5_20250920
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -495,8 +495,8 @@ shell:
       done
     done
   # additional relocate from cilium
-  - mkdir -p /relocate/var/lib/cilium
-  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+  - mkdir -p /relocate/var/lib/{cilium,cilium-rw}
+  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium-rw # for rw mode
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   # additional relocate for fix locale

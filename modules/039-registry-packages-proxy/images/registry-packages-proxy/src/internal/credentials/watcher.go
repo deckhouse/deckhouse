@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -90,18 +91,15 @@ func (w *Watcher) Watch(ctx context.Context) {
 
 func (w *Watcher) watchSecret(ctx context.Context) {
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
-		timeout := int64(30)
-
 		// Get the deckhouse-registry secret
 		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{
-			TimeoutSeconds: &timeout,
-			FieldSelector:  fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
+			FieldSelector: fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
 		})
 	}
 
 	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
-		w.logger.Errorf("Watch secrets: %v", err)
+		w.logger.Error("Watch secrets: %v", err)
 		return
 	}
 	defer secretWatcher.Stop()
@@ -119,7 +117,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 
 			err = w.processSecretEvent(event)
 			if err != nil {
-				w.logger.Errorf("Process secret event: %v", err)
+				w.logger.Error("Process secret event: %v", err)
 			}
 		}
 	}
@@ -157,10 +155,8 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 
 func (w *Watcher) watchModuleSources(ctx context.Context) {
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
-		timeout := int64((30 * time.Second).Seconds())
-
 		// Get the module sources and their registry credentials
-		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
+		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
@@ -197,7 +193,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Infof("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
+	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module source", moduleSource.Name))
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
@@ -223,12 +219,12 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		w.Lock()
-		w.logger.Infof("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("added registry config for repo", slog.String("repo", moduleSource.Spec.Registry.Repo))
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
 		w.Lock()
-		w.logger.Infof("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
+		w.logger.Info("deleted registry config for repo", slog.String("repo", moduleSource.Spec.Registry.Repo))
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
 	}

@@ -212,6 +212,7 @@ func (k *KubeProxy) healthMonitor(
 	defer log.DebugF("[%d] Kubeproxy health monitor stopped\n", startID)
 	log.DebugF("[%d] Kubeproxy health monitor started\n", startID)
 
+	proxyErrorCount := 0
 	for {
 		log.DebugF("[%d] Kubeproxy Monitor step\n", startID)
 		select {
@@ -231,9 +232,15 @@ func (k *KubeProxy) healthMonitor(
 
 			log.DebugF("[%d] Tunnel stopped before restart. Starting new tunnel...\n", startID)
 
-			k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh, startID)
-			if err != nil {
-				log.DebugF("[%d] Tunnel was not up: %v. Try to restart fully\n", startID, err)
+			if proxyErrorCount < 3 {
+				k.tunnel, _, err = k.upTunnel(k.port, k.localPort, tunnelErrorCh, startID)
+				if err != nil {
+					log.DebugF("[%d] Tunnel was not up: %v. Try to restart fully\n", startID, err)
+					k.tryToRestartFully(startID)
+					return
+				}
+				proxyErrorCount++
+			} else {
 				k.tryToRestartFully(startID)
 				return
 			}
@@ -345,7 +352,7 @@ func (k *KubeProxy) runKubeProxy(
 		m := portRe.FindStringSubmatch(line)
 		if len(m) == 2 && m[1] != "" {
 			port = m[1]
-			log.InfoF("Got proxy port = %s on host %s\n", port, k.Session.Host())
+			log.DebugF("Got proxy port = %s on host %s\n", port, k.Session.Host())
 			portReady <- struct{}{}
 		}
 	})

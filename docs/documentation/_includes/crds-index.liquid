@@ -1,0 +1,3 @@
+{%- for crd in site.data.schemas.crds-list %}
+- [{{ crd }}]({{ crd | downcase |  append: "/" }})
+{%- endfor %}

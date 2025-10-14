@@ -114,6 +114,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - referencegrants
   - grpcroutes
   - grpcroutes/status
   - gateways

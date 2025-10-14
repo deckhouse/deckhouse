@@ -33,6 +33,33 @@ module "kubernetes-data-disk" {
   size          = local.kubernetes_data_disk_size
 }
 
+module "additional-disk" {
+  source = "../../../terraform-modules/additional-disk"
+
+  for_each = {
+    for i, d in local.additional_disks : tostring(i) => d
+  }
+
+  api_version   = "virtualization.deckhouse.io/v1alpha2"
+  prefix        = local.prefix
+  node_group    = local.node_group
+  node_index    = local.node_index
+  disk_index    = tonumber(each.key)
+  namespace     = local.namespace
+  storage_class = try(each.value.storage_class, null)
+  size          = each.value.size
+}
+
+locals {
+  master_additional_disks = [
+    for k in sort(keys(module.additional-disk)) : {
+      name   = module.additional-disk[k].name
+      hash   = module.additional-disk[k].hash
+      md5_id = module.additional-disk[k].md5_id
+    }
+  ]
+}
+
 module "ipv4-address" {
   source       = "../../../terraform-modules/ipv4-address/"
   namespace    = local.namespace
@@ -64,4 +91,5 @@ module "master" {
   region                     = local.region
   zone                       = local.zone
   cloud_config               = local.user_data
+  additional_disks           = local.master_additional_disks
 }

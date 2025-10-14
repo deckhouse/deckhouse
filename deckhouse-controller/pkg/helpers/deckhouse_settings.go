@@ -19,13 +19,12 @@ package helpers
 import (
 	"sync"
 
-	"github.com/flant/shell-operator/pkg/metric"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather
@@ -52,7 +51,7 @@ func DefaultDeckhouseSettings() *DeckhouseSettings {
 	return settings
 }
 
-func NewDeckhouseSettingsContainer(spec *DeckhouseSettings, metricStorage metric.Storage) *DeckhouseSettingsContainer {
+func NewDeckhouseSettingsContainer(spec *DeckhouseSettings, metricStorage metricsstorage.Storage) *DeckhouseSettingsContainer {
 	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{}), metricStorage: metricStorage}
 }
 
@@ -60,7 +59,7 @@ type DeckhouseSettingsContainer struct {
 	settings      *DeckhouseSettings
 	lock          sync.Mutex
 	inited        chan struct{}
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 }
 
 // Set update settings in container

@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.28" "2.1.4" }}
 {{- $runc_versions := list "1.3.0" }}
 {{- $containerd2runc := dict "1.7.28" "1.3.0" "2.1.4" "1.3.0" }}
-{{- $containerd_integrity_patches_version := "2" }}
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "7" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -96,6 +96,7 @@ import:
   to: /
   includePaths:
   - containerd
+  - .containerd_fallback
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
@@ -118,7 +119,6 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromCacheVersion: "2025-08-19.1"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -176,6 +176,10 @@ shell:
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  {{- if and (eq $.Env "CSE") $is_v2 }}
+  - GOOS=linux GOARCH=amd64 make STATIC=1 INTEGRITY_IMAGE_SIGN_CHECK="false" INTEGRITY_DEV_MAPPER_CHECK="false" INTEGRITY_PERIODICAL_CHECK="false" INTEGRITY_STOP_CONTAINER_IF_FAIL="false" bin/containerd
+  - mv bin/containerd /out/.containerd_fallback
+  {{- end }}
   {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
   - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
   - |

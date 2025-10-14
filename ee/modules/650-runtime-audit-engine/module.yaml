@@ -1,7 +1,0 @@
-name: runtime-audit-engine
-stage: "General Availability"
-subsystems:
-  - security
-namespace: d8-runtime-audit-engine
-requirements:
-  deckhouse: ">= 1.68"

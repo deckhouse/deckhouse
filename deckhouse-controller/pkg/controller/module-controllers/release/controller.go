@@ -35,7 +35,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -51,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -63,6 +63,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -87,7 +88,7 @@ func RegisterController(
 	exts *extenders.ExtendersStack,
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -151,7 +152,7 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
-	metricStorage        metric.Storage
+	metricStorage        metricsstorage.Storage
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
@@ -201,8 +202,8 @@ func (r *reconciler) preflight(ctx context.Context) error {
 			"module":  release.GetModuleName(),
 		}
 
-		r.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), labels)
-		r.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), labels)
+		r.metricStorage.GaugeSet(metrics.ModulePullSecondsTotal, release.Status.PullDuration.Seconds(), labels)
+		r.metricStorage.GaugeSet(metrics.ModuleSizeBytesTotal, float64(release.Status.Size), labels)
 	}
 
 	r.log.Debug("controller is ready")
@@ -748,7 +749,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	if found {
 		policy, err = r.getUpdatePolicy(ctx, policyName)
 		if err != nil {
-			r.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, map[string]string{
+			r.metricStorage.CounterAdd(metrics.ModuleUpdatePolicyNotFound, 1.0, map[string]string{
 				"version":        release.GetReleaseVersion(),
 				"module_release": release.GetName(),
 				"module":         release.GetModuleName(),
@@ -1339,7 +1340,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 
 		if valuesByConfig || strings.Contains(err.Error(), "is required") {
 			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 				1,
 				configConfigurationErrorMetricsLabels,
 			)
@@ -1362,7 +1363,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 		return nil, fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
-	r.metricStorage.GaugeSet("{PREFIX}module_configuration_error",
+	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
 		0,
 		configConfigurationErrorMetricsLabels,
 	)

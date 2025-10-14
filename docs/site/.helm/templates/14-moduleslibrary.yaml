@@ -1,0 +1,205 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moduleslibrary
+  annotations:
+    "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
+  labels:
+    service: moduleslibrary
+    app.kubernetes.io/part-of: deckhouse-docs
+spec:
+  minReadySeconds: 5
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      service: moduleslibrary
+  template:
+    metadata:
+      labels:
+        service: moduleslibrary
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: docs-builder
+      initContainers:
+        - name: init
+          image: {{ index .Values.werf.image "web-frontend-init" }}
+          command: ["sh"]
+          args: ["/scripts/channels-convert.sh"]
+          env:
+            - name: CHANNELS_CONF_PATH
+              value: "/app/channels-data/channels.conf"
+            - name: CHANNELS_YAML_PATH
+              value: "/app/channels.yaml"
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 65534
+            runAsUser: 65534
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/channels.yaml
+              subPath: channels.yaml
+            - name: channels-data
+              mountPath: /app/channels-data
+      containers:
+        - name: web
+          image: {{ index .Values.werf.image "web-frontend" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx", "-s", "quit"]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "startup_probe" . | indent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "liveness_probe" . | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "readiness_probe" . | indent 12 }}
+          volumeMounts:
+            - mountPath: /app/en/modules
+              name: modules-docs-en
+            - mountPath: /app/ru/modules
+              name: modules-docs-ru
+            - mountPath: /app/en/search-external-modules-index
+              name: modules-searchindex-en
+            - mountPath: /app/ru/search-external-modules-index
+              name: modules-searchindex-ru
+            - name: nginx-config
+              mountPath: /usr/conf/nginx.conf
+              subPath: nginx.conf
+            - mountPath: /tmp
+              name: web-tmp
+            - name: channels-data
+              mountPath: /app/channels-data
+        - name: builder
+          command:
+            - "/app/server"
+            - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
+          image: {{ index .Values.werf.image "website-docs/builder" }}
+          {{- include "resources" . | nindent 10 }}
+          env:
+            - name: HUGO_ENVIRONMENT
+              value: production
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: CLUSTER_DOMAIN
+              value: "cluster.local"
+          ports:
+          - containerPort: 8081
+            name: http
+            protocol: TCP
+          - containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            {{- include "startup_probe" . | indent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            {{- include "liveness_probe" . | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            {{- include "readiness_probe" . | indent 12 }}
+          volumeMounts:
+            - mountPath: "/mount/public/en/modules"
+              name: modules-docs-en
+            - mountPath: "/mount/public/ru/modules"
+              name: modules-docs-ru
+            - mountPath: "/mount/public/en/search"
+              name: modules-searchindex-en
+            - mountPath: "/mount/public/ru/search"
+              name: modules-searchindex-ru
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: doc-moduleslibrary-nginx-config
+        - name: channels-yaml
+          configMap:
+            name: release-channels-data
+        - name: channels-data
+          emptyDir: {}
+        - name: web-tmp
+          emptyDir: {}
+        - name: modules-docs-en
+          emptyDir: {}
+        - name: modules-docs-ru
+          emptyDir: {}
+        - name: modules-searchindex-en
+          emptyDir: {}
+        - name: modules-searchindex-ru
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moduleslibrary
+  labels:
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
+spec:
+  clusterIP: None
+  selector:
+    service: moduleslibrary
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: moduleslibrary
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: moduleslibrary
+  updatePolicy:
+    updateMode: "Auto"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: moduleslibrary
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      service: moduleslibrary

@@ -10,9 +10,10 @@ import (
 )
 
 type Condition struct {
-	Reason string `json:"reason"`
-	Status string `json:"status"`
-	Type   string `json:"type"`
+	Reason  string `json:"reason"`
+	Status  string `json:"status"`
+	Type    string `json:"type"`
+	Message string `json:"message"`
 }
 
 func ConditionFromJSON(condition []byte) (*Condition, error) {

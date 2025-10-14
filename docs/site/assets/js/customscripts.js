@@ -313,3 +313,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function () {
   openDiagram()
 });
+

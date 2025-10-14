@@ -1,0 +1,163 @@
+<div class="installer_box">
+  {% alert level="info" %}
+  На текущий момент графический установщик поддерживает **не все платформы**. Установить DKP с его помощью возможно в следующие окружения:
+
+  * Bare metal (выделенные хосты)
+  * Yandex Cloud
+  * OpenStack
+  * Selectel (OpenStack)
+  * VK Cloud (OpenStack)
+  * VMware vCloud Director.
+
+  Поддерживаются **все редакции** от CE до EE, включая Deckhouse Certified Security Edition (bare metal).
+  {% endalert %}
+  <div class="installer_two-columns">
+    <div>
+      <ol>
+        <li>Запустите docker на вашем компьютере</li>
+        <li>
+          <p>Запустите установщик</p>
+          <div class="tabs">
+            <button id="tab-button-mac" class="tab-button active" onclick="openTab(event, 'tab-mac'); openMacTab(event, 'tab-mac-content-container'); openMacDefaultTab();">macOS</button>
+            <button id="tab-button-linux" class="tab-button" onclick="openTab(event, 'tab-linux'); openLinuxTab(event, 'tab-linux-content-container'); openLinuxDefaultTab();">Linux</button>
+            <button id="tab-button-windows" class="tab-button" onclick="openTab(event, 'tab-windows')">Windows</button>
+          </div>
+          <div id="tab-mac" class="tab-content active">
+            <div class="tabs">
+              <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Контейнером</button>
+              <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-script')">Скриптом</button>
+              <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
+            </div>
+            <div id="tab-mac-content-container" class="tab-content active">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-mac-content-script" class="tab-content">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+curl -sSf https://deckhouse.ru/downloads/installer | bash
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-mac-content-file" class="tab-content">
+              <p>Скачайте установщик:
+                <a href="/downloads/installer/latest/d8install-darwin-arm64" class="download-btn">d8install-darwin-arm64</a>
+                <a href="/downloads/installer/latest/d8install-darwin-amd64" class="download-btn">d8install-darwin-amd64</a>
+              </p>
+              <p>Запустите его, выполнив команды ниже. Например, для архитектуры arm64:</p>
+{% capture command %}
+```bash
+chmod +x d8install-darwin-arm64
+xattr -c d8install-darwin-arm64
+./d8install-darwin-arm64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+          </div>
+          <div id="tab-linux" class="tab-content">
+            <div class="tabs">
+              <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Контейнером</button>
+              <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-script')">Скриптом</button>
+              <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">Файлом</button>
+            </div>
+            <div id="tab-linux-content-container" class="tab-content active">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+docker run --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-linux-content-script" class="tab-content">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+curl -sSf https://deckhouse.ru/downloads/installer | bash
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-linux-content-file" class="tab-content">
+              <p>Скачайте установщик: <a href="/downloads/installer/latest/d8install-linux-amd64" class="download-btn">d8install-linux-amd64</a></p>
+              <p>Запустите его, выполнив команды:</p>
+{% capture command %}
+```bash
+chmod +x d8install-linux-amd64
+./d8install-linux-amd64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+          </div>
+          <div id="tab-windows" class="tab-content">
+            <p>Выполните команду:</p>
+{% capture command %}
+```bash
+docker run --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/c/Users/%USERNAME%/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+          </div>
+        </li>
+        <li>Откройте <a>http://localhost:8080</a></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openTab(evt, tabName) {
+      document.getElementById("tab-mac").classList.remove("active");
+      document.getElementById("tab-linux").classList.remove("active");
+      document.getElementById("tab-windows").classList.remove("active");
+
+      document.getElementById("tab-button-mac").classList.remove("active");
+      document.getElementById("tab-button-linux").classList.remove("active");
+      document.getElementById("tab-button-windows").classList.remove("active");
+
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openMacTab(evt, subTabName) {
+      document.getElementById("tab-mac-content-container").classList.remove("active");
+      document.getElementById("tab-mac-content-script").classList.remove("active");
+      document.getElementById("tab-mac-content-file").classList.remove("active");
+
+      document.getElementById("tab-buttons-mac-container").classList.remove("active");
+      document.getElementById("tab-buttons-mac-script").classList.remove("active");
+      document.getElementById("tab-buttons-mac-file").classList.remove("active");
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openLinuxTab(evt, subTabName) {
+      document.getElementById("tab-linux-content-container").classList.remove("active");
+      document.getElementById("tab-linux-content-script").classList.remove("active");
+      document.getElementById("tab-linux-content-file").classList.remove("active");
+
+      document.getElementById("tab-buttons-linux-container").classList.remove("active");
+      document.getElementById("tab-buttons-linux-script").classList.remove("active");
+      document.getElementById("tab-buttons-linux-file").classList.remove("active");
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openLinuxDefaultTab() {
+      document.getElementById("tab-buttons-linux-container").classList.add("active");
+  }
+  function openMacDefaultTab() {
+      document.getElementById("tab-buttons-mac-container").classList.add("active");
+  }
+</script>

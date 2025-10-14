@@ -86,7 +86,7 @@ entries:
                         ru: Добавление узла
                       url: /stronghold/documentation/admin/platform-management/node-management/adding-node.html
                     - title:
-                        en: Node сonfiguration
+                        en: Node configuration
                         ru: Настройка узлов
                       folders:
                         - title:
@@ -129,10 +129,6 @@ entries:
                         en: Master nodes
                         ru: Мастер узлы
                       url: /stronghold/documentation/admin/platform-management/control-plane-settings/masters.html
-                    - title:
-                        en: Components placement
-                        ru: Размещение компонентов
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/placement-management.html
                 - title:
                     en: Network management
                     ru: Управление сетью
@@ -400,4 +396,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/cli/d8/
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/

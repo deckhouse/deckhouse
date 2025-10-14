@@ -30,6 +30,10 @@ env:
 concurrency:
   group: e2e-daily
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   skip_tests_repos:
     name: Skip tests repos

@@ -242,22 +242,22 @@ func deleteIPtablesRule(mgr *iptables.IPTables, iptableName, chainName string, r
 func setupIPtables(kubeDNSSvcIp string) error {
 	iptablesMgr, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4), iptables.Timeout(60))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to init iptables manager: %w", err)
 	}
 
 	dnsTCPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p tcp -m tcp --sport 53 -j NOTRACK", kubeDNSSvcIp))
 	if err := appendIPtablesRule(iptablesMgr, "raw", "OUTPUT", dnsTCPRule); err != nil {
-		return err
+		return fmt.Errorf("failed to append iptables tcp rules: %w", err)
 	}
 
 	dnsUDPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p udp -m udp --sport 53 -j NOTRACK", kubeDNSSvcIp))
 	if err := appendIPtablesRule(iptablesMgr, "raw", "OUTPUT", dnsUDPRule); err != nil {
-		return err
+		return fmt.Errorf("failed to append iptables udp rules: %w", err)
 	}
 
 	socketRule := strings.Fields(fmt.Sprintf("-d %s/32 -m socket --nowildcard -j NOTRACK", kubeDNSSvcIp))
 	if err := deleteIPtablesRule(iptablesMgr, "raw", "OUTPUT", socketRule); err != nil {
-		return err
+		return fmt.Errorf("failed to delete iptables rules: %w", err)
 	}
 
 	return nil

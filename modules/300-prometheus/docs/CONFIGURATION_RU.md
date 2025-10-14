@@ -11,7 +11,7 @@ search: prometheus
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+По умолчанию используется модуль [user-authn](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
 Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем и пользователем `admin`.
 
 Посмотреть сгенерированный пароль можно командой:

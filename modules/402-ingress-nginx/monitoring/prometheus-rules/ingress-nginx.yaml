@@ -237,7 +237,7 @@
       ingress_nginx_validation_suspended != 0
     for: 3m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"

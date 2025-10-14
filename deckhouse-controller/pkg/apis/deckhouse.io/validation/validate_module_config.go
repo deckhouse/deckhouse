@@ -25,7 +25,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -33,12 +32,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type AnnotationsOnly struct {
@@ -60,7 +61,7 @@ const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhous
 func moduleConfigValidationHandler(
 	cli client.Client,
 	moduleStorage moduleStorage,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
@@ -105,7 +106,7 @@ func moduleConfigValidationHandler(
 					return rejectResult("delete the ModulePullOverride before deleting the module config")
 				}
 
-				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
+				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{"module": cfg.GetName()})
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -237,7 +238,7 @@ func moduleConfigValidationHandler(
 			warnings = append(warnings, res.Warning)
 		}
 
-		metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
 
 		module, err := moduleStorage.GetModuleByName(cfg.Name)
 		if err != nil {

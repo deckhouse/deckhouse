@@ -1,4 +1,6 @@
 dirs:
 - /etc/adapter
 - /var/run/adapter-cert
-- /var/run/apiserver-proxy-client/
+- /run/adapter-cert
+- /var/run/apiserver-proxy-client
+- /run/apiserver-proxy-client

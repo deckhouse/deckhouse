@@ -83,8 +83,13 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		c.logger.LogDebugF("Skip resource % readiness checking for waiting set status\n", name)
 		return false, nil
 	}
+	apiRes, err := c.kubeCl.APIResource(c.resource.GVK.Group+"/"+c.resource.GVK.Version, kind)
+	if err != nil {
+		c.logger.LogDebugF("Could not get APIResource %s with Kind %s: %s\n", c.resource.GVK.Group+"/"+c.resource.GVK.Version, kind, err.Error())
+		return false, nil
+	}
 
-	gvr, doc, err := resourceToGVR(c.kubeCl, c.resource)
+	gvr, doc, err := resourceToGVR(c.resource, *apiRes)
 	if err != nil {
 		logNotReadyYet()
 		c.logger.LogDebugF("Resource %s to GVR failed: %s\n", name, err)

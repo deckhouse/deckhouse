@@ -1,0 +1,245 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package hook
+
+import (
+	"github.com/aquasecurity/trivy-db/pkg/types"
+	ostype "github.com/aquasecurity/trivy/pkg/fanal/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// Severity level of a vulnerability or a configuration audit check.
+// +enum
+type Severity string
+
+const (
+	SeverityCritical Severity = "CRITICAL"
+	SeverityHigh     Severity = "HIGH"
+	SeverityMedium   Severity = "MEDIUM"
+	SeverityLow      Severity = "LOW"
+
+	SeverityUnknown Severity = "UNKNOWN"
+)
+
+const ScannerNameTrivy = "Trivy"
+
+// Scanner is the spec for a scanner generating a security assessment report.
+type Scanner struct {
+	// Name the name of the scanner.
+	Name string `json:"name"`
+
+	// Vendor the name of the vendor providing the scanner.
+	Vendor string `json:"vendor"`
+
+	// Version the version of the scanner.
+	Version string `json:"version"`
+}
+
+// VulnerabilitySummary is a summary of Vulnerability counts grouped by Severity.
+type VulnerabilitySummary struct {
+	// CriticalCount is the number of vulnerabilities with Critical Severity.
+	// +kubebuilder:validation:Minimum=0
+	CriticalCount int `json:"criticalCount"`
+
+	// HighCount is the number of vulnerabilities with High Severity.
+	// +kubebuilder:validation:Minimum=0
+	HighCount int `json:"highCount"`
+
+	// MediumCount is the number of vulnerabilities with Medium Severity.
+	// +kubebuilder:validation:Minimum=0
+	MediumCount int `json:"mediumCount"`
+
+	// LowCount is the number of vulnerabilities with Low Severity.
+	// +kubebuilder:validation:Minimum=0
+	LowCount int `json:"lowCount"`
+
+	// UnknownCount is the number of vulnerabilities with unknown severity.
+	// +kubebuilder:validation:Minimum=0
+	UnknownCount int `json:"unknownCount"`
+
+	// NoneCount is the number of packages without any vulnerability.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	NoneCount int `json:"noneCount"`
+}
+
+// Registry is a collection of repositories used to store Artifacts.
+type Registry struct {
+	// Server the FQDN of registry server.
+	// +optional
+	Server string `json:"server"`
+}
+
+// Artifact represents a standalone, executable package of software that
+// includes everything needed to run an application.
+type Artifact struct {
+	// Repository is the name of the repository in the Artifact registry.
+	// +optional
+	Repository string `json:"repository"`
+
+	// Digest is a unique and immutable identifier of an Artifact.
+	// +optional
+	Digest string `json:"digest,omitempty"`
+
+	// Tag is a mutable, human-readable string used to identify an Artifact.
+	// +optional
+	Tag string `json:"tag,omitempty"`
+
+	// MimeType represents a type and format of an Artifact.
+	// +optional
+	MimeType string `json:"mimeType,omitempty"`
+}
+
+// OS is the Operating System of the Artifact
+type OS struct {
+	// Eosl is true if OS version has reached end of service life
+	// +optional
+	Eosl bool `json:"eosl,omitempty"`
+
+	// Operating System Family
+	// +optional
+	Family ostype.OSType `json:"family"`
+
+	// Name or version of the OS
+	// +optional
+	Name string `json:"name,omitempty"`
+}
+
+// Vulnerability is the spec for a vulnerability record.
+type Vulnerability struct {
+	// VulnerabilityID the vulnerability identifier.
+	VulnerabilityID string `json:"vulnerabilityID"`
+
+	// Resource is a vulnerable package, application, or library.
+	Resource string `json:"resource"`
+
+	// InstalledVersion indicates the installed version of the Resource.
+	InstalledVersion string `json:"installedVersion"`
+
+	// FixedVersion indicates the version of the Resource in which this vulnerability has been fixed.
+	FixedVersion string `json:"fixedVersion"`
+	// PublishedDate indicates the date of published CVE.
+	PublishedDate string `json:"publishedDate"`
+	// LastModifiedDate indicates the last date CVE has been modified.
+	LastModifiedDate string `json:"lastModifiedDate"`
+	// Severity level of a vulnerability or a configuration audit check.
+	// +kubebuilder:validation:Enum={CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN}
+	Severity    Severity `json:"severity"`
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"`
+	CVSSSource  string   `json:"cvsssource,omitempty"`
+	PrimaryLink string   `json:"primaryLink,omitempty"`
+	// +optional
+	Links []string `json:"links"`
+	Score *float64 `json:"score,omitempty"`
+	// +optional
+	Target string `json:"target"`
+	// +optional
+	CVSS types.VendorCVSS `json:"cvss,omitempty"`
+	// +optional
+	Class       string `json:"class,omitempty"`
+	PackageType string `json:"packageType,omitempty"`
+	PkgPath     string `json:"packagePath,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:pruning:PreserveUnknownFields
+// +kubebuilder:resource:shortName={vuln,vulns}
+// +kubebuilder:printcolumn:name="Repository",type=string,JSONPath=`.report.artifact.repository`,description="The name of image repository"
+// +kubebuilder:printcolumn:name="Tag",type=string,JSONPath=`.report.artifact.tag`,description="The name of image tag"
+// +kubebuilder:printcolumn:name="Scanner",type=string,JSONPath=`.report.scanner.name`,description="The name of the vulnerability scanner"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="The age of the report"
+// +kubebuilder:printcolumn:name="Critical",type=integer,JSONPath=`.report.summary.criticalCount`,priority=1,description="The number of critical vulnerabilities"
+// +kubebuilder:printcolumn:name="High",type=integer,JSONPath=`.report.summary.highCount`,priority=1,description="The number of high vulnerabilities"
+// +kubebuilder:printcolumn:name="Medium",type=integer,JSONPath=`.report.summary.mediumCount`,priority=1,description="The number of medium vulnerabilities"
+// +kubebuilder:printcolumn:name="Low",type=integer,JSONPath=`.report.summary.lowCount`,priority=1,description="The number of low vulnerabilities"
+// +kubebuilder:printcolumn:name="Unknown",type=integer,JSONPath=`.report.summary.unknownCount`,priority=1,description="The number of unknown vulnerabilities"
+
+// VulnerabilityReport summarizes vulnerabilities in application dependencies and operating system packages
+// built into container images.
+type VulnerabilityReport struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Report is the actual vulnerability report data.
+	Report VulnerabilityReportData `json:"report"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:pruning:PreserveUnknownFields
+// +kubebuilder:resource:scope=Cluster,shortName={clustervuln}
+// +kubebuilder:printcolumn:name="Repository",type=string,JSONPath=`.report.artifact.repository`,description="The name of image repository"
+// +kubebuilder:printcolumn:name="Tag",type=string,JSONPath=`.report.artifact.tag`,description="The name of image tag"
+// +kubebuilder:printcolumn:name="Scanner",type=string,JSONPath=`.report.scanner.name`,description="The name of the vulnerability scanner"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="The age of the report"
+// +kubebuilder:printcolumn:name="Critical",type=integer,JSONPath=`.report.summary.criticalCount`,priority=1,description="The number of critical vulnerabilities"
+// +kubebuilder:printcolumn:name="High",type=integer,JSONPath=`.report.summary.highCount`,priority=1,description="The number of high vulnerabilities"
+// +kubebuilder:printcolumn:name="Medium",type=integer,JSONPath=`.report.summary.mediumCount`,priority=1,description="The number of medium vulnerabilities"
+// +kubebuilder:printcolumn:name="Low",type=integer,JSONPath=`.report.summary.lowCount`,priority=1,description="The number of low vulnerabilities"
+// +kubebuilder:printcolumn:name="Unknown",type=integer,JSONPath=`.report.summary.unknownCount`,priority=1,description="The number of unknown vulnerabilities"
+
+// ClusterVulnerabilityReport summarizes vulnerabilities in application dependencies and operating system packages
+// built into container images.
+type ClusterVulnerabilityReport struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Report is the actual vulnerability report data.
+	Report VulnerabilityReportData `json:"report"`
+}
+
+// VulnerabilityReportData is the spec for the vulnerability scan result.
+//
+// The spec follows the Pluggable Scanners API defined for Harbor.
+// @see https://github.com/goharbor/pluggable-scanner-spec/blob/master/api/spec/scanner-adapter-openapi-v1.0.yaml
+type VulnerabilityReportData struct {
+	// UpdateTimestamp is a timestamp representing the server time in UTC when this report was updated.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	UpdateTimestamp metav1.Time `json:"updateTimestamp"`
+
+	// Scanner is the scanner that generated this report.
+	Scanner Scanner `json:"scanner"`
+
+	// Registry is the registry the Artifact was pulled from.
+	// +optional
+	Registry Registry `json:"registry"`
+
+	// Artifact represents a standalone, executable package of software that includes everything needed to
+	// run an application.
+	Artifact Artifact `json:"artifact"`
+
+	// OS information of the artifact
+	OS OS `json:"os"`
+
+	// Summary is a summary of Vulnerability counts grouped by Severity.
+	Summary VulnerabilitySummary `json:"summary"`
+
+	// Vulnerabilities is a list of operating system (OS) or application software Vulnerability items found in the Artifact.
+	Vulnerabilities []Vulnerability `json:"vulnerabilities"`
+}
+
+// +kubebuilder:object:root=true
+
+// VulnerabilityReportList is a list of VulnerabilityReport resources.
+type VulnerabilityReportList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	// Vulnerability is the spec for a vulnerability record.
+	Items []VulnerabilityReport `json:"items"`
+}
+
+// +kubebuilder:object:root=true
+
+// ClusterVulnerabilityReportList is a list of VulnerabilityReport resources.
+type ClusterVulnerabilityReportList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	// ClusterVulnerability is the spec for a cluster vulnerability record.
+	Items []ClusterVulnerabilityReport `json:"items"`
+}

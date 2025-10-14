@@ -34,7 +34,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-fromImage: builder/golang-bullseye
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -52,13 +52,17 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "false" }}
   {{- include "debian packages proxy" . | nindent 2 }}
+{{- end }}
   - apt-get install -y rsync
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - make VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - export VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64`) | indent 4 }}
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64

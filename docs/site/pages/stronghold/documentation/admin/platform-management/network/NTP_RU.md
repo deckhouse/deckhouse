@@ -39,7 +39,7 @@ EOF
    Module chrony disabled
    ```
 
-1. Создайте [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) custom step, чтобы включить NTP-демоны на узлах (пример для systemd-timesyncd):
+1. Создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) custom step, чтобы включить NTP-демоны на узлах (пример для systemd-timesyncd):
 
    ```yaml
    d8 k apply -f - <<EOF

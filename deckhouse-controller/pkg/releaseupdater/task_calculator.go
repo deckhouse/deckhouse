@@ -74,6 +74,20 @@ const (
 	Process
 )
 
+// String returns the string representation of TaskType
+func (t TaskType) String() string {
+	switch t {
+	case Skip:
+		return "skip"
+	case Await:
+		return "await"
+	case Process:
+		return "process"
+	default:
+		return "unknown"
+	}
+}
+
 type Task struct {
 	TaskType TaskType
 	Message  string

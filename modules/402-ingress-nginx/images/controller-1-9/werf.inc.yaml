@@ -5,7 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-cacheVersion: "2025-09-16"
+cacheVersion: "2025-09-18"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -15,6 +15,11 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/geoip
+  to: /src/geoip
   stageDependencies:
     install:
       - '**/*'
@@ -69,6 +74,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/014-fix-success-reload-metric.patch
   - patch -p1 < /patches/ingress-nginx/015-disable-error-logs.patch
   - patch -p1 < /patches/ingress-nginx/016-maxmind-alerts.patch
+  - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -276,6 +282,10 @@ import:
     - libprotobuf.so*
     - libgrpc.so*
     - libupb.so*
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/geoip
+  to: /chroot/var/lib/geoip
+  before: setup
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -328,7 +338,6 @@ shell:
       mkdir -p ${dir};
       chown -R {{ $controllerUser }}:{{ $controllerUser }} ${dir};
     done'
-  - mkdir -p /chroot/etc/nginx/geoip
   - mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
@@ -363,10 +372,10 @@ shell:
   - cp -R /src/rootfs/etc/* /chroot/etc/
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - rm -rf /src/rootfs/etc
-  - ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip
+  - ln -sf /etc/ingress-controller/geoip /chroot/etc/nginx/geoip
 
----
 # Final image
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
 import:
@@ -402,6 +411,8 @@ import:
   add: /src/rootfs/etc
   to: /src/rootfs/etc
   before: setup
+git:
+{{- include "image mount points" $ }}
 shell:
   setup:
   # Remove python for cve
@@ -421,6 +432,26 @@ shell:
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
   - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - chmod 1777 /tmp
+  - rm -rf /etc/pki
+  - rm /chroot/etc/nginx/opentracing.json
+  - ln -sf /chroot/etc/pki /etc/pki
+  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+  - ln -sf /chroot/etc/nginx /etc/nginx
+  - rm -rf /tmp
+  - ln -sf /chroot/tmp /tmp
+  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  # a hack to let the controller update the /etc/nginx/lua/cfg.json file via a symlink on a read-only file system
+  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
+  - ln -s /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json
+  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
+  - ln -s /etc/ingress-controller/resolv/resolv.conf /chroot/etc/resolv.conf
+  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
+  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/etc/nginx/nginx.conf
+
+  - ln -sf /chroot/var/log/nginx /var/log/nginx
+  - ln -sf /chroot/modules_mount /modules_mount
+  - ln -sf /chroot/var/lib/geoip /var/lib/geoip
+
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
@@ -429,19 +460,8 @@ shell:
   - setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - rm -rf /etc/pki
-  - rm /chroot/etc/nginx/opentracing.json
-  - ln -sf /chroot/etc/pki /etc/pki
-  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - ln -sf /chroot/modules_mount /modules_mount
-  - touch /chroot/var/log/nginx/access.log
-  - chown {{ $controllerUser }}:{{ $controllerUser }} /chroot/var/log/nginx/access.log
-  - echo "" > /chroot/etc/resolv.conf
-  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /var/log /chroot/var/log /chroot/etc/resolv.conf
+
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /var/log /chroot/var/log
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9

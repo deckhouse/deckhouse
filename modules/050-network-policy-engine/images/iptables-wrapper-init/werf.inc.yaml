@@ -1,0 +1,58 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+fromCacheVersion: "2025-09-10-2"
+import:
+- image: tools/coreutils
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/bin/coreutils
+  - usr/bin/rm
+  - usr/bin/cp
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /_sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+  add: /relocate
+  to: /relocate
+  before: setup
+git:
+{{- include "image mount points" $ }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+final: false
+fromCacheVersion: "2025-09-10-2"
+fromImage: common/relocate-artifact
+shell:
+  install:
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done

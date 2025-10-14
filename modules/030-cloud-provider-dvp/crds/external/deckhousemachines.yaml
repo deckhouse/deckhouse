@@ -106,6 +106,25 @@ spec:
                     ProviderID is the UUID of the virtual machine, prefixed with 'dvp://'
                     proto.
                   type: string
+                additionalDisks:
+                  description: Additional virtual disks to attach to the VM.
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - size
+                      - storageClass
+                    properties:
+                      size:
+                        description: Disk size (`resource.Quantity`). For example, `10Gi`.
+                        anyOf:
+                          - type: integer
+                          - type: string
+                        x-kubernetes-int-or-string: true
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      storageClass:
+                        description: Name of the StorageClass to use for this disk.
+                        type: string
                 rootDiskSize:
                   anyOf:
                     - type: integer

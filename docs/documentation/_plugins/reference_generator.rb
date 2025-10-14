@@ -17,7 +17,7 @@ module ReferenceGenerator
   class ReferenceD8Page < Jekyll::Page
     def initialize(site, lang)
       @site = site
-      @baseUrl = '/deckhouse-cli/reference/'
+      @baseUrl = '/cli/d8/reference/'
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
       @lang = lang
@@ -66,7 +66,7 @@ module ReferenceGenerator
       signature = "d8 #{full_path}" unless parent_titles.empty?
       prepare_signature(signature) if signature
     end
-    
+
     # Escape `{{...}}`
     def escape_liquid_tags(text)
       text.gsub(/\{\{(.*?)\}\}/) { |match| "{% raw %}#{match}{% endraw %}" }
@@ -125,6 +125,16 @@ module ReferenceGenerator
         header_title = build_header_title(parent_titles, data['name'])
 
         result += %Q(<#{header_tag}#{style}>#{header_title}</#{header_tag}>\n)
+
+        # Add aliases if they exist
+        if data['aliases'] && data['aliases'].any?
+          aliases = data['aliases'].map { |alias_name| "<code>#{alias_name}</code>" }.join(', ')
+          if data['aliases'].size == 1
+            result += %Q(<p><strong>Alias:</strong> #{aliases}</p>\n)
+          else
+            result += %Q(<p><strong>Aliases:</strong> #{aliases}</p>\n)
+          end
+        end
 
         if header_tag == 'h3'
           signature = build_full_signature(parent_titles, data['name'])

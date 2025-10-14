@@ -31,8 +31,6 @@ shell:
   - chown -R 64535:64535 /opt/keepalived-static
   - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
   - chmod 0700 /opt/keepalived-static/usr/bin/genhash
-  - mkdir /empty
-  - chmod 755 /empty
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
@@ -57,6 +55,7 @@ fromImage: common/distroless
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
   to: /prepare-config.py
+{{- include "image mount points" . }}
 import:
 - image: {{ $.ModuleName }}/build-keepalived
   add: /opt/keepalived-static/usr/sbin/keepalived
@@ -65,10 +64,6 @@ import:
 - image: {{ $.ModuleName }}/build-keepalived
   add: /opt/keepalived-static/usr/bin/genhash
   to: /usr/bin/genhash
-  before: install
-- image: {{ $.ModuleName }}/build-keepalived
-  add: /empty
-  to: /run
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /

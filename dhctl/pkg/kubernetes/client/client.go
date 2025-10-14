@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
@@ -42,6 +43,7 @@ type KubeClient interface {
 	APIResourceList(apiVersion string) ([]*metav1.APIResourceList, error)
 	APIResource(apiVersion, kind string) (*metav1.APIResource, error)
 	GroupVersionResource(apiVersion, kind string) (schema.GroupVersionResource, error)
+	InvalidateDiscoveryCache()
 }
 
 // KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.

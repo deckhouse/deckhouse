@@ -16,6 +16,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -213,7 +214,7 @@ func generateOldDockerCfg(host string, username, password *string) string {
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
 
-	cfg, err := ParseConfigFromData(configData)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider())
 	f := require.NoError
 	if hasErr {
 		f = require.Error

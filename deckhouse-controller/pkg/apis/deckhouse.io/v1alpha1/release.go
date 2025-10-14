@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// +kubebuilder:object:generate=false
 type Release interface {
 	GetName() string
 	GetModuleName() string

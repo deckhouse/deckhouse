@@ -68,11 +68,11 @@ Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required 
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.29.13` to `1.29.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.29.*` to `1.30.*`) can be managed using the [`kubernetesVersion`](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](../../supported_versions.html#kubernetes).
+Upgrading **minor versions** of control plane components (e.g. from `1.29.*` to `1.30.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
-If the target version (set with the [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+If the target version (set with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
 
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
@@ -94,5 +94,10 @@ By default, in a cluster with Deckhouse, a basic policy is created for logging e
 - committed with resources in the "system" Namespace `kube-system`, `d8-*`.
 
 A basic policy can be disabled by setting the [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) flag to `false`.
+
+When OIDC authentication is configured, additional user information is included in audit logs under the `user.extra` field:
+- `user-authn.deckhouse.io/name` — user's display name
+- `user-authn.deckhouse.io/preferred_username` — user's preferred username  
+- `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).

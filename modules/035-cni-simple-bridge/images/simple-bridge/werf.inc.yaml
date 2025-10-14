@@ -1,5 +1,3 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -7,17 +5,6 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
   before: setup
 - image: base/python
   add: /
@@ -36,11 +23,13 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
 ---
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /usr/sbin/ip /usr/sbin/bridge" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
@@ -54,8 +43,3 @@ git:
 shell:
   install:
   - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
-  - |
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      rm -f "/relocate/sbin/${cmd}"
-      ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-    done

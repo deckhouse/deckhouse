@@ -50,10 +50,17 @@ title: "Модуль user-authn: FAQ"
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
-      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
+   - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
+      - `SERVICE_NAME` — имя сервиса (Service) аутентификатора. Как правило, оно соответствует формату `<NAME>-dex-authenticator` (`<NAME>` — это `metadata.name` DexAuthenticator).
+      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`.
       - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+
+   > **Важно:** Если имя DexAuthenticator (`<NAME>`) слишком длинное, имя сервиса (Service) может быть сокращено. Чтобы найти корректное имя сервиса, воспользуйтесь следующей командой (укажите имя пространства имен и имя аутентификатора):
+   >
+   > ```shell
+   > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+   > ```
+   >
 
    Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
 
@@ -82,7 +89,7 @@ title: "Модуль user-authn: FAQ"
 
 ## Как работает аутентификация с помощью DexAuthenticator
 
-![Как работает аутентификация с помощью DexAuthenticator](../../images/user-authn/dex_login.svg)
+![Как работает аутентификация с помощью DexAuthenticator](images/dex_login.svg)
 
 1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести свои логин и пароль в форму входа в Dex, и Dex сам проверит их верность, сделав запрос к API провайдера.
 
@@ -111,7 +118,7 @@ title: "Модуль user-authn: FAQ"
     enabled: true
   ```
 
-Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
+Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
 {% endraw %}
 
 ### Настройка kube-apiserver
@@ -134,7 +141,7 @@ title: "Модуль user-authn: FAQ"
 
 ### Как работает подключение к Kubernetes API с помощью сгенерированного kubeconfig
 
-![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
+![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](images/kubeconfig_dex.svg)
 
 1. До начала работы kube-apiserver необходимо запросить конфигурационный endpoint OIDC провайдера (в нашем случае — Dex), чтобы получить issuer и настройки JWKS endpoint.
 

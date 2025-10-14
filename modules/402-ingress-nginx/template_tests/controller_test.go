@@ -35,7 +35,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// Set to true to update golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
+// Set to true to update golden files with: `make FOCUS=ingress-nginx CGO_ENABLED=1 GOLDEN=true tests-modules`
 var (
 	golden             bool
 	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
@@ -108,6 +108,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
 			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 			// Assert DaemonSet exists
 			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)

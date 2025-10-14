@@ -82,7 +82,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the corresponding permissions:

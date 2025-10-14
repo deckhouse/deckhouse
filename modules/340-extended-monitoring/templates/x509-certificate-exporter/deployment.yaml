@@ -62,7 +62,7 @@ spec:
       serviceAccountName: x509-certificate-exporter
       containers:
       - name: x509-certificate-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -81,7 +81,7 @@ spec:
         - --kube-api-rate-limit-burst=5
         - --listen-address=127.0.0.1:9793
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9793"

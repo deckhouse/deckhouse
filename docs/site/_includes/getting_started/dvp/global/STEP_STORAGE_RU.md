@@ -48,7 +48,7 @@ sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.phase}=R
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
+Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 Для создания ресурса LVMVolumeGroup на узле выполните следующую команду, предварительно заменив имена узла и блочных устройств на свои:
 
 ```shell

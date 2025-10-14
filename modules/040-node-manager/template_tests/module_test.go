@@ -2070,7 +2070,7 @@ internal:
 					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
-
+				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
@@ -2205,8 +2205,8 @@ internal:
 					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
 					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
 
-					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("3f1dc05e566100348ab16d24a2dd1d1c6ba6792b7d6a7abeda12a7eac7406a95"), "Prevent checksum changing")
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2216,7 +2216,7 @@ internal:
 
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-8ced91ee",
-					templateName: "worker-75eea1e8",
+					templateName: "worker-a6381073",
 				})
 			})
 		})

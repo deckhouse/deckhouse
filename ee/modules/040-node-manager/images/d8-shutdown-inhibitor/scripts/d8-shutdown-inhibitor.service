@@ -1,6 +1,6 @@
 [Unit]
 Description=Shutdown inhibitor to allow manual Pod eviction
-Documentation=https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/
+Documentation=https://deckhouse.io/modules/node-manager/
 Wants=network-online.target kubelet.service containerd-deckhouse.service
 After=network-online.target kubelet.service containerd-deckhouse.service
 

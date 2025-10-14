@@ -53,6 +53,7 @@ spec:
       containers:
         - name: hubble-relay
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
+            readOnlyRootFilesystem: true
           image: {{ include "helm_lib_module_image" (list . "relay") }}
           command:
             - hubble-relay

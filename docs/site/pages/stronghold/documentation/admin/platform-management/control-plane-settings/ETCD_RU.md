@@ -111,9 +111,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [`highAvailability`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [`highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
-1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
 1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-с-одним-master-узлом) для кластера с одним master-узлом.
 

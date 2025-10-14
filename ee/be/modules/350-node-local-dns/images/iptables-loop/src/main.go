@@ -223,7 +223,7 @@ func main() {
 
 	iptablesMgr, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4), iptables.Timeout(60))
 	if err != nil {
-		logger.Errorf("failed to init iptables manager: %v", err)
+		logger.Fatalf("failed to init iptables manager: %v", err)
 	}
 
 	rf := newReadinessMgr(readinessFilePath, iptablesMgr, iptablesRule, sigs, logger)

@@ -2,6 +2,10 @@
 cpu: 20m
 memory: 50Mi
 {{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -49,9 +53,28 @@ spec:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: network-policy-engine
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+{{- end }}
       containers:
       - name: kube-router
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "kubeRouter") }}
         args:
         - --run-router=false
@@ -81,6 +104,9 @@ spec:
         - name: xtables-lock
           mountPath: /run/xtables.lock
           readOnly: false
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -98,3 +124,7 @@ spec:
         hostPath:
           path: /run/xtables.lock
           type: FileOrCreate
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi

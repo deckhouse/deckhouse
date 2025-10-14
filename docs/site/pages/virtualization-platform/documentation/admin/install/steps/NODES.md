@@ -5,7 +5,12 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/nodes.ht
 
 After the initial installation, the cluster consists of only one node — the master node. To run virtual machines on the prepared worker nodes, they need to be added to the cluster.
 
-Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html).
+Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html).
+
+{% alert level=“info” %}
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
+Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+{% endalert %}
 
 ## Node preparation
 
@@ -29,10 +34,10 @@ Next, we'll cover the process of adding two worker nodes. For more detailed info
 
 ## Adding prepared nodes
 
-Create the [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) resource `worker`. To do this, execute the following command on the **master node**:
+Create the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource `worker`. To do this, run the following command:
 
 ```yaml
-sudo -i d8 k create -f - << EOF
+d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -53,7 +58,7 @@ Generate an SSH key with an empty passphrase. To do this, execute the following 
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Create an [SSHCredentials](/products/virtualization-platform/reference/cr/sshcredentials.html) resource in the cluster. To do this, execute the following command on the **master node**:
+Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, execute the following command on the **master node**:
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
@@ -73,7 +78,7 @@ Retrieve the public part of the previously generated SSH key (it will be needed 
 cat /dev/shm/caps-id.pub
 ```
 
-**On the worker node**, create the user `caps`. To do this, execute the following commands, replacing `<SSH-PUBLIC-KEY>` with the public part of the SSH key obtained in the previous step:
+**On the worker node**, create the user `caps`. To do this, run the following commands, replacing `<SSH-PUBLIC-KEY>` with the public part of the SSH key obtained in the previous step:
 
 ```shell
 export KEY='<SSH-PUBLIC-KEY>' # Specify the public part of the SSH key.
@@ -90,16 +95,15 @@ chmod 600 /home/caps/.ssh/authorized_keys
 **In Astra Linux operating systems**, when using the mandatory integrity control module Parsec, configure the maximum integrity level for the user `caps`:
 
 ```shell
-pdpl-user -i 63 caps
+sudo -i pdpl-user -i 63 caps
 ```
 
-Create the [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html) resources.
-Execute the following commands on the **master node**, specifying the IP address and unique name of each node:
+Create the [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources. Run the following commands on the **master node**, specifying the IP address and unique name of each node:
 
 ```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Specify the IP address of the node to be added to the cluster.
 export NODE_NAME=<NODE-NAME> # Specify the unique name of the node, for example, dvp-worker-1.
-sudo -i d8 k create -f - <<EOF
+d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
@@ -116,13 +120,13 @@ EOF
 
 Ensure that all nodes in the cluster are in the `Ready` status.
 
-Execute the following command on the **master node** to get the list of cluster nodes:
+Run the following command to get the list of cluster nodes:
 
 ```shell
-sudo -i d8 k get no
+d8 k get no
 ```
 
-Example output:
+{% offtopic title="Example output..." %}
 
 ```console
 NAME            STATUS   ROLES                  AGE    VERSION
@@ -130,3 +134,5 @@ master-0        Ready    control-plane,master   40m    v1.29.10
 dvp-worker-1    Ready    worker                 3m     v1.29.10
 dvp-worker-2    Ready    worker                 3m     v1.29.10
 ```
+
+{% endofftopic %}

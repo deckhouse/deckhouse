@@ -1,16 +1,101 @@
 ---
-title: "NFS-хранилище"
+title: "Сетевое файловое хранилище NFS"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
+Deckhouse Virtualization Platform (DVP) поддерживает интеграцию с Network File System (NFS), обеспечивая возможность использования сетевых файловых хранилищ в качестве томов Kubernetes. Модуль `csi-nfs` предоставляет CSI-драйвер для подключения NFS-серверов и создания PersistentVolume на их основе.
 
-## Включение модуля
+На этой странице представлены инструкции по настройке NFS-хранилища в DVP, включая подключение к NFS-серверу, создание StorageClass, настройку безопасности RPC-with-TLS, а также проверку работоспособности системы.
 
-Чтобы включить модуль `csi-nfs`, выполните команду:
+## Системные требования
 
-```yaml
+### Минимальные требования
+
+Для работы модуля `csi-nfs` необходимо выполнение следующих условий:
+
+- [Поддерживаемые дистрибутивы Linux](/products/virtualization-platform/documentation/about/requirements.html) с соответствующими ядрами;
+- Настроенный и доступный NFS-сервер;
+- Для поддержки RPC-with-TLS: ядро Linux с включенными опциями `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`.
+
+### Рекомендации по настройке
+
+Для оптимальной работы модуля рекомендуется:
+
+- Для автоматического перезапуска подов при изменении параметров TLS включите модуль [pod-reloader](/modules/pod-reloader/) (включен по умолчанию).
+- Используйте стабильные версии NFS-сервера с поддержкой необходимых протоколов.
+
+{% alert level="warning" %}
+Для работы NFS как хранилища виртуальных дисков в Deckhouse Virtualization Platform настройте NFS-сервер с опцией `no_root_squash`.
+{% endalert %}
+
+## Ограничения
+
+### Общие ограничения
+
+При работе с модулем `csi-nfs` действуют следующие ограничения:
+
+- Создание StorageClass для CSI-драйвера `nfs.csi.k8s.io` вручную запрещено — используйте ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass).
+- PersistentVolume создаются только через [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) ресурсы.
+- Изменение параметров NFS-сервера в уже созданных PV невозможно.
+
+### Ограничения снимков томов
+
+{% alert level="info" %}
+Для работы со снимками требуется подключенный модуль [snapshot-controller](/modules/snapshot-controller/).
+{% endalert %}
+
+Создание снимков NFS-томов имеет существенные ограничения, связанные с архитектурой NFS и способом их реализации в `csi-nfs`. По возможности избегайте использования снимков в модуле.
+
+Принцип работы снимков:
+
+- CSI-драйвер создает снимок на уровне NFS-сервера
+- Для архивирования используется утилита `tar`, что накладывает определенные ограничения
+- Архив сохраняется в корневой папке NFS-сервера, указанной в параметре `spec.connection.share`
+
+{% alert level="warning" %}
+- Перед созданием снимка **обязательно** остановите рабочую нагрузку (поды), использующую NFS-том.
+- NFS не обеспечивает атомарность операций на уровне файловой системы при создании снимка.
+  {% endalert %}
+
+### Ограничения режима RPC-with-TLS
+
+#### Функциональные ограничения
+
+При использовании RPC-with-TLS действуют следующие ограничения:
+
+- Для политики безопасности `mtls` поддерживается только один сертификат клиента.
+- Один NFS-сервер не может одновременно работать в разных режимах безопасности: `tls`, `mtls` и стандартный режим (без TLS).
+- На узлах кластера не должен быть запущен демон `tlshd`, иначе он будет конфликтовать с демоном модуля. Для предотвращения конфликтов при включении
+  TLS на узлах автоматически останавливается сторонний `tlshd` и отключается его
+  автозапуск.
+
+#### Требования к системе
+
+Для работы RPC-with-TLS необходимо выполнение следующих системных требований:
+
+- Ядро Linux должно быть собрано с включенными параметрами `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`.
+- Пакет `nfs-utils` (в дистрибутивах на основе Debian — `nfs-common`) версии >= 2.6.3.
+
+## Настройка
+
+{% alert level="info" %}
+Все команды должны выполняться на машине с административными правами в Kubernetes API.
+{% endalert %}
+
+Для настройки NFS-хранилища необходимо выполнить следующие шаги:
+
+- Включение модуля;
+- Создание [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass).
+
+### Включение модуля
+
+Для поддержки работы с NFS-хранилищем включите модуль `csi-nfs`, который позволяет создавать StorageClass в Kubernetes с помощью пользовательских ресурсов [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). После включения модуля на узлах кластера произойдёт:
+
+- Регистрация CSI-драйвера;
+- Запуск сервисных подов `csi-nfs` и создание необходимых компонентов.
+
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -22,28 +107,23 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`.
-Проверить состояние можно, выполнив следующую команду:
+Дождитесь, пока модуль перейдет в состояние `Ready`:
 
 ```shell
 d8 k get module csi-nfs -w
 ```
 
-В результате будет выведена информация о модуле `csi-nfs`:
+Проверьте состояние подов в пространстве имён `d8-csi-nfs`. Все поды должны быть в состоянии `Running` или `Completed`, и запущены на всех узлах:
 
-```console
-NAME      STAGE   SOURCE   PHASE       ENABLED   READY
-csi-nfs                    Available   True      True
+```shell
+d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-## Создание StorageClass
+### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс `NFSStorageClass`.
-Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Пример создания ресурса:
 
-Пример команды для создания класса хранения на базе NFS:
-
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: NFSStorageClass
@@ -51,75 +131,123 @@ metadata:
   name: nfs-storage-class
 spec:
   connection:
-    # Адрес NFS сервера.
     host: 10.223.187.3
-    # Путь к точке монтирования на NFS сервере.
     share: /
-    # Версия NFS сервера.
     nfsVersion: "4.1"
-  # Режим поведения при удалении PVC.
-  # Допустимые значения:
-  # - Delete (при удалении PVC будет удален PV и данные на NFS-сервере);
-  # - Retain (при удалении PVC не будут удалены PV и данные на NFS-сервере, потребуют ручного удаления пользователем).
-  # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
   reclaimPolicy: Delete
-  # Режим создания тома.
-  # Допустимые значения: "Immediate", "WaitForFirstConsumer". 
-  # [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created`, выполнив следующую команду:
+Для каждого PV будет создаваться каталог `<директория из share>/<имя PV>`.
+
+### Настройка очистки томов
+
+При удалении PersistentVolume на томе могут остаться файлы с пользовательскими данными. Для обеспечения безопасности данных можно настроить метод очистки тома перед удалением с помощью параметра [`volumeCleanup`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-volumecleanup).
+
+{% alert level="warning" %}
+Важные замечания по очистке томов:
+
+- Опция очистки не влияет на файлы, уже удаленные клиентским приложением.
+- Очистка выполняется только через протокол NFS и зависит от:
+  - Сервиса NFS-сервера;
+  - Файловой системы;
+  - Уровня блочных устройств и их виртуализации (например, LVM);
+  - Физических устройств.
+- Убедитесь в доверенности NFS-сервера перед отправкой чувствительных данных.
+  {% endalert %}
+
+#### Параметр `RandomFillSinglePass`
+
+Содержимое файлов переписывается случайной последовательностью перед удалением. Случайная последовательность передается по сети.
+
+#### Параметр `RandomFillThreePass`
+
+Содержимое файлов трижды переписывается случайной последовательностью перед удалением. Три случайных последовательности передаются по сети.
+
+{% alert level="info" %}
+Использование данного метода имеет смысл только в том случае, если сервер хранит данные на жестком диске, и есть риск физического доступа злоумышленника к устройству.
+{% endalert %}
+
+#### Параметр `Discard`
+
+Оптимизированный метод очистки, использующий возможности файловых систем для работы с твердотельными накопителями. Содержимое файлов помечается как свободное через системный вызов `falloc` с флагом `FALLOC_FL_PUNCH_HOLE`. Файловая система освободит полностью используемые файлом блоки через вызов `blkdiscard`, а остальное место будет перезаписано нулями.
+
+Преимущества метода `Discard`:
+
+- Объём трафика не зависит от размера файлов, а только от их количества;
+- Может обеспечить недоступность старых данных при некоторых конфигурациях сервера;
+- Работает как для жестких дисков, так и для твердотельных накопителей;
+- Позволяет увеличить время жизни твердотельного накопителя.
+
+## Изменение параметров NFS-сервера для созданных PersistentVolume
+
+Изменение параметров NFS-сервера для созданных PersistentVolume невозможно, так как данные для подключения к NFS-серверу сохраняются непосредственно в манифесте PersistentVolume и не подлежат изменению. Изменение NFSStorageClass также не повлечет изменений настроек подключения в уже существующих PV.
+
+## Создание снимков томов
+
+В `csi-nfs` снимки создаются путем архивирования папки тома. Архив сохраняется в корне папки NFS-сервера, указанной в параметре `spec.connection.share`. При создании снимка томов важно учитывать [требования и ограничения](#ограничения-снимков-томов), перечисленные выше.
+
+Чтобы создать снимок, выполните следующие действия:
+
+1. Включите модуль `snapshot-controller`:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Создайте снимок тома, указав нужные параметры:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <имя namespace, в котором находится PVC>
+   spec:
+     volumeSnapshotClassName: csi-nfs-snapshot-class
+     source:
+       persistentVolumeClaimName: <имя PVC, для которого необходимо создать снимок>
+   EOF
+   ```
+
+1. Проверьте состояние созданного снимка:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+## Проблемы с удалением PV с поддержкой RPC-with-TLS
+
+Если ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) был настроен с поддержкой RPC-with-TLS, может возникнуть ситуация, когда PersistentVolume не удастся удалить. Это происходит из-за удаления секрета (например, после удаления [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass), который хранит параметры монтирования. В результате контроллер не может смонтировать NFS-папку для удаления папки `<имя PV>`.
+
+### Добавление нескольких CA в параметр `tlsParameters.ca`
+
+Для добавления нескольких сертификатов CA в параметр `tlsParameters.ca` используйте следующие команды:
+
+**Для двух CA:**
 
 ```shell
-d8 k get NFSStorageClass nfs-storage-class -w
+cat CA1.crt CA2.crt | base64 -w0
 ```
 
-В результате будет выведена информация о созданном ресурсе `NFSStorageClass`:
-
-```console
-NAME                PHASE     AGE
-nfs-storage-class   Created   1h
-```
-
-Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+**Для трех CA:**
 
 ```shell
-d8 k get sc nfs-storage-class
+cat CA1.crt CA2.crt CA3.crt | base64 -w0
 ```
 
-В результате будет выведена информация о созданном StorageClass:
-
-```console
-NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
-```
-
-Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля csi-nfs завершена.
-Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`.
-
-Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
-
-## Проверка работоспособности модуля
-
-Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в пространстве имен d8-csi-nfs.
-Все поды должны быть в состоянии `Running` или `Completed`, поды csi-nfs должны быть запущены на всех узлах.
-
-Проверить работоспособность модуля можно с помощью следующей команды:
+**Для большего количества CA:**
 
 ```shell
-d8 k -n d8-csi-nfs get pod -owide -w
-```
-
-В результате будет выведен список всех подов в пространстве имен d8-csi-nfs:
-
-```console
-NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
-controller-547979bdc7-5frcl      1/1     Running   0          1h    10.111.2.84    master     <none>           <none>
-csi-controller-5c6bd5c85-wzwmk   6/6     Running   0          1h    172.18.18.50   master     <none>           <none>
-webhooks-7b5bf9dbdb-m5wxb        1/1     Running   0          1h    10.111.0.16    master     <none>           <none>
-csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50   master     <none>           <none>
-csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
-csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52   worker-2   <none>           <none>
+cat CA1.crt CA2.crt CA3.crt ... CAN.crt | base64 -w0
 ```

@@ -14,7 +14,7 @@
       {{- $majMinVersion := regexReplaceAll "(v[0-9]+\\.[0-9]+)\\..+" .Version "$1" }}
       {{- if not (and (eq .Version "latest") (eq $majMinVersion $prevVersion)) }}
             <li class="submenu-item">
-                <a data-proofer-ignore class="submenu-item-link" href="/documentation/{{ .VersionURL }}/{{ $CurrentPageURLRelative }}">
+                <a data-proofer-ignore class="submenu-item-link" href="/products/kubernetes-platform/documentation/{{ .VersionURL }}/{{ $CurrentPageURLRelative }}">
             {{- if eq .Version "latest" }}
                     <span class="submenu-item-channel">latest</span>
             {{- else }}

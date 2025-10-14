@@ -1,8 +1,0 @@
-## Patches
-
-### 001-FixCVE-2025-8556_CVE-2025-54410_GHSA-fv92-fjc5-jj9h.patch
-
-Fixes:
-CVE-2025-8556
-CVE-2025-54410
-GHSA-fv92-fjc5-jj9h

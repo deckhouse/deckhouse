@@ -12,11 +12,11 @@ search: making Grafana graphs
 3. If you need to add a new Folder, just create a directory in the `grafana-dashboards/` and add at least one JSON manifest to it.
 4. You do not need to edit Dashboard files directly (unless you want to do a minor quick fix). Instead:
    * Open the Dashboard in Grafana:
-     * if the Dashboard already exists, open it and click the ["Make editable" button](/docs/documentation/images/prometheus/grafana_make_editable.jpg);
+     * if the Dashboard already exists, open it and click the ["Make editable" button](../images/grafana_make_editable.jpg);
      * if the Dashboard is a new one, then create it (in any Folder — it will be moved to the folder that corresponds to the repository directory);
      * if the Dashboard is a third-party one, import it to Grafana (via the "Import" button).
    * Now you can edit your Dashboard until you are happy with it. Do not forget to click the "Save" button in Grafana periodically to keep your changes (just in case).
-   * [Export the Dashboard to JSON](/docs/documentation/images/prometheus/grafana_export.jpg) and save it to a file (the new or existing one).
+   * [Export the Dashboard to JSON](../images/grafana_export.jpg) and save it to a file (the new or existing one).
 5. You can rename the Dashboard, rename the file, move the file from one Folder to another — everything will be configured automatically.
 6. Note that system Dashboards must be stored in `d8`-prefixed `GrafanaDashboardDefinition` custom resources.
 
@@ -71,14 +71,14 @@ You must always [explicitly specify the job](prometheus_rules_development.html#s
 ### The user must be able to choose the Prometheus instance
 
 Our Grafanas may have several Prometheus instances available (with different data granularity and storage periods). That means that the user must be able to choose the Prometheus server. To do this, you need to:
-* [create](/docs/documentation/images/prometheus/grafana_ds_prometheus_variable.jpg) a `$ds_prometheus` variable;
-* [set](/docs/documentation/images/prometheus/grafana_ds_prometheus_select_in_panel.jpg) the `$ds_prometheus` as the data source in each panel (instead of setting the specific Prometheus instance).
+* [create](../images/grafana_ds_prometheus_variable.jpg) a `$ds_prometheus` variable;
+* [set](../images/grafana_ds_prometheus_select_in_panel.jpg) the `$ds_prometheus` as the data source in each panel (instead of setting the specific Prometheus instance).
 
 ### Graph Tooltip must be in Shared crosshair mode
 
 One of the crucial features that graphs provide is the ability to analyze correlations visually. However, to perform such an analysis, you need to compare the same point on the time axis on different graphs. You can easily do that if graphs have the same size and are positioned under each other (but that doesn't look lovely). The problem is, in some cases, graphs cannot have the same size.
 
-Thus, always [use](/docs/documentation/images/prometheus/grafana_graph_tooltip.jpg) the Graph Tooltip in the Shared crosshair mode. It helps much in analyzing correlations visually: hover the mouse pointer over one of the graphs, and a bar will appear on all other graphs at the same point on the time axis.
+Thus, always [use](../images/grafana_graph_tooltip.jpg) the Graph Tooltip in the Shared crosshair mode. It helps much in analyzing correlations visually: hover the mouse pointer over one of the graphs, and a bar will appear on all other graphs at the same point on the time axis.
 
 We do not recommend using the more sophisticated Shared tooltip mode since it overloads the user with too much information.
 
@@ -99,7 +99,7 @@ Granted, in some cases, the level of detail makes it difficult to track global t
 3. **use Resolution 1/1 in al cases**;
 4. **never set the Min step**;
 
-    ![Data accuracy and granularity](/docs/documentation/images/prometheus/grafana_accuracy.jpg)
+    ![Data accuracy and granularity](../images/grafana_accuracy.jpg)
 
     **Reasons and details:**
       <ul dir="auto">
@@ -157,13 +157,9 @@ Grafana provides three modes for displaying the Null Value (no data).
 * `Null` should be used in all cases except for stacking since it clearly shows that there are no data.
 * The usage of the `null as zero` mode is recommended for stacking (otherwise, all the metrics will be lost if any one of them has a null value).
 
-| connected               | null          | null as zero                  |
-|-------------------------|---------------|-------------------------------|
-| ![connected][connected] | ![null][null] | ![null as zero][null as zero] |
-
-[connected]: /docs/documentation/images/prometheus/grafana_null_value_connected.jpg
-[null]: /docs/documentation/images/prometheus/grafana_null_value_null.jpg
-[null as zero]: /docs/documentation/images/prometheus/grafana_null_value_as_zero.jpg
+| connected               | null                                           | null as zero                                              |
+|-------------------------|------------------------------------------------|-----------------------------------------------------------|
+| ![connected](../images/grafana_null_value_connected.jpg) | ![null](../images/grafana_null_value_null.jpg) | ![null as zero](../images/grafana_null_value_as_zero.jpg) |
 
 #### The precision should be consistent with goals
 

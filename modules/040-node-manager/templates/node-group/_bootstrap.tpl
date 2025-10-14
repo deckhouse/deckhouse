@@ -48,7 +48,15 @@ except ImportError as e:
 ssl.match_hostname = lambda cert, hostname: True
 request = Request(sys.argv[1], headers={'Authorization': 'Bearer ' + sys.argv[2]})
 try:
-    response = urlopen(request, cafile='/var/lib/bashible/ca.crt', timeout=10)
+    # Try with context first (Python 3.13+), fallback to cafile for older versions
+    try:
+        # Create SSL context for Python 3.13 compatibility
+        context = ssl.create_default_context()
+        context.load_verify_locations('/var/lib/bashible/ca.crt')
+        response = urlopen(request, context=context, timeout=10)
+    except TypeError:
+        # Fallback for older Python versions that don't support context parameter
+        response = urlopen(request, cafile='/var/lib/bashible/ca.crt', timeout=10)
     data = json.loads(response.read())
     sys.stdout.write(data["bootstrap"])
 except HTTPError as e:

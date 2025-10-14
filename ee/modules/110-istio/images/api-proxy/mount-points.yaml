@@ -1,0 +1,4 @@
+files:
+  - /etc/ssl/kube-rbac-proxy-ca.crt
+dirs:
+- /remote
