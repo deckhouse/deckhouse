@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-259049cf7fd9715b32a7cc3bad5097c95cde602d90d6e501607d884eaeb355bd",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Firewalld reload command breaks network isolation on default bridge - we do not use this functionality",
+      "timestamp": "2025-10-14T11:19:41.603101Z"
+    }
+  ],
+  "timestamp": "2025-10-14T11:19:41Z"
+}
