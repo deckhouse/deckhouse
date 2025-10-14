@@ -27,14 +27,10 @@ spec:
         description: ServiceMonitor defines monitoring for a set of services.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. '
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. '
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. '
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -69,7 +65,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -86,8 +82,7 @@ spec:
                           type: string
                       type: object
                     basicAuth:
-                      description: 'BasicAuth allow an endpoint to authenticate over
-                        basic authentication More info: https://prometheus.io/docs/operating/configuration/#endpoints'
+                      description: 'BasicAuth allow an endpoint to authenticate over basic authentication. More info: https://prometheus.io/docs/operating/configuration/#endpoints'
                       properties:
                         password:
                           description: The secret in the service monitor namespace
@@ -98,7 +93,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -117,7 +112,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -141,7 +136,7 @@ spec:
                             be a valid secret key.
                           type: string
                         name:
-                          description: 'Name of the referent.
+                          description: 'Name of the referent.'
                           type: string
                         optional:
                           description: Specify whether the Secret or its key must
@@ -155,8 +150,7 @@ spec:
                       description: Whether to enable HTTP2.
                       type: boolean
                     filterRunning:
-                      description: 'Drop pods that are not running. (Failed, Succeeded).
-                        Enabled by default.
+                      description: 'Drop pods that are not running. (Failed, Succeeded). Enabled by default.'
                       type: boolean
                     followRedirects:
                       description: FollowRedirects configures whether scrape requests
@@ -268,7 +262,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -286,7 +280,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -305,7 +299,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -354,11 +348,7 @@ spec:
                         to proxy through this endpoint.
                       type: string
                     relabelings:
-                      description: 'RelabelConfigs to apply to samples before scraping.
-                        Prometheus Operator automatically adds relabelings for a few
-                        standard Kubernetes fields. The original scrape job''s name
-                        is available via the `__tmp_prometheus_job_name` label. More
-                        info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                      description: 'RelabelConfigs to apply to samples before scraping. Prometheus Operator automatically adds relabelings for a few standard Kubernetes fields. The original scrape job''s name is available via the `__tmp_prometheus_job_name` label. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
                       items:
                         description: "RelabelConfig allows dynamic rewriting of the
                           label set for targets, alerts, scraped samples and remote
@@ -471,7 +461,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -489,7 +479,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -515,7 +505,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -533,7 +523,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -564,7 +554,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must

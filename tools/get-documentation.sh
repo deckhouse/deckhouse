@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. $(~/bin/trdl use werf 2 alpha)
+
 #rm -rf /tmp/cse
 
 CSE_DOC_OUTPUT_DIR=/home/kar/deckhouse/cse/modules/810-documentation/images/web/content

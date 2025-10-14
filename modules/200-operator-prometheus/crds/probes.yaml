@@ -27,14 +27,10 @@ spec:
         description: Probe defines monitoring for a set of static targets or ingresses.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. '
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. '
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. '
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -54,7 +50,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -70,8 +66,7 @@ spec:
                     type: string
                 type: object
               basicAuth:
-                description: 'BasicAuth allow an endpoint to authenticate over basic
-                  authentication. More info: https://prometheus.io/docs/operating/configuration/#endpoint'
+                description: 'BasicAuth allow an endpoint to authenticate over basic authentication. More info: https://prometheus.io/docs/operating/configuration/#endpoint'
                 properties:
                   password:
                     description: The secret in the service monitor namespace that
@@ -82,7 +77,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -101,7 +96,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -122,7 +117,7 @@ spec:
                       valid secret key.
                     type: string
                   name:
-                    description: 'Name of the referent.
+                    description: 'Name of the referent.'
                     type: string
                   optional:
                     description: Specify whether the Secret or its key must be defined
@@ -235,9 +230,7 @@ spec:
                   type: object
                 type: array
               module:
-                description: 'The module to use for probing specifying how to probe
-                  the target. Example module configuring in the blackbox exporter:
-                  https://github.com/prometheus/blackbox_exporter/blob/master/example.yml'
+                description: 'The module to use for probing specifying how to probe the target. Example module configuring in the blackbox exporter: https://github.com/prometheus/blackbox_exporter/blob/master/example.yml'
                 type: string
               oauth2:
                 description: OAuth2 for the URL. Only valid in Prometheus versions
@@ -254,7 +247,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -272,7 +265,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -291,7 +284,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -385,12 +378,12 @@ spec:
                             type: array
                         type: object
                       relabelingConfigs:
-                        description: 'RelabelConfigs to apply to the label set of
+                        description: 'RelabelConfigs to apply to the label set of the target before scraping.
                           the target before it gets scraped. The original ingress
                           address is available via the `__tmp_prometheus_ingress_address`
                           label. It can be used to customize the probed URL. The original
                           scrape job''s name is available via the `__tmp_prometheus_job_name`
-                          label. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                          label.'
                         items:
                           description: "RelabelConfig allows dynamic rewriting of
                             the label set for targets, alerts, scraped samples and
@@ -513,9 +506,7 @@ spec:
                         x-kubernetes-map-type: atomic
                     type: object
                   staticConfig:
-                    description: 'staticConfig defines the static list of targets
-                      to probe and the relabeling configuration. If `ingress` is also
-                      defined, `staticConfig` takes precedence. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#static_config.'
+                    description: 'staticConfig defines the static list of targets to probe and the relabeling configuration. If `ingress` is also defined, `staticConfig` takes precedence.'
                     properties:
                       labels:
                         additionalProperties:
@@ -524,8 +515,7 @@ spec:
                           targets.
                         type: object
                       relabelingConfigs:
-                        description: 'RelabelConfigs to apply to the label set of
-                          the targets before it gets scraped. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                        description: 'RelabelConfigs to apply to the label set of the target before scraping.'
                         items:
                           description: "RelabelConfig allows dynamic rewriting of
                             the label set for targets, alerts, scraped samples and
@@ -621,7 +611,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -639,7 +629,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -660,7 +650,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -678,7 +668,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -700,7 +690,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be

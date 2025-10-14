@@ -399,7 +399,7 @@ spec:
                     description: 'Specific resourceVersion to which this reference is made, if any.'
                     type: string
                   uid:
-                    description: 'UID of the referent.
+                    description: 'UID of the referent.'
                     type: string
                 type: object
             required:

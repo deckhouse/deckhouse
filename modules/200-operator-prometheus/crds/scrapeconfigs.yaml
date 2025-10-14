@@ -28,14 +28,10 @@ spec:
           be aggregated across multiple namespaces into the Prometheus configuration.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. '
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. '
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. '
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -55,7 +51,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -82,7 +78,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -101,7 +97,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -137,7 +133,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -154,8 +150,7 @@ spec:
                           type: string
                       type: object
                     basicAuth:
-                      description: 'BasicAuth information to authenticate against
-                        the Consul Server. More info: https://prometheus.io/docs/operating/configuration/#endpoints'
+                      description: 'BasicAuth information to authenticate against the target'
                       properties:
                         password:
                           description: The secret in the service monitor namespace
@@ -166,7 +161,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -185,7 +180,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -238,7 +233,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -256,7 +251,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -275,7 +270,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -316,7 +311,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -388,7 +383,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -406,7 +401,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -428,7 +423,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -446,7 +441,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -469,7 +464,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -492,7 +487,7 @@ spec:
                             be a valid secret key.
                           type: string
                         name:
-                          description: 'Name of the referent.
+                          description: 'Name of the referent.'
                           type: string
                         optional:
                           description: Specify whether the Secret or its key must
@@ -551,11 +546,7 @@ spec:
                     configuration See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
                   properties:
                     files:
-                      description: 'List of files to be used for file discovery. Recommendation:
-                        use absolute paths. While relative paths work, the prometheus-operator
-                        project makes no guarantees about the working directory where
-                        the configuration file is stored. Files must be mounted using
-                        Prometheus.ConfigMaps or Prometheus.Secrets.'
+                      description: 'List of files to be used for file discovery. Recommendation: use absolute paths. While relative paths work, the prometheus-operator project makes no guarantees about the working directory where the configuration file is stored. Files must be mounted using Prometheus.ConfigMaps or Prometheus.Secrets.'
                       items:
                         description: SDFile represents a file used for service discovery
                         pattern: ^[^*]*(\*[^/]*)?\.(json|yml|yaml|JSON|YML|YAML)$
@@ -599,7 +590,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -616,8 +607,7 @@ spec:
                           type: string
                       type: object
                     basicAuth:
-                      description: 'BasicAuth information to authenticate against
-                        the target HTTP endpoint. More info: https://prometheus.io/docs/operating/configuration/#endpoints'
+                      description: 'BasicAuth information to authenticate against the target HTTP endpoint.'
                       properties:
                         password:
                           description: The secret in the service monitor namespace
@@ -628,7 +618,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -647,7 +637,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -679,7 +669,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -697,7 +687,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -719,7 +709,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -737,7 +727,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent.
+                                  description: 'Name of the referent.'
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -760,7 +750,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent.
+                              description: 'Name of the referent.'
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -1046,7 +1036,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -1064,7 +1054,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1085,7 +1075,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -1103,7 +1093,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent.
+                            description: 'Name of the referent.'
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1125,7 +1115,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent.
+                        description: 'Name of the referent.'
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
