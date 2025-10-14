@@ -384,7 +384,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
 Этот способ может понадобиться, если использование параметра `--force-new-cluster` не восстанавливает работу etcd. Это может произойти, если converge master-узлов прошел неудачно, в результате чего новый master-узел был создан на старом диске etcd, изменил свой адрес в локальной сети, а другие master-узлы отсутствуют. Этот метод стоит использовать если контейнер etcd находится в бесконечном цикле перезапуска, а в его логах появляется ошибка: `panic: unexpected removal of unknown remote peer`.
 
-1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
+1. Установите утилиту etcdutl.
 1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
 
    ```shell
@@ -606,7 +606,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    С подробной информацией по настройке содержимого файла `audit-policy.yaml` можно ознакомиться:
    * [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
    * [В статье на Habr](https://habr.com/ru/company/flant/blog/468679/);
-   * [В коде скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+   * В коде скрипта-генератора, используемого в GCE.
 
 ### Как исключить встроенные политики аудита?
 
@@ -777,7 +777,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    Должен отобразиться корректный вывод `etcdutl version` без ошибок.
 
-   Также вы можете загрузить исполняемый файл [etcdutl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdutl` была такая же, как и версия etcd в кластере):
+   Также вы можете загрузить исполняемый файл etcdutl:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -877,7 +877,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 В следующем примере `etcd-backup.snapshot` — [резервная копия](#как-сделать-бэкап-etcd-вручную) etcd (snapshot), `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
-* Для выгрузки бинарных данных из etcd потребуется утилита [auger](https://github.com/etcd-io/auger/tree/main). Ее можно собрать из исходного кода на любой машине с Docker (на узлах кластера это сделать невозможно).
+* Для выгрузки бинарных данных из etcd потребуется утилита auger.
 
   ```shell
   git clone -b v1.0.1 --depth 1 https://github.com/etcd-io/auger
@@ -1082,13 +1082,13 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 * [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
 * [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
 * [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/).
-* [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler).
+* Исходный код scheduler.
 
 <div id='как-изменитьрасширить-логику-работы-планировщика'></div>
 
 ### Как изменить или расширить логику работы планировщика
 
-Для изменения логики работы планировщика можно использовать [механизм плагинов расширения](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+Для изменения логики работы планировщика можно использовать механизм плагинов расширения.
 
 Каждый плагин представляет собой вебхук, отвечающий следующим требованиям:
 

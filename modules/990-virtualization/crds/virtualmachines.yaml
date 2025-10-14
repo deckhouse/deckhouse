@@ -69,7 +69,7 @@ spec:
                       description: |
                         `cloud-init` scenario content.
 
-                        [More information about `cloud-init` and configuration examples](https://cloudinit.readthedocs.io/en/latest/reference/examples.html).
+
                       type: string
                       maxLength: 2048
 

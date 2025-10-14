@@ -12,7 +12,7 @@ title: "Модуль deckhouse: FAQ"
    d8 s collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
+2. Отправьте получившийся архив команде Deckhouse для дальнейшего расследования.
 
 Данные, которые будут собраны:
 

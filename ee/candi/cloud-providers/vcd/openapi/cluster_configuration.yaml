@@ -455,7 +455,6 @@ apiVersions:
           description: |
             The way resources are located in the cloud.
 
-            Read [more](https://deckhouse.io/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
         provider:
           type: object
           additionalProperties: false

@@ -47,7 +47,7 @@ spec:
                     {{- end }}
                     ```
 
-                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+                    Также в скрипте допустимо использовать подготовленные команды bashbooster. Например:
 
                     ```shell
                     bb-event-on 'bb-package-installed' 'post-install'
@@ -64,7 +64,7 @@ spec:
                     curl -I https://google.com
                     bb-unset-proxy
                     ```
-                    
+
                     ```shell
                     test-function-with-proxy() {
                       bb-set-proxy

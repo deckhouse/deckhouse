@@ -189,7 +189,7 @@ spec:
                     **По умолчанию** к контроллеру можно подключаться с любых адресов.
                 hsts:
                   description: |
-                    Включен ли `HSTS`. [Подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                    Включен ли `HSTS`.
                 hstsOptions:
                   description: |
                     Параметры HTTP Strict Transport Security.
@@ -213,12 +213,12 @@ spec:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.
 
-                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
+                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера.
                     maxmindEditionIDs:
                       description: |
                         Список ревизий баз данных, которые будут скачаны при старте.
 
-                        [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                 legacySSL:
                   description: |
                     Определяет, разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
@@ -307,9 +307,6 @@ spec:
                   description: |
                     Разрешены ли нижние подчеркивания в заголовках.
 
-                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
-
-                    [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) не стоит бездумно это включать.
                 minReplicas:
                   description: |
                     Минимальное количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.

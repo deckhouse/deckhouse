@@ -121,7 +121,7 @@ spec:
                       type: array
                       default: ["openid", "profile", "email", "groups", "offline_access"]
                       description: |
-                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
+                        List of additional scopes to request in token response.
                       items:
                         type: string
                     allowedGroups:
@@ -238,7 +238,7 @@ spec:
                     userSearch:
                       type: object
                       required: ['baseDN', 'username', 'idAttr', 'emailAttr']
-                      description: 'User search maps a username and password entered by a user to a LDAP entry. [Details...](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      description: 'User search maps a username and password entered by a user to a LDAP entry.'
                       properties:
                         baseDN:
                           type: string
@@ -274,7 +274,7 @@ spec:
                     groupSearch:
                       type: object
                       required: ['baseDN', 'userMatchers', 'nameAttr']
-                      description: 'Group search queries for groups given a user entry. [Details](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      description: 'Group search queries for groups given a user entry.'
                       properties:
                         baseDN:
                           type: string

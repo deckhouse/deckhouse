@@ -92,7 +92,7 @@ properties:
         description: |
           Режим управления ресурсами:
           - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
-          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
+          - `VPA` — с помощью VPA. Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
       vpa:
         description: |
           Настройка управления ресурсами в режиме `VPA`.

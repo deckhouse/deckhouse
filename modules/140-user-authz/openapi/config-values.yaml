@@ -13,7 +13,6 @@ properties:
     description: |
       Enable namespace-based authorization (multi-tenancy mode).
 
-      All the `kube-apiserver` settings required for namespace-based authorization are performed automatically by the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module ([more details](https://deckhouse.io/modules/user-authz/usage.html#configuring-kube-apiserver-for-multi-tenancy-mode)).
     x-doc-default: false
     x-examples: [true, false]
   controlPlaneConfigurator:

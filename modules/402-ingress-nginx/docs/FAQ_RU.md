@@ -67,7 +67,7 @@ spec:
 
 Чтобы аутентифицировать и авторизовывать пользователей с помощью kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В кластерах DKP [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**, создавать её самостоятельно не требуется! Свяжите её с ServiceAccount вашего Deployment'а, как показано в примере ниже.
+В кластерах DKP уже есть готовая ClusterRole — **d8-rbac-proxy**, создавать её самостоятельно не требуется! Свяжите её с ServiceAccount вашего Deployment'а, как показано в примере ниже.
 {% raw %}
 
 ```yaml
@@ -322,7 +322,7 @@ spec:
 ```
 
 После применения настроек ModSecurity начнет работать для всего трафика, проходящего через данный ingress-nginx контроллер.
-При этом используется режим аудита (`DetectionOnly`) и [базовая рекомендуемая конфигурация](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
+При этом используется режим аудита (`DetectionOnly`) и базовая рекомендуемая конфигурация.
 
 ### Настройка ModSecurity
 
@@ -346,7 +346,5 @@ spec:
       Include /etc/nginx/modsecurity/modsecurity.conf
       SecRuleEngine On
 ```
-
-Полный перечень и описание директив вы можете найти в [официальной документации](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
 
 На данный момент использование набора правил OWASP Core Rule Set (CRS) недоступно.

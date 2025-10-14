@@ -150,7 +150,7 @@ properties:
         description: |
           The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster (usually these are DaemonSets, for example, `cni-flannel`, `monitoring-ping`).
 
-          [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
+
         type: object
         default: {}
         additionalProperties: false

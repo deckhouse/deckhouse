@@ -13,7 +13,7 @@ description: Управление сетевыми политиками в кл�
 
 Имплементация сетевых политик (`NetworkPolicy`) в Deckhouse также является простой и надежной системой, основанной на базе `kube-router` в режиме *Network Policy Controller* (`--run-firewall`). В этом случае `kube-router` транслирует сетевые политики `NetworkPolicy` в правила `iptables`, которые работают в любых инсталляциях вне зависимости от облака или используемого CNI.
 
-Модуль `network-policy-engine` разворачивает в namespace `d8-system` DaemonSet с [kube-router](https://github.com/cloudnativelabs/kube-router) в режиме поддержки [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/). В результате в Kubernetes-кластере включается полная поддержка Network Policies.
+Модуль `network-policy-engine` разворачивает в namespace `d8-system` DaemonSet с kube-router в режиме поддержки [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/). В результате в Kubernetes-кластере включается полная поддержка Network Policies.
 
 Поддерживаются следующие форматы описания политик:
 
@@ -21,4 +21,3 @@ description: Управление сетевыми политиками в кл�
 - *network policy V1/GA semantics;*
 - *network policy beta semantics.*
 
-[Примеры](https://github.com/ahmetb/kubernetes-network-policy-recipes) использования.

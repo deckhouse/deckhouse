@@ -24,7 +24,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+            Resource to store `PrometheusRule`.
           required:
             - spec
           properties:
@@ -38,7 +38,7 @@ spec:
                   description: |
                     Alert group description.
 
-                    The structure of the groups is similar to [that of prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+                    The structure of the groups is similar to that of prometheus-operator.
                   items:
                     type: object
                     required:

@@ -83,7 +83,7 @@ spec:
 
    - [официальная документация Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
    - [статья из блога компании «Флант» на Habr](https://habr.com/ru/companies/flant/articles/468679/);
-   - [код скрипта-генератора, используемого в GCE](https://github.com/kubernetes/kubernetes/blob/0ef45b4fcf7697ea94b96d1a2fe1d9bffb692f3a/cluster/gce/gci/configure-helper.sh#L722-L862).
+   - код скрипта-генератора, используемого в GCE.
 
 ## Работа с лог-файлом аудита
 

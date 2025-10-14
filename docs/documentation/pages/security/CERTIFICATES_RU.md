@@ -81,7 +81,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 Данный пример основан на использовании сервиса Yandex Cloud DNS:
 
 1. Для обработки вебхука разместите в кластере сервис `Yandex Cloud DNS ACME webhook`
-   согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
+   согласно официальной документации.
 1. Создайте ресурс ClusterIssuer, следуя примеру:
 
    ```yaml

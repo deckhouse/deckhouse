@@ -105,7 +105,7 @@ spec:
 
                      Допустимые значения: `None`, пустая строка (""), или действительный IP-адрес. Установка этого значения в `None` создает сервис без виртуального IP, что полезно, когда предпочтительнее прямое подключение к конечным точкам,
                      и проксирование не требуется. Применимо только к типам ClusterIP, NodePort и LoadBalancer. Если это поле указано при создании сервиса типа `ExternalName`, создание завершится неудачей.
-                     [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 clusterIPs:
                   description: |-
                     Список IP-адресов, назначенных сервису, обычно выделяемых случайным образом.
@@ -122,7 +122,7 @@ spec:
                     Если поле указано, необходимо убедиться, что значения `clusterIPs[0]` и `clusterIP` совпадают. Поле может содержать максимум два значения.
 
                     IP-адреса должны соответствовать значениям поля `ipFamilies`. Оба поля `clusterIPs` и `ipFamilies` подчиняются полю `ipFamilyPolicy`.
-                    [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 externalIPs:
                   description: |-
                     Список IP-адресов, по которым узлы в кластере также будут принимать трафик для этого сервиса.
@@ -213,11 +213,11 @@ spec:
                     Если указано и поддерживается платформой, это ограничит трафик через облачный балансировщик нагрузки только для указанных клиентских IP-адресов.
 
                     Это поле будет игнорироваться, если облачный провайдер не поддерживает данную функцию.
-                    [Подробнее.](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/)
+
                 ports:
                   description: |-
                     Список портов, которые открыты этим сервисом.
-                    [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                   items:
                     description: ServicePort содержит информацию о порте сервиса.
                     properties:
@@ -253,7 +253,7 @@ spec:
                           создание завершится с ошибкой.
 
                           Это поле будет очищено при обновлении службы, например, при изменении типа с NodePort на ClusterIP.
-                          [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport)
+
                       port:
                         description: Порт, который будет открыт этой службой.
                       protocol:
@@ -264,7 +264,7 @@ spec:
                           Номер порта для доступа к подам, на которые нацелен сервис.
 
                           Это поле игнорируется для сервисов с `clusterIP=None` и должно быть установлено равным полю `port`.
-                          [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service)
+
                 publishNotReadyAddresses:
                   description: |-
                     Указывает, что любые агенты, занимающиеся обработкой конечных точек данного сервиса, должны игнорировать статусы готовности или неготовности.
@@ -279,12 +279,12 @@ spec:
                     Применимо только к типам ClusterIP, NodePort и LoadBalancer.
 
                     Игнорируется, если тип — ExternalName.
-                    [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/)
+
                 sessionAffinity:
                   description: |-
                     Используется для поддержания сессий с привязкой к клиенту.
                     Должно быть указано значение либо `ClientIP`, либо `None`.
-                    [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 sessionAffinityConfig:
                   description: Содержит конфигурацию привязки сессий.
                   properties:
@@ -317,7 +317,7 @@ spec:
 
                     ExternalName создает алиас этому сервису на указанный `externalName`. Некоторые другие поля не применяются к сервисам типа ExternalName.
 
-                    [Подробнее.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+
             status:
               description: Определяет наблюдаемое состояние `ServiceWithHealthchecks`.
               properties:

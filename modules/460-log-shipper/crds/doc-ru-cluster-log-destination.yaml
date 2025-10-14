@@ -429,7 +429,7 @@ spec:
                     - node;
                     - pod_owner.
 
-                    [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+
                 transformations:
                   description: |
                     Список трансформаций, которые могут применяться к логам перед отправкой.

@@ -234,7 +234,7 @@ spec:
   - kind: User
     name: some@example.com
   - kind: ServiceAccount
-    name: gitlab-runner-deploy
+    name: some-runner-deploy
     namespace: d8-service-accounts
   - kind: Group
     name: some-group-name
@@ -261,7 +261,7 @@ spec:
 
 * ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
 * Остальные пользователи и группы, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются способы аутентификации:
-  * Через модуль `user-authn`. Модуль поддерживает следующие внешние провайдеры и протоколы аутентификации: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. Подробнее — в документации модуля [`user-authn`](../../modules/user-authn/).
+  * Через модуль `user-authn`.
   * С помощью [сертификатов](#создание-пользователя-с-помощью-клиентского-сертификата).
 
 При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на master-узле.
@@ -277,16 +277,16 @@ spec:
    apiVersion: v1
    kind: ServiceAccount
    metadata:
-     name: gitlab-runner-deploy
+     name: some-runner-deploy
      namespace: d8-service-accounts
    ---
    apiVersion: v1
    kind: Secret
    metadata:
-     name: gitlab-runner-deploy-token
+     name: some-runner-deploy-token
      namespace: d8-service-accounts
      annotations:
-       kubernetes.io/service-account.name: gitlab-runner-deploy
+       kubernetes.io/service-account.name: some-runner-deploy
    type: kubernetes.io/service-account-token
    EOF
    ```
@@ -298,11 +298,11 @@ spec:
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
    metadata:
-     name: gitlab-runner-deploy
+     name: some-runner-deploy
    spec:
      subjects:
      - kind: ServiceAccount
-       name: gitlab-runner-deploy
+       name: some-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
      # Опция доступна только при включенном режиме enableMultiTenancy.
@@ -316,7 +316,7 @@ spec:
 
    ```shell
    export CLUSTER_NAME=my-cluster
-   export USER_NAME=gitlab-runner-deploy.my-cluster
+   export USER_NAME=some-runner-deploy.my-cluster
    export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
    export FILE_NAME=kube.config
    ```
@@ -377,7 +377,7 @@ spec:
 
    ```shell
    d8 k config set-credentials $USER_NAME \
-     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+     --token=$(d8 k -n d8-service-accounts get secret some-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 

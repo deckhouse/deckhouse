@@ -61,8 +61,8 @@ Deckhouse Commander работает с СУБД PostgreSQL. Для коррек
 
 Модуль Deckhouse Commander важно включить после того, как в кластере появились CRD из модуля `operator-postgres`.
 
-Модуль `operator-postgres` использует [оператор PostgreSQL](https://github.com/zalando/postgres-operator).
-Вы можете использовать собственную инсталляцию [postgres-operator](https://github.com/zalando/postgres-operator) версии не ниже `v1.10.0`.
+Модуль `operator-postgres` использует оператор PostgreSQL.
+Вы можете использовать собственную инсталляцию postgres-operator версии не ниже `v1.10.0`.
 
 #### Шаг 1: включение operator-postgres
 

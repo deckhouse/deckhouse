@@ -7,7 +7,7 @@ force_searchable: true
 
 Чтобы включить экспортирование extended-monitoring метрик, нужно указать в пространстве имён лейбл `extended-monitoring.deckhouse.io/enabled` любым удобным способом, например:
 - добавить в проект соответствующий helm-чарт (рекомендуемый);
-- добавить в описание `.gitlab-ci.yml` (kubectl patch/create);
+- добавить в описание CI/CD (kubectl patch/create);
 - добавить вручную (`d8 k label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
 - настроить через [namespace-configurator](../namespace-configurator/) модуль.
 
@@ -46,7 +46,7 @@ Non-namespaced Kubernetes-объекты, то есть объекты вне п
 
 > **Важно!** Эти лейблы **не** действуют для тех разделов, в которых расположены `imagefs` (по умолчанию — `/var/lib/docker`) и `nodefs` (по умолчанию — `/var/lib/kubelet`).
 Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
-Значения по умолчанию указаны в документации [Kubernetes](https://github.com/kubernetes/kubernetes/blob/743e4fba6339237cc8d5c11413f76ea54b4cc3e8/pkg/kubelet/apis/config/v1beta1/defaults_linux.go#L22-L27), в описании [экспортера](https://github.com/deckhouse/deckhouse/blob/main/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/).
+Значения по умолчанию указаны в документации Kubernetes, в описании экспортера.
 
 #### Namespaced Kubernetes-объекты
 

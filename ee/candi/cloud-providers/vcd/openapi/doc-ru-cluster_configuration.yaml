@@ -257,7 +257,7 @@ apiVersions:
           description: |
             Способ размещения ресурсов в облаке.
 
-            [Подробнее](https://deckhouse.ru/modules/cloud-provider-vcd/layouts.html) о возможных вариантах размещения.
+
         provider:
           description: Параметры для подключения к VCD.
           properties:

@@ -43,16 +43,16 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 
 | Kind                           | Description        |  OpenAPI path       |
 | ------------------------------ | ------------------ | ------------------ |
-| ClusterConfiguration           | Basic Kubernetes cluster configuration | [candi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/cluster_configuration.yaml) |
-| InitConfiguration              | Required only for Deckhouse installation | [candi/openapi/init_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/init_configuration.yaml)|
-| StaticClusterConfiguration     | Bare metal specific configuration | [candi/openapi/static_cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/openapi/static_cluster_configuration.yaml)|
-| OpenStackClusterConfiguration  | OpenStack specific configuration | [candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/candi/cloud-providers/openstack/openapi/cluster_configuration.yaml) |
-| AWSClusterConfiguration        | AWS specific configuration | [candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/aws/openapi/cluster_configuration.yaml) |
-| GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
-| vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
-| YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/openapi.yaml) |
-| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
+| ClusterConfiguration           | Basic Kubernetes cluster configuration | candi/openapi/cluster_configuration.yaml |
+| InitConfiguration              | Required only for Deckhouse installation | candi/openapi/init_configuration.yaml|
+| StaticClusterConfiguration     | Bare metal specific configuration | candi/openapi/static_cluster_configuration.yaml|
+| OpenStackClusterConfiguration  | OpenStack specific configuration | candi/cloud-providers/openstack/openapi/openapi/cluster_configuration.yaml |
+| AWSClusterConfiguration        | AWS specific configuration | candi/cloud-providers/aws/openapi/openapi/cluster_configuration.yaml |
+| GCPClusterConfiguration        | GCP specific configuration | candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml |
+| vSphereClusterConfiguration    | vSphere specific configuration | candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml |
+| YandexClusterConfiguration     | Yandex Cloud specific configuration | candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml |
+| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | candi/bashible/openapi.yaml |
+| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | candi/control-plane-kubeadm/openapi.yaml|
 
 ### Bootstrap
 

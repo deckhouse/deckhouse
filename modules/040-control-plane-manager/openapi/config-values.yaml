@@ -88,7 +88,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Note that th `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
+          > Note that th `PodNodeSelector` admission plugin does not require specifiying a global configuration, it relies on annotated Namespaces.
         x-examples:
           - ["AlwaysPullImages", "NamespaceAutoProvision"]
         items:

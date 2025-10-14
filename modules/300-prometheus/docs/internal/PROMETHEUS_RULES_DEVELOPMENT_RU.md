@@ -10,7 +10,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
 * Правила в Prometheus делятся на два типа:
   * recording rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)) — позволяют выполнить предварительный расчет PromQL-выражения и сохранить результат в новую метрику (обычно это необходимо для ускорения работы Grafana или других правил).
   * alerting rules ([официальная документация](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/))— позволяют отправлять уведомления на основании результата выполнения PromQL выражения.
-* Все правила распределены по модулям и лежат в каталоге [monitoring/prometheus-rules](https://github.com/deckhouse/deckhouse/tree/main/modules/300-prometheus/monitoring/prometheus-rules/)`. Правила делятся на три категории:
+* Все правила распределены по модулям и лежат в каталоге monitoring/prometheus-rules`. Правила делятся на три категории:
   * в `coreos` лежат правила, происходящие из репозитория prometheus-operator (местами сильно нами поправленные),
   * в `kubernetes` лежат наши правила, касаемые мониторинга самого kubernetes (самой платформы — control plane, NGINX Ingress, Prometheus, etc) и мониторинг "объектов" в kubernetes (Pod'ы, CronJob'ы, место на диске и пр.).
   * в `applications` лежат правила для мониторинга приложений (таких, как redis, mongo и пр.)
@@ -49,7 +49,7 @@ search: Разработка правил Prometheus, prometheus alerting rules
 
 Имя метрики, пусть даже оно вам кажется уникальным, может перестать быть таковым в любой момент — в одном из кластеров кто-то может добавить custom приложение, которое возвращает метрики с таким-же названием, и все — ваши правила поломаются. Однако мы очень четко контролируем лейбл job (благодаря servicemonitor'ам) и связка `название метрики` + `job` является гарантированно уникальной. Поэтому, **обязательно добавляйте имя job'а** во все запросы всех правил!
 
-Например, метрика `nginx_filterzone_responses_total` является стандартной (ее экспортирует [nginx-vts-exporter](https://github.com/hnlq715/nginx-vts-exporter)), поэтому если не указать явно название job'а, то любое custom приложение экспортирующее эти метрики сломает все графики и все алерты ingress-nginx.
+Например, метрика `nginx_filterzone_responses_total` является стандартной (ее экспортирует nginx-vts-exporter), поэтому если не указать явно название job'а, то любое custom приложение экспортирующее эти метрики сломает все графики и все алерты ingress-nginx.
 
 ```text
 sum(nginx_filterzone_responses_total{job="nginx-ingress-controller", server_zone="request_time_hist"}) by (job, namespace, scheme, server_name)

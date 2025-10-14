@@ -25,7 +25,7 @@ spec:
                           tolerationSeconds:
                 deschedulerPolicy:
                   description: |-
-                    `globalParameters` и `strategies` соответствуют [документации descheduler](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
+                    `globalParameters` и `strategies` соответствуют документации descheduler.
                   properties:
                     globalParameters:
                       description: |-

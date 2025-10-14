@@ -58,7 +58,7 @@ spec:
                   type: object
                 deschedulerPolicy:
                   description: |
-                    `globalParameters` and `strategies` follow the [descheduler's documentation](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
+                    `globalParameters` and `strategies` follow the descheduler's documentation.
                   properties:
                     globalParameters:
                       description: Parameters that apply to all policies.

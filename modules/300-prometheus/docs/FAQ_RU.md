@@ -92,7 +92,7 @@ spec:
 
 Параметры:
 
-- `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает [с аналогичной в prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+- `groups` — единственный параметр, в котором необходимо описать группы алертов. Структура групп полностью совпадает с аналогичной в prometheus-operator.
 
 Пример:
 

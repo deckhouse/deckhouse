@@ -1,5 +1,5 @@
 ---
-title: "Модуль operator-trivy: Custom Resources (от aquasecurity.github.io)"
+title: "Модуль operator-trivy: Custom Resources"
 ---
 
 Модуль `operator-trivy` использует набор кастомных ресурсов, разработанных проектом [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) от Aqua Security, для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.

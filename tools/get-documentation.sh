@@ -22,9 +22,13 @@ fi
 # Удалить разделы про обновление DKP в FAQ и переключение между редакциями
 # (https://deckhouse.(ru|io)/documentation/v1/modules/   -> /modules/
 # (https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/   -> /modules/
-# НЕ НАДО - они внутренние.  в AlertmanagerConfig customAlertmanagerConfig удалить лишние ресиверы
+# customAlertmanagerConfig удалить лишние ресиверы
+# cert-manager - route53
 # github/gitlab
+# ссылки на github.com, kubernetes.io, helm.sh и другие внешние ресурсы
 # Cloud
+# aquasecurity
+# VictoriaMetrics
 # enterprise
 # edition
 # slack
@@ -33,7 +37,7 @@ fi
 # nodeGroup - параметры обновлений облаков, бандлов
 # ingress - sourceRanges
 # standby
-#
+# Deckhouse - > Deckhouse Platform Certified Security Edition
 # Hugo replacements are in docs/documentation/werf-web.inc.yaml
 
 

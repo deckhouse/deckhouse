@@ -84,7 +84,7 @@ spec:
 
 Подробнее о шаблонах и языке политик можно узнать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
 
-Больше примеров описания проверок для расширения политики можно найти [в библиотеке Gatekeeper](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
+Больше примеров описания проверок для расширения политики можно найти в библиотеке Gatekeeper.
 
 ## Как включить одну или несколько политик Pod Security Standards, не отключая весь набор?
 

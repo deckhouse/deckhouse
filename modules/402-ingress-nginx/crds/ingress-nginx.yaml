@@ -308,7 +308,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled ([read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Determines whether hsts is enabled.
                   default: false
                 hstsOptions:
                   type: object
@@ -343,7 +343,7 @@ spec:
                       description: |
                         A list of database editions to download at startup.
 
-                        [More info...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
                       items:
                         type: string
@@ -363,7 +363,7 @@ spec:
                   description: |
                     Enable outdated versions of the TLS protocol and cipher suites.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C' ](https://cheatsheetseries.owasp.org/cheatsheets/TLS_Cipher_String_Cheat_Sheet.html).
 
                     By default, only TLSv1.2 and the newest cipher suites are enabled.
                 disableHTTP2:
@@ -493,7 +493,7 @@ spec:
                 underscoresInHeaders:
                   type: boolean
                   description: |
-                    Determines whether underscores are allowed in headers. Learn [more...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    Determines whether underscores are allowed in headers.
 
                     [This tutorial](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
                   default: false
@@ -959,7 +959,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled ([read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Determines whether hsts is enabled.
                   default: false
                 hstsOptions:
                   type: object
@@ -994,7 +994,7 @@ spec:
                       description: |
                         A list of database editions to download at startup.
 
-                        [More info...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+
                       default: ["GeoLite2-City", "GeoLite2-ASN"]
                       items:
                         type: string
@@ -1151,7 +1151,7 @@ spec:
                 underscoresInHeaders:
                   type: boolean
                   description: |
-                    Determines whether underscores are allowed in headers. Learn [more...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+                    Determines whether underscores are allowed in headers.
 
                     [This tutorial](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
                   default: false

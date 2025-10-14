@@ -875,7 +875,7 @@ spec:
                     - node
                     - pod_owner
 
-                    [More about field path notation...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+
                   x-doc-examples:
                     - forwarder: vector
                       key: value

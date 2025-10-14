@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage.
 
             Таких ресурсов в кластере может быть любое количество.
           properties:

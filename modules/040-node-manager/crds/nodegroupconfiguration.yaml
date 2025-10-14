@@ -58,7 +58,7 @@ spec:
                     {{- end }}
                     ```
 
-                    You can also use the pre-defined [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) commands in the script. For example:
+                    You can also use the pre-defined bashbooster commands in the script. For example:
 
                     ```shell
                     bb-event-on 'bb-package-installed' 'post-install'
@@ -76,7 +76,7 @@ spec:
                     curl -I https://google.com
                     bb-unset-proxy
                     ```
-                    
+
                     ```shell
                     test-function-with-proxy() {
                       bb-set-proxy

@@ -932,7 +932,7 @@ ColdStandby обеспечивает механизм восстановлени
 Для работы данного механизма необходимо выполнить следующие требования:
 
 - для политики запуска виртуальной машины (`.spec.runPolicy`) должно быть установлено одно из следующих значений: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`;
-- на узлах, где запущены виртуальные машины, должен быть включён механизм [Fencing](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-fencing-mode).
+- на узлах, где запущены виртуальные машины, должен быть включён механизм [Fencing](/modules/040-node-manager/cr.html#nodegroup-v1-spec-fencing-mode).
 
 Рассмотрим как это работает на примере:
 

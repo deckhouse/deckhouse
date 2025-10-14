@@ -4,7 +4,7 @@ title: "Модуль user-authn: настройки"
 
 <!-- SCHEMA -->
 
-Автоматический деплой [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) в namespace вашего приложения и подключение его к Dex происходят при создании custom resource [`DexAuthenticator`](cr.html#dexauthenticator).
+Автоматический деплой oauth2-proxy.
 
 **Важно!** Так как использование OpenID Connect по протоколу HTTP является слишком значительной угрозой безопасности (что подтверждается, например, тем, что Kubernetes API-сервер не поддерживает работу с OIDC по HTTP), данный модуль можно установить только при включенном HTTPS (`https.mode` выставить в отличное от `Disabled` значение или на уровне кластера, или в самом модуле).
 

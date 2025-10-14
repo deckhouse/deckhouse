@@ -159,7 +159,7 @@ spec:
 
 Дополнительные примеры правил можно найти на следующих ресурсах:
 
-- [официальный репозиторий правил Falco](https://github.com/falcosecurity/rules/blob/32b635394c40a56f8bdeb334c60a46e2edd9908c/rules/application_rules.yaml);
+- официальный репозиторий правил Falco;
 - [раздел с правилами Falco на Artifact Hub](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1).
 
 ### Применение стороннего правила
@@ -317,7 +317,7 @@ spec:
 
 #### Falco
 
-Утилита [`event-generator`](https://github.com/falcosecurity/event-generator) позволяет генерировать
+Утилита `event-generator` позволяет генерировать
 различные подозрительные действия (например, системные вызовы или события аудита API Kubernetes).
 
 Используйте следующую команду для запуска тестового набора событий в кластере Kubernetes:
@@ -327,7 +327,7 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
 Если вам нужно сымитировать определённое действие,
-обратитесь [к руководству утилиты](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
+обратитесь к руководству утилиты.
 
 #### Falcosidekick
 

@@ -25,7 +25,7 @@ properties:
           - `Disabled` — Модуль observability будет работать только по HTTP;
           - `CertManager` — Модуль observability будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — Модуль observability будет работать по HTTPS, используя сертификат из namespace `d8-system`;
-          - `OnlyInURI` — Модуль observability будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Модуль observability будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:

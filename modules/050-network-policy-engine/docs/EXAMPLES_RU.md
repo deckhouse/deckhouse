@@ -23,4 +23,3 @@ spec:
   - Egress
 ```
 
-Больше примеров можно посмотреть [в этом репозитории](https://github.com/ahmetb/kubernetes-network-policy-recipes).

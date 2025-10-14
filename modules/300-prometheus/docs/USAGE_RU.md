@@ -32,13 +32,7 @@ spec:
 
 ## Запись данных Prometheus в longterm storage
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка этого механизма реализована с помощью кастомного ресурса `PrometheusRemoteWrite`.
-
-{% endraw -%}
-{% alert level="info" %}
-Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
-{% endalert %}
-{% raw %}
+У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage.
 
 ### Пример минимального PrometheusRemoteWrite
 
@@ -252,7 +246,7 @@ spec:
       repeatInterval: 12h
 ```
 
-Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
+Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои.
 
 ## Пример отправки алертов в Slack с фильтром
 

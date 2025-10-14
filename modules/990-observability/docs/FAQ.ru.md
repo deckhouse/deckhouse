@@ -238,7 +238,7 @@ subjects:
 
 ## Как выдать доступ при использовании RBAC 2.0
 
-Если включена [экспериментальная ролевая модель](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#экспериментальная-ролевая-модель), права назначаются через ресурсы `UserRole` и `ClusterUserRole`.
+Если включена [экспериментальная ролевая модель](/modules/user-authz/#экспериментальная-ролевая-модель), права назначаются через ресурсы `UserRole` и `ClusterUserRole`.
 
 ### Пример доступа к метрикам и дашбордам в конкретном пространстве имён
 
@@ -260,13 +260,13 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-> Данный пример предоставляет права не только для доступа к дашбордам и метрикам. Описание данной роли можно найти в [документации модуля user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/#use-роли).
+> Данный пример предоставляет права не только для доступа к дашбордам и метрикам. Описание данной роли можно найти в [документации модуля user-authz](/modules/user-authz/#use-роли).
 
 ## Как предоставить внешний доступ для чтения метрик
 
 Для предоставления внешнего доступа к метрикам необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/products/kubernetes-platform/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
 2. Для авторизации запросов создать сервис аккаунт.
 
    ```yaml
@@ -341,7 +341,7 @@ roleRef:
 
 Для предоставления внешнего доступа для записи метрик необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам, для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/products/kubernetes-platform/modules/observability/stable/configuration.html#parameters-externalmetricsaccess), в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам, для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess), в настройках модуля observability.
 
 2. Для авторизации запросов, создать сервис аккаунт:
 
@@ -410,7 +410,7 @@ roleRef:
 
 Для предоставления внешнего доступа к метрикам кластера, необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/products/kubernetes-platform/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
 
 2. Для авторизации запросов создать сервис аккаунт.
 

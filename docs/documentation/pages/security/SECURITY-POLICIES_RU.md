@@ -146,7 +146,7 @@ spec:
 Вспомогательные ресурсы при создании расширенных политик:
 
 - [документация Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/) с информацией о шаблонах и языке политик;
-- [библиотека Gatekeeper](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general) с примерами шаблонов проверок.
+- библиотека Gatekeeper с примерами шаблонов проверок.
 
 ## Операционные политики
 

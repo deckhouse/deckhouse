@@ -111,7 +111,7 @@ spec:
                         Для выборки по данному критерию все значения логически суммируются.
                 tolerations:
                   description: |
-                    Параметр аналогичен параметру `spec.tolerations` у подов. [Подробнее о taints и tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                    Параметр аналогичен параметру `spec.tolerations` у подов.
                     Tolerations из этого параметра будут объединены с tolerations, указанными в ресурсе VirtualMachine. При этом, tolerations у VirtualMachine имеют больший приоритет.
                   items:
                     description: ""

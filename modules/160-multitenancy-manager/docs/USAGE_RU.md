@@ -13,20 +13,14 @@ title: "Модуль multitenancy-manager: примеры использован
   * выбор профиля безопасности;
   * настройка администраторов проекта.
 
-    Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
-
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
   * настройка допустимых для проекта UID/GID;
   * правила аудита обращения Linux-пользователей проекта к ядру;
   * сканирование запускаемых образов контейнеров на наличие известных уязвимостей (CVE).
 
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
-
 - `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также дополнительные функции:
   * определение селектора узла для всех подов в проекте: если под создан, селектор узла пода будет автоматически **заменён** на селектор узла проекта;
   * определение стандартных tolerations для всех подов в проекте: если под создан, стандартные значения tolerations **добавляются** к нему автоматически.
-
-  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 

@@ -23,7 +23,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage (E.g: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage.
 
             A cluster can have any number of such resources.
           required:

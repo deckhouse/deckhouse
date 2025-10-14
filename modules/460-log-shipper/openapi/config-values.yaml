@@ -79,7 +79,7 @@ properties:
         description: |
           Resource request management mode:
           - `Static` is a classic one. In it, you explicitly specify requests. The parameters of this mode are defined in the [static](#parameters-resourcesrequests-static) parameter section;
-          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
+          - `VPA` mode uses VPA. You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesrequests-vpa) parameter section.
         enum: ["VPA", "Static"]
         default: "VPA"
       vpa:

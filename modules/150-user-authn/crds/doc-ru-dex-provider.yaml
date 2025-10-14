@@ -47,7 +47,7 @@ spec:
                       description: |
                         Запрашивать дополнительные данные об успешно подключенном пользователе.
 
-                        [Подробнее...](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
+
                     userIDKey:
                       description: |
                         [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения ID пользователя.
@@ -83,7 +83,7 @@ spec:
                         Если параметр не задан, проверка принадлежности к группам не выполняется.
                     scopes:
                       description: |
-                        Список [полей](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
+                        Список полей для включения в ответ при запросе токена.
                     promptType:
                       description: |
                         Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
@@ -137,7 +137,7 @@ spec:
                         Настройки фильтров пользователей, которые помогают сначала отфильтровать директории, в которых будет производиться поиск пользователей,
                         а затем найти пользователя по полям (его имени, адресу электронной почты или отображаемому имени).
 
-                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
+
                       properties:
                         baseDN:
                           description: 'Откуда будет начат поиск пользователей.'
@@ -160,7 +160,7 @@ spec:
                       description: |
                         Настройки фильтра для поиска групп для указанного пользователя.
 
-                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
+
                       properties:
                         baseDN:
                           description: 'Откуда будет начат поиск групп'

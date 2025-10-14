@@ -220,7 +220,7 @@ spec:
                   types ClusterIP, NodePort, and LoadBalancer. If this field is specified
                   when creating a Service of type ExternalName, creation will fail.
                   This field will be wiped when updating a Service to type ExternalName.
-                  [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 type: string
               externalIPs:
                 description: |-
@@ -373,7 +373,7 @@ spec:
 
                   This field will be ignored if the
                   cloud-provider does not support the feature.
-                  [More info.](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/)
+
                 items:
                   type: string
                 type: array
@@ -381,7 +381,7 @@ spec:
               ports:
                 description: |-
                   The list of ports that are exposed by this service.
-                  [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 items:
                   description: ServicePort contains information on service's port.
                   properties:
@@ -425,7 +425,7 @@ spec:
                         This field will be
                         wiped when updating a Service to no longer need it (e.g. changing type
                         from NodePort to ClusterIP).
-                        [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport)
+
                       format: int32
                       type: integer
                     port:
@@ -447,7 +447,7 @@ spec:
 
                         This field is ignored for services with `clusterIP=None`, and should be
                         omitted or set equal to the `port` field.
-                        [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service)
+
                   required:
                   - port
                   type: object
@@ -481,7 +481,7 @@ spec:
                   Only applies to types ClusterIP, NodePort, and LoadBalancer.
 
                   Ignored if type is `ExternalName`.
-                  [More info.](https://kubernetes.io/docs/concepts/services-networking/service/)
+
                 type: object
                 x-kubernetes-map-type: atomic
               sessionAffinity:
@@ -489,7 +489,7 @@ spec:
                   Used to maintain session affinity.
                   Enable client IP based session affinity.
                   Must be `ClientIP` or `None`.
-                  [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
+
                 type: string
               sessionAffinityConfig:
                 description: Contains the configurations of session affinity.
@@ -542,7 +542,7 @@ spec:
 
                   ExternalName aliases this service to the specified `externalName`.
                   Several other fields do not apply to ExternalName services.
-                  [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+
                 type: string
             required:
             - healthcheck

@@ -86,7 +86,7 @@ properties:
         description: |
           Количество ресурсов (CPU и памяти), выделяемых для работы компонентов Deckhouse, работающих на каждом узле кластера (обычно это DaemonSet'ы, например `cni-flannel`, `monitoring-ping`).
 
-          [Подробнее](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) про единицы измерения ресурсов.
+
         properties:
           controlPlane:
             description: |

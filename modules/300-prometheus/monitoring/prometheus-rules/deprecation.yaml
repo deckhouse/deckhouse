@@ -46,7 +46,7 @@
         description: |-
           Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
 
-          Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/implemented/202212-scrape-config.md) instead.
+          Migrate to using the ScrapeConfig custom resource instead.
     - alert: PrometheusDirectAccessDeprecated
       expr: d8_monitoring_ingress_with_client_cert == 1
       labels:
@@ -62,7 +62,7 @@
           The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
           This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
 
-          To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
+          To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
 - name: d8.grafana.interval_deprecation
   rules:
     - alert: GrafanaDashboardPanelIntervalDeprecated

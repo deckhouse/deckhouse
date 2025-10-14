@@ -56,7 +56,7 @@ properties:
               cacheSize: 2000
             ```
 
-          > Admission-плагин `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
+          > Admission-плагин `PodNodeSelector` не требует.
       bindToWildcard:
         description: |
           Прослушивание на `0.0.0.0`.
@@ -162,7 +162,7 @@ properties:
           - Enforce
           Отклонять записи без подписи, с недействительной подписью или в неправильном формате.
           - Rollback
-          Преобразовать записи в стандартный формат (формат по умолчанию для etcd) при изменении записей.  
+          Преобразовать записи в стандартный формат (формат по умолчанию для etcd) при изменении записей.
           Разрешает использовать записи без подписи или с недействительной подписью.
   etcd:
     description: |

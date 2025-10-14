@@ -106,7 +106,7 @@ properties:
                 description: |
                   A set of zones in which nodes can be created.
                   To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-                  Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
                   > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
                 items:
                   type: string
@@ -388,7 +388,6 @@ properties:
             type: string
             description: |
               The way resources are located in the cloud.
-              Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html) about possible provider layouts.
             enum: [Standard]
 
           region:
@@ -396,14 +395,14 @@ properties:
             description: |
               The name of region.
               To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
-              Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
               > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
           zones:
             type: array
             description: |
               A set of zones in which nodes can be created.
               To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-              Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
+
               > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             items:
               type: string

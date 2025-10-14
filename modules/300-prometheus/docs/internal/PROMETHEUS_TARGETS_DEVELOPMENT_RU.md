@@ -30,7 +30,7 @@ search: Разработка target'ов Prometheus, prometheus target
 
 Настоятельно рекомендуется настраивать экспортеры метрик так, чтобы получить данные мог только проверенный и авторизованный пользователь.
 
-Для предоставления безопасного доступа к метрикам в Kubernetes существует [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy) — написанный на go прокси, который достает из запросов аутентифицирует пользователя при помощи `TokenReview` или клиентского сертификата.
+Для предоставления безопасного доступа к метрикам в Kubernetes существует kube-rbac-proxy — написанный на go прокси, который достает из запросов аутентифицирует пользователя при помощи `TokenReview` или клиентского сертификата.
 Авторизация осуществляется при помощи `SubjectAccessReview` согласно описанным для пользователя RBAC-правилам.
 
 #### Пример Deployment для защищенного экспортера
@@ -86,7 +86,7 @@ spec:
 
 Чтобы аутентифицировать и авторизовывать пользователей при помощи kube-apiserver, у прокси должны быть права на создание `TokenReview` и `SubjectAccessReview`.
 
-В наших кластерах [уже есть готовая ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) - **d8-rbac-proxy**.
+В наших кластерах уже есть готовая ClusterRole - **d8-rbac-proxy**.
 Создавать её самостоятельно не нужно! Нужно только прикрепить её к serviceaccount'у вашего Deployment'а.
 
 ```yaml

@@ -52,15 +52,15 @@
         The Deployment is in the `MinimumReplicasUnavailable` state.
 
         Troubleshooting options:
-        
+
         - To check the Deployment's status:
-        
+
           ```shell
           kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
           ```
 
         - To check a Pod's status:
-        
+
           ```shell
           kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
@@ -148,7 +148,7 @@
         Grafana has restarted {{`{{ $value }}`}} times in the last hour.
 
         Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
-      
+
         To investigate the issue, check the logs:
 
         ```shell
@@ -173,5 +173,5 @@
 
         **This method is no longer supported**.
 
-        Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
+        Migrate to using the custom GrafanaDashboardDefinition resource instead.
 {{- end }}

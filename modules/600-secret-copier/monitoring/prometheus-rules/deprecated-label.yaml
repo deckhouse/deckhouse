@@ -12,7 +12,7 @@
       plk_markup_format: "markdown"
       summary: Obsolete `antiopa_secret_copier=yes` label detected.
       description: |-
-        The [`secret-copier` module](https://github.com/deckhouse/deckhouse/tree/main/modules/600-secret-copier/) has changed its labeling approach for original secrets in the `default` namespace.
+        The `secret-copier` module has changed its labeling approach for original secrets in the `default` namespace.
 
         The label `antiopa-secret-copier: "yes"` is deprecated and will be removed soon.
 

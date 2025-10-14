@@ -55,7 +55,7 @@ spec:
                     inhibitRules:
                       description: Список правил подавления.
                       items:
-                        description: Правила подавления используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
+                        description: Правила подавления используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения.
                         properties:
                           equal:
                             description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы подавление вступило в силу.
@@ -532,7 +532,7 @@ spec:
                               description: |
                                 Конфигурация определяет параметры отправки оповещений с помощью Telegram.
 
-                                [Подробнее см. в документации Prometheus…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
+
                               properties:
                                 apiURL:
                                   description: |
@@ -767,7 +767,7 @@ spec:
                           webhookConfigs:
                             description: Список конфигураций для отправки оповещений через webhook.
                             items:
-                              description: Конфигурация определяет параметры отправки оповещений с помощью webhook'а. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#webhook_config)
+                              description: Конфигурация определяет параметры отправки оповещений с помощью webhook'а.
                               properties:
                                 httpConfig:
                                   description: Конфигурация HTTP-клиента.
