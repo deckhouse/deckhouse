@@ -20,7 +20,7 @@ Combined with the DaemonSet deployment, these mechanisms ensure a high level of 
 Each cluster node runs a Falco Pod with the following components:
 
 - `falco`: Collects events, enriches them with metadata, and outputs them to stdout.
-- `rules-loader`: Retrieves rule data from [FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources
+- `rules-loader`: Retrieves rule data from [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources
   and stores them in a shared directory.
 - [`falcosidekick`](https://github.com/falcosecurity/falcosidekick): Receives events from `falco`
   and exports them as metrics to external systems.
@@ -43,7 +43,7 @@ DVP provides the following types of built-in rules:
 
 ### Custom rules
 
-Custom rules can be defined using the [FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
+Custom rules can be defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 Each Falco agent includes a sidecar container with a [`shell-operator`](https://github.com/flant/shell-operator) instance.
 This instance reads rules from Kubernetes resources, converts them into Falco rule format,

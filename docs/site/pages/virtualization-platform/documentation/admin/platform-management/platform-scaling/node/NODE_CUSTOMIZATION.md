@@ -3,7 +3,7 @@ title: "Custom node configuration"
 permalink: en/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/node-customization.html
 ---
 
-To automate actions on group nodes, use the [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
+To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
 
 - Installing and configuring additional OS packages.  
 
@@ -56,7 +56,7 @@ cloudProvider:
 </li>
 <li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is used).</li>
 <li><code>.kubernetesVersion</code> — the version of Kubernetes in use.</li>
-<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="cr.html#nodeuser">NodeUser</a> resource.
+<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a> resource.
 {% offtopic title="Example data..." %}
 ```yaml
 nodeUsers:
@@ -165,7 +165,7 @@ Useful specifics of certain scripts:
 
 ## How to use containerd with Nvidia GPU support
 
-You need to create a separate [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) for GPU nodes:
+You need to create a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) for GPU nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -180,7 +180,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Next, create a [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource for the `gpu` NodeGroup to configure `containerd`:
+Next, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for the `gpu` NodeGroup to configure `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

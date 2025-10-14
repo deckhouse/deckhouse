@@ -6,11 +6,11 @@ lang: ru
 
 ## Описание
 
-Проекты (ресурс [Project](/products/kubernetes-platform/documentation/v1/modules/multitenancy-manager/cr.html#project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
+Проекты (ресурс [Project](/modules/multitenancy-manager/cr.html#project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
 
 Настройки проекта позволяют задать квоты для ресурсов, ограничить сетевое взаимодействие, как внутри платформы, так и вне её.
 
-Для создания проектов используются шаблоны (ресурс [ProjectTemplate](/products/kubernetes-platform/documentation/v1/modules/multitenancy-manager/cr.html#projecttemplate)).
+Для создания проектов используются шаблоны (ресурс [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate)).
 
 {% alert level="warning" %}
 При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
@@ -40,8 +40,8 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Чтобы создать проект, создайте ресурс [Project](/products/kubernetes-platform/documentation/v1/modules/multitenancy-manager/cr.html#project), указав имя шаблона проекта в поле `.spec.projectTemplateName`.
-1. В параметре `.spec.parameters` ресурса [Project](/products/kubernetes-platform/documentation/v1/modules/multitenancy-manager/cr.html#project) укажите значения для параметров из секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](/products/kubernetes-platform/documentation/v1/modules/multitenancy-manager/cr.html#projecttemplate).
+1. Чтобы создать проект, создайте ресурс [Project](/modules/multitenancy-manager/cr.html#project), указав имя шаблона проекта в поле `.spec.projectTemplateName`.
+1. В параметре `.spec.parameters` ресурса [Project](/modules/multitenancy-manager/cr.html#projecttemplate).
 
    Пример создания проекта с помощью ресурса Project из `default` ProjectTemplate представлен ниже:
 

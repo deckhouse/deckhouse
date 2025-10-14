@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/pl
 lang: ru
 ---
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration). С его помощью можно выполнять на узлах bash-скрипты, используя набор команд [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также применять шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). С его помощью можно выполнять на узлах bash-скрипты, используя набор команд [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также применять шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 
 - Установка и настройки дополнительных пакетов ОС.  
 
@@ -56,7 +56,7 @@ cloudProvider:
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
-<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
+<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
 ```yaml
 nodeUsers:
@@ -165,7 +165,7 @@ rm /var/lib/bashible/configuration_checksum
 
 ## Как использовать containerd с поддержкой Nvidia GPU
 
-Создайте отдельную [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) для GPU-узлов:
+Создайте отдельную [NodeGroup](/modules/node-manager/cr.html#nodegroup) для GPU-узлов:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -180,7 +180,7 @@ spec:
   nodeType: CloudStatic
 ```
 
-Далее создайте ресурс [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
+Далее создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для NodeGroup `gpu` для конфигурации `containerd`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

@@ -1,5 +1,5 @@
 {%- assign moduleName = page['module-kebab-name'] %}
-{%- assign moduleAlertsUrl = "../../alerts.html#" | append: moduleName %}
+{%- assign moduleAlertsUrl = "/products/kubernetes-platform/documentation/v1/reference/alerts.html#" | append: moduleName %}
 
 {%- assign moduleAlerts = site.data.deckhouse-alerts.alerts | where: "module", moduleName  %}
 

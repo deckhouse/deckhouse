@@ -31,7 +31,7 @@ sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/
 </div>
   </li>
   <li>
-<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -59,14 +59,14 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
 
 <ul>
   <li>
     Подготовьте <strong>чистую</strong> виртуальную машину, которая будет узлом кластера.
   </li>
   <li>
-<p>Настройте StorageClass <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -91,7 +91,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта.</p>
+    <p>Создайте <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта.</p>
     
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
@@ -170,7 +170,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Создайте в кластере ресурс <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте в кластере ресурс <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
@@ -237,7 +237,7 @@ pdpl-user -i 63 caps
 </div>
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
+    <p>Создайте <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
 <div markdown="1">
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
@@ -284,7 +284,7 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
 
 <ul>
-<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
+<li><p>Убедитесь, что под Kruise controller manager модуля <a href="/modules/ingress-nginx/">ingress-nginx</a> запустился и находится в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду:</p>
 
 <div markdown="1">

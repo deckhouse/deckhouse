@@ -42,6 +42,7 @@ const (
 	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
 	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
 	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
+	DeckhouseReleaseAnnotationUpdateInfo            = "release.deckhouse.io/update-info"
 
 	DeckhouseReleaseAnnotationDryrun            = "dryrun"
 	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"

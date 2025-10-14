@@ -4,7 +4,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/bin-cilium-src-artifact
@@ -26,7 +26,9 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
   - go mod vendor && go mod verify
-  - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
+  - |
+    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- include "image-build.build" (set $ "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator`) | indent 4 }}
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
   - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
   - rm -rf /src/cilium/vendor

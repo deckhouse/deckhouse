@@ -1,83 +1,17 @@
-<div class="searchV2">
-  <div class="searchV2__blocks searchV2__documents">
-    <h4 class="searchV2__results-counter">
-       <span>{{ site.data.i18n.common.documents_found[page.lang] }}: </span>
-       <span class="searchV2__results-counter-data"></span>
-    </h4>
-    <div class="searchV2__results-list">
-        <h4 class="searchV2__results-absent-block">{{ site.data.i18n.common.empty_search_documents_result[page.lang] }}</h4>
-        <ul class="searchV2__results"></ul>
-    </div>
-  </div>
-  <div class="searchV2__blocks searchV2__parameters">
-    <h4 class="searchV2__results-counter">
-        <span>{{ site.data.i18n.common.parameters_and_resources_found[page.lang] }}: </span>
-        <span class="searchV2__results-counter-data"></span>
-    </h4>
-    <div class="searchV2__results-list">
-        <h4 class="searchV2__results-absent-block">{{ site.data.i18n.common.empty_search_parameters_resources_result[page.lang] }}</h4>
-        <ul class="searchV2__results"></ul>
-    </div>
-  </div>
-</div>
-<script>
-var documents=[
+{% assign productCode = include.productCode -%}
+{"documents":[
 {%- assign searchedpages = site.pages | where: "searchable", true | where: "lang", page.lang %}
 {%- for page in searchedpages %}
-{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | relative_url %}
-{
-"title": "{{ page.title | escape }}",
-"url": "{{ page_canonical_url }}",
-{%- if page['module-index-page']  %}
-  {%- assign keywords = page['module-kebab-name'] | append: ', ' |  append: page['module-snake-name'] %}
-{%- else %}
-  {%- assign keywords = "" %}
-{%- endif %}
-{%- if page.search.size > 0 %}
-  {%- if keywords.size > 0 %}
-    {%- assign keywords = page.search | append: ", " | append: keywords %}
-  {%- else %}
-    {%- assign keywords = page.search %}
-  {%- endif %}
-{%- endif %}
-{%- if keywords.size > 0 %}
-"keywords": {{ keywords | jsonify }},
-{%- endif %}
-"content": {{ page.content | normalizeSearchContent | jsonify }}
+{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' %}{% continue %}{% endif %}
+{"title": "{{ page.title | escape }}",
+"url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"keywords": {{ page.search | jsonify }},
+"content": {{ page.content | normalizeSearchContent | jsonify -}}
 }
 {%- unless forloop.last %},{% endunless %}
 {%- endfor -%}
-{%- assign configpages = site.pages | where_exp: "item", "item.legacy-enabled-commands.size > 0" | where: "lang", page.lang %}
-{%- if configpages.size > 0 %},{% endif %}
-{%- for page in configpages %}
-{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en\/|ru\/)', '' | relative_url %}
-{%- assign keywords = "" %}
-{%- if page['legacy-enabled-commands'] %}
-  {%- if keywords.size > 0 %}
-    {%- assign keywords = page['legacy-enabled-commands'] | append: ", " | append: keywords %}
-  {%- else %}
-    {%- assign keywords = page['legacy-enabled-commands'] %}
-  {%- endif %}
-{%- endif %}
-{%- if page.search.size > 0 %}
-  {%- if keywords.size > 0 %}
-    {%- assign keywords = page.search | append: ", " | append: keywords %}
-  {%- else %}
-    {%- assign keywords = page.search %}
-  {%- endif %}
-{%- endif %}
-{
-"title": "{{ page.title | escape }}",
-"url": "{{ page_canonical_url }}",
-{%- if keywords.size > 0 %}
-"keywords": {{ keywords | jsonify }},
-{%- endif %}
-"content": "{{ page.title | escape }}"
-}
-{%- unless forloop.last %},{% endunless %}
-{%- endfor -%}
-];
-var parameters=[
+],
+"parameters":[
 {%- for item in site.data.search.searchItems[page.lang] %}
 {%- assign page_canonical_url = item.url | relative_url %}
 {%- assign keywords = "" %}
@@ -90,6 +24,8 @@ var parameters=[
 {%- endif %}
 {
 "name": "{{ item.name }}",
+"module": "{{ item.module | default: "global" }}",
+"moduletype": "embedded",
 "url": "{{ page_canonical_url }}",
 "resName": "{{ item.resourceName | escape }}",
 {%- if item.isResource %}
@@ -102,26 +38,8 @@ var parameters=[
 "keywords": {{ keywords | jsonify }},
 {%- endif %}
 "path": "{{ item.pathString | escape }}",
-"content": {{ item.content | default: '' | normalizeSearchContent | jsonify }}
+"content": {{ item.content | default: '' | normalizeSearchContent | jsonify -}}
 }
 {%- unless forloop.last %},{% endunless %}
 {%- endfor -%}
-];
-</script>
-
-{% capture asset_url %}
-{%- javascript_asset_tag lunr %}
-- _assets/js/lunr.js
-- _assets/js/lunr.stemmer.support.js
-- _assets/js/lunr.multi.js
-- _assets/js/lunr.ru.js
-{% endjavascript_asset_tag -%}
-{% endcapture %}
-<script type="text/javascript" src='{{ asset_url | strip_newlines | true_relative_url }}'></script>
-
-{% capture asset_url %}
-{%- javascript_asset_tag search %}
-- _assets/js/search.js
-{% endjavascript_asset_tag %}
-{% endcapture %}
-<script type="text/javascript" src='{{ asset_url | strip_newlines | true_relative_url }}'></script>
+]}

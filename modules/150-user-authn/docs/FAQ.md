@@ -90,7 +90,7 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 
 ## Authentication flow with DexAuthenticator
 
-![Authentication flow with DexAuthenticator](../../images/user-authn/dex_login.svg)
+![Authentication flow with DexAuthenticator](images/dex_login.svg)
 
 1. Dex redirects the user to the provider's login page in most cases and wait for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user should write credentials to the Dex login form instead, and Dex will make a request to the provider's API to validate them.
 
@@ -119,7 +119,7 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
     enabled: true
   ```
 
-The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
+The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
 {% endraw %}
 
 ### Configuring kube-apiserver
@@ -142,7 +142,7 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 
 ### The flow of accessing Kubernetes API with generated kubeconfig
 
-![Interaction scheme when accessing Kubernetes API using generated kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
+![Interaction scheme when accessing Kubernetes API using generated kubeconfig](images/kubeconfig_dex.svg)
 
 1. Before the start, kube-apiserver needs to request the configuration endpoint of the OIDC provider (Dex in our case) to get the issuer and JWKS endpoint settings.
 

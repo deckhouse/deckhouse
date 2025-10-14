@@ -48,8 +48,13 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
         command:
         - /bin/bash
-        - -c
-        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        - -ec
+        - |
+          /usr/bin/cp /iptables-wrapper /sbin/ -rv
+          /usr/bin/cp /_sbin/* /sbin/ -rv
+          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+          /sbin/iptables --version
+          /usr/bin/rm /sbin/iptables-wrapper -v
         volumeMounts:
         - mountPath: /sbin
           name: sbin

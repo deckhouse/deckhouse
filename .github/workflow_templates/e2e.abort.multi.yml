@@ -91,6 +91,10 @@ env:
 # Note: no concurrency section for e2e workflows.
 # Usually you run e2e and wait until it ends.
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   started_at:
     name: Save start timestamp

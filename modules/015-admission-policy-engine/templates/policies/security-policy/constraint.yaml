@@ -21,6 +21,11 @@
   {{- if not $cr.spec.policies.automountServiceAccountToken }}
     {{- include "automount_service_account_token" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "allowRbacWildcards" }}
+  {{- if not $cr.spec.policies.allowRbacWildcards }}
+    {{- include "allow_rbac_wildcards" (list $context $cr) }}
+  {{- end }}
+  {{- end }}
   {{- if hasKey $cr.spec.policies "allowedClusterRoles" }}
     {{- include "allowed_cluster_roles" (list $context $cr) }}
   {{- end }}
@@ -539,5 +544,24 @@ spec:
     {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
     blockWildcardDomains: {{ $cr.spec.policies.blockWildcardDomains }}
     {{- end }}
+{{- end }}
+
+{{- define "allow_rbac_wildcards" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowRbacWildcards
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
 {{- end }}
 

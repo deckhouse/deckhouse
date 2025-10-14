@@ -82,6 +82,11 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 			Checksum:     addonOperatorModuleConfig.Checksum(),
 		}
 
+		// it is needed to trigger kube config apply after enabling
+		if moduleConfig.Spec.Enabled != nil && !*moduleConfig.Spec.Enabled {
+			kubeConfig.Modules[moduleConfig.Name].Checksum = ""
+		}
+
 		// update deckhouse settings
 		if moduleConfig.Name == moduleDeckhouse {
 			h.deckhouseConfigCh <- values

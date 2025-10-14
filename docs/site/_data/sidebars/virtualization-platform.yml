@@ -24,6 +24,10 @@ entries:
             en: Requirements
             ru: Требования
           url: /virtualization-platform/documentation/about/requirements.html
+        - title:
+            en: Architecture options
+            ru: Архитектурные решения
+          url: /virtualization-platform/documentation/about/architecture-options.html
     - title:
         en: Administration
         ru: Администрирование
@@ -95,7 +99,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
@@ -238,17 +241,9 @@ entries:
                     ru: Настройка хранилищ
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
-                    en: Configuring volume snapshot creation
-                    ru: Настройка создания снимков томов
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
-                - title:
                     en: Software-defined storage (SDS)
                     ru: Программно-определяемые хранилища (SDS)
                   folders:
-                    - title:
-                        en: Local path provisioner storage
-                        ru: Локальное хранилище Local Path Provisioner
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/local-path-provisioner.html
                     - title:
                         en: Node configuration for software-defined storage (SDS)
                         ru: Настройка узлов для программно-определяемых хранилищ
@@ -310,8 +305,8 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
                     - title:
-                        en: NFS data storage
-                        ru: Хранилище данных NFS
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                     - title:
                         en: SCSI-based data storage
@@ -561,54 +556,18 @@ entries:
                 en: Sysctl parameters
                 ru: Параметры sysctl
               url: /virtualization-platform/documentation/architecture/security/sysctl.html
-    #    - title:
-    #        en: Functional specifications
-    #        ru: Функциональные характеристики
-    #      url: /virtualization-platform/documentation/architecture/functional-specifications.html
-    #    - title:
-    #        en: Overall architecture
-    #        ru: Общая архитектура
-    #      url: /virtualization-platform/documentation/architecture/overall-architecture.html
-    #    - title:
-    #        en: Scheme of interaction of the platform components
-    #        ru: Схема взаимодействия компонентов платформы
-    #      url: /virtualization-platform/documentation/architecture/scheme.html
-    #    - title:
-    #        en: Used ports
-    #        ru: Используемые порты
-    #      url: /virtualization-platform/documentation/architecture/used-ports.html
-    #    - title:
-    #        en: Table
-    #        ru: Таблица
-    #      url: /virtualization-platform/documentation/architecture/table.html
     - title:
         en: Reference
         ru: Справка
       folders:
-        #- title:
-        #    en: Modules
-        #    ru: Модули
-        #  url: /virtualization-platform/reference/modules.html
-        - title:
-            en: Modules settings
-            ru: Настройки модулей
-          url: /virtualization-platform/reference/mc.html
-        - title:
-            en: Custom Resources
-            ru: Custom Resources
-          url: /virtualization-platform/reference/cr/
         - title:
             en: Console utilities
             ru: Консольные утилиты
           folders:
-            #- title:
-            #    en: dhctl
-            #    ru: dhctl
-            #  url: /virtualization-platform/documentation/reference/console-utilities/dhctl.html
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /virtualization-platform/reference/console-utilities/d8.html
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/
         - title:
             en: FAQ
             ru: FAQ
@@ -617,11 +576,3 @@ entries:
         en: Release notes
         ru: История изменений
       url: /virtualization-platform/documentation/release-notes.html
-    #- title:
-    #    en: DVP editions
-    #    ru: Список  DVP
-    #  folders:
-    #    - title:
-    #        en: Configuration module
-    #        ru: Конфигурации модуля
-    #      url: /virtualization-platform/documentation/dvp-editions/changelog.html

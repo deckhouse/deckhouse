@@ -70,6 +70,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					"labelSelector": {}
 				},
 				"policies": {
+					"allowRbacWildcards": true,
 					"automountServiceAccountToken": true,
  					"seccompProfiles": {},
 					"verifyImageSignatures": [
@@ -122,6 +123,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						}
 					],
 					"allowedUnsafeSysctls": [
+						"user/huyser",
 						"*"
 					],
 					"allowHostIPC": true,
@@ -129,8 +131,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					"allowHostPID": false,
 					"allowPrivileged": false,
 					"allowPrivilegeEscalation": false,
+					"allowRbacWildcards": true,
 					"automountServiceAccountToken": true,
 					"forbiddenSysctls": [
+						"user/huyser",
 						"user/example"
 					],
 					"readOnlyRootFilesystem": true,
@@ -256,6 +260,7 @@ spec:
     allowHostNetwork: false
     allowPrivilegeEscalation: false
     allowPrivileged: false
+    allowRbacWildcards: true
     allowedCapabilities: []
     allowedAppArmor:
     - runtime/default
@@ -264,10 +269,12 @@ spec:
     allowedProcMount: Unmasked
     allowedUnsafeSysctls:
     - user/huyser
+    - "*"
     allowedVolumes:
     - '*'
     forbiddenSysctls:
     - user/huyser
+    - user/example
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
@@ -300,9 +307,6 @@ spec:
     allowedHostPorts:
     - min: 10
       max: 100
-    allowedUnsafeSysctls: ["*"]
-    forbiddenSysctls:
-    - user/example
     requiredDropCapabilities:
     - ALL
     seccompProfiles:

@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -52,20 +51,6 @@ var cloudProviderToProviderKind = map[string]string{
 	"Huaweicloud": "HuaweiCloudClusterConfiguration",
 	"Dynamix":     "DynamixClusterConfiguration",
 	"DVP":         "DVPClusterConfiguration",
-}
-
-var cloudProviderSpecificClusterPrefix = map[string]interface{}{
-	"OpenStack":   regexp.MustCompile(".+"),
-	"AWS":         regexp.MustCompile(".+"),
-	"GCP":         regexp.MustCompile(".+"),
-	"Yandex":      regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
-	"vSphere":     regexp.MustCompile(".+"),
-	"Azure":       regexp.MustCompile(".+"),
-	"VCD":         regexp.MustCompile(".+"),
-	"Zvirt":       regexp.MustCompile(".+"),
-	"Huaweicloud": regexp.MustCompile(".+"),
-	"Dynamix":     regexp.MustCompile(".+"),
-	"DVP":         regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
@@ -760,29 +745,4 @@ func (i *namedIndex) String() string {
 		return fmt.Sprintf("%s, %s", i.Kind, i.Version)
 	}
 	return fmt.Sprintf("%s, %s, metadata.name: %q", i.Kind, i.Version, i.Metadata.Name)
-}
-
-func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
-	regex, ok := cloudProviderSpecificClusterPrefix[provider]
-	if !ok {
-		return nil
-	}
-
-	if !regex.(*regexp.Regexp).MatchString(prefix) {
-		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, provider, regex)
-	}
-
-	return nil
-}
-
-func validateVCDServerNoTrailingSlash(server string) error {
-	server = strings.TrimSpace(server)
-	if server == "" {
-		return nil
-	}
-	if strings.HasSuffix(server, "/") {
-		return fmt.Errorf("provider.server must not end with a slash '/'")
-	}
-
-	return nil
 }

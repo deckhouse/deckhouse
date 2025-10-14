@@ -23,6 +23,6 @@ properties:
           * existing StorageClass present in the cluster that has the default annotation;
           * the first (in lexicographic order) StorageClass created by the module (in accordance with the order listed in the table above).
 
-          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
         x-examples:
         - "pd-ssd-not-replicated"

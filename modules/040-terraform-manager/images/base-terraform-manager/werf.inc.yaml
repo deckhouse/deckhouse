@@ -2,10 +2,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 final: false
 fromImage: common/distroless
-imageSpec:
-  config:
-    env: { "PATH": "/root:/" }
-    entrypoint: ["/dhctl"]
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -13,7 +9,7 @@ import:
   before: setup
 - image: terraform
   add: /terraform/terraform
-  to: /root/terraform
+  to: /bin/terraform
   before: setup
 git:
 - add: /{{ .ModulePath }}
@@ -25,10 +21,6 @@ git:
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
 fromImage: common/distroless
-imageSpec:
-  config:
-    env: { "PATH": "/root:/" }
-    entrypoint: ["/dhctl"]
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -36,11 +28,7 @@ import:
   before: setup
 - image: opentofu
   add: /opentofu/opentofu
-  to: /root/opentofu
-  before: setup
-- image: opentofu
-  add: /opentofu/opentofu
-  to: /root/terraform
+  to: /bin/opentofu
   before: setup
 git:
 - add: /{{ .ModulePath }}
@@ -103,7 +91,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}          
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:

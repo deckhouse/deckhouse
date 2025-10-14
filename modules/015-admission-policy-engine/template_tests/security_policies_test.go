@@ -38,6 +38,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 				"allowedHostPaths": [{"pathPrefix": "/dev","readOnly": true}],
 				"allowedHostPorts": [{"max": 100,"min": 10}],
 				"allowedUnsafeSysctls": ["*"],
+				"allowRbacWildcards": false,
 				"forbiddenSysctls": ["user/example"],
 				"allowedProcMount": "default",
 				"allowedVolumes": {"volumes": ["csi"]},
@@ -85,6 +86,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8SeLinux", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8AppArmor", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8VerifyImageSignatures", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8AllowRbacWildcards", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

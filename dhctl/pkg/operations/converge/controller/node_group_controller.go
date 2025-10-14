@@ -50,7 +50,7 @@ type NodeGroupController struct {
 
 	cloudConfig     string
 	desiredReplicas int
-	layoutStep      string
+	layoutStep      infrastructure.Step
 }
 
 func NewNodeGroupController(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool) *NodeGroupController {
@@ -120,7 +120,13 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 				return fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
 			}
 
-			newCtx := context.NewContext(ctx.Ctx(), kubeCl, ctx.StateCache(), ctx.ChangesSettings())
+			newCtx := context.NewContext(ctx.Ctx(), context.Params{
+				KubeClient:     kubeCl,
+				Cache:          ctx.StateCache(),
+				ChangeParams:   ctx.ChangesSettings(),
+				ProviderGetter: ctx.ProviderGetter(),
+				Logger:         ctx.Logger(),
+			})
 			ctx = newCtx
 		}
 
@@ -188,7 +194,8 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			if err != nil {
 				return err
 			}
-			cfg, err = mc.DeepCopy().Prepare()
+			// we use dummy preparator because metaConfig was prepared early
+			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyPreparatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}
@@ -215,7 +222,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			nodeState = nodeToDeleteInfo.state
 		}
 
-		nodeRunner := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
+		nodeRunner, err := ctx.InfrastructureContext(cfg).GetConvergeNodeDeleteRunner(ctx.Ctx(), cfg, infrastructure.NodeDeleteRunnerOptions{
 			NodeName:        nodeToDeleteInfo.name,
 			NodeGroupName:   c.name,
 			LayoutStep:      c.layoutStep,
@@ -229,6 +236,9 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		}, ctx.ChangesSettings().AutomaticSettings)
+		if err != nil {
+			return err
+		}
 
 		if err := infrastructure.DestroyPipeline(ctx.Ctx(), nodeRunner, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))

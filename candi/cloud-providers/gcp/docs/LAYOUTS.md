@@ -14,7 +14,7 @@ Two layouts are supported. Below is more information about each of them.
 * If the master does not have a public IP, then an additional instance with a public IP (aka bastion host) is required for installation tasks and accessing the cluster.
 * Peering can also be configured between the cluster VPC and other VPCs.
 
-![resources](../../images/cloud-provider-gcp/gcp-standard.png)
+![resources](images/gcp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
@@ -83,7 +83,7 @@ provider:
 * A dedicated VPC is created for the cluster; all cluster nodes have public IP addresses.
 * Peering can be configured between the cluster VPC and other VPCs.
 
-![resources](../../images/cloud-provider-gcp/gcp-withoutnat.png)
+![resources](images/gcp-withoutnat.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:

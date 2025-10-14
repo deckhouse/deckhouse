@@ -137,7 +137,7 @@ Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
 
 This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
+![Grafana cloud API key](images/grafana_cloud.png)
 
 Firstly you should encode your token with base64.
 
@@ -525,7 +525,7 @@ If multiple `ParseMessage` transformations are used, the one that parses the str
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: string-to-json
 spec:
@@ -560,7 +560,7 @@ to parse logs in Klog format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: klog-to-json
 spec:
@@ -598,7 +598,7 @@ to parse logs in Syslog format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: syslog-to-json
 spec:
@@ -644,7 +644,7 @@ to parse logs in CLF format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: clf-to-json
 spec:
@@ -686,7 +686,7 @@ to parse logs in Logfmt format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: logfmt-to-json
 spec:
@@ -724,7 +724,7 @@ Using the `depth` parameter, you can control the nesting depth.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -759,7 +759,7 @@ The string transformation must be applied last.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: parse-json
 spec:
@@ -818,7 +818,7 @@ You can use the `ReplaceKeys` transformation to replace `source` with `target` i
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: replace-dot
 spec:
@@ -859,7 +859,7 @@ You can use the `DropLabels` transformation to remove specific labels from log m
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:
@@ -879,7 +879,7 @@ followed by `DropLabels` to remove the specified label.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
-kind: ClusterLoggingDestination
+kind: ClusterLogDestination
 metadata:
   name: drop-label
 spec:

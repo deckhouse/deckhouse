@@ -2,20 +2,20 @@ properties:
   logLevel:
     description: |
       Уровень логирования Deckhouse.
-  
+
   bundle:
     description: |
       [Набор модулей](../../#наборы-модулей) Deckhouse. Определяет включенные по умолчанию модули:
       - `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей.
       - `Managed` — набор для managed-кластеров от облачных провайдеров (например, Google Kubernetes Engine).
       - `Minimal` — минимально возможный набор, который включает единственный модуль (этот). **Обратите внимание,** что в набор модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI). Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
-  
+
   releaseChannel:
     description: |
       Желаемый канал обновлений Deckhouse ([переключение](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#что-происходит-при-смене-канала-обновлений) на него произойдет при появлении такой возможности).
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
-  
+
   update:
     description: Настройки режима и окон обновления Deckhouse.
     properties:
@@ -36,7 +36,7 @@ properties:
 
             Для обновления и минорной, и патч-версии необходимо подтверждение.
 
-          Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем ресурсе [DeckhouseRelease](../../cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
+          Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
 
           Выбранный режим обновления применяется **только** при установленном [канале обновлений](#parameters-releasechannel).
       disruptionApprovalMode:
@@ -44,7 +44,7 @@ properties:
         description: |
           Режим обновления версий Deckhouse, имеющих изменения, которые могут привести к кратковременному простою в работе системных компонентов:
           - `Auto` — автоматический режим обновления.
-          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](../../cr.html#deckhouserelease).
+          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
       windows:
         description: |
           Список окон обновлений в течение суток.
@@ -155,7 +155,7 @@ properties:
               Определяет тип версии, о которой будет отправлено оповещение:
               - `Minor` — только для обновления минорной версии.
               - `All` — для любых обновлений, включая обновление патч-версии.
-  
+
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
@@ -163,7 +163,7 @@ properties:
       Если значение не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
       **Внимание.** Deckhouse перестанет работать, если в `nodeSelector` указать несуществующий лейбл. Для восстановления работоспособности необходимо изменить значения на правильные в `ModuleConfig/deckhouse` и `deployment/deckhouse`.
-  
+
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
@@ -176,12 +176,12 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   allowExperimentalModules:
     description: |
       Разрешает использование экспериментальных модулей (модули на стадии жизненного цикла `Experimental`).
 
-      Экспериментальные модули могут быть нестабильными и не поддерживаются в рамках SLA Deckhouse. Используйте их с осторожностью.  
+      Экспериментальные модули могут быть нестабильными и не поддерживаются в рамках SLA Deckhouse. Используйте их с осторожностью.
 
   license:
     type: object
@@ -234,7 +234,7 @@ properties:
           password:
             description: |
               Пароль для аутентификации в container registry.
-              
+
               Параметр обязателен, если не указан параметр `license`.
           scheme:
             description: |
@@ -244,9 +244,9 @@ properties:
           ca:
             description: |
               Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата container registry.
-              
+
               Параметр необходимо указывать, если container registry использует самоподписанный сертификат или сертификат, выданный частным центром сертификации.
-              
+
               Если параметр не указан, будут использоваться сертификаты, определенные в хранилище корневых сертификатов узла.
           checkMode:
             description: |

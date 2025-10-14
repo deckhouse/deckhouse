@@ -1,0 +1,92 @@
+{{- $currentPage := $.Page }}
+
+{{- $modulesList := .Site.Data.modules.channels }}
+{{- $channelsInfo := .Site.Data.channels.info }}
+{{- $lang := .Site.Language.Lang }}
+{{- $sidebarRootMenu := slice }}
+{{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{- $ctx := $ }}
+
+{{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{- $currentModuleName := index $_pathElements 1 }}
+{{- $currentModuleChannel := index $_pathElements 2 }}
+
+{{- range $module, $data := $modulesList }}
+  {{- $moduleTitle := "" }}
+  {{- $moduleChannel := "" }}
+  {{- $isActiveItem := false }}
+  {{- $moduleStatus := "" }}
+
+  {{- if eq $currentModuleName $module }}
+    {{- $moduleChannel = $currentModuleChannel }}
+    {{- $isActiveItem = true }}
+  {{- end }}
+
+  {{- range sort $channelsInfo "stability" "desc" }}
+    {{- $code := .code }}
+    {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}
+    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
+      {{- if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
+      {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
+      {{- if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+    {{- end }}
+  {{- end }}
+  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{- if $moduleChannel }}
+    {{- $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "moduleStatus" $moduleStatus) }}
+  {{- end }}
+{{- end}}
+
+{{- $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
+
+{{ $pages := (where .Site.RegularPages "File.Dir" .File.Dir).ByWeight }}
+
+  <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+    <div>
+      <strong>{{ T "channel_or_version" }}:</strong>
+    </div>
+
+    <div id="doc-versions-menu" class="channel-menu submenu-parent">
+      {{- if $.IsPage }}
+        {{- if and $currentModuleName $currentModuleChannel }}
+          {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+        {{- end }}
+      {{- end }}
+    </div>
+  </div>
+
+  <div class="sidebar__wrapper-inner">
+    <nav class="sidebar__container">
+      <ul class="sidebar" id="mysidebar">
+        {{- $overviewPage := index (where $pages ".File.TranslationBaseName" "in" (slice "readme" "README") ) 0 }}
+        {{- if $overviewPage }}
+          {{- template "moduleSidebarPage" (dict "ctx" $ "Page" $overviewPage ) }}
+        {{- end }}
+        {{- range $pages }}
+          {{- if eq (strings.ToLower .File.TranslationBaseName) "readme" }}{{ continue }}{{ end }}
+          {{- template "moduleSidebarPage" (dict "ctx" $ "Page" . ) }}
+        {{- end }}
+      </ul>
+    </nav>
+  </div>
+
+{{/* --- moduleSidebarPage --- */}}
+{{- define "moduleSidebarPage" }}
+
+  {{- $pageTitle := "" }}
+  {{- if in .ctx.Site.Data.helpers.knownPageNames .Page.File.TranslationBaseName }}
+    {{- $pageTitle = T (printf "moduleLinkTitle%s" .Page.File.TranslationBaseName) }}
+  {{- else if .Page.LinkTitle }}
+    {{- $pageTitle = strings.TrimSpace .Page.LinkTitle }}
+  {{- else if .Title }}
+    {{- $pageTitle = strings.TrimSpace .Page.Title }}
+  {{- end }}
+  {{- if $pageTitle }}
+       <li class="sidebar__item {{ if eq .ctx.Page .Page }}active{{ end }}">
+          <a href="{{ if .Page.IsPage }}./{{ replaceRE "readme.html$" "" (path.Base .Page.RelPermalink) }}{{ else }}#{{ end }}">
+          {{- $pageTitle -}}
+          </a>
+      </li>
+  {{- end }}
+{{- end }}
+{{/* END --- moduleSidebarPage --- */}}

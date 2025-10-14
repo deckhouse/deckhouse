@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ac
 
 ## Description
 
-Deckhouse Virtualization Platform (DVP) projects (the [Project](../../../../reference/cr/project.html) resource) provide isolated environments for creating user resources.
+Deckhouse Virtualization Platform (DVP) projects (the [Project](/modules/multitenancy-manager/cr.html#project) resource) provide isolated environments for creating user resources.
 
 Project settings let you set resource quotas and restrict network communication both within and outside DVP.
 
-You can create a project using a template (the [ProjectTemplate](../../../../reference/cr/projecttemplate.html) resource).
+You can create a project using a template (the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
 
 {% alert level="warning" %}
 If you modify a project template, all projects created from it will be updated to match the modified template.
@@ -49,10 +49,10 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
 ## Creating a project
 
-1. To create a project, create the [Project](../../../../reference/cr/project.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](../../../../reference/cr/project.html#project-v1alpha2-spec-projecttemplatename) field.
-2. In the [.spec.parameters](../../../../reference/cr/project.html#project-v1alpha2-spec-parameters) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.parametersSchema.openAPIV3Schema](../../../../reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
+1. To create a project, create the [Project](/modules/multitenancy-manager/cr.html#project#project) resource by specifying the name of the project template in [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-projecttemplatename) field.
+2. In the [.spec.parameters](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-parameters) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
 
-   Example of creating a project using the [Project](../../../../reference/cr/project.html) resource from the `default` [ProjectTemplate](../../../../reference/cr/projecttemplate.html):
+   Example of creating a project using the [Project](/modules/multitenancy-manager/cr.html#project) resource from the `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

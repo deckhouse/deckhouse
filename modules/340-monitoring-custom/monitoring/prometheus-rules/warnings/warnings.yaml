@@ -15,14 +15,14 @@
         There are ServiceMonitors in the Deckhouse namespace that were not created by Deckhouse.
 
         To resolve the issue, move these ServiceMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
-        
+
         To list all ServiceMonitors in the Deckhouse namespace, run the following command:
-        
+
         ```bash
         d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
 
   - alert: CustomPodMonitorFoundInCluster
     expr: |
@@ -39,14 +39,14 @@
         There are PodMonitors in the Deckhouse namespace that were not created by Deckhouse.
 
         To resolve the issue, move these PodMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
-        
+
         To list all PodMonitors in the Deckhouse namespace, run the following command:
-        
+
         ```bash
         d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
 
   - alert: D8CustomPrometheusRuleFoundInCluster
     expr: |
@@ -63,14 +63,14 @@
         There are PrometheusRules in the Deckhouse namespace that were not created by Deckhouse.
 
         To resolve the issue, replace these PrometheusRules with the CustomPrometheusRules object.
-        
+
         To list all PrometheusRules in the Deckhouse namespace, run the following command:
-        
+
         ```bash
         d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
         ```
 
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
 
   - alert: D8OldPrometheusCustomTargetFormat
     expr: |
@@ -89,9 +89,9 @@
         The label format has been changed. To resolve the issue, replace the `prometheus-custom-target` label with `prometheus.deckhouse.io/custom-target`.
 
         To list all services labeled with `prometheus-custom-target`, run the following command:
-        
+
         ```bash
         d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).

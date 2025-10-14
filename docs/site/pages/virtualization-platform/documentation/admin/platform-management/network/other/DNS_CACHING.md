@@ -4,9 +4,9 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ne
 ---
 
 In Deckhouse Virtualization Platform, you can deploy a local caching DNS server on each cluster node.
-It exports metrics to Prometheus for visualization in a [Grafana dashboard](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/#grafana-dashboard).
+It exports metrics to Prometheus for visualization in a [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard).
 
-This feature is implemented by the [`node-local-dns`](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/) module.
+This feature is implemented by the [`node-local-dns`](/modules/node-local-dns/) module.
 The module consists of the original CoreDNS deployed as a DaemonSet on all cluster nodes,
 along with a network configuration algorithm and iptables rules.
 

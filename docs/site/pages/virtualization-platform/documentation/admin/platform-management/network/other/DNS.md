@@ -3,7 +3,7 @@ title: "Managing DNS in a cluster"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/other/dns.html
 ---
 
-DNS management in a cluster is implemented using the [`kube-dns`](/products/kubernetes-platform/documentation/v1/modules/kube-dns/) module.
+DNS management in a cluster is implemented using the [`kube-dns`](/modules/kube-dns/) module.
 
 The module installs CoreDNS components for managing DNS in the cluster.
 

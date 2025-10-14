@@ -48,17 +48,36 @@ func (svc *Service) Build() error {
 	}
 
 	for _, lang := range []string{"ru", "en"} {
+		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
 		err = removeGlob(glob)
 		if err != nil {
 			return fmt.Errorf("clear %s: %w", svc.destDir, err)
 		}
 
+		syncer := fsync.NewSyncer()
+		syncer.NoChmod = true
+		syncer.NoTimes = true
+
 		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
 		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
-		err = fsync.Sync(newLocation, oldLocation)
+		err = syncer.Sync(newLocation, oldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
+		}
+
+		// Sync search index folder
+		searchGlob := filepath.Join(svc.destDir, "public", lang, "search/*")
+		err = removeGlob(searchGlob)
+		if err != nil {
+			return fmt.Errorf("clear %s: %w", svc.destDir, err)
+		}
+
+		searchOldLocation := filepath.Join(svc.baseDir, "public", lang, "search")
+		searchNewLocation := filepath.Join(svc.destDir, "public", lang, "search")
+		err = syncer.Sync(searchNewLocation, searchOldLocation)
+		if err != nil {
+			return fmt.Errorf("move %s to %s: %w", searchOldLocation, searchNewLocation, err)
 		}
 	}
 
@@ -68,7 +87,7 @@ func (svc *Service) Build() error {
 }
 
 func (svc *Service) buildHugo() error {
-	flags := hugo.Flags{
+	flags := &hugo.Flags{
 		LogLevel: "debug",
 		Source:   svc.baseDir,
 		CfgDir:   filepath.Join(svc.baseDir, "config"),

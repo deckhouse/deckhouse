@@ -14,6 +14,8 @@ import:
   add: /src/_output/bin/kube-apiserver
   to: /usr/bin/kube-apiserver
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-apiserver"]

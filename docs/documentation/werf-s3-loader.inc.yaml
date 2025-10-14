@@ -1,0 +1,20 @@
+# Image, containing static files of all the embedded modules and documentation for loading into an S3 storage
+# website-docs/s3-loader
+image: {{ .ModuleName }}/s3-loader
+# TODO: Use the different image
+from: amazon/aws-cli:2.28.16
+import:
+# Static files of embedded modules
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
+  add: /app/_site/
+  to: /embedded-modules
+  before: setup
+  includePaths:
+  - en
+  - ru
+# Static files of documentation
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site
+  to: /documentation
+  before: setup
+---

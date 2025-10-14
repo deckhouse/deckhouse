@@ -34,13 +34,12 @@ import (
 )
 
 var (
-	deckhouseDir           = "/deckhouse"
-	candiDir               = deckhouseDir + "/candi"
-	modulesDir             = deckhouseDir + "/modules"
-	globalHooksModule      = deckhouseDir + "/global-hooks"
-	versionMap             = candiDir + "/version_map.yml"
-	imagesDigestsJSON      = candiDir + "/images_digests.json"
-	InfrastructureVersions = candiDir + "/terraform_versions.yml"
+	deckhouseDir      = "/deckhouse"
+	candiDir          = deckhouseDir + "/candi"
+	modulesDir        = deckhouseDir + "/modules"
+	globalHooksModule = deckhouseDir + "/global-hooks"
+	versionMap        = candiDir + "/version_map.yml"
+	imagesDigestsJSON = candiDir + "/images_digests.json"
 
 	// This value is set on the dhctl build in the dhctl/Makefile script.
 	// Do not touch it !!!
@@ -48,8 +47,8 @@ var (
 	RppSignCheck = "false"
 )
 
-func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(fs.RevealWildcardPaths(paths), opts...)
+func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
+	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +90,7 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
+func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
 
@@ -107,16 +106,16 @@ func ParseConfig(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
-	return ParseConfigFromData(content, opts...)
+	return ParseConfigFromData(ctx, content, preparatorProvider, opts...)
 }
 
-func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 	err = log.Process("common", "Get Cluster configuration", func() error {
 		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
-				metaConfig, err = parseConfigFromCluster(ctx, kubeCl)
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider)
 				return err
 			})
 	})
@@ -126,13 +125,13 @@ func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	return metaConfig, nil
 }
 
-func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
 	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
-			metaConfig, err = parseConfigFromCluster(ctx, kubeCl)
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider)
 			return err
 		})
 	if err != nil {
@@ -141,7 +140,7 @@ func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient) 
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (*MetaConfig, error) {
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	metaConfig := MetaConfig{}
 	schemaStore := NewSchemaStore()
 
@@ -188,7 +187,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 	}
 
-	return metaConfig.Prepare()
+	return metaConfig.Prepare(ctx, preparatorProvider)
 }
 
 // parseDocument
@@ -274,7 +273,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 	return found, nil
 }
 
-func ParseConfigFromData(configData string, opts ...ValidateOption) (*MetaConfig, error) {
+func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -317,7 +316,7 @@ deckhouse: {}
 		}
 	}
 
-	return metaConfig.Prepare()
+	return metaConfig.Prepare(ctx, preparatorProvider)
 }
 
 func InitGlobalVars(pwd string) {
@@ -327,5 +326,4 @@ func InitGlobalVars(pwd string) {
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap = candiDir + "/version_map.yml"
 	imagesDigestsJSON = candiDir + "/images_digests.json"
-	InfrastructureVersions = candiDir + "/terraform_versions.yml"
 }

@@ -10,7 +10,7 @@ Deckhouse Code is based on the GitLab platform and combines all the necessary to
 
 Documentation includes the following sections:
 
-- [Module installation and configuration instructions](https://deckhouse.io/products/kubernetes-platform/modules/code/stable/) — contain information on requirements, installation procedures, and platform configuration.
+- [Module installation and configuration instructions](/modules/code/stable/) — contain information on requirements, installation procedures, and platform configuration.
 - [Administrator guide](../documentation/admin/) — guide for users with administrator rights.
 - [User guide](../documentation/user/) — information and instructions for using the main service features.
 

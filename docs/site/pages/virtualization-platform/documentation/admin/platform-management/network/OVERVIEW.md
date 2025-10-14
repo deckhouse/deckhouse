@@ -29,7 +29,7 @@ which is especially important for secure integrations with external APIs and ser
 This can be achieved by defining policies that allow or block specific traffic flows.
 
 Outgoing traffic management is implemented using the Egress Gateway feature
-(provided by the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) module).
+(provided by the [`cni-cilium`](/modules/cni-cilium/) module).
 
 ## Internal network configuration
 

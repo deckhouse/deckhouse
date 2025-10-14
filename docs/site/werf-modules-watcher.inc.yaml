@@ -1,0 +1,28 @@
+# Build scanner, which fetch modules documentation from list of specified registries
+image: registry-modules-watcher-artifact
+fromImage: builder/golang-alpine
+shell:
+  install:
+  - cd /go/src/app
+  - go mod download
+  setup:
+  - cd /go/src/app
+  - go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
+git:
+  - add: /docs/site/backends/registry-modules-watcher
+    to: /go/src/app
+    stageDependencies:
+      install: 'go.mod'
+      setup: '**/*'
+---
+image: registry-modules-watcher
+fromImage: builder/alpine-3.22
+imageSpec:
+  config:
+    workingDir: "/app"
+import:
+  - image: registry-modules-watcher-artifact
+    add: /go/src/app/registry-modules-watcher
+    to: /app/registry-modules-watcher
+    before: setup
+---

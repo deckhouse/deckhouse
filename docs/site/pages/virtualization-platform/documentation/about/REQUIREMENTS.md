@@ -16,77 +16,68 @@ The platform supports the following configuration:
 - Maximum number of nodes: 1000.
 - Maximum number of virtual machines: 50000.
 
-The platform has no other restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which it can be installed.
+## Minimum platform requirements
+
+Depending on the architecture, the following minimum resources are required for the platform to operate correctly:
+
+| Architecture                                                             | Workload placement   | Master node          | Worker node         | System node          | Frontend node       |
+|--------------------------------------------------------------------------|----------------------|----------------------|---------------------|----------------------|---------------------|
+| Single-node platform<br/>(Single Node / Edge)                            | On a single node     | 3 vCPU<br/>10 GB RAM | —                   | —                    | —                   |
+| Multi-node platform<br/>(1 master node + worker nodes)                   | On all nodes         | 6 vCPU<br/>6 GB RAM  | 2 vCPU<br/>4 GB RAM | —                    | —                   |
+| Three-master platform<br/>(3 master nodes, High Availability)            | On all nodes         | 6 vCPU<br/>14 GB RAM | —                   | —                    | —                   |
+| Platform with dedicated worker nodes<br/>(3 master nodes + worker nodes) | On worker nodes only | 5 vCPU<br/>11 GB RAM | 2 vCPU<br/>5 GB RAM | —                    | —                   |
+| Distributed architecture                                                 | On worker nodes only | 4 vCPU<br/>9 GB RAM  | 1 vCPU<br/>2 GB RAM | 4 vCPU<br/>10 GB RAM | 1 vCPU<br/>2 GB RAM |
+
+The choice of platform architecture is described in detail in the [Architecture options](/products/virtualization-platform/documentation/about/architecture-options.html) section.
 
 ## Hardware Requirements
 
-1. A dedicated **machine for installation**.
+### Requirements for the installation machine
 
-   This machine will run the Deckhouse installer. For example, it can be an administrator's laptop or any other computer that is not intended to be added to the cluster. Requirements for this machine:
+The Deckhouse installer runs on this machine. It can be an administrator's laptop or any other computer that is not intended to be added to the cluster. Requirements for this machine:
 
-   - OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+).
-   - Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/)).
-   - HTTPS access to the container image registry at `registry.deckhouse.io`.
-   - SSH-key-based access to the node that will serve as the **master node** of the future cluster.
-   - SSH-key-based access to the node that will serve as the **worker node** of the future cluster (if the cluster will consist of more than one master node).
+- OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
+- Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+- HTTPS access to the container image registry `registry.deckhouse.ru`;
+- SSH key-based access to the node that will become the cluster **master node**;
+- SSH key-based access to the node that will become the cluster **worker node** (if the cluster will contain more than one master node).
 
-1. **Server for the master node**
+### General requirements for physical servers (bare-metal)
 
-   There can be multiple servers running the cluster’s control plane components, but only one server is required for installation. The others can be added later via node management mechanisms.
+All cluster nodes must meet the following baseline hardware requirements:
 
-   Requirements for a physical bare-metal server:
+- **CPU**:
+  - x86_64 architecture;
+  - Intel-VT (VMX) or AMD-V (SVM) support.
+- **Compatibility**:
+  - The platform has no additional restrictions and can run on any server hardware supported by the selected operating system.
+- **Resources**:
+  - CPU, RAM, and disk must meet the selected cluster architecture (see [minimum requirements](#minimum-platform-requirements));
+  - Fast disk (≥400 IOPS), at least 60 GB capacity;
+  - Additional disks may be required when using SDS.
+- **Operating system** — [from the supported list](#supported-os-for-platform-nodes), Linux kernel version `5.8` or newer.
+- **Software**:
+  - Installed `cloud-init` and `cloud-utils` packages (package names may vary depending on the distribution).
+- **Networking**:
+  - HTTPS access to `registry.deckhouse.ru` and OS package repositories;
+  - SSH access from the installation machine on port `22/TCP` (see details in [requirements for the installation machine](#requirements-for-the-installation-machine));
+  - Unique hostname across all cluster nodes.
 
-   - Resources:
-     - CPU:
-       - x86-64 architecture;
-       - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
-       - At least 4 cores.
-     - RAM: At least 8 GB.
-     - Disk space:
-       - At least 60 GB;
-       - High-speed disk (400+ IOPS).
-   - OS [from the list of supported ones](#supported-os-for-platform-nodes):
-     - Linux kernel version `5.8` or newer.
-   - **Unique hostname** across all servers in the future cluster;
-   - Network access:
-     - HTTPS access to the container image registry at `registry.deckhouse.io`;
-     - Access to the package repositories of the chosen OS;
-     - SSH key-based access from the **installation machine** (see item 1);
-     - Network access from the **installation machine** (see item 1) on port `22/TCP`.
-   - Required software:
-     - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
-   > **Warning.** The container runtime will be installed automatically, so there's no need to install any `containerd` or `docker` packages.
+{% alert level="warning" %}
+The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be preinstalled.
+{% endalert %}
 
-1. **Servers for worker nodes**
+#### Additional requirements for master nodes
 
-   These nodes will run virtual machines, so the servers must have enough resources to handle the planned number of VMs. Additional disks may be required if you deploy a software-defined storage solution.
+Master nodes host the cluster control plane components. Minimum resource requirements for master nodes are specified in the [minimum requirements](#minimum-platform-requirements) table.
 
-   Requirements for a physical bare-metal server:
+#### Additional requirements for worker nodes
 
-   - Resources:
-     - CPU:
-       - x86-64 architecture;
-       - Support for Intel-VT (VMX) or AMD-V (SVM) instructions;
-       - At least 4 cores;
-     - RAM: At least 8 GB;
-     - Disk space:
-       - At least 60 GB;
-       - High-speed disk (400+ IOPS);
-       - Additional disks for software-defined storage;
-   - OS [from the list of supported ones](#supported-os-for-platform-nodes);
-     - Linux kernel version `5.8` or newer;
-   - **Unique hostname** across all servers in the future cluster;
-   - Network access:
-     - HTTPS access to the container image registry at `registry.deckhouse.io`;
-     - Access to the package repositories of the chosen OS;
-     - SSH key-based access from the **installation machine** (see item 1);
-   - Required software:
-     - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
-   > **Important.** The container runtime will be installed automatically, so there's no need to install any `containerd` or `docker` packages.
+Worker nodes host virtual machines. Resource requirements depend on the number and size of the planned VMs (see details in the [minimum platform requirements](#minimum-platform-requirements)). If SDS is used, additional dedicated disk space may be required for storage.
 
-1. **Storage hardware**
+### Storage hardware requirements
 
-   Depending on the chosen storage solution, additional resources may be required. For details, refer to the section [Storage Management](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
+Depending on the selected storage type, additional resources may be required. For details, see [Storage Management](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
 
 ## Supported OS for platform nodes
 

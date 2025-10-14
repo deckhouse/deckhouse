@@ -18,11 +18,12 @@ type VsphereCloudDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
 
-	VMFolderPath     string             `json:"vmFolderPath,omitempty"`
-	ResourcePoolPath string             `json:"resourcePoolPath,omitempty"`
-	Datacenter       string             `json:"datacenter,omitempty"`
-	Zones            []string           `json:"zones,omitempty"`
-	Datastores       []VsphereDatastore `json:"datastores,omitempty"`
+	VMFolderPath     string                 `json:"vmFolderPath,omitempty"`
+	ResourcePoolPath string                 `json:"resourcePoolPath,omitempty"`
+	Datacenter       string                 `json:"datacenter,omitempty"`
+	Zones            []string               `json:"zones,omitempty"`
+	Datastores       []VsphereDatastore     `json:"datastores,omitempty"`
+	StoragePolicies  []VsphereStoragePolicy `json:"storagePolicies,omitempty"`
 }
 
 type VsphereDatastore struct {
@@ -31,4 +32,9 @@ type VsphereDatastore struct {
 	Name          string   `json:"name,omitempty"`
 	DatastoreType string   `json:"datastoreType,omitempty"`
 	DatastoreURL  string   `json:"datastoreURL,omitempty"`
+}
+
+type VsphereStoragePolicy struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
 }

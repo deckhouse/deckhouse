@@ -1,0 +1,7 @@
+dirs:
+  - /etc/prometheus/config
+  - /etc/prometheus/config_out
+  - /etc/prometheus/rules/prometheus-main-rulefiles-0
+  - /etc/prometheus/rules/prometheus-longterm-rulefiles-0
+  - /etc/alertmanager/config
+  - /etc/alertmanager/config_out

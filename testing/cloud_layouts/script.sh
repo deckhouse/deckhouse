@@ -79,7 +79,9 @@ Provider specific environment variables:
 
   vSphere:
 
+\$LAYOUT_VSPHERE_USERNAME
 \$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_BASE_DOMAIN
 
   VCD:
 
@@ -285,7 +287,7 @@ function prepare_environment() {
   case "$PROVIDER" in
   "Yandex.Cloud")
     # shellcheck disable=SC2016
-    env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
+    env CLOUD_ID="$LAYOUT_YANDEX_CLOUD_ID" FOLDER_ID="$LAYOUT_YANDEX_FOLDER_ID" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
@@ -304,7 +306,7 @@ function prepare_environment() {
 
   "AWS")
     # shellcheck disable=SC2016
-    env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
+    env AWS_ACCESS_KEY="$LAYOUT_AWS_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
@@ -323,8 +325,14 @@ function prepare_environment() {
 
   "OpenStack")
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -332,8 +340,16 @@ function prepare_environment() {
 
   "vSphere")
     # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+    env VSPHERE_PASSWORD="$LAYOUT_VSPHERE_PASSWORD" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
+        VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
+        VSPHERE_USERNAME="$LAYOUT_VSPHERE_USERNAME" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -341,7 +357,7 @@ function prepare_environment() {
 
 "VCD")
     # shellcheck disable=SC2016
-    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
+    env VCD_PASSWORD="$LAYOUT_VCD_PASSWORD" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
@@ -364,7 +380,7 @@ function prepare_environment() {
   "Static")
     pre_bootstrap_static_setup
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" \
         KUBERNETES_VERSION="$KUBERNETES_VERSION" \
         CRI="$CRI" \
         DEV_BRANCH="$DEV_BRANCH" \
@@ -375,7 +391,7 @@ function prepare_environment() {
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" PREFIX="$PREFIX" \
+    env OS_PASSWORD="$LAYOUT_OS_PASSWORD" PREFIX="$PREFIX" \
         envsubst <"$cwd/infra.tpl.tf"* >"$cwd/infra.tf"
     # "Hide" infra template from terraform.
     mv "$cwd/infra.tpl.tf" "$cwd/infra.tpl.tf.orig"
@@ -441,7 +457,7 @@ function run-test() {
 
   wait_deckhouse_ready || return $?
   wait_cluster_ready || return $?
-
+  wait_prom_rules_mutating_ready || return $?
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     echo "Starting Deckhouse update..."
     trigger_deckhouse_update || return $?
@@ -450,7 +466,33 @@ function run-test() {
     wait_cluster_ready || return $?
   fi
 }
+function wait_prom_rules_mutating_ready() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get pods -l app=prom-rules-mutating
+[[ "$(kubectl get pods -l app=prom-rules-mutating -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+END_SCRIPT
+)
 
+  testRunAttempts=60
+  for ((i=1; i<=testRunAttempts; i++)); do
+    >&2 echo "Check prom-rules-mutating pod readiness..."
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  return 1
+}
 function pre_bootstrap_static_setup() {
   cd $cwd/registry-mirror
 
@@ -779,6 +821,7 @@ ENDSSH
 
   for ((i=1; i<=$testRunAttempts; i++)); do
     if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
+      grep -q 'openSUSE Leap' /etc/os-release && sudo zypper -n remove containerd
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes

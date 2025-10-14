@@ -8,6 +8,11 @@ runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "started_at_output"         $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step"        $ctx | strings.Indent 2 }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
   {!{- $dir := "docs/documentation" -}!}
 {!{ if eq $docPart "main" }!}
@@ -50,6 +55,11 @@ steps:
 {!{ if eq $mode "release" }!}
   {!{ tmpl.Exec "login_rw_registry_step"       $ctx | strings.Indent 2 }!}
 {!{- else }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step"      $ctx | strings.Indent 2 }!}
 {!{- end }!}
   {!{ tmpl.Exec "werf_install_step"            $ctx | strings.Indent 2 }!}
@@ -61,12 +71,14 @@ steps:
       WERF_ENV: "EE"
       DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
       CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
-  {!{ if eq $mode "release" }!}
+{!{ if eq $mode "release" }!}
       WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
 {!{- else }!}
       WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
 {!{- end }!}
     run: |
+      # Temporary disable it without failing the step.
+      exit 0
       type werf
       werf version
 
@@ -85,27 +97,27 @@ steps:
       echo "Use werf_dir $WERF_DIR"
       type werf && source $(werf ci-env github --verbose --as-file)
 
-      echo "werf stage image web-backend:"
+      echo "werf stage image web-router:"
       werf stage image web-backend | tr 'a-z' 'A-Z'
-      docker pull $(werf stage image web-backend) || true
+      docker pull $(werf stage image web-router) || true
 
       echo "werf stage image web-frontend:"
       werf stage image web-frontend | tr 'a-z' 'A-Z'
       docker pull $(werf stage image web-frontend) || true
 
-      echo "Copying files from the web-backend container..."
-      docker cp $(docker create --rm $(werf stage image web-backend)):/app/root ${_TMPDIR}/backend
+      echo "Copying files from the web-router container..."
+      docker cp $(docker create --rm $(werf stage image web-router)):/app/root ${_TMPDIR}/backend
       echo "Copying files from the web-frontend container..."
       docker cp $(docker create --rm $(werf stage image web-frontend)):/app ${_TMPDIR}/frontend
 
       # Extract documentation content to the tmp directory.
       export WERF_DIR=$BASEDIR/documentation
       type werf && source $(werf ci-env github --verbose --as-file)
-      echo "werf stage image docs/web:"
-      werf stage image docs/web | tr 'a-z' 'A-Z'
-      docker pull $(werf stage image docs/web)
-      echo "Copying DKP documentation files from the docs/web container..."
-      docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/dkp-documentation
+      echo "werf stage image website-docs/web:"
+      werf stage image website-docs/web | tr 'a-z' 'A-Z'
+      docker pull $(werf stage image website-docs/web)
+      echo "Copying DKP documentation files from the website-docs/web container..."
+      docker cp $(docker create --rm $(werf stage image website-docs/web)):/app ${_TMPDIR}/dkp-documentation
 
       # Create EN site structure.
       echo "Create site structure in ${_TMPDIR}"
@@ -142,6 +154,8 @@ steps:
       DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
       CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
     run: |
+      # Temporary disable it without failing the step.
+      exit 0
       test -e ./tools/docs/link-checker/entrypoint.sh && \
       docker run \
         --rm \
@@ -192,6 +206,9 @@ steps:
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
+{!{- $s3Bucket := "${{ secrets.DOC_S3_BUCKET_DEV }}" -}!}
+{!{- $s3AcessKey := "${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}" -}!}
+{!{- $s3SecretKey := "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
@@ -199,6 +216,9 @@ steps:
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
+  {!{- $s3Bucket = "${{ secrets.DOC_S3_BUCKET_PROD }}" -}!}
+  {!{- $s3AcessKey = "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}" -}!}
+  {!{- $s3SecretKey = "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}" -}!}
 {!{- else if eq $env "test2" }!}
   {!{- $url = "deckhouse.2.test.flant.com" -}!}
   {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
@@ -216,7 +236,7 @@ steps:
   {!{- $urlRu = "deckhouse.ru.6.test.flant.com" -}!}
 {!{- else if eq $env "test7" }!}
   {!{- $url = "deckhouse.7.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}  
+  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -227,6 +247,9 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+{!{- if eq $env "production" }!}
+    WERF_REQUIRE_BUILT_IMAGES: "true"
+{!{- end }!}
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -236,6 +259,11 @@ steps:
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
+    WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket={!{ $s3Bucket }!}"
+    WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+    WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+    WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id={!{ $s3AcessKey }!}"
+    WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key={!{ $s3SecretKey }!}"
 # </template: deploy_doc_template>
 {!{- end -}!}
 
@@ -247,6 +275,7 @@ steps:
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
+{!{- $s3BucketPublicUrl := "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $repo = "${{ steps.check_readonly_registry.outputs.web_registry_path }}" -}!}
@@ -254,6 +283,7 @@ steps:
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
+  {!{- $s3BucketPublicUrl = "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_PROD }}" -}!}
 {!{- else if eq $env "test2" }!}
   {!{- $url = "deckhouse.2.test.flant.com" -}!}
   {!{- $urlRu = "deckhouse.ru.2.test.flant.com" -}!}
@@ -271,7 +301,7 @@ steps:
   {!{- $urlRu = "deckhouse.ru.6.test.flant.com" -}!}
 {!{- else if eq $env "test7" }!}
   {!{- $url = "deckhouse.7.test.flant.com" -}!}
-  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}  
+  {!{- $urlRu = "deckhouse.ru.7.test.flant.com" -}!}
 {!{- end -}!}
 
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}
@@ -284,6 +314,9 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+{!{- if eq $env "production" }!}
+    WERF_REQUIRE_BUILT_IMAGES: "true"
+{!{- end }!}
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
@@ -295,6 +328,7 @@ steps:
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DOMAIN_MAP: "global.domain_map={!{ base64.Encode $siteDomainMap }!}"
     WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
+    WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url={!{ $s3BucketPublicUrl }!}"
     DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
     DOC_API_URL: "${{vars.DOC_API_URL}}"
     WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"

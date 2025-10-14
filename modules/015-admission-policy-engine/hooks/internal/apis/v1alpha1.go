@@ -63,6 +63,7 @@ type SecurityPolicySpec struct {
 		AllowHostPID             *bool     `json:"allowHostPID,omitempty"`
 		AllowPrivileged          *bool     `json:"allowPrivileged,omitempty"`
 		AllowPrivilegeEscalation *bool     `json:"allowPrivilegeEscalation,omitempty"`
+		AllowRbacWildcards       *bool     `json:"allowRbacWildcards,omitempty"`
 		AllowedProcMount         string    `json:"allowedProcMount,omitempty"`
 		AllowedCapabilities      []string  `json:"allowedCapabilities,omitempty"`
 		AllowedAppArmor          []string  `json:"allowedAppArmor,omitempty"`

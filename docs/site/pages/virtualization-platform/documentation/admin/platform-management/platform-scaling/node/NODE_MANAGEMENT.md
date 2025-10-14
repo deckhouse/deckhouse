@@ -14,7 +14,7 @@ Deckhouse Virtualization Platform (DVP) supports the full lifecycle of node mana
 DVP can operate on bare-metal clusters, providing flexibility and scalability.
 {% endalert %}
 
-Node groups allow logical segmentation of the cluster infrastructure. In DVP, the following [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) roles are commonly used:
+Node groups allow logical segmentation of the cluster infrastructure. In DVP, the following [NodeGroup](/modules/node-manager/cr.html#nodegroup) roles are commonly used:
 
 - `master`: Control plane nodes.
 - `front`: Nodes for routing HTTP(S) traffic.
@@ -26,7 +26,7 @@ Each group can have centralized configuration settings, including the Kubernetes
 
 ## Enabling the node management mechanism
 
-Node management is implemented via the [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/) module, which can be enabled or disabled in several ways:
+Node management is implemented via the [`node-manager`](/modules/node-manager/) module, which can be enabled or disabled in several ways:
 
 1. Using the ModuleConfig/node-manager resource:
 
@@ -59,7 +59,7 @@ Node management is implemented via the [`node-manager`](/products/kubernetes-pla
 
 ## Automatic deployment and updates
 
-Deckhouse Virtualization Platform (DVP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) resources. DVP supports both initial node provisioning and updates when configuration changes, for bare-metal clusters (if the `node-manager` module is enabled).
+Deckhouse Virtualization Platform (DVP) provides an automated mechanism for managing the lifecycle of nodes based on [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. DVP supports both initial node provisioning and updates when configuration changes, for bare-metal clusters (if the `node-manager` module is enabled).
 
 How it works:
 
@@ -99,7 +99,7 @@ When nodes are created and joined to the cluster, DVP automatically performs a s
 - Installing and configuring the container runtime (`containerd`) and `kubelet`.
 - Registering the node with the Kubernetes cluster.
 
-These actions are performed automatically when using `bootstrap.sh` or when connecting nodes via [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials) resources.
+These actions are performed automatically when using `bootstrap.sh` or when connecting nodes via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resources.
 
 ### Updates that require node downtime
 
@@ -183,7 +183,7 @@ spec:
 
 Creating (or updating) a NodeGroup resource in the cluster may take a significant amount of time (until all nodes become ready). When using werf (e.g., in CI/CD), this can lead to a build timeout.
 
-To make werf ignore the NodeGroup status, add the following annotations to the [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) resource:
+To make werf ignore the NodeGroup status, add the following annotations to the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource:
 
 ```yaml
 metadata:
@@ -194,7 +194,7 @@ metadata:
 
 ## Settings for Static NodeGroups
 
-Node groups with types Static are intended for managing manually created nodes. These nodes are connected manually or via [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
+Node groups with types Static are intended for managing manually created nodes. These nodes are connected manually or via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and do not support automatic updates or scaling.
 
 Configuration specifics:
 
@@ -210,16 +210,16 @@ Configuration specifics:
 
 - Node registration to the cluster can be performed either manually or automatically, depending on the configuration:
   - **Manual**: The user downloads the bootstrap script, configures the server, and runs the script manually.
-  - **Automatic (CAPS)**: When using [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials), DVP automatically connects and configures the nodes.
+  - **Automatic (CAPS)**: When using [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials), DVP automatically connects and configures the nodes.
   - **Hybrid approach**: A manually added node can be handed over to CAPS by using the annotation `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DVP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
 
-> In a [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) of type Static, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DVP uses this value for state monitoring and automation.
+> In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DVP uses this value for state monitoring and automation.
 
 ## Running DVP on an arbitrary node
 
-To run DVP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
+To run DVP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
 
 {% alert level="warning" %}
 Only use nodes of type **Static** to run DVP. Avoid using a `NodeGroup` that contains only a single node for running DVP.

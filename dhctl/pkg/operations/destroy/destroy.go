@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,9 +43,9 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -67,6 +68,10 @@ type Params struct {
 	*commander.CommanderModeParams
 
 	InfrastructureContext *infrastructure.Context
+
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 }
 
 type ClusterDestroyer struct {
@@ -85,10 +90,19 @@ type ClusterDestroyer struct {
 
 	CommanderMode bool
 	CommanderUUID uuid.UUID
+
+	tmpDir  string
+	logger  log.Logger
+	isDebug bool
 }
 
-func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
+func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
+
+	logger := params.Logger
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
 
 	if app.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
@@ -118,16 +132,28 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
+		metaConfig, err := commander.ParseMetaConfig(ctx, state.cache, params.CommanderModeParams, logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
 		terraStateLoader = infrastructurestate.NewFileTerraStateLoader(state.cache, metaConfig)
 	} else {
-		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(
+			infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache, logger),
+		)
 	}
 
-	clusterInfra := controller.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.InfrastructureContext, controller.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := controller.NewClusterInfraWithOptions(
+		terraStateLoader,
+		state.cache,
+		params.InfrastructureContext,
+		controller.ClusterInfraOptions{
+			PhasedExecutionContext: pec,
+			TmpDir:                 params.TmpDir,
+			IsDebug:                params.IsDebug,
+			Logger:                 logger,
+		},
+	)
 
 	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{}, d8Destroyer)
 
@@ -145,6 +171,10 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		PhasedExecutionContext: pec,
 		CommanderMode:          params.CommanderMode,
 		CommanderUUID:          params.CommanderUUID,
+
+		tmpDir:  params.TmpDir,
+		logger:  logger,
+		isDebug: params.IsDebug,
 	}, nil
 }
 
@@ -247,6 +277,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	d.d8Destroyer.UnlockConverge(false)
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
+	if clusterType == config.CloudClusterType {
+		d.d8Destroyer.sshClient.Stop()
+	}
 
 	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
@@ -472,7 +505,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 
 	log.DebugLn("Private key written")
 
-	if !app.SSHLegacyMode {
+	if sshclient.IsModernMode() {
 		log.DebugF("Old SSH Client: %-v\n", d.SSHClient)
 		log.DebugLn("Stopping old SSH client")
 		d.SSHClient.Stop()
@@ -492,14 +525,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 		BecomePass:     d.userCredentials.Password,
 	})
 
-	var newSSHClient node.SSHClient
-	if app.SSHLegacyMode {
-		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-		// Avoid starting a new ssh agent
-		newSSHClient.(*clissh.Client).InitializeNewAgent = false
-	} else {
-		newSSHClient = gossh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-	}
+	newSSHClient := sshclient.NewClient(sess, []session.AgentPrivateKey{privateKey})
 
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()
@@ -508,7 +534,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	}
 
 	// adding keys to agent is actual only in legacy mode
-	if app.SSHLegacyMode {
+	if sshclient.IsLegacyMode() {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)

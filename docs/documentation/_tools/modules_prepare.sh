@@ -14,12 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO: Refactor this!
+
 # Checks if a file has a frontmatter section.
+# TODO: Refactor this to use a more robust method of checking for frontmatter.
+# E.g. better to use something like awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' or something like that:
+# or awk
+# awk 'BEGIN { in_fm = 0; has_fm = 0 }
+#                     NR == 1 && /^---$/ { in_fm = 1; next }
+#                     in_fm == 1 && /^---$/ {
+#                     if (NR > 2) { has_fm = 1 }
+#                     exit }
+#                     END { exit !has_fm }' "$file")
+# or
+# has_frontmatter() {
+#   awk 'NR==1 && $0=="---"{f=1; next} f && $0=="---"{exit 0} END{exit 1}' "$1"
+# }
+#
+# BTW the module docs frontmatter should NOT have permalinks...
+
 page::has_frontmatter() {
     if [[ -f $1 ]]
     then
-        head -n 1  $1 | grep -q "^---"
-        if [ $? -eq 0 ]; then return 0; fi
+        if awk 'NR==1 && /^---$/ { found_start=1 }
+            NR>1 && /^---$/ && found_start { found_end=1; exit }
+            END { exit !(found_start && found_end) }' "$1"; then
+            # Has valid frontmatter
+           return 0
+        fi
     else
         echo "Can't find file $1" >&2
         return 1
@@ -42,8 +64,7 @@ for page in ${pages}; do
     module_original_name=$(echo $page | cut -d\/ -f1)
     module_name=$(echo $module_original_name | sed -E 's#^[0-9]+-##')
 
-    # Skip modules, which are listed in modules_menu_skip file
-    if grep -Fxq "$module_name" _tools/modules_menu_skip; then
+    if jq -e --arg name "$module_name" '.[] | select(. == $name)' _tools/modules_excluded.json &>/dev/null; then
         continue
     fi
 

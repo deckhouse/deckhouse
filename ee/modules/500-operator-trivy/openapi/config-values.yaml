@@ -6,7 +6,7 @@ properties:
     description: |-
       The name of StorageClass that will be used in the cluster by default.
 
-      If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+      If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
 
       The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
@@ -136,12 +136,12 @@ properties:
 
       If it is necessary to specify a certificate with an intermediate certificate, the chain is specified without additional line breaks.
     items:
-      type: object   
+      type: object
       properties:
         name:
           type: string
         ca:
-          type: string       
+          type: string
     x-doc-examples:
     - |
       ```yaml

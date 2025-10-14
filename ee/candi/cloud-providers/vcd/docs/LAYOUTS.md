@@ -5,7 +5,7 @@ description: "Schemes of placement and interaction of resources in VMware Cloud 
 
 ## Standard
 
-![Standard layout](../../images/cloud-provider-vcd/vcd-standard.png)
+![Standard layout](images/vcd-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11247&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
@@ -37,7 +37,7 @@ masterNodeGroup:
 
 ## WithNAT
 
-![WithNAT layout](../../images/cloud-provider-vcd/vcd-withnat.png)
+![WithNAT layout](images/vcd-withnat.png)
 
 When using this placement scheme, you must check with the administrator which network virtualization platform is in use and specify it in the `edgeGateway.type` parameter.  
 Two options are supported: `NSX-T` and `NSX-V`.

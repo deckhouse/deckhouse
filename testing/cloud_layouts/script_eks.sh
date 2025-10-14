@@ -53,8 +53,8 @@ function prepare_environment() {
   root_wd="/deckhouse/testing/cloud_layouts/"
   export cwd="/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/"
 
-  export AWS_ACCESS_KEY_ID="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")"
-  export AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")"
+  export AWS_ACCESS_KEY_ID="$LAYOUT_AWS_ACCESS_KEY"
+  export AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY"
   export KUBERNETES_VERSION="$KUBERNETES_VERSION"
   export CRI="$CRI"
   export LAYOUT="$LAYOUT"

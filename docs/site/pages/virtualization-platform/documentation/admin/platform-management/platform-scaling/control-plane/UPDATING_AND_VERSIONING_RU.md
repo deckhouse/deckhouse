@@ -15,7 +15,7 @@ lang: ru
 
 ### Изменение версии Kubernetes
 
-1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration):
+1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
 
    ```shell
    d8 platform edit cluster-configuration

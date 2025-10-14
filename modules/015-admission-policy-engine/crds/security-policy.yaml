@@ -123,6 +123,15 @@ spec:
                     allowHostNetwork:
                       type: boolean
                       description: Allows containers to use the host's network.
+                    allowRbacWildcards:
+                      type: boolean
+                      default: true
+                      description: |
+                        Allows using wildcards (`*`) in namespaced Role and RoleBinding resources.
+
+                        ClusterRole and ClusterRoleBinding are not validated by SecurityPolicy.
+
+                        **By default** (if not specified) — `true`. This means that if the field is omitted or explicitly set to `true`, using wildcards is allowed. If you want to deny wildcards, set this parameter to `false`.
                     allowedHostPorts:
                       type: array
                       description: The list of `hostPort` ranges allowed by the rule.

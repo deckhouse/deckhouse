@@ -445,7 +445,7 @@ There are two ways to solve this problem:
 {% alert level="info" %}
 Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 
-To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
 ## How to allocate nodes to system components?
@@ -587,6 +587,51 @@ While changing `cri.type` for NodeGroups, created using `dhctl`, you must change
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
 node updates or requires manual confirmation.
+
+## Why might the CRI change not apply?
+
+When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
+
+The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
+
+- Kernel version is at least 5.8;
+- systemd version is at least 244;
+- cgroup v2 is enabled;
+- The EROFS filesystem is available.
+
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+
+If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
+
+If you cannot remove the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource that modifies the containerd configuration and is incompatible with containerd v2, use the universal template:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Script to modify the configuration for ContainerdV2>
+    {{- else }}
+  # <Script to modify the configuration for ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Additionally, to switch the CRI you may need to remove the custom label `node.deckhouse.io/containerd-config=custom`. You can do this with the following command:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Name of NodeGroup where CRI is changed>=); do kubectl label $node node.deckhouse.io/containerd-config-; done
+```
 
 ## How to change CRI for the whole cluster?
 
@@ -745,7 +790,7 @@ This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="info" %}
-Used in containerd v1 when Deckhouse is not managed by the [Registry module](../registry).
+Used in containerd v1 when Deckhouse is not managed by the [Registry module](/modules/registry/).
 {% endalert %}
 
 The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
@@ -939,7 +984,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the [`registry` module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [`registry` module](/modules/registry/) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -1345,7 +1390,7 @@ To add a GPU node to the cluster, perform the following steps:
          effect: NoSchedule
    ```
 
-   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
+   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
 
    Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 

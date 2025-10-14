@@ -1,0 +1,29 @@
+candi:
+  fixes:
+    - summary: Fix nodeuser deletion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15550
+cloud-provider-vsphere:
+  fixes:
+    - summary: cloud-data-discoverer fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15507
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook
+        execution
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15724
+dhctl:
+  fixes:
+    - summary: Fixing bashible steps when it does not respond to the limit on the number of attempts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15633
+    - summary: Fix start and keep-alive behavior, do not change host if any kube-proxies has been started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15566
+node-manager:
+  fixes:
+    - summary: CAPI crd served version fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15706
+vertical-pod-autoscaler:
+  fixes:
+    - summary: Disable vpa for k8s-metacollector in module runtime-audit-engine
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15659
+

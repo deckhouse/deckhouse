@@ -315,7 +315,6 @@ spec:
       namespace: d8-monitoring
       pathPrefix: /
       port: http
-      resourceName: alerts-receiver
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}

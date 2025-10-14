@@ -1,8 +1,0 @@
-type: object
-properties:
-  logLevel:
-    description: Уровень логирования модуля.
-  nodeSelector:
-    description: |
-      Указывает, на каких узлах могут использоваться ресурсы СХД. Работает аналогично параметру `spec.nodeSelector` в Kubernetes Pods.
-      Если параметр опущен, ресурсы могут быть смонтированы на любом узле кластера с ОС `Linux`.

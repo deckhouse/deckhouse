@@ -74,7 +74,7 @@ There is the `vector top` command to help you see how much data is going through
 
 Example of the output:
 
-![Vector TOP output](../../images/log-shipper/vector_top.png)
+![Vector TOP output](images/vector_top.png)
 
 ### Get raw log samples
 

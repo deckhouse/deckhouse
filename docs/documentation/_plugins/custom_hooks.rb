@@ -4,12 +4,12 @@ def doc_links_for_module(moduleName)
     data = {
       'overview' => {
           'internal' => {
-            'en' => "/en/platform/modules/%s/" % moduleName,
-            'ru' => "/ru/platform/modules/%s/" % moduleName
+            'en' => "/en/modules/%s/" % moduleName,
+            'ru' => "/ru/modules/%s/" % moduleName
           },
           'external' => {
-            'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName,
-            'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName
+            'en' => "/modules/%s/" % moduleName,
+            'ru' => "/modules/%s/" % moduleName
           }
         },
       'crds' => []
@@ -65,6 +65,11 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesModules = Hash.new()
   bundleNames = []
 
+  puts "Custom hook: pre_render"
+
+  site.data['bundles'] = Hash.new() if ! site.data.has_key?('bundles')
+  site.data['bundles']['raw'] = Hash.new() if ! site.data['bundles'].has_key?('raw')
+
   site.data['bundles']['raw'].each do |revision, revisionData|
     revisionData.each do |key, val|
       bundleName = key.delete_prefix('values-').capitalize
@@ -94,7 +99,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
 
-  #parse_module_data(site.data["sidebars"]["main"]["entries"], site)
+  site.data['modules'] = Hash.new() if ! site.data.has_key?('modules')
+  site.data['modules']['all'] = Hash.new() if ! site.data['modules'].has_key?('all')
 
   _editionsFullList = site.data['modules']['editions-weight'].keys
   # Automatically fill editions, except for CSE, since their CSE needs to be specified explicitly.
@@ -123,7 +129,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   # Add module name in kebab case and snake case to metadata of module pages.
   # Add module name in kebab case and snake case to search keywords.
 
-  pageSuffixes = [
+  pageAllowedSuffixes = [
     'CONFIGURATION.md', 'CONFIGURATION_RU.md',
     'CR_RU.md', 'CR.md',
     'EXAMPLES_RU.md', 'EXAMPLES.md',
@@ -135,12 +141,14 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   # - module-kebab-name: module name in kebab case
   # - module-snake-name: module name in snake case
   site.pages.each do |page|
-    if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || (page.name && pageSuffixes.any? { |suffix| page.name.end_with?(suffix) })
-    then
+    # if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || (page.name && pageAllowedSuffixes.any? { |suffix| page.name.end_with?(suffix) })
+    #if page.dir.match?(%r{/modules(_en|_ru)/([0-9]+-)?[^/]+/docs/$}) && (page.name && pageAllowedSuffixes.any? { |suffix| page.name.end_with?(suffix) })
+    if page.dir.match?(%r{(/en|/ru)/modules/([0-9]+-)?[^/]+/$})
       moduleKebabCase = page.url.sub(%r{(.*)?/modules/([0-9]+-)?([^/]+)/.*$},'\3')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase
+      page.data['sidebar'] = 'embedded-modules'
       if  page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
         page.data['legacy-enabled-commands'] = %Q(#{moduleSnakeCase}Enabled)
       else
@@ -153,7 +161,8 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     end
 
     if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
-      insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
+      # TODO Fix it
+      # insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
 
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)

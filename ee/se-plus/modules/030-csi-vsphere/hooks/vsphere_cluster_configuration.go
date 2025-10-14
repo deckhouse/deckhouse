@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	apisv1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/vsphere/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
@@ -47,7 +48,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, _ *con
 	input.Values.Set("csiVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
-})
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
 
 func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModuleConfiguration) error {
 	if m.Host != nil {

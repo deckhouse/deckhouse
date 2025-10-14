@@ -1,4 +1,4 @@
-{{ $imageAvailabilityExporterVersion := "0.13.0" }}
+{{ $imageAvailabilityExporterVersion := "0.14.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

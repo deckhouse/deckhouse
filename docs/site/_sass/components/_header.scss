@@ -100,8 +100,27 @@ font-family: 'Noto Sans', sans-serif;
   }
 
   .header__navigation-item {
+
+    &.active {
+    position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        padding: .375rem .75rem;
+        top: -.375rem;
+        left: -.75rem;
+        width: 100%;
+        height: 100%;
+        background-color: mixins.$primary-100;
+        border-radius: 2rem;
+      }
+    }
+
+
     > a {
       font-size: .875em;
+      position: relative;
 
       @include breakpoints.min-w(xl) {
         font-size: 14px;

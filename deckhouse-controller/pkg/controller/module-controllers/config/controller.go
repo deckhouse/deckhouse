@@ -60,9 +60,6 @@ const (
 
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
-
-	obsoleteConfigMetricGroup = "obsoleteVersion_%s"
-	moduleConflictMetricGroup = "module_%s_at_conflict"
 )
 
 func RegisterController(
@@ -247,7 +244,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -373,7 +370,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				return ctrl.Result{}, err
 			}
 			// fire alert at Conflict
-			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
+			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
 				"moduleName": module.Name,
 			})
 		}
@@ -400,11 +397,11 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, moduleConfig.Name)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// clear conflict metrics
-	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})

@@ -18,7 +18,7 @@ shell:
   - cd /src/gops
 ---
 image: {{ .ModuleName }}/gops-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -39,6 +39,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/gops
   - mkdir -p "/out/linux/amd64/bin"
-  - go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops`) | indent 4 }}
   - strip /out/linux/amd64/bin/gops
 ---

@@ -23,7 +23,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях настроек модуля описаны по [ссылке](/products/kubernetes-platform/documentation/v1/modules/kube-dns/configuration.html).
+Подробности о возможностях настроек модуля описаны по [ссылке](/modules/kube-dns/configuration.html).
 
 ## Пример конфигурации DNS
 
@@ -62,7 +62,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации модуля kube-dns описаны по [ссылке](/products/kubernetes-platform/documentation/v1/modules/kube-dns/configuration.html).
+Подробности о возможностях конфигурации модуля kube-dns описаны по [ссылке](/modules/kube-dns/configuration.html).
 
 ## Изменение домена кластера
 

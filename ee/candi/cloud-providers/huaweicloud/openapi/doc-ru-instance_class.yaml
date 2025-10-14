@@ -6,7 +6,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-manager/)).
+            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
 
             На этот ресурс ссылается ресурс CloudInstanceClass модуля `node-manager`.
           properties:

@@ -10,5 +10,34 @@
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
 
-{{- $context := . }}
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web.inc.yaml" .ModulePath)) $context }}
+---
+# Nginx for serving documentation static files
+# Image documentation/web (for website)
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/nginx-static
+git:
+{{- include "image mount points" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/documentation
+  to: /app/docs-dkp
+  before: setup
+  excludePaths:
+  - '*/gs/'
+  - '*/guides/'
+  - search-index.json
+  - '*/sitemap*.xml'
+  - '*/robots.txt'
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
+  add: /app/_site/
+  to: /app/embedded-modules
+  before: setup
+  includePaths:
+  - en
+  - ru
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}

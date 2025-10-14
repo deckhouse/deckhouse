@@ -115,7 +115,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-1. Change the [`maxDbSize`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings to match the value specified in the manifest.
+1. Change the [`maxDbSize`](/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings to match the value specified in the manifest.
 
 ## High availability
 

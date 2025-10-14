@@ -160,7 +160,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает автомат�
    --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-1. Убедитесь, что [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) функционирует на узле.
+1. Убедитесь, что [`control-plane-manager`](/modules/control-plane-manager/) функционирует на узле.
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
