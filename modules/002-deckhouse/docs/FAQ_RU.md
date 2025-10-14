@@ -36,27 +36,27 @@ title: "Модуль deckhouse: FAQ"
 
 ## Как собрать информацию для отладки?
 
-Мы всегда рады помочь пользователям с расследованием сложных проблем. Пожалуйста, выполните следующие шаги, чтобы мы смогли вам помочь:
+1. Соберите диагностический архив утилитой `d8`, перенаправив вывод (stdout) в файл:
 
-1. Выполните следующую команду, чтобы собрать необходимые данные:
-
-   ```sh
+   ```shell
    d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
-{% alert level="info" %}
-Флаг `--exclude` позволяет исключить файлы, данные по которым не будут включены в архив.
+1. Отправьте полученный архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
 
-```sh
-d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
-```
+> Флаг `--exclude` исключает указанные элементы из архива. Пример:
 
-Флаг `--list-exclude` отображает список файлов, которые можно исключить из выборки.
-{% endalert %}
+  ```shell
+  d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+  ```
 
-2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.
+> Флаг `--list-exclude` выводит список доступных для исключения элементов. Пример:
 
-Данные, которые будут собраны:
+  ```shell
+  d8 p collect-debug-info --list-exclude
+  ```
+
+<p>Ниже перечислены сведения, формируемые при выполнении архива. Названия в колонке «Файл в архиве» соответствуют элементам верхнего уровня внутри итогового архива <code>tar.gz</code>. Отдельные чувствительные значения (например, <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>) исключаются из выборки.</p>
 
 <table>
   <thead>
@@ -67,21 +67,22 @@ d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +
     </tr>
   </thead>
   <tbody>
+    <!-- Deckhouse -->
     <tr>
       <td rowspan="6"><strong>Deckhouse</strong></td>
       <td>Состояние очереди Deckhouse</td>
       <td><code>queue</code></td>
     </tr>
     <tr>
-      <td>Deckhouse values (за исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>)</td>
+      <td>Значения Deckhouse (кроме <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>)</td>
       <td><code>global-values</code></td>
     </tr>
     <tr>
-      <td>Данные о текущей версии пода <code>deckhouse</code></td>
+      <td>Версия текущего пода <code>deckhouse</code></td>
       <td><code>deckhouse-version</code></td>
     </tr>
     <tr>
-      <td>Все объекты DeckhouseRelease</td>
+      <td>Все объекты <code>DeckhouseRelease</code></td>
       <td><code>deckhouse-releases</code></td>
     </tr>
     <tr>
@@ -89,71 +90,77 @@ d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +
       <td><code>deckhouse-logs</code></td>
     </tr>
     <tr>
-      <td>Манифесты контроллеров и подов из всех пространств имен Deckhouse</td>
+      <td>Манифесты контроллеров и подов из всех пространств имён Deckhouse</td>
       <td><code>d8-all</code></td>
     </tr>
+
+    <!-- Объекты кластера -->
     <tr>
       <td rowspan="11"><strong>Объекты кластера</strong></td>
-      <td>NodeGroup</td>
+      <td><code>NodeGroup</code></td>
       <td><code>node-groups</code></td>
     </tr>
     <tr>
-      <td>NodeGroupConfiguration</td>
+      <td><code>NodeGroupConfiguration</code></td>
       <td><code>node-group-configuration</code></td>
     </tr>
     <tr>
-      <td>Node</td>
+      <td><code>Node</code></td>
       <td><code>nodes</code></td>
     </tr>
     <tr>
-      <td>Machine</td>
+      <td><code>Machine</code></td>
       <td><code>machines</code></td>
     </tr>
     <tr>
-      <td>Instance</td>
+      <td><code>Instance</code></td>
       <td><code>instances</code></td>
     </tr>
     <tr>
-      <td>StaticInstance</td>
+      <td><code>StaticInstance</code></td>
       <td><code>staticinstances</code></td>
     </tr>
     <tr>
-      <td>MachineDeployment</td>
+      <td><code>MachineDeployment</code></td>
       <td><code>cloud-machine-deployment</code>, <code>static-machine-deployment</code></td>
     </tr>
     <tr>
-      <td>ClusterAuthorizationRule</td>
+      <td><code>ClusterAuthorizationRule</code></td>
       <td><code>cluster-authorization-rules</code></td>
     </tr>
     <tr>
-      <td>AuthorizationRule</td>
+      <td><code>AuthorizationRule</code></td>
       <td><code>authorization-rules</code></td>
     </tr>
     <tr>
-      <td>ModuleConfig</td>
+      <td><code>ModuleConfig</code></td>
       <td><code>module-configs</code></td>
     </tr>
     <tr>
-      <td>Events из всех пространств имен</td>
+      <td>События (все пространства имён)</td>
       <td><code>events</code></td>
     </tr>
+
+    <!-- Модули и их состояния -->
     <tr>
       <td rowspan="4"><strong>Модули и их состояния</strong></td>
-      <td>Список включенных модулей</td>
+      <td>Список включённых модулей</td>
       <td><code>deckhouse-enabled-modules</code></td>
     </tr>
     <tr>
-      <td>Список объектов ModuleSource в кластере</td>
+      <td>Объекты <code>ModuleSource</code> в кластере</td>
       <td><code>deckhouse-module-sources</code></td>
     </tr>
     <tr>
-      <td>Список объектов ModulePullOverride в кластере</td>
+      <td>Объекты <code>ModulePullOverride</code> в кластере</td>
       <td><code>deckhouse-module-pull-overrides</code></td>
     </tr>
     <tr>
-      <td>Список модулей в режиме <code>maintenance</code></td>
+      <td>Модули в режиме <code>maintenance</code></td>
       <td><code>deckhouse-maintenance-modules</code></td>
     </tr>
+
+    <!-- Логи и манифесты контроллеров -->
     <tr>
       <td rowspan="10"><strong>Логи и манифесты контроллеров</strong></td>
       <td>Логи <code>machine-controller-manager</code></td>
@@ -172,15 +179,15 @@ d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +
       <td><code>cluster-autoscaler-logs</code></td>
     </tr>
     <tr>
-      <td>Логи Vertical Pod Autoscaler admission controller</td>
+      <td>Логи VPA admission controller</td>
       <td><code>vpa-admission-controller-logs</code></td>
     </tr>
     <tr>
-      <td>Логи Vertical Pod Autoscaler recommender</td>
+      <td>Логи VPA recommender</td>
       <td><code>vpa-recommender-logs</code></td>
     </tr>
     <tr>
-      <td>Логи Vertical Pod Autoscaler updater</td>
+      <td>Логи VPA updater</td>
       <td><code>vpa-updater-logs</code></td>
     </tr>
     <tr>
@@ -195,26 +202,30 @@ d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +
       <td>YAML <code>machine-controller-manager</code></td>
       <td><code>machine-controller-manager</code></td>
     </tr>
+
+    <!-- Мониторинг и алерты -->
     <tr>
       <td rowspan="4"><strong>Мониторинг и алерты</strong></td>
       <td>Логи Prometheus</td>
       <td><code>prometheus-logs</code></td>
     </tr>
     <tr>
-      <td>Все горящие уведомления в Prometheus</td>
+      <td>Активные (горящие) уведомления в Prometheus</td>
       <td><code>alerts</code></td>
     </tr>
     <tr>
-      <td>Список всех подов, которые не находятся в состоянии <code>Running</code>, кроме подов в состояниях <code>Completed</code> и <code>Evicted</code></td>
+      <td>Поды не в состоянии <code>Running</code> (кроме <code>Completed</code> и <code>Evicted</code>)</td>
       <td><code>bad-pods</code></td>
     </tr>
     <tr>
-      <td>Список Audit Policy</td>
+      <td>Список <code>Audit Policy</code></td>
       <td><code>audit-policy</code></td>
     </tr>
+
+    <!-- Сеть -->
     <tr>
       <td rowspan="7"><strong>Сеть</strong></td>
-      <td>Все объекты из пространства имен <code>d8-istio</code></td>
+      <td>Все объекты в пространстве имён <code>d8-istio</code></td>
       <td><code>d8-istio-resources</code></td>
     </tr>
     <tr>
@@ -241,6 +252,8 @@ d8 p collect-debug-info --exclude=queue global-values > deckhouse-debug-$(date +
       <td>Состояние соединения Cilium (<code>cilium health status</code>)</td>
       <td><code>cilium-health-status</code></td>
     </tr>
+
+    <tr><td colspan="3" style="padding:0;"></td></tr>
   </tbody>
 </table>
 
