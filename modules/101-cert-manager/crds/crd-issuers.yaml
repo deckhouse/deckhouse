@@ -102,7 +102,7 @@ spec:
                               description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                               type: string
                             name:
-                              description: 'Name of the resource being referred to.
+                              description: 'Name of the resource being referred to.'
                               type: string
                     preferredChain:
                       description: 'PreferredChain is the chain to use if the ACME server outputs multiple. PreferredChain is no guarantee that this one gets delivered by the ACME endpoint. For example, for Let''s Encrypt''s DST crosssign you would use: "DST Root CA X3" or "ISRG Root X1" for the newer Let''s Encrypt root CA. This value picks the first certificate bundle in the ACME alternative chains that has a certificate with this value as its issuer''s CN'
@@ -118,7 +118,7 @@ spec:
                           description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                           type: string
                         name:
-                          description: 'Name of the resource being referred to.
+                          description: 'Name of the resource being referred to.'
                           type: string
                     server:
                       description: 'Server is the URL used to access the ACME server''s ''directory'' endpoint. For example, for Let''s Encrypt''s staging endpoint, you would use: "https://acme-staging-v02.api.letsencrypt.org/directory". Only ACME v2 endpoints (i.e. RFC 8555) are supported.'
@@ -154,7 +154,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   host:
                                     type: string
@@ -177,7 +177,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   clientSecretSecretRef:
                                     description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
@@ -189,7 +189,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   clientTokenSecretRef:
                                     description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
@@ -201,7 +201,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   serviceConsumerDomain:
                                     type: string
@@ -225,7 +225,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   environment:
                                     description: name of the Azure environment (default AzurePublicCloud)
@@ -278,7 +278,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                               cloudflare:
                                 description: Use the Cloudflare API to manage DNS01 challenge records.
@@ -294,7 +294,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   apiTokenSecretRef:
                                     description: API token used to authenticate with Cloudflare.
@@ -306,7 +306,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   email:
                                     description: Email of the account, only required when using API key based authentication.
@@ -333,7 +333,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                               rfc2136:
                                 description: Use RFC2136 ("Dynamic Updates in the Domain Name System") (https://datatracker.ietf.org/doc/rfc2136/) to manage DNS01 challenge records.
@@ -360,7 +360,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                               route53:
                                 description: Use the AWS Route53 API to manage DNS01 challenge records.
@@ -381,7 +381,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                                   hostedZoneID:
                                     description: If set, the provider will manage only this zone in Route53 and will not do an lookup using the route53:ListHostedZonesByName api call.
@@ -402,7 +402,7 @@ spec:
                                         description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                         type: string
                                       name:
-                                        description: 'Name of the resource being referred to.
+                                        description: 'Name of the resource being referred to.'
                                         type: string
                               webhook:
                                 description: Configure an external webhook based DNS01 challenge solver to manage DNS01 challenge records.
@@ -1018,7 +1018,7 @@ spec:
                                                   type: string
                                               x-kubernetes-map-type: atomic
                                           nodeSelector:
-                                            description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node.
+                                            description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node.'
                                             type: object
                                             additionalProperties:
                                               type: string
@@ -1137,7 +1137,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to.
+                                  description: 'Name of the resource being referred to.'
                                   type: string
                         kubernetes:
                           description: Kubernetes authenticates with Vault by passing the ServiceAccount token stored in the named Secret resource to the Vault server.
@@ -1161,7 +1161,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to.
+                                  description: 'Name of the resource being referred to.'
                                   type: string
                             serviceAccountRef:
                               description: A reference to a service account that will be used to request a bound token (also known as "projected token"). Compared to using "secretRef", using this field means that you don't rely on statically bound tokens. To use this field, you must configure an RBAC rule to let cert-manager request a token.
@@ -1182,7 +1182,7 @@ spec:
                               description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                               type: string
                             name:
-                              description: 'Name of the resource being referred to.
+                              description: 'Name of the resource being referred to.'
                               type: string
                     caBundle:
                       description: Base64-encoded bundle of PEM CAs which will be used to validate the certificate chain presented by Vault. Only used if using HTTPS to connect to Vault and ignored for HTTP connections. Mutually exclusive with CABundleSecretRef. If neither CABundle nor CABundleSecretRef are defined, the certificate bundle in the cert-manager controller container is used to validate the TLS connection.
@@ -1198,7 +1198,7 @@ spec:
                           description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                           type: string
                         name:
-                          description: 'Name of the resource being referred to.
+                          description: 'Name of the resource being referred to.'
                           type: string
                     namespace:
                       description: 'Name of the vault namespace. Namespaces is a set of features within Vault Enterprise that allows Vault environments to support Secure Multi-tenancy. e.g: "ns1" More about namespaces can be found here https://www.vaultproject.io/docs/enterprise/namespaces'
@@ -1231,7 +1231,7 @@ spec:
                               description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                               type: string
                             name:
-                              description: 'Name of the resource being referred to.
+                              description: 'Name of the resource being referred to.'
                               type: string
                         url:
                           description: URL is the base URL for Venafi Cloud. Defaults to "https://api.venafi.cloud/v1".
@@ -1254,7 +1254,7 @@ spec:
                             - name
                           properties:
                             name:
-                              description: 'Name of the resource being referred to.
+                              description: 'Name of the resource being referred to.'
                               type: string
                         url:
                           description: 'URL is the base URL for the vedsdk endpoint of the Venafi TPP instance, for example: "https://tpp.example.com/vedsdk".'
