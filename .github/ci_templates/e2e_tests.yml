@@ -101,7 +101,7 @@
   REPOSITORY: ${{ github.repository }}
 {!{- if not (has $commanderProviders $provider) }!}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-  STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+  STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
 {!{- if has $commanderProviders $provider }!}
@@ -469,6 +469,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -666,7 +670,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -741,7 +745,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -852,6 +856,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -971,7 +979,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}

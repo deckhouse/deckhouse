@@ -185,6 +185,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -328,7 +332,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -505,6 +509,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -648,7 +656,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -825,6 +833,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -968,7 +980,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1145,6 +1157,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -1288,7 +1304,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1465,6 +1481,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -1608,7 +1628,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1785,6 +1805,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -1928,7 +1952,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2105,6 +2129,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -2248,7 +2276,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2425,6 +2453,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -2568,7 +2600,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2745,6 +2777,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -2888,7 +2924,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3065,6 +3101,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -3208,7 +3248,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3385,6 +3425,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -3528,7 +3572,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3705,6 +3749,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -3848,7 +3896,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -4025,6 +4073,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -4168,7 +4220,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -4345,6 +4397,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -4488,7 +4544,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}

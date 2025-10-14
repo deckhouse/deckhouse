@@ -185,6 +185,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -338,7 +342,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -356,7 +360,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -534,6 +538,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -687,7 +695,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -705,7 +713,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -883,6 +891,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1036,7 +1048,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1054,7 +1066,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1232,6 +1244,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1385,7 +1401,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1403,7 +1419,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1581,6 +1597,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -1734,7 +1754,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -1752,7 +1772,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1930,6 +1950,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2083,7 +2107,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2101,7 +2125,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2279,6 +2303,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2432,7 +2460,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2450,7 +2478,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2628,6 +2656,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -2781,7 +2813,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -2799,7 +2831,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2977,6 +3009,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3130,7 +3166,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3148,7 +3184,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -3326,6 +3362,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3479,7 +3519,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3497,7 +3537,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -3675,6 +3715,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3828,7 +3872,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -3846,7 +3890,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -4024,6 +4068,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -4177,7 +4225,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -4195,7 +4243,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -4373,6 +4421,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -4526,7 +4578,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "1.34"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -4544,7 +4596,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -4722,6 +4774,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -4875,7 +4931,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
@@ -4893,7 +4949,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:

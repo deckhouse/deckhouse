@@ -199,6 +199,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -395,7 +399,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -464,7 +468,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -594,6 +598,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -818,7 +826,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -834,7 +842,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script_eks.sh run-test' via 'docker run', using environment:
@@ -949,7 +957,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -964,7 +972,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
@@ -1117,6 +1125,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure subscriptionId | LAYOUT_AZURE_SUBSCRIPTION_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure clientId | LAYOUT_AZURE_CLIENT_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure clientSecret | LAYOUT_AZURE_CLIENT_SECRET ;
@@ -1315,7 +1327,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -1388,7 +1400,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -1522,6 +1534,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -1717,7 +1733,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -1786,7 +1802,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -1916,6 +1932,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
@@ -2113,7 +2133,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -2184,7 +2204,7 @@ jobs:
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -2316,6 +2336,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2511,7 +2535,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -2578,7 +2602,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -2706,6 +2730,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new e2e-username | LAYOUT_VSPHERE_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new e2e-password | LAYOUT_VSPHERE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new base-domain | LAYOUT_VSPHERE_BASE_DOMAIN ;
@@ -2903,7 +2931,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -2974,7 +3002,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -3106,6 +3134,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
@@ -3326,7 +3358,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -3344,7 +3376,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
@@ -3417,7 +3449,7 @@ jobs:
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
@@ -3434,7 +3466,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
-          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -3591,6 +3623,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3786,7 +3822,7 @@ jobs:
           LAYOUT: Static
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -3857,7 +3893,7 @@ jobs:
           LAYOUT: Static
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
