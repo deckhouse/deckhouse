@@ -391,6 +391,7 @@ check_e2e_labels:
   permissions:
     contents: read
     pull-requests: read
+    issues: read
   outputs:
 {!{ range $criName := $ctx.criNames }!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}

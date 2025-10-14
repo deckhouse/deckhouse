@@ -238,6 +238,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      issues: read
     outputs:
 
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
