@@ -308,7 +308,7 @@ spec:
 
     {{- with .parameters.clusterLogDestinationName }}
     ---
-    # Refer to https://deckhouse.io/modules/log-shipper/
+    # Refer to /moduleslog-shipper/
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -319,7 +319,7 @@ spec:
     {{- end }}
 
     ---
-    # Referer to https://deckhouse.io/modules/admission-policy-engine/
+    # Referer to /modulesadmission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
     kind: OperationPolicy
     metadata:
@@ -341,7 +341,7 @@ spec:
     ---
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
-    # Refer to https://deckhouse.io/modules/runtime-audit-engine/examples.html
+    # Refer to /modulesruntime-audit-engine/examples.html
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
     metadata:
@@ -381,7 +381,7 @@ spec:
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
-    # Refer to https://deckhouse.io/modules/admission-policy-engine/cr.html#securitypolicy
+    # Refer to /modulesadmission-policy-engine/cr.html#securitypolicy
     apiVersion: deckhouse.io/v1alpha1
     kind: SecurityPolicy
     metadata:

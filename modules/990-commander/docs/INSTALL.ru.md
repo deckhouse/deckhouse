@@ -46,7 +46,7 @@ Platform.
 ## Подготовка СУБД
 
 Deckhouse Commander работает с СУБД PostgreSQL. Для корректной работы Deckhouse Commander необходимы
-расширения [plpgsql](https://postgrespro.ru/docs/postgresql/14/plpgsql) и [pgcrypto](https://postgrespro.ru/docs/postgresql/14/pgcrypto).
+расширения plpgsql и pgcrypto.
 
 ### Вариант 1: выделенная СУБД
 

@@ -20,7 +20,7 @@
         d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
 
-        Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).
+        Consider expanding disk size following the [guide](/modulesprometheus/faq.html#how-to-expand-disk-size).
   # If there was retention in the last 24 hours and the oldest metric was recorded less than 10 days ago and storage.tsdb.retention.size has not been changed.
   - alert: PrometheusMainRotatingEarlierThanConfiguredRetentionDays
     expr: |

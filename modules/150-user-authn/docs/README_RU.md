@@ -31,7 +31,7 @@ webIfaces:
 
 ### Базовая аутентификация в API Kubernetes
 
-[Базовая аутентификация](https://en.wikipedia.org/wiki/Basic_access_authentication) в API Kubernetes на данный момент доступна только для провайдера Crowd (с включением параметра [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth)).
+Базовая аутентификация в API Kubernetes на данный момент доступна только для провайдера Crowd (с включением параметра [`enableBasicAuth`](cr.html#dexprovider-v1-spec-crowd-enablebasicauth)).
 
 > К API Kubernetes можно подключаться и [через другие поддерживаемые внешние провайдеры](#веб-интерфейс-для-генерации-готовых-kubeconfig-файлов).
 

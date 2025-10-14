@@ -31,7 +31,7 @@ spec:
 
 ### OIDC (OpenID Connect)
 
-Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
+Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера.
 
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
 
@@ -147,8 +147,6 @@ echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | ba
 * `httpd-tools` — для дистрибутивов, основанных на CentOS;
 * `apache2-htpasswd` — для ALT Linux.
 {% endalert %}
-
-Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
 Обратите внимание, что в приведенном примере указан [`ttl`](cr.html#user-v1-spec-ttl).
 

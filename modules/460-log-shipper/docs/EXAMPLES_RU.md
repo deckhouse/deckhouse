@@ -135,7 +135,7 @@ spec:
 
 ## Работа с Grafana Cloud
 
-Данная документация подразумевает, что у вас уже [создан ключ API](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
+Данная документация подразумевает, что у вас уже создан ключ API.
 
 Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
 

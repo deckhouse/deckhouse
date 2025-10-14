@@ -334,7 +334,7 @@ spec:
                             annotations is an unstructured key value map stored with a resource that may be
                             set by external tools to store and retrieve arbitrary metadata. They are not
                             queryable and should be preserved when modifying objects.
-                            More info: http://kubernetes.io/docs/user-guide/annotations
+
                           type: object
                         labels:
                           additionalProperties:
@@ -343,7 +343,7 @@ spec:
                             labels is a map of string keys and values that can be used to organize and categorize
                             (scope and select) objects. May match selectors of replication controllers
                             and services.
-                            More info: http://kubernetes.io/docs/user-guide/labels
+
                           type: object
                       type: object
                     spec:
@@ -658,7 +658,7 @@ spec:
                   description: |-
                     selector is the same as the label selector but in the string format to avoid introspection
                     by clients. The string will be in the same format as the query-param syntax.
-                    More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
+
                   maxLength: 4096
                   minLength: 1
                   type: string
@@ -1068,7 +1068,7 @@ spec:
                             annotations is an unstructured key value map stored with a resource that may be
                             set by external tools to store and retrieve arbitrary metadata. They are not
                             queryable and should be preserved when modifying objects.
-                            More info: http://kubernetes.io/docs/user-guide/annotations
+
                           type: object
                         labels:
                           additionalProperties:
@@ -1077,7 +1077,7 @@ spec:
                             labels is a map of string keys and values that can be used to organize and categorize
                             (scope and select) objects. May match selectors of replication controllers
                             and services.
-                            More info: http://kubernetes.io/docs/user-guide/labels
+
                           type: object
                       type: object
                     spec:
@@ -1509,7 +1509,7 @@ spec:
                   description: |-
                     selector is the same as the label selector but in the string format to avoid introspection
                     by clients. The string will be in the same format as the query-param syntax.
-                    More info about label selectors: http://kubernetes.io/docs/user-guide/labels#label-selectors
+
                   maxLength: 4096
                   minLength: 1
                   type: string

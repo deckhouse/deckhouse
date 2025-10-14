@@ -275,7 +275,7 @@ properties:
   controlPlaneConfigurator:
     type: object
     default: {}
-    description: 'Parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module.'
+    description: 'Parameters of the [control-plane-manager](/modulescontrol-plane-manager/) module.'
     properties:
       enabled:
         type: boolean

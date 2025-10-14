@@ -12,6 +12,6 @@ webIfaces:
 Для работы модуля `cilium-hubble` необходимы:
 
 - Версия ядра Linux >= 5.8 с поддержкой eBPF.
-- Поддержка формата метаданных [BPF Type Format (BTF)](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). Проверить можно следующими способами:
+- Поддержка формата метаданных BPF Type Format (BTF). Проверить можно следующими способами:
   - выполнить команду `ls -lah /sys/kernel/btf/vmlinux` — наличие файла подтверждает поддержку BTF;
   - выполнить команду `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — если параметр включён, BTF поддерживается.

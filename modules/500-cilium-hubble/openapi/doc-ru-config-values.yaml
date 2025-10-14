@@ -25,7 +25,7 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx auth_request.
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](/modulesuser-authn/).
         properties:
           authURL:
             description: |

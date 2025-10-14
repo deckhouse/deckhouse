@@ -3,7 +3,7 @@ title: "Модуль admission-policy-engine"
 description: Модуль admission-policy-engine Deckhouse позволяет использовать в кластере Kubernetes политики безопасности согласно Kubernetes Pod Security Standards.
 ---
 
-Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes. Модуль для работы использует [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes. Модуль для работы использует Gatekeeper.
 
 Pod Security Standards определяют три политики, охватывающие весь спектр безопасности. Эти политики являются кумулятивными, то есть состоящими из набора политик, и варьируются по уровню ограничений от «неограничивающего» до «ограничивающего значительно».
 
@@ -165,4 +165,3 @@ spec:
 - [ModifySet](gatekeeper-cr.html#modifyset) — для добавления или удаления значений из списка, например аргументов для запуска контейнера.
 - [AssignImage](gatekeeper-cr.html#assignimage) — для изменения параметра `image` ресурса.
 
-Подробнее про доступные варианты можно прочитать в документации [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).

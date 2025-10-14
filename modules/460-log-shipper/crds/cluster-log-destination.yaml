@@ -25,7 +25,7 @@ spec:
           description: |
             Describes setting for a log storage, which you can use in many log sources.
 
-            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](https://deckhouse.io/modules/log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](/moduleslog-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               type: object

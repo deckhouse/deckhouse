@@ -38,7 +38,7 @@ function __main__() {
   if [[ "$mcName" == "sds-drbd" ]]; then
     if context::jq -e '.review.request.object.spec.enabled' >/dev/null; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"moduleconfigs.deckhouse.io \"sds-drbd\" is deprecated, please use sds-replicated-volume module instead (https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume)." }
+{"allowed":false, "message":"moduleconfigs.deckhouse.io \"sds-drbd\" is deprecated, please use sds-replicated-volume module instead (/modulessds-replicated-volume/stable/faq.html#migrating-from-sds-drbd-module-to-sds-replicated-volume)." }
 EOF
     return 0
     fi

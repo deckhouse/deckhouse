@@ -3,7 +3,7 @@ title: "Модуль chrony"
 description: "Синхронизация времени в кластере Deckhouse Platform Certified Security Edition."
 ---
 
-Обеспечивает синхронизацию времени на всех узлах кластера с помощью утилиты [chrony](https://chrony.tuxfamily.org/).
+Обеспечивает синхронизацию времени на всех узлах кластера с помощью утилиты chrony.
 
 ## Как работает
 

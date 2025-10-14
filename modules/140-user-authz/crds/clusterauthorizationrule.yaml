@@ -105,9 +105,9 @@ spec:
                   description: |
                     Users and/or groups to grant privileges.
 
-                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) module:
+                    Pay attention to the following nuances if this module is used together with the [user-authn](/modulesuser-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
-                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider).
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](/modulesuser-authn/cr.html#dexprovider).
                   items:
                     type: object
                     required:
@@ -352,9 +352,9 @@ spec:
 
                     [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
-                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) module:
+                    Pay attention to the following nuances if this module is used together with the [user-authn](/modulesuser-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
-                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider).
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](/modulesuser-authn/cr.html#dexprovider).
                   items:
                     type: object
                     required:

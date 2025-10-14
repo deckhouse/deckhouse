@@ -400,7 +400,7 @@ roleRef:
    kubectl -n my-namespace get secret metrics-access -ojsonpath='{ .data.token }' | base64 -d
    ```
 
-5. Для записи метрик необходимо отправлять запросы по протоколам Prometheus Remote-Write [V1](https://prometheus.io/docs/specs/prw/remote_write_spec/) или [V2](https://prometheus.io/docs/specs/prw/remote_write_spec_2_0/).
+5. Для записи метрик необходимо отправлять запросы по протоколам Prometheus Remote-Write V1 или V2.
    - `URL`: `https://observability.%publicDomainTemplate%/api/v1/write`. [Подробнее про publicDomainTemplate](/reference/api/global.html#parameters-modules-publicdomaintemplate).
    - `HTTP Headers`:
      - `Header`: Authorization

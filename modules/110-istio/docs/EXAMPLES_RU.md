@@ -5,7 +5,6 @@ title: "Модуль istio: примеры"
 ## Circuit Breaker
 
 Для выявления проблемных эндпоинтов используются настройки `outlierDetection` в кастомном ресурсе [DestinationRule](istio-cr.html#destinationrule).
-Более подробно алгоритм Outlier Detection описан в [документации Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier).
 
 Пример:
 
@@ -54,7 +53,7 @@ spec:
 
 ## Locality Failover
 
-> При необходимости ознакомьтесь с [основной документацией](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+> При необходимости ознакомьтесь с основной документацией.
 
 Istio позволяет настроить приоритетный географический фейловер между эндпоинтами. Для определения зоны Istio использует лейблы узлов с соответствующей иерархией:
 

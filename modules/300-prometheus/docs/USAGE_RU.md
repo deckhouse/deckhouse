@@ -142,7 +142,7 @@ data:
 
 ## Подключение стороннего приложения к Prometheus
 
-Подключение к Prometheus защищено с помощью [kube-rbac-proxy](https://github.com/brancz/kube-rbac-proxy). Для подключения создайте `ServiceAccount` с необходимыми правами.
+Подключение к Prometheus защищено с помощью kube-rbac-proxy. Для подключения создайте `ServiceAccount` с необходимыми правами.
 
 ```yaml
 ---

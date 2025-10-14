@@ -41,7 +41,7 @@ spec:
                   description: |
                     User email.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    **Caution!** Note that if used together with the [user-authz](/modulesuser-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](/modulesuser-authz/cr.html#clusterauthorizationrule) CR.
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string
@@ -160,7 +160,7 @@ spec:
                   description: |
                     User email.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    **Caution!** Note that if used together with the [user-authz](/modulesuser-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](/modulesuser-authz/cr.html#clusterauthorizationrule) CR.
                   x-doc-examples: ['user@domain.com']
                 password:
                   type: string

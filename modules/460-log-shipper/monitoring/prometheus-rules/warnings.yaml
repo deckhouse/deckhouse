@@ -13,4 +13,4 @@
         description: |-
           Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
 
-          Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
+          Add the authorization parameters to the ClusterLogDestination resource following the [instructions](/moduleslog-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).

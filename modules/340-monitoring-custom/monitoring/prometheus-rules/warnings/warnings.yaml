@@ -22,7 +22,7 @@
         d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](/modulesprometheus/faq.html).
 
   - alert: CustomPodMonitorFoundInCluster
     expr: |
@@ -46,7 +46,7 @@
         d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](/modulesprometheus/faq.html).
 
   - alert: D8CustomPrometheusRuleFoundInCluster
     expr: |
@@ -70,7 +70,7 @@
         d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
         ```
 
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](/modulesprometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
 
   - alert: D8OldPrometheusCustomTargetFormat
     expr: |
@@ -94,4 +94,4 @@
         d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](/modulesprometheus/faq.html).

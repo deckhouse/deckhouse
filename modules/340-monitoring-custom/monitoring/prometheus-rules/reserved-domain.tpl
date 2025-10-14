@@ -18,4 +18,4 @@
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](/modulesnode-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).

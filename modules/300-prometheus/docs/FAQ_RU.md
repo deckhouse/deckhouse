@@ -77,7 +77,7 @@ spec:
 {% alert level="warning" %}
 Системные и добавленные через [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) дашборды нельзя изменить через интерфейс Grafana.
 
-Алерты, настроенные в панели dashboard, не работают с шаблонами datasource — такой dashboard является невалидным и не импортируется. В версии Grafana 9.0 функционал legacy alerting был признан [устаревшим](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) и заменён на Grafana Alerting. В связи с этим, мы не рекомендуем использовать legacy alerting (оповещения панели мониторинга) в dashboards.
+Алерты, настроенные в панели dashboard, не работают с шаблонами datasource — такой dashboard является невалидным и не импортируется. В версии Grafana 9.0 функционал legacy alerting был признан устаревшим и заменён на Grafana Alerting. В связи с этим, мы не рекомендуем использовать legacy alerting (оповещения панели мониторинга) в dashboards.
 {% endalert %}
 
 {% alert level="info" %}
@@ -117,8 +117,6 @@ spec:
 ### Как подключить дополнительные data source для Grafana?
 
 Для подключения дополнительных data source к Grafana существует специальный ресурс — `GrafanaAdditionalDatasource`.
-
-Параметры ресурса подробно описаны [в документации к Grafana](https://grafana.com/docs/grafana/latest/administration/provisioning/#example-datasource-config-file). Тип ресурса смотрите в документации по конкретному [datasource](https://grafana.com/docs/grafana/latest/datasources/).
 
 Пример:
 
@@ -488,12 +486,9 @@ route:
       receiver: blackhole
 ```
 
-С подробным описанием всех параметров можно ознакомиться [в официальной документации](https://prometheus.io/docs/alerting/latest/configuration/#configuration-file).
-
 ## Почему нельзя установить разный scrapeInterval для отдельных таргетов?
 
-Наиболее [полный ответ](https://www.robustperception.io/keep-it-simple-scrape_interval-id) на этот вопрос дает разработчик Prometheus Brian Brazil.
-Вкратце, разные scrapeInterval'ы принесут следующие проблемы:
+Разные scrapeInterval'ы принесут следующие проблемы:
 
 * увеличение сложности конфигурации;
 * проблемы при написании запросов и создании графиков;

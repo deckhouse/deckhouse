@@ -299,4 +299,3 @@ CAA record does not match issuer
 
 то необходимо проверить `CAA (Certificate Authority Authorization)` DNS-запись у домена, для которого заказывается сертификат.
 Если вы хотите использовать Let’s Encrypt-сертификаты, у домена должна быть CAA-запись: `issue "letsencrypt.org"`.
-Подробнее про CAA можно почитать [в документации Let’s Encrypt](https://letsencrypt.org/docs/caa/).

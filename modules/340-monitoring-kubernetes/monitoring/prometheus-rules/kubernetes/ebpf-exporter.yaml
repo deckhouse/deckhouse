@@ -45,4 +45,4 @@
         Possible options to resolve the issue:
 
         * Build the kernel with [BTF type information](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
-        * [Disable ebpf_exporter](https://deckhouse.io/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
+        * [Disable ebpf_exporter](/modulesmonitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).

@@ -52,7 +52,7 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
 
 ## Эмуляция события Falcosidekick
 
-Вы можете использовать [Falcosidekick](https://github.com/falcosecurity/falcosidekick) `/test` HTTP endpoint для отправки тестового события.
+Вы можете использовать Falcosidekick `/test` HTTP endpoint для отправки тестового события.
 
 - Создайте отладочное событие, выполнив команду:
 

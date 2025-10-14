@@ -18,14 +18,14 @@ properties:
   controlPlaneConfigurator:
     type: object
     description: |
-      Parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module.
+      Parameters of the [control-plane-manager](/modulescontrol-plane-manager/) module.
     default: {}
     properties:
       enabled:
         type: boolean
         default: true
         description: |
-          Passes parameters for configuring `authz-webhook` to the `control-plane-manager` module (see the parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters) module).
+          Passes parameters for configuring `authz-webhook` to the `control-plane-manager` module (see the parameters of the [control-plane-manager](/modulescontrol-plane-manager/configuration.html#parameters) module).
 
           If this parameter is disabled, the `control-plane-manager` module assumes that Webhook-based authorization is disabled by default. In this case (if no additional settings are provided), the `control-plane-manager` module will try to delete all references to the Webhook plugin from the manifest (even if you configure the manifest manually).
         x-doc-default: true

@@ -82,8 +82,6 @@ spec:
 
 Пример демонстрирует настройку проверки адреса репозитория в поле `image` у всех подов, создающихся в пространстве имен, имеющих label `security.deckhouse.io/pod-policy: restricted`. Если адрес в поле `image` создаваемого пода начинается не с `mycompany.registry.com`, под создан не будет.
 
-Подробнее о шаблонах и языке политик можно узнать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
-
 Больше примеров описания проверок для расширения политики можно найти в библиотеке Gatekeeper.
 
 ## Как включить одну или несколько политик Pod Security Standards, не отключая весь набор?
@@ -285,7 +283,7 @@ spec:
 
 {% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
 
-В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента Cosign. Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
 
 {% offtopic title="Как подписать образ..." %}
 Шаги для подписания образа:
@@ -293,7 +291,6 @@ spec:
 - Сгенерируйте ключи: `cosign generate-key-pair`
 - Подпишите образ: `cosign sign --key <key> <image>`
 
-Подробнее о работе с Cosign можно узнать в [документации](https://docs.sigstore.dev/cosign/key_management).
 {% endofftopic %}
 
 Пример SecurityPolicy для настройки проверки подписи образов контейнеров:

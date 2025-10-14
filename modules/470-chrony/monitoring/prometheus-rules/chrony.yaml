@@ -32,9 +32,9 @@
 
         3. Resolve the time synchronization issues:
            - Fix network errors:
-             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](/moduleschrony/configuration.html) are available.
              - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
+           - Modify the NTP servers list defined in the [chrony configuration](/moduleschrony/configuration.html).
 
   - alert: NodeTimeOutOfSync
     expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
@@ -52,6 +52,6 @@
         To resolve the time synchronization issues:
 
         - Fix network errors:
-          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
+          - Ensure the upstream time synchronization servers defined in the [chrony configuration](/moduleschrony/configuration.html) are available.
           - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
+        - Modify the NTP servers list defined in the [chrony configuration](/moduleschrony/configuration.html).

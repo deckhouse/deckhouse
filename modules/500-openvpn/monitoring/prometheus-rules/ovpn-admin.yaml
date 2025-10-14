@@ -19,7 +19,7 @@
           ```
 
           Renew or delete the expired certificate.
-          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+          Check [the documentation](/modulesopenvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
     - alert: OpenVPNClientCertificateExpired
       expr: ovpn_client_cert_expire < 7
@@ -34,7 +34,7 @@
           The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
           Renewal of certificate required.
-          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+          Check [the documentation](/modulesopenvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
           View certificate details to display the exact expiration date:
 
@@ -55,7 +55,7 @@
           The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
           Renewal of certificate required.
-          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+          Check [the documentation](/modulesopenvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
           View certificate details to display the exact expiration date:
 
@@ -77,7 +77,7 @@
 
           OpenVPN server certificate renews automatically 1 days before expiration.
           Automatic rotation did not work.
-          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+          Check the module status or perform [manual rotation](/modulesopenvpn/faq.html#how-to-rotate-a-server-certificate).
 
           Check the certificate information and make sure it actually expires:
 
@@ -99,7 +99,7 @@
 
           OpenVPN server certificate renews automatically 1 days before expiration.
           Automatic rotation did not work.
-          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+          Check the module status or perform [manual rotation](/modulesopenvpn/faq.html#how-to-rotate-a-server-certificate).
 
           Check the certificate information and make sure it actually expires.
           ```shell
@@ -120,7 +120,7 @@
 
           Renew the CA certificate if necessary.
           After renewing the certificate, **you will need to reissue all client and server certificates**.
-          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+          Check [the documentation](/modulesopenvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
 
           View certificate details to display the exact expiration date:
 
@@ -142,7 +142,7 @@
 
           Renew the CA certificate if necessary.
           After renewing the certificate, **you will need to reissue all client and server certificates**.
-          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+          Check [the documentation](/modulesopenvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
 
           View certificate details to display the exact expiration date:
 
@@ -162,7 +162,7 @@
         description: |-
           OpenVPN CA certificate renews automatically 1 days before expiration.
           Automatic rotation did not work.
-          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+          Check the module status or perform [manual rotation](/modulesopenvpn/faq.html#how-to-rotate-a-root-certificate-ca).
 
           View certificate details to display the exact expiration date:
 
@@ -185,7 +185,7 @@
         description: |-
           OpenVPN CA certificate renews automatically 1 days before expiration.
           Automatic rotation did not work.
-          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+          Check the module status or perform [manual rotation](/modulesopenvpn/faq.html#how-to-rotate-a-root-certificate-ca).
 
           View certificate details to display the exact expiration date:
 

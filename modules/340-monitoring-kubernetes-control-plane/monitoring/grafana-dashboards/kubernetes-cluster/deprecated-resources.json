@@ -226,7 +226,7 @@
       },
       "id": 11,
       "options": {
-        "content": "1. Enabled audit logs: [deckhouse.io/#how-do-i-configure-additional-audit-policies](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies).\n\n2. Run the following command on each master node:\n```sh\ncat /var/log/kube-audit/audit.log \\\n  | grep '\"k8s.io/deprecated\":\"true\"' \\\n  | jq -rc 'del(.objectRef.namespace) | {user: .user.username, objectRef: .objectRef}' \\\n  | sort | uniq\n```",
+        "content": "1. Enabled audit logs: [deckhouse.io/#how-do-i-configure-additional-audit-policies](/modulescontrol-plane-manager/faq.html#how-do-i-configure-additional-audit-policies).\n\n2. Run the following command on each master node:\n```sh\ncat /var/log/kube-audit/audit.log \\\n  | grep '\"k8s.io/deprecated\":\"true\"' \\\n  | jq -rc 'del(.objectRef.namespace) | {user: .user.username, objectRef: .objectRef}' \\\n  | sort | uniq\n```",
         "mode": "markdown"
       },
       "pluginVersion": "8.5.2",
