@@ -36,6 +36,10 @@ if [ -d /etc/audit/rules.d ]; then
 -a always,exit -F arch=b64 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
 -a always,exit -F arch=b32 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
 EOF
+  bb-sync-file /etc/audit/rules.d/z99-deckhouse.rules - << "EOF"
+-b 65536
+--backlog_wait_time 0
+EOF
 fi
 
 {{- end }}
