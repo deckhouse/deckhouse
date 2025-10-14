@@ -10,7 +10,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/nvidia-container-toolkit.git /src
   - cd /src
-  - rm -rf .git hack test
+  - rm -rf .git hack tests deployments
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
