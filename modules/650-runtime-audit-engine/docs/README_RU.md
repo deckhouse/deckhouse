@@ -38,7 +38,7 @@ description: Поиск угроз безопасности в кластере 
 ## Kubernetes Audit Webhook
 
 Режим Webhook audit mode должен быть настроен на получение событий аудита от `kube-apiserver`.
-Если модуль [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) включен, настройки автоматически применятся при включении модуля `runtime-audit-engine`.
+Если модуль [control-plane-manager](/modules/control-plane-manager/) включен, настройки автоматически применятся при включении модуля `runtime-audit-engine`.
 
 В кластерах Kubernetes, в которых control plane не управляется Deckhouse, webhook необходимо настроить вручную. Для этого:
 
@@ -68,7 +68,7 @@ description: Поиск угроз безопасности в кластере 
 
 {{< alert level="warning" >}}
 Не забудьте настроить audit policy, поскольку Deckhouse по умолчанию собирает только события аудита Kubernetes для системных пространств имен.
-Пример конфигурации можно найти в документации модуля [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/).
+Пример конфигурации можно найти в документации модуля [control-plane-manager](/modules/control-plane-manager/).
 {{< /alert >}}
 
 ## Архитектура
@@ -113,11 +113,6 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 ```shell
 d8 k -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
-
-{{< alert level="info" >}}
-- При использовании [текущей ролевой модели](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#текущая-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `PrivilegedUser` или выше на пространство имён `d8-runtime-audit-engine`.
-- При использовании [экспериментальной ролевой модели](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/#экспериментальная-ролевая-модель) для выполнения данной команды необходимо иметь привилегии роли `d8:manage:security:manager`.
-{{< /alert >}}
 
 Настроить список встроенных правил можно с помощью параметра [settings.builtInRulesList](configuration.html#parameters-builtinruleslist).
 

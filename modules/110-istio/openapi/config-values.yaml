@@ -411,13 +411,13 @@ properties:
         description: |
           Optional `nodeSelector` for istiod. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined automatically.
       tolerations:
         type: array
         description: |
           Optional `tolerations` for istiod. The same as `spec.tolerations` for the Kubernetes pod.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined automatically.
         items:
           type: object
           properties:
@@ -868,13 +868,13 @@ properties:
     description: |
       Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
   tolerations:
     type: array
     description: |
       Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
     items:
       type: object
       properties:

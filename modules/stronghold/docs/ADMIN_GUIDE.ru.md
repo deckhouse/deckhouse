@@ -84,12 +84,12 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 - Токен доступа с полными правами через UI Deckhouse Admin.
 
-  - Создайте [статического пользователя](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user) и [группу](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group) в Deckhouse Platform Certified Security Edition, или настройте аутентификацию через [внешние системы](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Platform Certified Security Edition, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь в веб-интерфейсе и получите токен. Для этого в навигационном меню нажмите [Кнопку авторизации](images/image1.ru.png) и в открывшемся меню нажмите на *Копировать токен*.
 
 - Токен доступа с полными правами через CLI.
-  - Создайте [статического пользователя](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user) и [группу](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group) в Deckhouse Platform Certified Security Edition, или настройте аутентификацию через [внешние системы](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Platform Certified Security Edition, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь с помощью `vault login`, выполнив следующие команды (укажите актуальный адрес в `VAULT_ADDR`):
 

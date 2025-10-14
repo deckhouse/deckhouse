@@ -210,7 +210,7 @@ spec:
 
     {{- with .parameters.clusterLogDestinationName }}
     ---
-    # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
+    # Refer to /modules/460-log-shipper/
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -221,7 +221,7 @@ spec:
     {{- end }}
 
     ---
-    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    # Referer to /modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
     kind: OperationPolicy
     metadata:

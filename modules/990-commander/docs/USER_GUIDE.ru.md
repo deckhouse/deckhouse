@@ -45,15 +45,13 @@ Deckhouse Commander является источником истины для к
 
 ##### Kubernetes
 
-Настройки версии Kubernetes, подсети подов и сервисов. См.
-[ClusterConfiguration](https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration).
 
 ##### Размещение
 
 Особенности размещения кластера в инфраструктуре. Здесь для статического кластера конфигурация может
 остаться пустой.
 
-* [Статические ресурсы](https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration)
+* [Статические ресурсы](/reference/api/cr.html#staticclusterconfiguration)
 
 Для облачных кластеров указываются особенности доступа в API облака, набор узлов,
 которые будут созданы автоматически и отслеживаться (в том числе master-узлы), настройки зон
@@ -97,7 +95,6 @@ host: 172.16.0.3
 
 ##### Реестр контейнеров
 
-Здесь (см. [InitConfiguration](https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration)).
 Этот манифест содержит в реестр контейнеров, откуда будут взять образы Deckhouse Platform Certified Security Edition.
 
 #### Раздел «Kubernetes»

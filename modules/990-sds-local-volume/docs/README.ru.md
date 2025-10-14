@@ -318,5 +318,5 @@ kubectl -n d8-sds-local-volume get pod -owide
 
 ## Системные требования и рекомендации
 
-- Используйте стоковые ядра, поставляемые вместе с [поддерживаемыми дистрибутивами](https://deckhouse.ru/documentation/v1/supported_versions.html#linux).
+- Используйте стоковые ядра, поставляемые вместе с поддерживаемыми дистрибутивами.
 - Не используйте другой SDS (Software defined storage) для предоставления дисков SDS Deckhouse.

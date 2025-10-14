@@ -137,7 +137,7 @@ apiVersions:
                 To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
 
 
-                > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               items:
                 type: string
               uniqueItems: true
@@ -395,7 +395,7 @@ apiVersions:
                   To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
 
 
-                  > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                  > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
                 items:
                   type: string
                 uniqueItems: true
@@ -499,7 +499,7 @@ apiVersions:
             To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
 
 
-            > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           type: array
           description: |
@@ -508,7 +508,7 @@ apiVersions:
             To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
 
 
-            > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
           items:
             type: string
           uniqueItems: true

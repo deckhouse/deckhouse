@@ -10,8 +10,8 @@ url: https://deckhouse.io
 urls:
   ru: https://deckhouse.ru
   en: https://deckhouse.io
-canonical_url_prefix_documentation: /products/kubernetes-platform/documentation/v1
-canonical_url_prefix: /products/kubernetes-platform
+canonical_url_prefix_documentation: /
+canonical_url_prefix: /
 site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
   ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."

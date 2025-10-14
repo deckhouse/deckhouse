@@ -37,7 +37,7 @@ apiVersions:
                 Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
 
 
-                > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
               description: |
                 Параметры виртуальной машины и ее дисков для созданного master-узла.
@@ -171,7 +171,7 @@ apiVersions:
 
                   Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
 
-                  > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                  > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
                 description: |
                   Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
@@ -231,7 +231,7 @@ apiVersions:
             Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
 
 
-            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по NodeGroup](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           description: |
             Набор зон, в которых могут быть созданы узлы.
@@ -239,7 +239,7 @@ apiVersions:
             Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
 
 
-            > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
           description: |
             Содержит настройки для подключения к API Deckhouse Platform Certified Security Edition.

@@ -28,7 +28,7 @@ Docs Builder handles the complete documentation lifecycle:
 
 ### 1. Frontend Mode
 **Purpose:** Public-facing documentation website
-**Example:** [Deckhouse documentation site](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-overview.html)
+**Example:** Deckhouse documentation site
 **Features:**
 - Full module documentation across all channels
 - Public internet accessibility

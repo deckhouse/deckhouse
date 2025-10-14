@@ -235,9 +235,6 @@ common:
   scope:
     en: Scope
     ru: Область (scope)
-  notice-latest:
-    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
-    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
   os_supported_phrase:
     en: The following Linux distributions are currently supported for nodes
     ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
@@ -433,7 +430,7 @@ features:
     ru: Доступно в других коммерческих редакциях.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP.
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP.

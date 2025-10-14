@@ -132,14 +132,14 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      automatically.
   tolerations:
     type: array
     description: >
       The same as the Pods' `spec.tolerations` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `tolerations` will be determined
-      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      automatically.
     items:
       type: object
       properties:

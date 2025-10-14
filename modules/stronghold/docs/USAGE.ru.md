@@ -74,10 +74,10 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 ## Управление доступами
 
-В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/).
-Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](../../secrets-store-integration/).
+В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/modules/user-authn/).
+Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](/modules/secrets-store-integration/).
 
-Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
+Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -124,7 +124,7 @@ spec:
 
 > Так же нужен опыт работы с утилитой `kubectl`
 
-Ниже приведены варианты организации доступа к модулю через [инлет Ingress](../../../documentation/v1/modules/402-ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
+Ниже приведены варианты организации доступа к модулю через [инлет Ingress](/modules/402-ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
 
 ### Способы организации доступа через инлет Ingress
 
@@ -347,7 +347,7 @@ spec:
 
 ### Не резолвится доменное имя dex.mycompany.tld
 Если ваш домен не резолвится через DNS и вы планируете использвать файл hosts, то для работы dex нужно добавить
-адрес балансировщика или IP фронт-ноды в кластерный DNS. В его роли можно использовать [модуль kube-dns](../../../documentation/v1/modules/042-kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
+адрес балансировщика или IP фронт-ноды в кластерный DNS. В его роли можно использовать [модуль kube-dns](/modules/042-kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
 
 Пример получения IP для ингресса `nginx-load-balancer` с типом `LoadBlancer`
 

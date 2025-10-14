@@ -200,7 +200,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
     additionalProperties:
       type: string
   tolerations:
@@ -208,7 +208,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
     items:
       type: object
       properties:

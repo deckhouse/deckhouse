@@ -26,7 +26,7 @@ properties:
     x-examples: ["LTS"]
     default: "LTS"
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will switch to it when such an opportunity appears).
 
       Only `LTS` is allowed.
 
@@ -257,7 +257,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined automatically.
 
       **Caution!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
 
@@ -266,7 +266,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined automatically.
 
       **Caution!**  Deckhouse will stop working if `tolerations` specified are incorrect. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
     items:

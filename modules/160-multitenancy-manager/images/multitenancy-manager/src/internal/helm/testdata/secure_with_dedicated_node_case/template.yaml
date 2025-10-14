@@ -184,7 +184,7 @@ spec:
               description: |
                 The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-                If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                If the parameter is omitted or `false`, it will be determined automatically.
 
                 These tolerations will be added to the pods in the project by default.
               items:
@@ -307,7 +307,7 @@ spec:
 
     {{- with .parameters.clusterLogDestinationName }}
     ---
-    # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
+    # Refer to /modules/460-log-shipper/
     apiVersion: deckhouse.io/v1alpha1
     kind: PodLoggingConfig
     metadata:
@@ -318,7 +318,7 @@ spec:
     {{- end }}
 
     ---
-    # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
+    # Referer to /modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
     kind: OperationPolicy
     metadata:
@@ -340,7 +340,7 @@ spec:
     ---
     # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
     # As example send notifications when a shell is run in a container.
-    # Refer to https://deckhouse.io/documentation/v1/modules/650-runtime-audit-engine/examples.html
+    # Refer to /modules/650-runtime-audit-engine/examples.html
     apiVersion: deckhouse.io/v1alpha1
     kind: FalcoAuditRules
     metadata:
@@ -380,7 +380,7 @@ spec:
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
-    # Refer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
+    # Refer to /modules/015-admission-policy-engine/cr.html#securitypolicy
     apiVersion: deckhouse.io/v1alpha1
     kind: SecurityPolicy
     metadata:

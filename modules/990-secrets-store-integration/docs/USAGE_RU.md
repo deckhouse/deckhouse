@@ -563,7 +563,7 @@ for {
 
 ### Официальный сайт Deckhouse Platform Certified Security Edition
 
-Перейдите на официальный сайт и воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/deckhouse-cli/#как-установить-deckhouse-cli)
+Перейдите на официальный сайт и воспользуйтесь [инструкцией](/cli/d8/#как-установить-deckhouse-cli)
 
 ### Субдомен вашей Deckhouse Platform Certified Security Edition
 

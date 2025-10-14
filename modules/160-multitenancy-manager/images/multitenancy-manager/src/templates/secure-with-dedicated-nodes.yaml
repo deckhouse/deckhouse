@@ -185,7 +185,7 @@ spec:
               description: |
                 The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-                If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                If the parameter is omitted or `false`, it will be determined automatically.
 
                 These tolerations will be added to the pods in the project by default.
               items:

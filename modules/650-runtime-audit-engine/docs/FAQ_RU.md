@@ -7,9 +7,9 @@ title: "FAQ"
 ## Как собирать события?
 
 Поды `runtime-audit-engine` выводят все события в стандартный вывод.
-Далее [агенты log-shipper](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/) могут собирать их и отправлять в хранилище логов.
+Далее агенты log-shipper могут собирать их и отправлять в хранилище логов.
 
-Пример конфигурации [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
+Пример конфигурации [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) для модуля `log-shipper`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -36,7 +36,7 @@ spec:
 ## Как оповещать о критических событиях?
 
 Prometheus автоматически собирает метрики о событиях.
-Чтобы включить оповещения, добавьте в кластер правило [CustomPrometheusRule](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#customprometheusrules).
+Чтобы включить оповещения, добавьте в кластер правило [CustomPrometheusRule](/modules/prometheus/cr.html#customprometheusrules).
 
 Пример настройки такого правила:
 

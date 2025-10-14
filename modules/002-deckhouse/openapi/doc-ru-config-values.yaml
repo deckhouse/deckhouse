@@ -12,7 +12,7 @@ properties:
 
   releaseChannel:
     description: |
-      Желаемый канал обновлений Deckhouse ([переключение](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#что-происходит-при-смене-канала-обновлений) на него произойдет при появлении такой возможности).
+      Желаемый канал обновлений Deckhouse (переключение на него произойдет при появлении такой возможности).
 
       Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
 

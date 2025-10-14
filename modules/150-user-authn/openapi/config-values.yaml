@@ -189,7 +189,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
   tolerations:
     type: array
     items:
@@ -215,7 +215,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined automatically.
   ingressClass:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'

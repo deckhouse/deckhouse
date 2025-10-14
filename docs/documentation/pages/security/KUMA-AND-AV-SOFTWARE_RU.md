@@ -16,7 +16,7 @@ Deckhouse Platform Certified Security Edition поддерживает инте�
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов;
 - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — задаёт параметры сбора логов из кластера.
 
-{% alert level="info" %   }
+{% alert level="info" %}
 На стороне KUMA настройте соответствующие ресурсы для приёма событий.
 {% endalert %}
 
@@ -190,8 +190,6 @@ Deckhouse Platform Certified Security Edition поддерживает инте�
 
 Если на узлах кластера Deckhouse Platform Certified Security Edition используются антивирусные средства (например, Kaspersky Endpoint Security (KESL)),
 вам может понадобиться исключить из анализа служебные директории Deckhouse, чтобы избежать ложных срабатываний.
-
-Перечень служебных директорий Deckhouse ([также доступен в CSV](/products/kubernetes-platform/documentation/v1/deckhouse-directories.csv)):
 
 | Директория | Назначение |
 | ---------- | ---------- |
