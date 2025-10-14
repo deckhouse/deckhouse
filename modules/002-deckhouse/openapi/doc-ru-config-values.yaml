@@ -190,15 +190,8 @@ properties:
     properties:
       edition:
         type: string
-        x-examples: ["CE"]
         description: |
           Редакция Deckhouse Platform Certified Security Edition.
-          - `CE` — Community Edition.
-          - `BE` — Basic Edition.
-          - `EE` — Enterprise Edition.
-          - `SE` — Standard Edition.
-          - `SE-plus` — Standard Edition+.
-        default: "CE"
 
   registry:
     description: |
