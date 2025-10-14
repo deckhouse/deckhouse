@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
 bb-event-on 'bb-sync-file-changed' '_on_audit_rules_changed'
 _on_audit_rules_changed() {
@@ -41,6 +41,7 @@ EOF
 --backlog_wait_time 0
 EOF
 fi
+command -v auditctl &>/dev/null && auditctl --backlog_wait_time 0 -b 65536
 
 {{- end }}
 
