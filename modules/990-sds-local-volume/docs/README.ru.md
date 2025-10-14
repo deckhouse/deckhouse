@@ -13,7 +13,7 @@ description: "Модуль sds-local-volume: общие концепции и п
 
   Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
 
-- Включите модуль [sds-node-configurator](/sds-node-configurator/).
+- Включите модуль [sds-node-configurator](/modules/sds-node-configurator/).
 
   Убедитесь, что модуль `sds-node-configurator` включен **до** включения модуля `sds-local-volume`.
 
