@@ -152,31 +152,6 @@ func removeDirectory(dir string) error {
 	return os.RemoveAll(dir)
 }
 
-func removeDirectoryContent(dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	for _, entry := range entries {
-		p := filepath.Join(dir, entry.Name())
-		if entry.IsDir() {
-			if err := os.RemoveAll(p); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := removeFile(p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func removeOrphanFiles() {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
 	log.Info("phase: remove orphan files from dir", slog.String("dir", srcDir))
