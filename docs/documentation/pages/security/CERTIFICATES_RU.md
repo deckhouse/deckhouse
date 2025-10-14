@@ -153,7 +153,7 @@ Deckhouse Platform Certified Security Edition экспортирует метр�
 для всех компонентов Deckhouse Platform Certified Security Edition или конкретного компонента.
 
 Например, чтобы использовать ClusterIssuer для получения сертификатов для всех компонентов Deckhouse Platform Certified Security Edition,
-укажите его имя [в глобальном параметре `clusterIssuerName`](../../../reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
+укажите его имя [в глобальном параметре `clusterIssuerName`](/reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
 
 ```yaml
   spec:

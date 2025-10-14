@@ -3,7 +3,7 @@ title: "Cloud provider — DVP"
 description: "Интеграция Deckhouse Platform Certified Security Edition с платформой виртуализации. Развертывание кластеров Deckhouse Platform Certified Security Edition поверх Deckhouse Platform Certified Security Edition."
 ---
 
-Взаимодействие с облачными ресурсами провайдера [DVP](https://deckhouse.ru/products/virtualization-platform/) осуществляется с помощью модуля `cloud-provider-dvp`. Он позволяет [модулю управления узлами `node-manager`](/modules/node-manager/) задействовать ресурсы DVP при создании узлов для [заданной группы узлов](/modules/node-manager/cr.html#nodegroup).
+Взаимодействие с облачными ресурсами провайдера DVP осуществляется с помощью модуля `cloud-provider-dvp`. Он позволяет [модулю управления узлами `node-manager`](/modules/node-manager/) задействовать ресурсы DVP при создании узлов для [заданной группы узлов](/modules/node-manager/cr.html#nodegroup).
 
 Основные возможности модуля `cloud-provider-dvp`:
 
