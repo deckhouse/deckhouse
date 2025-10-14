@@ -37,6 +37,6 @@ if [ -d /etc/audit/rules.d ]; then
 -a always,exit -F arch=b32 -F path=/run/containerd/containerd.sock -F perm=rw  -k containerd
 EOF
 fi
-command -v auditctl &>/dev/null && auditctl --backlog_wait_time 0 -b 65536
+
 {{- end }}
 
