@@ -228,7 +228,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -238,9 +238,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -623,7 +623,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -633,9 +633,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -1148,7 +1148,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -1158,9 +1158,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -1550,7 +1550,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -1560,9 +1560,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -1946,7 +1946,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -1956,9 +1956,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -2344,7 +2344,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -2354,9 +2354,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -2736,7 +2736,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -2746,9 +2746,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -3137,7 +3137,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -3147,9 +3147,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
@@ -3619,7 +3619,7 @@ jobs:
       - name: Check stage registry credentials
         id: check_stage_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -3629,9 +3629,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           logout: false
       # </template: login_stage_registry_step>
 
