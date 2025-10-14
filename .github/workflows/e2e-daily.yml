@@ -398,7 +398,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1230,7 +1230,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1570,7 +1570,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1910,7 +1910,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
