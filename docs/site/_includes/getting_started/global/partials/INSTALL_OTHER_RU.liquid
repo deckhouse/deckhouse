@@ -40,7 +40,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
@@ -56,7 +56,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 </div>
 {% else %}
@@ -79,7 +79,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type == "cloud" %} \
   -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
 ```
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
@@ -96,7 +96,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
 {%- if page.platform_type == "cloud" %} -v "%cd%\config.yml:/config.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
 > Если вы устанавливаете Deckhouse Kubernetes Platform в закрытом окружении с доступом к публичному registry Deckhouse через прокси-сервер, укажите в команде запуска контейнера параметры доступа к прокси-серверу. Пример (для DKP SE+):
