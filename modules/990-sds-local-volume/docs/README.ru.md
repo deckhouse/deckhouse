@@ -11,9 +11,9 @@ description: "Модуль sds-local-volume: общие концепции и п
 
 - Настройте LVMVolumeGroup.
 
-  Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](../../sds-node-configurator/stable/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
+  Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
 
-- Включите модуль [sds-node-configurator](../../sds-node-configurator/stable/).
+- Включите модуль [sds-node-configurator](/sds-node-configurator/).
 
   Убедитесь, что модуль `sds-node-configurator` включен **до** включения модуля `sds-local-volume`.
 
@@ -22,7 +22,7 @@ description: "Модуль sds-local-volume: общие концепции и п
   Создание StorageClass для CSI-драйвера `local.csi.storage.deckhouse.io` пользователем **запрещено**.
 
 {% alert level="info" %}
-Для работы с снапшотами требуется подключенный модуль [snapshot-controller](../../snapshot-controller/).
+Для работы с снапшотами требуется подключенный модуль [snapshot-controller](/modules/snapshot-controller/).
 {% endalert %}
 
 Модуль поддерживает два режима работы: LVM (Thick) и LVM Thin.
@@ -112,7 +112,7 @@ kubectl -n d8-sds-local-volume get pod -owide
 
 #### Шаги настройки
 
-1. Получите все ресурсы [BlockDevice](../../sds-node-configurator/stable/cr.html#blockdevice), которые доступны в вашем кластере:
+1. Получите все ресурсы [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice), которые доступны в вашем кластере:
 
    ```shell
    kubectl get bd
@@ -126,7 +126,7 @@ kubectl -n d8-sds-local-volume get pod -owide
    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
    ```
 
-1. Создайте ресурс [LVMVolumeGroup](../../sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-0`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-0`:
 
    ```yaml
    kubectl apply -f - <<EOF
@@ -157,7 +157,7 @@ kubectl -n d8-sds-local-volume get pod -owide
 
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-1. Создайте ресурс [LVMVolumeGroup](../../sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-1`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-1`:
 
    ```yaml
    kubectl apply -f - <<EOF
@@ -188,7 +188,7 @@ kubectl -n d8-sds-local-volume get pod -owide
 
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-1` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-1. Создайте ресурс [LVMVolumeGroup](../../sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-2`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-2`:
 
    ```yaml
    kubectl apply -f - <<EOF

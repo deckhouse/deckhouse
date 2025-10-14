@@ -5,7 +5,7 @@ description: Использование модуля secrets-store-integration.
 
 ## Настройка модуля для работы c Deckhouse Stronghold
 
-Для автоматической настройки работы модуля secrets-store-integration в связке с модулем [Deckhouse Stronghold](/modules/stronghold/stable/) потребуется ранее [включенный](/modules/stronghold/stable/usage.html#включение-модуля) и настроенный Stronghold.
+Для автоматической настройки работы модуля secrets-store-integration в связке с модулем [Deckhouse Stronghold](/modules/stronghold/) потребуется ранее [включенный](/modules/stronghold/usage.html#включение-модуля) и настроенный Stronghold.
 
 Далее достаточно применить следующий ресурс:
 

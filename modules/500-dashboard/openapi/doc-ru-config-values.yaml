@@ -11,7 +11,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress external-auth, работающий на основе модуля Nginx auth_request.
 
           Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
 
@@ -54,7 +54,7 @@ properties:
           * `CertManager` — дашборд работает по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — дашборд работает по HTTPS, используя сертификат из пространства имен `d8-system`;
           * `Disabled` — в данном режиме дашборд не будет работать;
-          * `OnlyInURI` — это режим, при котором дашборд работает через HTTP (с учетом того, что перед ним настроен внешний HTTPS-балансировщик, который завершает HTTPS-соединение). В этом случае все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с использованием схемы HTTPS. Балансировщик должен обеспечивать автоматическое перенаправление с HTTP на HTTPS.
+          * `OnlyInURI` — это режим, при котором дашборд работает через HTTP (с учетом того, что перед ним настроен внешний HTTPS-балансировщик, который завершает HTTPS-соединение). В этом случае все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с использованием схемы HTTPS. Балансировщик должен обеспечивать автоматическое перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:

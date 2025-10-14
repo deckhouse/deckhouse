@@ -156,7 +156,7 @@ weight: 15
    sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```
 
-4. Включите модуль [`console`](https://deckhouse.ru/modules/console/stable/), который позволит управлять компонентами виртуализации через веб-интерфейс Deckhouse (данная возможность доступна только пользователям EE-редакции).
+4. Включите модуль [`console`](/modules/console/), который позволит управлять компонентами виртуализации через веб-интерфейс Deckhouse (данная возможность доступна только пользователям EE-редакции).
 
 5. Включите модуль `virtualization`:
 

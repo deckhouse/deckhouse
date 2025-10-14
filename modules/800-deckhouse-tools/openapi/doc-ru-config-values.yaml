@@ -11,7 +11,7 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для включения внешней аутентификации на основе NGINX Ingress external-auth механизма, использующего Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Параметры для включения внешней аутентификации на основе NGINX Ingress external-auth механизма, использующего Nginx auth_request module.
 
           > Внешняя аутентификация включена по умолчанию, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
         properties:

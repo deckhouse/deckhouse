@@ -299,7 +299,7 @@ spec:
 
                     Regardless of the inlet type, the source IP address gets always verified (the `original_address` field in logs) (the address that the connection was established from) and not the "address of the client" that can be passed in some inlets via headers or using the proxy protocol.
 
-                    This parameter is implemented using the [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html). If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
+                    This parameter is implemented using the map module. If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
 
                     By default, the connection to the controller can be made from any address.
                   items:
@@ -512,7 +512,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server)). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx server directive). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.
@@ -950,7 +950,7 @@ spec:
 
                     Regardless of the inlet type, the source IP address gets always verified (the `original_address` field in logs) (the address that the connection was established from) and not the "address of the client" that can be passed in some inlets via headers or using the proxy protocol.
 
-                    This parameter is implemented using the [map module](http://nginx.org/en/docs/http/ngx_http_map_module.html). If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
+                    This parameter is implemented using the map module. If the source address is not in the list of allowed addresses, nginx closes the connection immediately using HTTP code 444.
 
                     By default, the connection to the controller can be made from any address.
                   items:
@@ -1170,7 +1170,7 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server)). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx server directive). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.

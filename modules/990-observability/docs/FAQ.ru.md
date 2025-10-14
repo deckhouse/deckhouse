@@ -266,7 +266,7 @@ roleRef:
 
 Для предоставления внешнего доступа к метрикам необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
 2. Для авторизации запросов создать сервис аккаунт.
 
    ```yaml
@@ -341,7 +341,7 @@ roleRef:
 
 Для предоставления внешнего доступа для записи метрик необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам, для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess), в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам, для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/configuration.html#parameters-externalmetricsaccess), в настройках модуля observability.
 
 2. Для авторизации запросов, создать сервис аккаунт:
 
@@ -410,7 +410,7 @@ roleRef:
 
 Для предоставления внешнего доступа к метрикам кластера, необходимо выполнить следующие шаги:
 
-1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/stable/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
+1. Разрешить внешний доступ к метрикам. Для этого необходимо включить параметр [spec.settings.externalMetricsAccess](/modules/observability/configuration.html#parameters-externalmetricsaccess) в настройках модуля observability.
 
 2. Для авторизации запросов создать сервис аккаунт.
 

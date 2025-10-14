@@ -17,7 +17,7 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress external-auth mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the NGINX Ingress external-auth mechanism that uses the Nginx auth_request module.
 
           External authentication is enabled automatically if the [user-authn](/modules/user-authn/) module is enabled.
 

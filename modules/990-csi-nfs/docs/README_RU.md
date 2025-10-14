@@ -18,7 +18,7 @@ description: "Модуль csi-nfs: общие концепции и полож�
 {% endalert %}
 
 {% alert level="info" %}
-Для работы с снапшотами требуется подключенный модуль [snapshot-controller](../../snapshot-controller/).
+Для работы с снапшотами требуется подключенный модуль [snapshot-controller](/modules/snapshot-controller/).
 {% endalert %}
 
 {% alert level="info" %}

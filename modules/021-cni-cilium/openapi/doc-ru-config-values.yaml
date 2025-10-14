@@ -6,7 +6,7 @@ properties:
     description: |
       Cilium создает идентификаторы безопасности основываясь на лейблах сущностей k8s, чем больше лейблов участвует в этом процессе - тем более детализированно можно настроить доступы.
       Но в кластерах больших объёмов излишняя детализация может создать большую нагрузку, и при помощи опции labelsRegex можно более явно указать - какие лейблы будут использоваться для политик безопасности,
-      а какими следует пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
+      а какими следует пренебречь.
 
       Каждый лейбл должен задаваться RegExp-выражением в формате YAML quoted string с экранированием спецсимволов.
   createNodeRoutes:
@@ -39,15 +39,13 @@ properties:
     description: |
       Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       Проверка не производится, если доступ производится изнутри кластера или параметр `sourceRanges` пуст/не указан.
-      Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего трафика на основе параметра `sourceRanges`, в таком случае [документация по cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
-      рекомендует отключать проверку `svcSourceRangeCheck`.
+      Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего трафика на основе параметра `sourceRanges`, в таком случае рекомендуется отключать проверку `svcSourceRangeCheck`.
 
       Не включайте, если перед сервисами есть другой балансировщик или какие-либо виды SNAT.
   loadBalancerSourceRangeAllTypes:
     description: |
       Включает проверку source IP для всех типов сервисов, а не только для LoadBalancer.
       К соответствующему NodePort или ClusterIP также будет применен фильтр CIDR.
-      Для получения более подробной информации, пожалуйста, перейдите по [ссылке](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
   policyAuditMode:
     description: |
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.

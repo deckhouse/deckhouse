@@ -9,7 +9,7 @@ d8Edition: ee
 > **Внимание!** Создание `StorageClass` для CSI-драйвера `csi-tatlinunified.yadro.com` пользователем запрещено.
 
 {% alert level="info" %}
-Для работы с снапшотами требуется подключенный модуль [snapshot-controller](../../snapshot-controller/).
+Для работы с снапшотами требуется подключенный модуль [snapshot-controller](/modules/snapshot-controller/).
 {% endalert %}
 
 ## Системные требования и рекомендации

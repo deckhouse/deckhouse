@@ -14,7 +14,7 @@ spec:
                   description: |
                     Email пользователя.
 
-                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/modules/user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                    **Важно!** При использовании совместно с модулем [user-authz](/modules/user-authz/) для выдачи прав конкретному пользователю в качестве имени пользователя в custom resource [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
                     Хэш пароля пользователя в явном виде или закодированный в Base64.
@@ -94,7 +94,7 @@ spec:
                   description: |
                     Email пользователя.
 
-                    **Важно!** При использовании совместно с модулем [user-authz](https://deckhouse.ru/modules/user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
+                    **Важно!** При использовании совместно с модулем [user-authz](/modules/user-authz/), для выдачи прав конкретному пользователю в качестве имени пользователя в CR [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) необходимо указывать `email`.
                 password:
                   description: |
                     Хэш пароля пользователя в явном виде или закодированный в Base64.

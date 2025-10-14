@@ -6,7 +6,7 @@ menuTitle: "Observability"
 moduleStatus: experimental
 ---
 
-Модуль `Observability` расширяет функциональность модулей [Prometheus](/modules/prometheus/) и [Deckhouse Веб Интерфейс](/modules/console/stable/), предоставляя дополнительные возможности для гибкого управления визуализацией метрик и разграничения доступа к ним.
+Модуль `Observability` расширяет функциональность модулей [Prometheus](/modules/prometheus/) и [Deckhouse Веб Интерфейс](/modules/console/), предоставляя дополнительные возможности для гибкого управления визуализацией метрик и разграничения доступа к ним.
 
 ## Возможности
 

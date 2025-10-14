@@ -3,7 +3,7 @@ title: "Модуль cni-cilium"
 description: Модуль cni-cilium Deckhouse обеспечивает работу сети в кластере Kubernetes с помощью Cilium.
 ---
 
-Модуль `cni-cilium` обеспечивает работу сети в кластере. Основан на проекте [Cilium](https://cilium.io/).
+Модуль `cni-cilium` обеспечивает работу сети в кластере. Основан на проекте Cilium.
 
 ## Ограничения
 
@@ -58,7 +58,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 Для использования CiliumClusterwideNetworkPolicies выполните следующие шаги:
 
-1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](../cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
 Опция `policyAuditMode` может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
 
 1. Примените правило политики сетевой безопасности:
