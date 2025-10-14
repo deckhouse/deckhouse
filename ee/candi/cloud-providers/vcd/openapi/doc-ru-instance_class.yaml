@@ -11,7 +11,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы виртуальных машин VCD, используемых `cluster-api-controller-manager` (модулем [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/)).
+            Параметры группы виртуальных машин VCD, используемых `cluster-api-controller-manager` (модулем [cloud-provider-vcd](/modulescloud-provider-vcd/)).
           properties:
             spec:
               properties:

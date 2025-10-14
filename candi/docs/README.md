@@ -8,8 +8,8 @@ CandI subsystem consists of the following components:
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
-  * [**control-plane-manager**](https://deckhouse.io/modules/control-plane-manager/) — `control-plane` maintaining.
-  * [**node-manager**](https://deckhouse.io/modules/node-manager/) — swiss knife to create and update cloud and bare metal nodes.
+  * **control-plane-manager** — `control-plane` maintaining.
+  * **node-manager** — swiss knife to create and update cloud and bare metal nodes.
   * **cloud-provider-** — modules to integrate different cloud with Deckhouse.
 * Installer or **dhctl** — tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 
@@ -62,11 +62,11 @@ Bootstrap process with [dhctl](../../dhctl/docs/README.md) consists of several s
 
 There are three variants of terraforming:
 * `base-infrastructure` — creates basic cluster components: networks, routers, SSH key pairs, etc.
-  * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
+  * dhctl discovers through terraform output:
     * `cloud_discovery_data` — the information for the cloud provider module to work correctly, will be saved in the secret `d8-provider-cluster-configuration` in namespace `kube-system`.
 
 * `master-node` — creates a master node.
-  * dhctl discovers through terraform [output](https://www.terraform.io/docs/configuration/outputs.html):
+  * dhctl discovers through terraform output:
     * `master_ip_address_for_ssh` — external master ip address to connect to the node.
     * `node_internal_ip_address` — internal address to bind control plane components.
     * `kubernetes_data_device_path` — device name for storing Kubernetes data (etcd and manifests).

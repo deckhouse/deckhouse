@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/) module).
+            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](/modulescloud-provider-vcd/) module).
           required:
             - spec
           properties:

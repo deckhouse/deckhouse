@@ -21,7 +21,7 @@ Deckhouse Platform Certified Security Edition позволяет:
 
 Deckhouse Platform Certified Security Edition использует два основных источника событий:
 
-- события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
+- события ядра Linux — с помощью eBPF-драйвера для системы обнаружения угроз Falco;
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом Kubernetes auditing и вебхук-интерфейс.
 
 ## Минимальные требования
@@ -29,7 +29,7 @@ Deckhouse Platform Certified Security Edition использует два осн
 Для получения событий ядра требуется:
 
 - ядро Linux версии 5.8 или выше;
-- поддержка [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html).
+- поддержка eBPF.
   Проверить наличие поддержки можно одним из следующих способов:
   - убедитесь в наличии файла `/sys/kernel/btf/vmlinux`:
 
@@ -127,7 +127,7 @@ Deckhouse Platform Certified Security Edition использует два осн
 ### Добавление пользовательского правила
 
 Чтобы добавить правило, создайте [ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) с необходимыми условиями.
-Используйте [синтаксис условий Falco](https://falco.org/docs/concepts/rules/conditions/).
+Используйте синтаксис условий Falco.
 Агенты Falco автоматически применят созданное правило.
 
 Пример:
@@ -157,7 +157,7 @@ spec:
 Дополнительные примеры правил можно найти на следующих ресурсах:
 
 - официальный репозиторий правил Falco;
-- [раздел с правилами Falco на Artifact Hub](https://artifacthub.io/packages/search?kind=1&sort=relevance&page=1).
+- раздел с правилами Falco на Artifact Hub.
 
 ### Применение стороннего правила
 

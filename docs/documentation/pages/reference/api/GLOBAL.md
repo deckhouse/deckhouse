@@ -12,7 +12,7 @@ The global configuration settings are stored in the ModuleConfig `global`.
 {% alert %}
 The [publicDomainTemplate](#parameters-modules-publicdomaintemplate) parameter specifies a DNS name template used by some Deckhouse modules to create Ingress resources. If this parameter is not specified, Ingress resources will not be created.
 
-If you don't have access to wildcard DNS records, you can use [sslip.io](https://sslip.io) or similar services for testing purposes.
+If you don't have access to wildcard DNS records, you can use sslip.io or similar services for testing purposes.
 
 The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. We do not recommend changing the `clusterDomain` value unless absolutely necessary.
 

@@ -5,21 +5,5 @@
 {{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/[a-zA-Z0-9-]+/(.*)$" "$1/stable/$2" $canonicalURL 1 }}
 
 <title>{{ .Title }} | {{ .Site.Title }}</title>
-<link rel="canonical" href='{{ site.BaseURL }}{{ strings.TrimLeft "/" $canonicalURL }}' />
 <meta name="description" content="{{  $description }}">
 <meta name="title" content="{{ .Title }} | {{ .Site.Title }}">
-
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ strings.TrimSuffix "readme.html" .Permalink  }}">
-<meta property="og:title" content="{{ .Title }} | {{ .Site.Title }}">
-<meta property="og:description" content="{{ $description }}">
-<meta property="og:image" content="{{ site.BaseURL }}favicon-32x32.png" />
-
-<!-- Twitter -->
-<meta name="twitter:card" content="summary">
-<meta name="twitter:url" content="{{ strings.TrimSuffix "readme.html" .Permalink }}">
-<meta name="twitter:title" content="{{ .Title }} | {{ .Site.Title }}">
-<meta name="twitter:description" content="{{ $description }}">
-<meta name="twitter:image" content="{{ site.BaseURL }}favicon-32x32.png" />
-<meta name="twitter:image:alt" content="{{ site.Title }}">

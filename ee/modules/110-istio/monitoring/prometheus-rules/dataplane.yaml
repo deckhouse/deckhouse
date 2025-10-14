@@ -175,7 +175,7 @@
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
+        1. Use the automatic Istio data plane upgrade described in the [guide](/modulesistio/examples.html#upgrading-istio).
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_markup_format: markdown
