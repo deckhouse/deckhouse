@@ -19,6 +19,7 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
     {{- if .Values.registry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
     {{- end }}
