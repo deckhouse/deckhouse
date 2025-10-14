@@ -56,7 +56,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
             type: string
           kind:
             description: |-
@@ -64,7 +64,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
             type: string
           metadata:
             type: object
@@ -2190,7 +2190,7 @@ spec:
                                   One of Always, Never, IfNotPresent.
                                   Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
                                   Cannot be updated.
-                                  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+
                                 type: string
                               imagePullSecret:
                                 description: ImagePullSecret is the name of the Docker
@@ -2353,7 +2353,7 @@ spec:
                   Periodic probe of VirtualMachineInstance liveness.
                   VirtualmachineInstances will be stopped if the probe fails.
                   Cannot be updated.
-                  More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                 properties:
                   exec:
                     description: |-
@@ -2435,7 +2435,7 @@ spec:
                   initialDelaySeconds:
                     description: |-
                       Number of seconds after the VirtualMachineInstance has started before liveness probes are initiated.
-                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                     format: int32
                     type: integer
                   periodSeconds:
@@ -2480,7 +2480,7 @@ spec:
                       A small buffer will be added to the resulting workload exec probe to compensate for delays
                       caused by the qemu guest exec mechanism.
                       Defaults to 1 second. Minimum value is 1.
-                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                     format: int32
                     type: integer
                 type: object
@@ -2512,7 +2512,7 @@ spec:
                       description: |-
                         Network name.
                         Must be a DNS_LABEL and unique within the vm.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                       type: string
                     pod:
                       description: Represents the stock pod network interface.
@@ -2539,7 +2539,7 @@ spec:
                 description: |-
                   NodeSelector is a selector which must be true for the vmi to fit on a node.
                   Selector which must match a node's labels for the vmi to be scheduled on that node.
-                  More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+
                 type: object
               priorityClassName:
                 description: |-
@@ -2552,7 +2552,7 @@ spec:
                   Periodic probe of VirtualMachineInstance service readiness.
                   VirtualmachineInstances will be removed from service endpoints if the probe fails.
                   Cannot be updated.
-                  More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                 properties:
                   exec:
                     description: |-
@@ -2634,7 +2634,7 @@ spec:
                   initialDelaySeconds:
                     description: |-
                       Number of seconds after the VirtualMachineInstance has started before liveness probes are initiated.
-                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                     format: int32
                     type: integer
                   periodSeconds:
@@ -2679,7 +2679,7 @@ spec:
                       A small buffer will be added to the resulting workload exec probe to compensate for delays
                       caused by the qemu guest exec mechanism.
                       Defaults to 1 second. Minimum value is 1.
-                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                     format: int32
                     type: integer
                 type: object
@@ -2955,7 +2955,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -2967,7 +2967,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -3002,7 +3002,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -3014,7 +3014,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -3031,12 +3031,12 @@ spec:
                     configMap:
                       description: |-
                         ConfigMapSource represents a reference to a ConfigMap in the same namespace.
-                        More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
+
                       properties:
                         name:
                           description: |-
                             Name of the referent.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                             TODO: Add other useful fields. apiVersion, kind, uid?
                           type: string
                         optional:
@@ -3066,7 +3066,7 @@ spec:
                             One of Always, Never, IfNotPresent.
                             Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
                             Cannot be updated.
-                            More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+
                           type: string
                         imagePullSecret:
                           description: ImagePullSecret is the name of the Docker registry
@@ -3206,12 +3206,12 @@ spec:
                           description: |-
                             PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace.
                             Directly attached to the vmi via qemu.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                           properties:
                             claimName:
                               description: |-
                                 claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
-                                More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                               type: string
                             readOnly:
                               description: |-
@@ -3256,7 +3256,7 @@ spec:
                         claimName:
                           description: |-
                             claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                           type: string
                         hotpluggable:
                           description: Hotpluggable indicates whether the volume can
@@ -3274,18 +3274,18 @@ spec:
                       description: |-
                         Volume's name.
                         Must be a DNS_LABEL and unique within the vmi.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                       type: string
                     persistentVolumeClaim:
                       description: |-
                         PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace.
                         Directly attached to the vmi via qemu.
-                        More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                       properties:
                         claimName:
                           description: |-
                             claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                           type: string
                         hotpluggable:
                           description: Hotpluggable indicates whether the volume can
@@ -3302,7 +3302,7 @@ spec:
                     secret:
                       description: |-
                         SecretVolumeSource represents a reference to a secret data in the same namespace.
-                        More info: https://kubernetes.io/docs/concepts/configuration/secret/
+
                       properties:
                         optional:
                           description: Specify whether the Secret or it's keys must
@@ -3311,7 +3311,7 @@ spec:
                         secretName:
                           description: |-
                             Name of the secret in the pod's namespace to use.
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+
                           type: string
                         volumeLabel:
                           description: |-
@@ -3324,12 +3324,12 @@ spec:
                       description: |-
                         ServiceAccountVolumeSource represents a reference to a service account.
                         There can only be one volume of this type!
-                        More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+
                       properties:
                         serviceAccountName:
                           description: |-
                             Name of the service account in the pod's namespace to use.
-                            More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+
                           type: string
                       type: object
                     sysprep:
@@ -3343,7 +3343,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -3356,7 +3356,7 @@ spec:
                             name:
                               description: |-
                                 Name of the referent.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                 TODO: Add other useful fields. apiVersion, kind, uid?
                               type: string
                           type: object
@@ -3586,7 +3586,7 @@ spec:
                         accessModes:
                           description: |-
                             AccessModes contains the desired access modes the volume should have.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+
                           items:
                             type: string
                           type: array
@@ -3636,7 +3636,7 @@ spec:
                         accessModes:
                           description: |-
                             AccessModes contains the desired access modes the volume should have.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+
                           items:
                             type: string
                           type: array
@@ -3894,7 +3894,7 @@ spec:
                 description: |-
                   The Quality of Service (QOS) classification assigned to the virtual machine instance based on resource requirements
                   See PodQOSClass type for available QOS classes
-                  More info: https://git.k8s.io/community/contributors/design-proposals/node/resource-qos.md
+
                 type: string
               reason:
                 description: A brief CamelCase message indicating details about why
@@ -3986,7 +3986,7 @@ spec:
                         accessModes:
                           description: |-
                             AccessModes contains the desired access modes the volume should have.
-                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+
                           items:
                             type: string
                           type: array

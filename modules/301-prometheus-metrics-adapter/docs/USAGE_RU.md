@@ -5,7 +5,7 @@ search: autoscaler, HorizontalPodAutoscaler
 
 {% raw %}
 
-Ниже рассматривается только HPA (Horizontal Pod Autoscaling) с [apiVersion: autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling), чья поддержка появилась начиная с Kubernetes v1.12.
+Ниже рассматривается только HPA (Horizontal Pod Autoscaling) с apiVersion: autoscaling/v2, чья поддержка появилась начиная с Kubernetes v1.12.
 
 Для настройки HPA требуется:
 * определить, что именно масштабируется (`.spec.scaleTargetRef`);
@@ -17,9 +17,9 @@ search: autoscaler, HorizontalPodAutoscaler
 * [кастомные](#масштабирование-по-кастомным-метрикам) — с типами (`.spec.metrics[].type`) «Pods» или «Object»;
 * [внешние]( #применение-внешних-метрик-в-hpa) — с типом (`.spec.metrics[].type`) «External».
 
-**Важно!** [По умолчанию](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior) HPA использует разные подходы при масштабировании:
-* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на требование масштабировать **вверх**, это происходит незамедлительно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста: за 15 секунд поды могут удвоиться, но если подов меньше 4, добавятся 4 новых пода.
-* Если метрики [указывают](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) на то, что требуется масштабировать **вниз**, это происходит в течение 5 минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): собираются предложения о новом количестве реплик, в результате чего выбирается самое большое значение. Нет ограничений на количество удаляемых подов за один раз.
+**Важно!** По умолчанию HPA использует разные подходы при масштабировании:
+* Если метрики указывают на требование масштабировать **вверх**, это происходит незамедлительно (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 0). Единственное ограничение — скорость прироста: за 15 секунд поды могут удвоиться, но если подов меньше 4, добавятся 4 новых пода.
+* Если метрики указывают на то, что требуется масштабировать **вниз**, это происходит в течение 5 минут (`spec.behavior.scaleUp.stabilizationWindowSeconds` = 300): собираются предложения о новом количестве реплик, в результате чего выбирается самое большое значение. Нет ограничений на количество удаляемых подов за один раз.
 
 Если имеются проблемы с колебаниями метрик и происходит резкое увеличение ненужных реплик приложения, применяются следующие подходы:
 * Оборачивание метрики агрегирующей функцией (например, `avg_over_time()`), если метрика определена PromQL-запросом. Подробнее см. [пример](#пример-использования-нестабильной-кастомной-метрики).

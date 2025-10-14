@@ -7,7 +7,7 @@ search: security policies, pod security standards, gatekeeper, security enforcem
 ---
 
 Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,
-соответствующих модели [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и дополнительно расширяемых через встроенные механизмы DKP.
+соответствующих модели Kubernetes Pod Security Standards и дополнительно расширяемых через встроенные механизмы DKP.
 
 Для реализации политик безопасности в DKP используется [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
 
@@ -437,10 +437,6 @@ Gatekeeper предоставляет расширенные возможнос�
 можно прочитать [в документации Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/).
 
 ## Проверка подписи образов
-
-{% alert level="warning" %}
-Доступно только в DKP Enterprise edition.
-{% endalert %}
 
 DKP поддерживает проверку подписей образов контейнеров с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
 Проверка позволяет убедиться в целостности и подлинности образов.

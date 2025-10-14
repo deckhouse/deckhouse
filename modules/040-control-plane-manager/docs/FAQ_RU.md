@@ -603,11 +603,6 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
      - RequestReceived
    ```
 
-   С подробной информацией по настройке содержимого файла `audit-policy.yaml` можно ознакомиться:
-   * [В официальной документации Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
-   * [В статье на Habr](https://habr.com/ru/company/flant/blog/468679/);
-   * В коде скрипта-генератора, используемого в GCE.
-
 ### Как исключить встроенные политики аудита?
 
 Установите параметр [apiserver.basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) модуля в `false`.
@@ -1020,10 +1015,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Примеры плагинов:
 
 * **ImageLocality** — отдает предпочтение узлам, на которых уже есть образы контейнеров, которые используются в запускаемом поде. Фаза: `Scoring`.
-* **TaintToleration** — реализует механизм [taints and tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Фазы: `Filtering`, `Scoring`.
+* **TaintToleration** — реализует механизм taints and tolerations. Фазы: `Filtering`, `Scoring`.
 * **NodePorts** — проверяет, есть ли у узла свободные порты, необходимые для запуска пода. Фаза: `Filtering`.
-
-С полным списком плагинов можно ознакомиться в [документации Kubernetes](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
 
 ### Логика работы
 
@@ -1078,13 +1071,6 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 В итоге под запускается на выбранном узле.
 
 #### Документация
-
-* [Общее описание scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/).
-* [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins).
-* [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/).
-* Исходный код scheduler.
-
-<div id='как-изменитьрасширить-логику-работы-планировщика'></div>
 
 ### Как изменить или расширить логику работы планировщика
 

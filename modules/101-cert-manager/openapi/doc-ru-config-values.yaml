@@ -10,37 +10,6 @@ properties:
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если значение не указано или указано `false`, будет использоваться автоматика.
-  cloudflareAPIToken:
-    description: |
-      API Tokens позволяют использовать ключи, привязанные к определенным DNS-зонам.
-
-      Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
-
-      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
-      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена ACME DNS01 Challenge Provider.
-  cloudflareGlobalAPIKey:
-    description: |
-      Cloudflare Global API key для управления DNS-записями.
-
-      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
-      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
-      TXT-записей для домена ACME DNS01 Challenge Provider.
-  cloudflareEmail:
-    description: |
-      Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
-  route53AccessKeyID:
-    description: |
-      Access Key ID пользователя с необходимыми правами.
-
-      Amazon Route53 IAM Policy
-      для управления доменными записями домена.
-  route53SecretAccessKey:
-    description: |
-      Secret Access Key пользователя с необходимыми правами для управления доменными записями домена.
-  digitalOceanCredentials:
-    description: |
-      Access Token от Digital Ocean API, который можно создать в разделе `API`.
   cloudDNSServiceAccount:
     description: |
       Service Account из того же проекта с ролью Администратора DNS.

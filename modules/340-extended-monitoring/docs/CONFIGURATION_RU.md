@@ -45,7 +45,7 @@ Non-namespaced Kubernetes-объекты, то есть объекты вне п
 | load-average-per-core-critical | int           | 10                    |
 
 > **Важно!** Эти лейблы **не** действуют для тех разделов, в которых расположены `imagefs` (по умолчанию — `/var/lib/docker`) и `nodefs` (по умолчанию — `/var/lib/kubelet`).
-Для этих разделов пороги настраиваются полностью автоматически согласно [eviction thresholds в kubelet](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/).
+Для этих разделов пороги настраиваются полностью автоматически согласно eviction thresholds в kubelet.
 Значения по умолчанию указаны в документации Kubernetes, в описании экспортера.
 
 #### Namespaced Kubernetes-объекты
@@ -72,7 +72,7 @@ Non-namespaced Kubernetes-объекты, то есть объекты вне п
 |--------------------|-------------|-----------------------|
 | replicas-not-ready | int (count) | 0                     |
 
-Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение, чем разрешено в `maxUnavailable`. То есть при нуле сработает, если недоступно больше, чем указано в `maxUnavailable`, а при единице сработает, если недоступно больше, чем указано в `maxUnavailable`, плюс 1. Таким образом, у конкретных Deployment, которые находятся в пространстве имён со включенным расширенным мониторингом и которым допустимо быть недоступными, можно установить этот параметр, чтобы не получать ненужные алерты.
+Порог подразумевает количество недоступных реплик **сверх** maxUnavailable. Сработает, если недоступно реплик больше на указанное значение, чем разрешено в `maxUnavailable`. То есть при нуле сработает, если недоступно больше, чем указано в `maxUnavailable`, а при единице сработает, если недоступно больше, чем указано в `maxUnavailable`, плюс 1. Таким образом, у конкретных Deployment, которые находятся в пространстве имён со включенным расширенным мониторингом и которым допустимо быть недоступными, можно установить этот параметр, чтобы не получать ненужные алерты.
 
 ##### StatefulSet
 
@@ -80,7 +80,7 @@ Non-namespaced Kubernetes-объекты, то есть объекты вне п
 |--------------------|-------------|-----------------------|
 | replicas-not-ready | int (count) | 0                     |
 
-Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
+Порог подразумевает количество недоступных реплик **сверх** maxUnavailable (см. комментарии к [Deployment](#deployment)).
 
 ##### DaemonSet
 
@@ -88,7 +88,7 @@ Non-namespaced Kubernetes-объекты, то есть объекты вне п
 |--------------------|-------------|-----------------------|
 | replicas-not-ready | int (count) | 0                     |
 
-Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable) (см. комментарии к [Deployment](#deployment)).
+Порог подразумевает количество недоступных реплик **сверх** maxUnavailable (см. комментарии к [Deployment](#deployment)).
 
 ##### CronJob
 

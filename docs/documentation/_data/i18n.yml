@@ -316,9 +316,6 @@ common:
   alert_edition:
     en: The minimum DKP edition in which the alert is available
     ru: Минимальная редакция DKP, в которой доступен алерт
-  note_ce_notguaranteed:
-    en: Functionality in Community Edition is not guaranteed
-    ru: Работоспособность в Community Edition не гарантируется
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты

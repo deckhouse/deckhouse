@@ -36,9 +36,6 @@ apiVersions:
             description: |
               Address of a container registry with Deckhouse images.
 
-              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
-
-              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
             minLength: 1
             default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:

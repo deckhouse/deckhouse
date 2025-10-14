@@ -376,7 +376,7 @@ report:
 
 ### RbacAssessmentReport
 
-[`RbacAssessmentReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/rbacassessment-report/) — это отчёт, созданный на основе анализа настроек RBAC (Role-Based Access Control) в кластере Kubernetes.
+RbacAssessmentReport — это отчёт, созданный на основе анализа настроек RBAC (Role-Based Access Control) в кластере Kubernetes.
 
 Он содержит результаты проверок, выполненных средствами аудита конфигурации, таких как Trivy.  
 Примеры проверок включают в себя выявление ролей, которые:
@@ -550,9 +550,7 @@ report:
 
 ### ClusterComplianceReport
 
-[`ClusterComplianceReport`](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/clustercompliance-report/) — это кластерный ресурс, содержащий сводный отчёт о соответствии кластера требованиям информационной безопасности.
-
-На текущий момент поддерживается проверка на соответствие [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) — набора рекомендаций по безопасной настройке компонентов Kubernetes.
+ClusterComplianceReport — это кластерный ресурс, содержащий сводный отчёт о соответствии кластера требованиям информационной безопасности.
 
 Структура отчёта:
 

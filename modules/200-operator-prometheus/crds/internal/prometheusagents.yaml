@@ -54,12 +54,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. '
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -110,7 +110,7 @@ spec:
                       valid secret key.
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: 'Name of the referent.
                     type: string
                   optional:
                     description: Specify whether the Secret or its key must be defined
@@ -966,7 +966,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1000,7 +1000,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1019,7 +1019,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1060,7 +1060,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -1078,7 +1078,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1104,7 +1104,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -1122,7 +1122,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1153,7 +1153,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1222,7 +1222,7 @@ spec:
                         for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
                         produce the string literal "$(VAR_NAME)". Escaped references
                         will never be expanded, regardless of whether the variable
-                        exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
+                        exists or not. Cannot be updated.
                       items:
                         type: string
                       type: array
@@ -1371,7 +1371,7 @@ spec:
                             description: The ConfigMap to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap must be
@@ -1387,7 +1387,7 @@ spec:
                             description: The Secret to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret must be defined
@@ -1397,7 +1397,7 @@ spec:
                         type: object
                       type: array
                     image:
-                      description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images
+                      description: 'Container image name.
                         This field is optional to allow higher level config management
                         to default or override container images in workload controllers
                         like Deployments and StatefulSets.'
@@ -1405,7 +1405,7 @@ spec:
                     imagePullPolicy:
                       description: 'Image pull policy. One of Always, Never, IfNotPresent.
                         Defaults to Always if :latest tag is specified, or IfNotPresent
-                        otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
+                        otherwise. Cannot be updated.
                       type: string
                     lifecycle:
                       description: Actions that the management system should take
@@ -1514,7 +1514,7 @@ spec:
                             will eventually terminate within the Pod''s termination
                             grace period (unless delayed by finalizers). Other management
                             of the container blocks until the hook completes or until
-                            the termination grace period is reached. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks'
+                            the termination grace period is reached.
                           properties:
                             exec:
                               description: Exec specifies the action to take.
@@ -1807,7 +1807,7 @@ spec:
                     readinessProbe:
                       description: 'Periodic probe of container service readiness.
                         Container will be removed from service endpoints if the probe
-                        fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        fails. Cannot be updated.
                       properties:
                         exec:
                           description: Exec specifies the action to take.
@@ -1977,7 +1977,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     resources:
                       description: 'Compute Resources required by this container.
-                        Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        Cannot be updated.
                       properties:
                         claims:
                           description: "Claims lists the names of resources, defined
@@ -2009,7 +2009,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            resources allowed.
                           type: object
                         requests:
                           additionalProperties:
@@ -2022,7 +2022,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. Requests
-                            cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            cannot exceed Limits.
                           type: object
                       type: object
                     restartPolicy:
@@ -2224,7 +2224,7 @@ spec:
                         can be used to provide different probe parameters at the beginning
                         of a Pod''s lifecycle, when it might take a long time to load
                         data or warm a cache, than during steady-state operation.
-                        This cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        This cannot be updated.
                       properties:
                         exec:
                           description: Exec specifies the action to take.
@@ -2596,7 +2596,7 @@ spec:
                         in the namespace are matched.
                       type: string
                     namespace:
-                      description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                      description: 'Namespace of the referent.
                       minLength: 1
                       type: string
                     resource:
@@ -2689,7 +2689,7 @@ spec:
                     let you locate the referenced object inside the same namespace.
                   properties:
                     name:
-                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                      description: 'Name of the referent.
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
@@ -2699,7 +2699,7 @@ spec:
                   Pod definition. Those can be used to e.g.  fetch secrets for injection
                   into the Prometheus configuration from external sources. Any errors
                   during the execution of an initContainer will lead to a restart
-                  of the Pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+                  of the Pod.
                   InitContainers described here modify an operator generated init
                   containers if they share the same name and modifications are done
                   via a strategic merge patch. \n The names of init container name
@@ -2720,7 +2720,7 @@ spec:
                         for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
                         produce the string literal "$(VAR_NAME)". Escaped references
                         will never be expanded, regardless of whether the variable
-                        exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
+                        exists or not. Cannot be updated.
                       items:
                         type: string
                       type: array
@@ -2869,7 +2869,7 @@ spec:
                             description: The ConfigMap to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap must be
@@ -2885,7 +2885,7 @@ spec:
                             description: The Secret to select from
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret must be defined
@@ -2895,7 +2895,7 @@ spec:
                         type: object
                       type: array
                     image:
-                      description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images
+                      description: 'Container image name.
                         This field is optional to allow higher level config management
                         to default or override container images in workload controllers
                         like Deployments and StatefulSets.'
@@ -2903,7 +2903,7 @@ spec:
                     imagePullPolicy:
                       description: 'Image pull policy. One of Always, Never, IfNotPresent.
                         Defaults to Always if :latest tag is specified, or IfNotPresent
-                        otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
+                        otherwise. Cannot be updated.
                       type: string
                     lifecycle:
                       description: Actions that the management system should take
@@ -3012,7 +3012,7 @@ spec:
                             will eventually terminate within the Pod''s termination
                             grace period (unless delayed by finalizers). Other management
                             of the container blocks until the hook completes or until
-                            the termination grace period is reached. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks'
+                            the termination grace period is reached.
                           properties:
                             exec:
                               description: Exec specifies the action to take.
@@ -3305,7 +3305,7 @@ spec:
                     readinessProbe:
                       description: 'Periodic probe of container service readiness.
                         Container will be removed from service endpoints if the probe
-                        fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        fails. Cannot be updated.
                       properties:
                         exec:
                           description: Exec specifies the action to take.
@@ -3475,7 +3475,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     resources:
                       description: 'Compute Resources required by this container.
-                        Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        Cannot be updated.
                       properties:
                         claims:
                           description: "Claims lists the names of resources, defined
@@ -3507,7 +3507,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            resources allowed.
                           type: object
                         requests:
                           additionalProperties:
@@ -3520,7 +3520,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. Requests
-                            cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            cannot exceed Limits.
                           type: object
                       type: object
                     restartPolicy:
@@ -3722,7 +3722,7 @@ spec:
                         can be used to provide different probe parameters at the beginning
                         of a Pod''s lifecycle, when it might take a long time to load
                         data or warm a cache, than during steady-state operation.
-                        This cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        This cannot be updated.
                       properties:
                         exec:
                           description: Exec specifies the action to take.
@@ -4326,7 +4326,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4359,7 +4359,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4378,7 +4378,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4444,7 +4444,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -4462,7 +4462,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -4481,7 +4481,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4584,7 +4584,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4613,7 +4613,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4639,7 +4639,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -4657,7 +4657,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -4683,7 +4683,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -4701,7 +4701,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -4732,7 +4732,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -4873,7 +4873,7 @@ spec:
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
                     description: 'Limits describes the maximum amount of compute resources
-                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                      allowed.
                     type: object
                   requests:
                     additionalProperties:
@@ -4886,7 +4886,7 @@ spec:
                       resources required. If Requests is omitted for a container,
                       it defaults to Limits if that is explicitly specified, otherwise
                       to an implementation-defined value. Requests cannot exceed Limits.
-                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+
                     type: object
                 type: object
               routePrefix:
@@ -5319,13 +5319,13 @@ spec:
                   emptyDir:
                     description: 'EmptyDirVolumeSource to be used by the StatefulSet.
                       If specified, it takes precedence over `ephemeral` and `volumeClaimTemplate`.
-                      More info: https://kubernetes.io/docs/concepts/storage/volumes/#emptydir'
+
                     properties:
                       medium:
                         description: 'medium represents what type of storage medium
                           should back this directory. The default is "" which means
                           to use the node''s default medium. Must be an empty string
-                          (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+                          (default) or Memory.
                         type: string
                       sizeLimit:
                         anyOf:
@@ -5337,7 +5337,7 @@ spec:
                           medium EmptyDir would be the minimum value between the SizeLimit
                           specified here and the sum of memory limits of all containers
                           in a pod. The default is nil which means that the limit
-                          is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+                          is undefined.
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                     type: object
@@ -5345,7 +5345,7 @@ spec:
                     description: 'EphemeralVolumeSource to be used by the StatefulSet.
                       This is a beta field in k8s 1.21 and GA in 1.15. For lower versions,
                       starting with k8s 1.19, it requires enabling the GenericEphemeralVolume
-                      feature gate. More info: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes'
+                      feature gate.
                     properties:
                       volumeClaimTemplate:
                         description: "Will be used to create a stand-alone PVC to
@@ -5380,7 +5380,7 @@ spec:
                             properties:
                               accessModes:
                                 description: 'accessModes contains the desired access
-                                  modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                                  modes the volume should have.
                                 items:
                                   type: string
                                 type: array
@@ -5485,7 +5485,7 @@ spec:
                                   feature is enabled users are allowed to specify
                                   resource requirements that are lower than previous
                                   value but must still be higher than capacity recorded
-                                  in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                                  in the status field of the claim.
                                 properties:
                                   claims:
                                     description: "Claims lists the names of resources,
@@ -5519,7 +5519,7 @@ spec:
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
                                     description: 'Limits describes the maximum amount
-                                      of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                      of compute resources allowed.
                                     type: object
                                   requests:
                                     additionalProperties:
@@ -5533,7 +5533,7 @@ spec:
                                       omitted for a container, it defaults to Limits
                                       if that is explicitly specified, otherwise to
                                       an implementation-defined value. Requests cannot
-                                      exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                      exceed Limits.
                                     type: object
                                 type: object
                               selector:
@@ -5587,7 +5587,7 @@ spec:
                                 x-kubernetes-map-type: atomic
                               storageClassName:
                                 description: 'storageClassName is the name of the
-                                  StorageClass required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                                  StorageClass required by the claim.
                                 type: string
                               volumeMode:
                                 description: volumeMode defines what type of volume
@@ -5613,13 +5613,13 @@ spec:
                         description: 'APIVersion defines the versioned schema of this
                           representation of an object. Servers should convert recognized
                           schemas to the latest internal value, and may reject unrecognized
-                          values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                          values. '
                         type: string
                       kind:
                         description: 'Kind is a string value representing the REST
                           resource this object represents. Servers may infer this
                           from the endpoint the client submits requests to. Cannot
-                          be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          be updated. In CamelCase. '
                         type: string
                       metadata:
                         description: EmbeddedMetadata contains metadata relevant to
@@ -5653,11 +5653,11 @@ spec:
                         type: object
                       spec:
                         description: 'Defines the desired characteristics of a volume
-                          requested by a pod author. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                          requested by a pod author.
                         properties:
                           accessModes:
                             description: 'accessModes contains the desired access
-                              modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                              modes the volume should have.
                             items:
                               type: string
                             type: array
@@ -5753,7 +5753,7 @@ spec:
                               feature is enabled users are allowed to specify resource
                               requirements that are lower than previous value but
                               must still be higher than capacity recorded in the status
-                              field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                              field of the claim.
                             properties:
                               claims:
                                 description: "Claims lists the names of resources,
@@ -5787,7 +5787,7 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 description: 'Limits describes the maximum amount
-                                  of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                  of compute resources allowed.
                                 type: object
                               requests:
                                 additionalProperties:
@@ -5853,7 +5853,7 @@ spec:
                             x-kubernetes-map-type: atomic
                           storageClassName:
                             description: 'storageClassName is the name of the StorageClass
-                              required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                              required by the claim.
                             type: string
                           volumeMode:
                             description: volumeMode defines what type of volume is
@@ -5870,7 +5870,7 @@ spec:
                         properties:
                           accessModes:
                             description: 'accessModes contains the actual access modes
-                              the volume backing the PVC has. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                              the volume backing the PVC has.
                             items:
                               type: string
                             type: array
@@ -6286,7 +6286,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -6304,7 +6304,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -6330,7 +6330,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -6348,7 +6348,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -6379,7 +6379,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -6457,14 +6457,14 @@ spec:
                     awsElasticBlockStore:
                       description: 'awsElasticBlockStore represents an AWS Disk resource
                         that is attached to a kubelet''s host machine and then exposed
-                        to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+                        to the pod.
                       properties:
                         fsType:
                           description: 'fsType is the filesystem type of the volume
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+                            if unspecified.
                           type: string
                         partition:
                           description: 'partition is the partition in the volume that
@@ -6476,11 +6476,11 @@ spec:
                           type: integer
                         readOnly:
                           description: 'readOnly value true will force the readOnly
-                            setting in VolumeMounts. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+                            setting in VolumeMounts.
                           type: boolean
                         volumeID:
                           description: 'volumeID is unique ID of the persistent disk
-                            resource in AWS (Amazon EBS volume). More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+                            resource in AWS (Amazon EBS volume).
                           type: string
                       required:
                       - volumeID
@@ -6570,7 +6570,7 @@ spec:
                             More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6601,7 +6601,7 @@ spec:
                             object containing parameters used to connect to OpenStack.'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6668,7 +6668,7 @@ spec:
                             type: object
                           type: array
                         name:
-                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          description: 'Name of the referent.
                           type: string
                         optional:
                           description: optional specify whether the ConfigMap or its
@@ -6702,7 +6702,7 @@ spec:
                             are passed.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -6811,13 +6811,13 @@ spec:
                       type: object
                     emptyDir:
                       description: 'emptyDir represents a temporary directory that
-                        shares a pod''s lifetime. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+                        shares a pod''s lifetime.
                       properties:
                         medium:
                           description: 'medium represents what type of storage medium
                             should back this directory. The default is "" which means
                             to use the node''s default medium. Must be an empty string
-                            (default) or Memory. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+                            (default) or Memory.
                           type: string
                         sizeLimit:
                           anyOf:
@@ -6829,7 +6829,7 @@ spec:
                             medium EmptyDir would be the minimum value between the
                             SizeLimit specified here and the sum of memory limits
                             of all containers in a pod. The default is nil which means
-                            that the limit is undefined. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+                            that the limit is undefined.
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                       type: object
@@ -6886,7 +6886,7 @@ spec:
                               properties:
                                 accessModes:
                                   description: 'accessModes contains the desired access
-                                    modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                                    modes the volume should have.
                                   items:
                                     type: string
                                   type: array
@@ -6994,7 +6994,7 @@ spec:
                                     feature is enabled users are allowed to specify
                                     resource requirements that are lower than previous
                                     value but must still be higher than capacity recorded
-                                    in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                                    in the status field of the claim.
                                   properties:
                                     claims:
                                       description: "Claims lists the names of resources,
@@ -7029,7 +7029,7 @@ spec:
                                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                         x-kubernetes-int-or-string: true
                                       description: 'Limits describes the maximum amount
-                                        of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                        of compute resources allowed.
                                       type: object
                                     requests:
                                       additionalProperties:
@@ -7043,7 +7043,7 @@ spec:
                                         is omitted for a container, it defaults to
                                         Limits if that is explicitly specified, otherwise
                                         to an implementation-defined value. Requests
-                                        cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                        cannot exceed Limits.
                                       type: object
                                   type: object
                                 selector:
@@ -7183,7 +7183,7 @@ spec:
                             scripts.'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7208,14 +7208,14 @@ spec:
                     gcePersistentDisk:
                       description: 'gcePersistentDisk represents a GCE Disk resource
                         that is attached to a kubelet''s host machine and then exposed
-                        to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+                        to the pod.
                       properties:
                         fsType:
                           description: 'fsType is filesystem type of the volume that
                             you want to mount. Tip: Ensure that the filesystem type
                             is supported by the host operating system. Examples: "ext4",
                             "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+
                           type: string
                         partition:
                           description: 'partition is the partition in the volume that
@@ -7223,16 +7223,16 @@ spec:
                             by volume name. Examples: For volume /dev/sda1, you specify
                             the partition as "1". Similarly, the volume partition
                             for /dev/sda is "0" (or you can leave the property empty).
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+
                           format: int32
                           type: integer
                         pdName:
                           description: 'pdName is unique name of the PD resource in
-                            GCE. Used to identify the disk in GCE. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+                            GCE. Used to identify the disk in GCE.
                           type: string
                         readOnly:
                           description: 'readOnly here will force the ReadOnly setting
-                            in VolumeMounts. Defaults to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+                            in VolumeMounts. Defaults to false.
                           type: boolean
                       required:
                       - pdName
@@ -7287,12 +7287,12 @@ spec:
                         on the host machine that is directly exposed to the container.
                         This is generally used for system agents or other privileged
                         things that are allowed to see the host machine. Most containers
-                        will NOT need this. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
+                        will NOT need this.
                       properties:
                         path:
                           description: 'path of the directory on the host. If the
                             path is a symlink, it will follow the link to the real
-                            path. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
+                            path.
                           type: string
                         type:
                           description: 'type for HostPath Volume Defaults to "" More
@@ -7319,7 +7319,7 @@ spec:
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi'
+                            if unspecified.
                           type: string
                         initiatorName:
                           description: initiatorName is the custom iSCSI Initiator
@@ -7354,7 +7354,7 @@ spec:
                             and initiator authentication
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7370,11 +7370,11 @@ spec:
                       type: object
                     name:
                       description: 'name of the volume. Must be a DNS_LABEL and unique
-                        within the pod. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        within the pod.
                       type: string
                     nfs:
                       description: 'nfs represents an NFS mount on the host that shares
-                        a pod''s lifetime More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+                        a pod''s lifetime
                       properties:
                         path:
                           description: 'path that is exported by the NFS server. More
@@ -7383,11 +7383,11 @@ spec:
                         readOnly:
                           description: 'readOnly here will force the NFS export to
                             be mounted with read-only permissions. Defaults to false.
-                            More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+
                           type: boolean
                         server:
                           description: 'server is the hostname or IP address of the
-                            NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+                            NFS server.
                           type: string
                       required:
                       - path
@@ -7396,7 +7396,7 @@ spec:
                     persistentVolumeClaim:
                       description: 'persistentVolumeClaimVolumeSource represents a
                         reference to a PersistentVolumeClaim in the same namespace.
-                        More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+
                       properties:
                         claimName:
                           description: 'claimName is the name of a PersistentVolumeClaim
@@ -7750,7 +7750,7 @@ spec:
                             that you want to mount. Tip: Ensure that the filesystem
                             type is supported by the host operating system. Examples:
                             "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4"
-                            if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd'
+                            if unspecified.
                           type: string
                         image:
                           description: 'image is the rados image name. More info:
@@ -7780,7 +7780,7 @@ spec:
                             nil. More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it'
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7819,7 +7819,7 @@ spec:
                             Login operation will fail.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -7852,7 +7852,7 @@ spec:
                       type: object
                     secret:
                       description: 'secret represents a secret that should populate
-                        this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+                        this volume.
                       properties:
                         defaultMode:
                           description: 'defaultMode is Optional: mode bits used to
@@ -7911,7 +7911,7 @@ spec:
                           type: boolean
                         secretName:
                           description: 'secretName is the name of the secret in the
-                            pod''s namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+                            pod''s namespace to use.
                           type: string
                       type: object
                     storageos:
@@ -7934,7 +7934,7 @@ spec:
                             values will be attempted.
                           properties:
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
@@ -8062,7 +8062,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -8080,7 +8080,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -8111,7 +8111,7 @@ spec:
                                 description: The key to select.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the ConfigMap or its
@@ -8129,7 +8129,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -8160,7 +8160,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must

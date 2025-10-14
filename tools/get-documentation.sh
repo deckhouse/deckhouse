@@ -29,8 +29,9 @@ fi
 # ссылки на github.com, kubernetes.io, helm.sh и другие внешние ресурсы
 # Cloud
 # aquasecurity
+# cisecurity
 # VictoriaMetrics
-# enterprise
+# enterprise  / community
 # edition
 # slack
 # openapispec

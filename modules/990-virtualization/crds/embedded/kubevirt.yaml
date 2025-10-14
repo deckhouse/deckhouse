@@ -56,7 +56,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
             type: string
           kind:
             description: |-
@@ -64,7 +64,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
             type: string
           metadata:
             type: object
@@ -557,7 +557,7 @@ spec:
                               description: |-
                                 NodeSelector is a selector which must be true for the vmi to fit on a node.
                                 Selector which must match a node's labels for the vmi to be scheduled on that node.
-                                More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+
                               type: object
                           required:
                           - nodeSelector
@@ -699,7 +699,7 @@ spec:
                                     x-kubernetes-int-or-string: true
                                   description: |-
                                     Limits describes the maximum amount of compute resources allowed.
-                                    More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                   type: object
                                 requests:
                                   additionalProperties:
@@ -712,7 +712,7 @@ spec:
                                     Requests describes the minimum amount of compute resources required.
                                     If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                     otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                    More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                   type: object
                               type: object
                             domainAttachmentType:
@@ -936,7 +936,7 @@ spec:
                                 x-kubernetes-int-or-string: true
                               description: |-
                                 Limits describes the maximum amount of compute resources allowed.
-                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                               type: object
                             requests:
                               additionalProperties:
@@ -949,7 +949,7 @@ spec:
                                 Requests describes the minimum amount of compute resources required.
                                 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                 otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                               type: object
                           type: object
                         type:
@@ -1115,7 +1115,7 @@ spec:
                     name:
                       description: |-
                         Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                         TODO: Add other useful fields. apiVersion, kind, uid?
                       type: string
                   type: object

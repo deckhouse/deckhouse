@@ -140,7 +140,7 @@ For example, use a docker image from the Flant docker registry:
 ### Create additional resources
 
 During a bootstrap process, ready to work deckhouse controller will be installed in the cluster.
-It is a cluster operator which extends the cluster's Kubernetes API with [Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+It is a cluster operator which extends the cluster's Kubernetes API with Custom Resource Definitions.
 
 It is possible to deploy Kubernetes resources after successful cluster creation by providing a path to the file
 with manifests specifying the `--resources` flag for `bootstrap` command.

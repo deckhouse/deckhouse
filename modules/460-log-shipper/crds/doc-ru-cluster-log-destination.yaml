@@ -76,19 +76,19 @@ spec:
                     auth:
                       properties:
                         strategy:
-                          description: Тип аутентификации — `Basic` или `AWS`.
+                          description: Тип аутентификации — `Basic`.
                         password:
                           description: Закодированный в Base64 пароль для Basic-аутентификации.
                         awsAccessKey:
-                          description: Закодированный в Base64 AWS `ACCESS_KEY`.
+                          description: Закодированный в Base64 `ACCESS_KEY`.
                         awsSecretKey:
-                          description: Закодированный в Base64 AWS `SECRET_KEY`.
+                          description: Закодированный в Base64 `SECRET_KEY`.
                         awsAssumeRole:
                           description: ARN роли в IAM.
                         user:
                           description: Имя пользователя, используемое при Basic-аутентификации.
                         awsRegion:
-                          description: Регион AWS для аутентификации.
+                          description: Регион для аутентификации.
                     index:
                       description: Имя индекса, куда будут сохранены данные. Это поле можно задать динамически.
                     pipeline:

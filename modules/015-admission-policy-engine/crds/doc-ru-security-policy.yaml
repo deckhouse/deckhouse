@@ -247,7 +247,6 @@ spec:
                           description: |
                             Указывает селектор меток для фильтрации пространств имен.
 
-                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:
                             matchLabels:
                               description: Список лейблов, которые должно иметь пространство имен.

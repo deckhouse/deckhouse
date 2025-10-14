@@ -588,8 +588,6 @@ spec:
 
 ## Устройство мультикластера из двух кластеров с помощью ресурса IstioMulticluster
 
-{% alert level="warning" %}Доступно только в редакции Enterprise Edition.{% endalert %}
-
 Cluster A:
 
 ```yaml

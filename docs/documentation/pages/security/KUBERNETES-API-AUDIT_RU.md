@@ -4,11 +4,11 @@ permalink: security/events/kubernetes-api-audit.html
 lang: ru
 ---
 
-Процедура аудита ([Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/))
+Процедура аудита (Kubernetes auditing)
 позволяет отслеживать обращения к API-серверу и анализировать события, происходящие в кластере.
 Аудит может быть полезен для отладки неожиданных сценариев поведения, а также для соблюдения требований безопасности.
 
-Kubernetes поддерживает настройку аудита через механизм [Audit policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy),
+Kubernetes поддерживает настройку аудита через механизм Audit policy,
 который позволяет задавать правила логирования интересующих операций.
 Результаты аудита по умолчанию записываются в лог-файл `/var/log/kube-audit/audit.log`.
 
@@ -81,7 +81,7 @@ spec:
 
    Источники с подробной информацией по настройке возможного содержимого файла `audit-policy.yaml`:
 
-   - [официальная документация Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy);
+   - официальная документация Kubernetes;
    - [статья из блога компании «Флант» на Habr](https://habr.com/ru/companies/flant/articles/468679/);
    - код скрипта-генератора, используемого в GCE.
 

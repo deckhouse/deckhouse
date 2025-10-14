@@ -48,12 +48,12 @@ spec:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. '
               type: string
             kind:
               description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. '
               type: string
             metadata:
               type: object
@@ -101,7 +101,7 @@ spec:
                   properties:
                     accessModes:
                       description: 'accessModes contains the desired access modes the
-                      volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                      volume should have.
                       items:
                         type: string
                       type: array
@@ -190,7 +190,7 @@ spec:
                       should have. If RecoverVolumeExpansionFailure feature is enabled
                       users are allowed to specify resource requirements that are
                       lower than previous value but must still be higher than capacity
-                      recorded in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                      recorded in the status field of the claim.
                       properties:
                         claims:
                           description: "Claims lists the names of resources, defined
@@ -222,7 +222,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          resources allowed.
                           type: object
                         requests:
                           additionalProperties:
@@ -235,7 +235,7 @@ spec:
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
                           to an implementation-defined value. Requests cannot exceed
-                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          Limits.
                           type: object
                       type: object
                     selector:
@@ -286,7 +286,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     storageClassName:
                       description: 'storageClassName is the name of the StorageClass
-                      required by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                      required by the claim.
                       type: string
                     volumeMode:
                       description: volumeMode defines what type of volume is required
@@ -505,7 +505,7 @@ spec:
                   properties:
                     accessModes:
                       description: 'AccessModes contains the desired access modes the
-                      volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                      volume should have.
                       items:
                         type: string
                       type: array
@@ -585,7 +585,7 @@ spec:
                       type: object
                     resources:
                       description: 'Resources represents the minimum resources the volume
-                      should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                      should have.
                       properties:
                         claims:
                           description: "Claims lists the names of resources, defined
@@ -617,7 +617,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          resources allowed.
                           type: object
                         requests:
                           additionalProperties:
@@ -630,7 +630,7 @@ spec:
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
                           to an implementation-defined value. Requests cannot exceed
-                          Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          Limits.
                           type: object
                       type: object
                     selector:
@@ -680,7 +680,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     storageClassName:
                       description: 'Name of the StorageClass required by the claim.
-                      More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+
                       type: string
                     volumeMode:
                       description: volumeMode defines what type of volume is required

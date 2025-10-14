@@ -64,7 +64,6 @@ spec:
 
 На основе концепции снапшотов также можно выполнить клонирование Persistent Volume, а именно, существующих PersistentVolumeClaim (PVC).
 Однако спецификация CSI не позволяет производить клонирование томов в пространстве имен и StorageClass'ах, отличных от оригинального PVC.
-(обратитесь [к документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-pvc-datasource/), чтобы узнать больше об ограничениях).
 
 Чтобы клонировать том, создайте новый PVC и укажите исходный PVC в `dataSource`:
 

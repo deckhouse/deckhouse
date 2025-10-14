@@ -46,10 +46,10 @@ spec:
             - spec
           properties:
             apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. '
               type: string
             kind:
-              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. '
               type: string
             metadata:
               type: object
@@ -114,7 +114,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             host:
                               type: string
@@ -137,7 +137,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             clientSecretSecretRef:
                               description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
@@ -149,7 +149,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             clientTokenSecretRef:
                               description: A reference to a specific 'key' within a Secret resource. In some instances, `key` is a required field.
@@ -161,7 +161,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             serviceConsumerDomain:
                               type: string
@@ -185,7 +185,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             environment:
                               description: name of the Azure environment (default AzurePublicCloud)
@@ -238,7 +238,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                         cloudflare:
                           description: Use the Cloudflare API to manage DNS01 challenge records.
@@ -254,7 +254,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             apiTokenSecretRef:
                               description: API token used to authenticate with Cloudflare.
@@ -266,7 +266,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             email:
                               description: Email of the account, only required when using API key based authentication.
@@ -293,7 +293,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                         rfc2136:
                           description: Use RFC2136 ("Dynamic Updates in the Domain Name System") (https://datatracker.ietf.org/doc/rfc2136/) to manage DNS01 challenge records.
@@ -320,7 +320,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                         route53:
                           description: Use the AWS Route53 API to manage DNS01 challenge records.
@@ -341,7 +341,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                             hostedZoneID:
                               description: If set, the provider will manage only this zone in Route53 and will not do an lookup using the route53:ListHostedZonesByName api call.
@@ -362,7 +362,7 @@ spec:
                                   description: The key of the entry in the Secret resource's `data` field to be used. Some instances of this field may be defaulted, in others it may be required.
                                   type: string
                                 name:
-                                  description: 'Name of the resource being referred to. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the resource being referred to.
                                   type: string
                         webhook:
                           description: Configure an external webhook based DNS01 challenge solver to manage DNS01 challenge records.
@@ -974,11 +974,11 @@ spec:
                                         type: object
                                         properties:
                                           name:
-                                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                            description: 'Name of the referent.  TODO: Add other useful fields. apiVersion, kind, uid?'
                                             type: string
                                         x-kubernetes-map-type: atomic
                                     nodeSelector:
-                                      description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                                      description: 'NodeSelector is a selector which must be true for the pod to fit on a node. Selector which must match a node''s labels for the pod to be scheduled on that node.
                                       type: object
                                       additionalProperties:
                                         type: string

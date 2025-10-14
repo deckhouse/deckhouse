@@ -4,13 +4,13 @@ search: autoscaler, HorizontalPodAutoscaler
 description: "Обеспечение работы горизонтального и вертикального масштабирования по любым метрикам в кластере Deckhouse Kubernetes Platform."
 ---
 
-Позволяет работать [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)- и [VPA](../vertical-pod-autoscaler/)-автоскейлерам по «любым» метрикам.
+Позволяет работать HPA- и [VPA](../vertical-pod-autoscaler/)-автоскейлерам по «любым» метрикам.
 
 Устанавливает в кластер имплементацию Kubernetes resource metrics API, custom metrics API и external metrics API для получения метрик из Prometheus.
 
 Это позволяет:
 - `kubectl top` брать метрики из Prometheus, через адаптер;
-- использовать custom resource версии [autoscaling/v2](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmetricsource-v2-autoscaling) для масштабирования приложений (HPA);
+- использовать custom resource версии autoscaling/v2 для масштабирования приложений (HPA);
 - получать информацию из Prometheus средствами API Kubernetes для других модулей (Vertical Pod Autoscaler, ...).
 
 Модуль позволяет производить масштабирование по следующим параметрам:

@@ -193,8 +193,6 @@ spec:
            name: rbac-proxy-test
    ```
 
-   > Более подробную информацию по атрибутам можно найти [в документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authorization).
-
 3. Создайте `Service` и `Deployment` для вашего приложения, где `kube-rbac-proxy` займет позицию sidecar-контейнера:
 
    ```yaml

@@ -22,7 +22,7 @@ DKP позволяет:
 DKP использует два основных источника событий:
 
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
-- события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
+- события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом Kubernetes auditing и вебхук-интерфейс.
 
 Подробности об архитектуре реализации аудита можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
 
@@ -67,7 +67,7 @@ DKP использует два основных источника событи
    ```
 
 1. (**Опционально**) Если control plane в кластере не управляется DKP при помощи [`control-plane-manager`](/modules/control-plane-manager/),
-   настройте [вебхук аудита API Kubernetes](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) вручную.
+   настройте вебхук аудита API Kubernetes вручную.
 
 Все доступные параметры аудита безопасности доступны [в разделе документации модуля `runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html).
 

@@ -28,12 +28,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. '
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -228,7 +228,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -592,7 +592,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -612,7 +612,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -815,7 +815,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1648,7 +1648,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -1673,7 +1673,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2064,7 +2064,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2091,7 +2091,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -2166,7 +2166,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -3014,7 +3014,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -3391,7 +3391,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -4473,7 +4473,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key
@@ -4503,7 +4503,7 @@ spec:
                                   be a valid secret key.
                                 type: string
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                description: 'Name of the referent.
                                 type: string
                               optional:
                                 description: Specify whether the Secret or its key

@@ -168,7 +168,6 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 ```
 
 {% endraw %}
-Подробнее о том, как работает аутентификация по сертификатам, можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#x509-client-certs).
 
 ## Как сконфигурировать балансировщик нагрузки для проверки доступности IngressNginxController?
 

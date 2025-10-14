@@ -18,7 +18,7 @@ spec:
           type: object
           description: |
             Resource quota for the project.
-            Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+
           required:
             - requests
           properties:
@@ -133,7 +133,7 @@ spec:
         allowedUIDs:
           description: |
             Range of IDs allowed for users in the container.
-            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+
           required:
             - min
             - max
@@ -145,7 +145,7 @@ spec:
         allowedGIDs:
           description: |
             Range of IDs allowed for groups in the container.
-            Refer to https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
+
           required:
             - min
             - max
@@ -237,7 +237,7 @@ spec:
 
     ---
     # Max requests and limits for resource and storage consumption for all pods in a namespace.
-    # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
+    #
     apiVersion: v1
     kind: ResourceQuota
     metadata:
@@ -259,7 +259,7 @@ spec:
     {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
-    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    #
     kind: NetworkPolicy
     apiVersion: networking.k8s.io/v1
     metadata:

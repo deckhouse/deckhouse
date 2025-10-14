@@ -36,7 +36,7 @@ title: "Модуль cert-manager: FAQ"
    * `letsencrypt-staging`
 
 Таким образом, дополнительный `ClusterIssuer` может потребоваться в случаях издания сертификатов:
-1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном). Поддерживаемые УЦ доступны [в документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/)
+1. В удостоверяющем центре (УЦ), отличном от Let's Encrypt (в т.ч. в приватном).
 2. Через Let's Encrypt с помощью метода `DNS-01` через сторонний провайдер.
 
 ### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiCorp Vault для выпуска сертификатов?

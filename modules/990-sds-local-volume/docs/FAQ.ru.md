@@ -336,8 +336,6 @@ echo "Data migration completed"
 
 ## Как создавать снимки томов?
 
-Подробную информацию о снимках можно найти [здесь](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
-
 1. Включение snapshot-controller
     Сначала необходимо включить snapshot-controller:
 

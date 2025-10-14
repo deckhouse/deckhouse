@@ -5,7 +5,7 @@ title: "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
 ## Mutation Custom Resources
 
 {% alert level="info" %}
-Для мутационных хуков используется настройка `reinvocationPolicy: IfNeeded` в MutatingWebhookConfiguration. Подробнее [в документации Kubernetes.](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#reinvocation-policy)
+Для мутационных хуков используется настройка `reinvocationPolicy: IfNeeded` в MutatingWebhookConfiguration.
 {% endalert %}  
 
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)

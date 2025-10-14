@@ -69,22 +69,6 @@ spec:
                     ```
 
 
-                    Example of using the proxy parameters of ClusterConfiguration resource:
-
-                    ```shell
-                    bb-set-proxy
-                    curl -I https://google.com
-                    bb-unset-proxy
-                    ```
-
-                    ```shell
-                    test-function-with-proxy() {
-                      bb-set-proxy
-                      trap bb-unset-proxy RETURN
-                      curl -I https://google.com
-                    }
-                    test-function-with-proxy
-                    ```
                 weight:
                   type: integer
                   default: 100

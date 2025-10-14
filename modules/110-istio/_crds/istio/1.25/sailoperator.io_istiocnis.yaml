@@ -47,7 +47,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
             type: string
           kind:
             description: |-
@@ -55,7 +55,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
             type: string
           metadata:
             type: object
@@ -1129,7 +1129,7 @@ spec:
                           Specifies the image pull policy. one of Always, Never, IfNotPresent.
                           Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 
-                          More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+
                         enum:
                         - Always
                         - Never
@@ -1254,7 +1254,7 @@ spec:
                               x-kubernetes-int-or-string: true
                             description: |-
                               Limits describes the maximum amount of compute resources allowed.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                           requests:
                             additionalProperties:
@@ -1267,7 +1267,7 @@ spec:
                               Requests describes the minimum amount of compute resources required.
                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                         type: object
                       rollingMaxUnavailable:
@@ -1366,7 +1366,7 @@ spec:
                               x-kubernetes-int-or-string: true
                             description: |-
                               Limits describes the maximum amount of compute resources allowed.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                           requests:
                             additionalProperties:
@@ -1379,7 +1379,7 @@ spec:
                               Requests describes the minimum amount of compute resources required.
                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                         type: object
                       hub:
@@ -1390,7 +1390,7 @@ spec:
                           Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
                           Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 
-                          More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+
                         enum:
                         - Always
                         - Never

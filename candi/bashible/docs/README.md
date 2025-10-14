@@ -25,13 +25,6 @@ Bashible consists of small bash scripts, that are called `steps`.
     * ubuntu-lts
     * centos
     * debian
-  * cloud-provider - supported cloud providers:
-    * aws
-    * azure
-    * gcp  
-    * openstack
-    * vsphere
-    * yandex
 
 * `runType` - step execution type, which is used during Go templates compilation:
   * ClusterBootstrap - bootstrap first master node

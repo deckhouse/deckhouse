@@ -448,8 +448,8 @@ spec:
 
 Для решений данной задачи существуют два механизма:
 
-1. Установка меток в `NodeGroup` `spec.nodeTemplate.labels` для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
-1. Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
+1. Установка меток в `NodeGroup` `spec.nodeTemplate.labels` для последующего использования их в `Pod` spec.nodeSelector или spec.affinity.nodeAffinity. Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
+1. Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` spec.tolerations. Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
 {% alert level="info" %}
 Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
@@ -1265,12 +1265,6 @@ metadata:
 Некоторые операции по изменению конфигурации узлов могут потребовать перезагрузки.
 
 Перезагрузка узла может потребоваться при изменении некоторых настроек sysctl, например, при изменении параметра `kernel.yama.ptrace_scope` (изменяется при использовании команды `astra-ptrace-lock enable/disable` в Astra Linux).
-
-## Как работать с GPU-узлами?
-
-{% alert level="info" %}
-Управление GPU-узлами доступно только в Enterprise Edition.
-{% endalert %}
 
 ## Как мониторить GPU?
 

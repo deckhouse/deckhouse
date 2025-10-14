@@ -14,8 +14,8 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
   * под находится в пространстве имен `d8-*` или `kube-system`;
   * под имеет `priorityClassName` `system-cluster-critical` или `system-node-critical`;
   * под связан с локальным хранилищем;
-  * под связан с [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/);
-  * вытеснение пода нарушит [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
+  * под связан с DaemonSet;
+  * вытеснение пода нарушит Pod Disruption Budget (PDB);
   * нет доступных узлов для запуска вытесненного пода.
 * Поды с классом приоритета `Best effort` вытесняются раньше, чем поды с классами `Burstable` и `Guaranteed`.
 
@@ -46,7 +46,7 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 {% endalert %}
 
 {% alert level="warning" %}
-Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
+Использование ресурсов узла учитывает extended-ресурсы и рассчитывается на основе запросов и лимитов подов (requests and limits), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
 {% endalert %}
 
 ### LowNodeUtilization
@@ -66,7 +66,7 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 Стратегия включается параметром [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
 {% alert level="warning" %}
-Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
+Использование ресурсов узла учитывает extended-ресурсы и рассчитывается на основе запросов и лимитов подов (requests and limits), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах. Это означает, что метрики использования ресурсов, отображаемые Kubelet (или командами вроде `kubectl top`), могут отличаться от расчетных показателей, так как Kubelet и связанные инструменты отображают данные о реальном потреблении ресурсов.
 {% endalert %}
 
 ### RemoveDuplicates
@@ -84,10 +84,10 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 ### RemovePodsViolatingInterPodAntiAffinity
 
 {% alert level="info" %}
-Вытесняет поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity).
+Вытесняет поды, нарушающие правила inter-pod affinity и anti-affinity.
 {% endalert %}
 
-Стратегия гарантирует, что поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), будут удалены с узлов.
+Стратегия гарантирует, что поды, нарушающие правила inter-pod affinity и anti-affinity, будут удалены с узлов.
 
 Например, если на узле находится **Под1**, а также **Под2** и **Под3**, имеющие правила anti-affinity, которые запрещают им работать на одном узле с подом **Под1**, то **Под1** будет вытеснен с узла, чтобы **Под2** и **Под3** смогли работать. Такая ситуация может возникнуть, когда правила inter-pod affinity для **Под2** и **Под3** создаются когда поды уже запущены на узле.
 
@@ -96,10 +96,10 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 ### RemovePodsViolatingNodeAffinity
 
 {% alert level="info" %}
-Вытесняет поды, нарушающие [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity).
+Вытесняет поды, нарушающие правила node affinity.
 {% endalert %}
 
-Стратегия гарантирует, что все поды, которые нарушают [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity), в конечном счете будут удалены с узлов.
+Стратегия гарантирует, что все поды, которые нарушают правила node affinity, в конечном счете будут удалены с узлов.
 
 По сути, в зависимости от настроек параметра [strategies.removePodsViolatingNodeAffinity.nodeAffinityType](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype),  
 стратегия превращает правило `requiredDuringSchedulingIgnoredDuringExecution` node affinity пода в правило `requiredDuringSchedulingRequiredDuringExecution`, а правило `preferredDuringSchedulingIgnoredDuringExecution` в правило `preferredDuringSchedulingPreferredDuringExecution`.

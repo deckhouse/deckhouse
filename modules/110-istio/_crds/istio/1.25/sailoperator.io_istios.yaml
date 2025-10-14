@@ -67,7 +67,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+
             type: string
           kind:
             description: |-
@@ -75,7 +75,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+
             type: string
           metadata:
             type: object
@@ -302,7 +302,7 @@ spec:
                               x-kubernetes-int-or-string: true
                             description: |-
                               Limits describes the maximum amount of compute resources allowed.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                           requests:
                             additionalProperties:
@@ -315,7 +315,7 @@ spec:
                               Requests describes the minimum amount of compute resources required.
                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                         type: object
                       defaultTolerations:
@@ -376,7 +376,7 @@ spec:
                           Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
                           Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 
-                          More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+
                         enum:
                         - Always
                         - Never
@@ -394,7 +394,7 @@ spec:
                         description: |-
                           Defines which IP family to use for single stack or the order of IP families for dual-stack.
                           Valid list items are "IPv4", "IPv6".
-                          More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
+
                         items:
                           type: string
                         type: array
@@ -402,7 +402,7 @@ spec:
                         description: |-
                           Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
                           are PreferDualStack, RequireDualStack, and SingleStack.
-                          More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
+
                         type: string
                       istioNamespace:
                         description: Specifies the default namespace for the Istio
@@ -718,14 +718,14 @@ spec:
                           lifecycle:
                             description: |-
                               The k8s lifecycle hooks definition (pod.spec.containers.lifecycle) for the proxy container.
-                              More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+
                             properties:
                               postStart:
                                 description: |-
                                   PostStart is called immediately after a container is created. If the handler fails,
                                   the container is terminated and restarted according to its restart policy.
                                   Other management of the container blocks until the hook completes.
-                                  More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+
                                 properties:
                                   exec:
                                     description: Exec specifies a command to execute
@@ -838,7 +838,7 @@ spec:
                                   container will eventually terminate within the Pod's termination grace
                                   period (unless delayed by finalizers). Other management of the container blocks until the hook completes
                                   or until the termination grace period is reached.
-                                  More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+
                                 properties:
                                   exec:
                                     description: Exec specifies a command to execute
@@ -1024,7 +1024,7 @@ spec:
                                   x-kubernetes-int-or-string: true
                                 description: |-
                                   Limits describes the maximum amount of compute resources allowed.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                               requests:
                                 additionalProperties:
@@ -1037,7 +1037,7 @@ spec:
                                   Requests describes the minimum amount of compute resources required.
                                   If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                   otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                             type: object
                           startupProbe:
@@ -1137,7 +1137,7 @@ spec:
                                   x-kubernetes-int-or-string: true
                                 description: |-
                                   Limits describes the maximum amount of compute resources allowed.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                               requests:
                                 additionalProperties:
@@ -1150,7 +1150,7 @@ spec:
                                   Requests describes the minimum amount of compute resources required.
                                   If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                   otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                             type: object
                         type: object
@@ -2327,7 +2327,7 @@ spec:
                                   x-kubernetes-int-or-string: true
                                 description: |-
                                   Limits describes the maximum amount of compute resources allowed.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                               requests:
                                 additionalProperties:
@@ -2340,7 +2340,7 @@ spec:
                                   Requests describes the minimum amount of compute resources required.
                                   If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                   otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                 type: object
                             type: object
                           toleration:
@@ -3686,7 +3686,7 @@ spec:
                               initialDelaySeconds:
                                 description: |-
                                   Number of seconds after the container has started before liveness probes are initiated.
-                                  More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                                 format: int32
                                 type: integer
                               periodSeconds:
@@ -3739,7 +3739,7 @@ spec:
                                 description: |-
                                   Number of seconds after which the probe times out.
                                   Defaults to 1 second. Minimum value is 1.
-                                  More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+
                                 format: int32
                                 type: integer
                             type: object
@@ -6957,7 +6957,7 @@ spec:
                         description: |-
                           Defines which IP family to use for single stack or the order of IP families for dual-stack.
                           Valid list items are "IPv4", "IPv6".
-                          More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
+
                         items:
                           type: string
                         type: array
@@ -6965,7 +6965,7 @@ spec:
                         description: |-
                           Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
                           are PreferDualStack, RequireDualStack, and SingleStack.
-                          More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
+
                         type: string
                       istiodRemote:
                         description: Configuration for the istio-discovery chart when
@@ -7099,7 +7099,7 @@ spec:
                               x-kubernetes-int-or-string: true
                             description: |-
                               Limits describes the maximum amount of compute resources allowed.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                           requests:
                             additionalProperties:
@@ -7112,7 +7112,7 @@ spec:
                               Requests describes the minimum amount of compute resources required.
                               If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                               otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                             type: object
                         type: object
                       rollingMaxSurge:
@@ -7196,7 +7196,7 @@ spec:
                         description: |-
                           The node tolerations to be applied to the Pilot deployment so that it can be
                           scheduled to particular nodes with matching taints.
-                          More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
+
 
                           Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                         items:
@@ -7507,14 +7507,14 @@ spec:
                                 kubelet's host machine and then exposed to the pod.
                                 Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
                                 awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+
                               properties:
                                 fsType:
                                   description: |-
                                     fsType is the filesystem type of the volume that you want to mount.
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+
                                   type: string
                                 partition:
                                   description: |-
@@ -7527,12 +7527,12 @@ spec:
                                 readOnly:
                                   description: |-
                                     readOnly value true will force the readOnly setting in VolumeMounts.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+
                                   type: boolean
                                 volumeID:
                                   description: |-
                                     volumeID is unique ID of the persistent disk resource in AWS (Amazon EBS volume).
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
+
                                   type: string
                               required:
                               - volumeID
@@ -7642,7 +7642,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7686,7 +7686,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7759,7 +7759,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                   type: string
                                 optional:
                                   description: optional specify whether the ConfigMap
@@ -7798,7 +7798,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7910,14 +7910,14 @@ spec:
                             emptyDir:
                               description: |-
                                 emptyDir represents a temporary directory that shares a pod's lifetime.
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+
                               properties:
                                 medium:
                                   description: |-
                                     medium represents what type of storage medium should back this directory.
                                     The default is "" which means to use the node's default medium.
                                     Must be an empty string (default) or Memory.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+
                                   type: string
                                 sizeLimit:
                                   anyOf:
@@ -7929,7 +7929,7 @@ spec:
                                     The maximum usage on memory medium EmptyDir would be the minimum value between
                                     the SizeLimit specified here and the sum of memory limits of all containers in a pod.
                                     The default is nil which means that the limit is undefined.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                               type: object
@@ -8000,7 +8000,7 @@ spec:
                                         accessModes:
                                           description: |-
                                             accessModes contains the desired access modes the volume should have.
-                                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+
                                           items:
                                             type: string
                                           type: array
@@ -8091,7 +8091,7 @@ spec:
                                             If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
-                                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
+
                                           properties:
                                             limits:
                                               additionalProperties:
@@ -8102,7 +8102,7 @@ spec:
                                                 x-kubernetes-int-or-string: true
                                               description: |-
                                                 Limits describes the maximum amount of compute resources allowed.
-                                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                               type: object
                                             requests:
                                               additionalProperties:
@@ -8115,7 +8115,7 @@ spec:
                                                 Requests describes the minimum amount of compute resources required.
                                                 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                                                 otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
                                               type: object
                                           type: object
                                         selector:
@@ -8170,7 +8170,7 @@ spec:
                                         storageClassName:
                                           description: |-
                                             storageClassName is the name of the StorageClass required by the claim.
-                                            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+
                                           type: string
                                         volumeAttributesClassName:
                                           description: |-
@@ -8184,7 +8184,7 @@ spec:
                                             If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
                                             set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
                                             exists.
-                                            More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
+
                                             (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                                           type: string
                                         volumeMode:
@@ -8279,7 +8279,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -8307,14 +8307,14 @@ spec:
                                 kubelet's host machine and then exposed to the pod.
                                 Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
                                 gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+
                               properties:
                                 fsType:
                                   description: |-
                                     fsType is filesystem type of the volume that you want to mount.
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+
                                   type: string
                                 partition:
                                   description: |-
@@ -8322,19 +8322,19 @@ spec:
                                     If omitted, the default is to mount by volume name.
                                     Examples: For volume /dev/sda1, you specify the partition as "1".
                                     Similarly, the volume partition for /dev/sda is "0" (or you can leave the property empty).
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+
                                   format: int32
                                   type: integer
                                 pdName:
                                   description: |-
                                     pdName is unique name of the PD resource in GCE. Used to identify the disk in GCE.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+
                                   type: string
                                 readOnly:
                                   description: |-
                                     readOnly here will force the ReadOnly setting in VolumeMounts.
                                     Defaults to false.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
+
                                   type: boolean
                               required:
                               - pdName
@@ -8395,19 +8395,19 @@ spec:
                                 machine that is directly exposed to the container. This is generally
                                 used for system agents or other privileged things that are allowed
                                 to see the host machine. Most containers will NOT need this.
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+
                               properties:
                                 path:
                                   description: |-
                                     path of the directory on the host.
                                     If the path is a symlink, it will follow the link to the real path.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+
                                   type: string
                                 type:
                                   description: |-
                                     type for HostPath Volume
                                     Defaults to ""
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
+
                                   type: string
                               required:
                               - path
@@ -8442,7 +8442,7 @@ spec:
                                     Required: Image or artifact reference to be used.
                                     Behaves in the same way as pod.spec.containers[*].image.
                                     Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
-                                    More info: https://kubernetes.io/docs/concepts/containers/images
+
                                     This field is optional to allow higher level config management to default or override
                                     container images in workload controllers like Deployments and StatefulSets.
                                   type: string
@@ -8466,7 +8466,7 @@ spec:
                                     fsType is the filesystem type of the volume that you want to mount.
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
+
                                   type: string
                                 initiatorName:
                                   description: |-
@@ -8511,7 +8511,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -8529,28 +8529,28 @@ spec:
                               description: |-
                                 name of the volume.
                                 Must be a DNS_LABEL and unique within the pod.
-                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                               type: string
                             nfs:
                               description: |-
                                 nfs represents an NFS mount on the host that shares a pod's lifetime
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+
                               properties:
                                 path:
                                   description: |-
                                     path that is exported by the NFS server.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+
                                   type: string
                                 readOnly:
                                   description: |-
                                     readOnly here will force the NFS export to be mounted with read-only permissions.
                                     Defaults to false.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+
                                   type: boolean
                                 server:
                                   description: |-
                                     server is the hostname or IP address of the NFS server.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs
+
                                   type: string
                               required:
                               - path
@@ -8560,12 +8560,12 @@ spec:
                               description: |-
                                 persistentVolumeClaimVolumeSource represents a reference to a
                                 PersistentVolumeClaim in the same namespace.
-                                More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                               properties:
                                 claimName:
                                   description: |-
                                     claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
-                                    More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
                                   type: string
                                 readOnly:
                                   description: |-
@@ -8785,7 +8785,7 @@ spec:
                                               This field is effectively required, but due to backwards compatibility is
                                               allowed to be empty. Instances of this type with an empty value here are
                                               almost certainly wrong.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                             type: string
                                           optional:
                                             description: optional specify whether
@@ -8927,7 +8927,7 @@ spec:
                                               This field is effectively required, but due to backwards compatibility is
                                               allowed to be empty. Instances of this type with an empty value here are
                                               almost certainly wrong.
-                                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                             type: string
                                           optional:
                                             description: optional field specify whether
@@ -9018,7 +9018,7 @@ spec:
                                     fsType is the filesystem type of the volume that you want to mount.
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
+
                                   type: string
                                 image:
                                   description: |-
@@ -9067,7 +9067,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -9120,7 +9120,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -9155,7 +9155,7 @@ spec:
                             secret:
                               description: |-
                                 secret represents a secret that should populate this volume.
-                                More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+
                               properties:
                                 defaultMode:
                                   description: |-
@@ -9214,7 +9214,7 @@ spec:
                                 secretName:
                                   description: |-
                                     secretName is the name of the secret in the pod's namespace to use.
-                                    More info: https://kubernetes.io/docs/concepts/storage/volumes#secret
+
                                   type: string
                               type: object
                             storageos:
@@ -9245,7 +9245,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic

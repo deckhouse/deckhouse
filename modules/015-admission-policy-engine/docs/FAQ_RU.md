@@ -91,7 +91,7 @@ spec:
 Чтобы применить только нужные политики безопасности, не отключая весь предустановленный набор:
 
 1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
-1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
+1. Создайте ресурс SecurityPolicy, соответствующий уровню baseline или restricted. В секции `policies` укажите только необходимые вам настройки.
 1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
 
 SecurityPolicy, соответствующая baseline:

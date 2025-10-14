@@ -123,8 +123,6 @@ title: "Модуль deckhouse: FAQ"
 d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
-Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
-
 ## Как отлаживать проблемы на узлах с помощью ephemeral containers?
 
 Выполните следующую команду:
@@ -133,4 +131,3 @@ d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 d8 k debug node/mynode -it --image=ubuntu
 ```
 
-Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).

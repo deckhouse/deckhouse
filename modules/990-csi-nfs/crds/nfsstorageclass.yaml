@@ -201,8 +201,6 @@ spec:
                   type: string
                   x-doc-d8editions: [ee, fe]
                   description: |
-                    **This feature is available in Enterprise Edition.**
-
                     Specifies the cleanup method to be applied to the PV’s subdirectory content before deletion.
                     By default, the NFS CSI driver simply deletes the directory created for the Persistent Volume (PV) on the NFS server without performing any data cleanup.
                     When volumeCleanup is enabled, the driver will erase each file in the PV directory.

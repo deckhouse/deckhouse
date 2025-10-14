@@ -64,12 +64,12 @@ spec:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
                 of an object. Servers should convert recognized schemas to the latest
-                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                internal value, and may reject unrecognized values. '
               type: string
             kind:
               description: 'Kind is a string value representing the REST resource this
                 object represents. Servers may infer this from the endpoint the client
-                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                submits requests to. Cannot be updated. In CamelCase. '
               type: string
             metadata:
               type: object
@@ -169,7 +169,7 @@ spec:
                 selector:
                   description: 'A label query over pods that are managed by the daemon
                     set. Must match in order to be controlled. It must match the pod
-                    template''s labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                    template''s labels.
                   properties:
                     matchExpressions:
                       description: matchExpressions is a list of label selector requirements.
@@ -217,7 +217,7 @@ spec:
                   description: 'An object that describes the pod that will be created.
                     The DaemonSet will create exactly one copy of this pod on every
                     node that matches the template''s node selector (or on every node
-                    if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/replicationcontroller#pod-template'
+                    if no node selector is specified).
                   x-kubernetes-preserve-unknown-fields: true
                 updateStrategy:
                   description: An update strategy to replace existing DaemonSet pods
@@ -387,7 +387,7 @@ spec:
                   type: array
                 currentNumberScheduled:
                   description: 'The number of nodes that are running at least 1 daemon
-                    pod and are supposed to run the daemon pod. More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/'
+                    pod and are supposed to run the daemon pod.
                   format: int32
                   type: integer
                 daemonSetHash:
@@ -408,7 +408,7 @@ spec:
                   type: integer
                 numberMisscheduled:
                   description: 'The number of nodes that are running the daemon pod,
-                    but are not supposed to run the daemon pod. More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/'
+                    but are not supposed to run the daemon pod.
                   format: int32
                   type: integer
                 numberReady:

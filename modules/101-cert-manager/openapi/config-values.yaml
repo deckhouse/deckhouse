@@ -75,7 +75,7 @@ properties:
     type: string
     x-examples: ["nginx"]
     description: |
-      The name of the `ingressClass` used to confirm ownership of domain using the [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenges method.
+      The name of the `ingressClass` used to confirm ownership of domain using the ACME HTTP-01 challenges method.
       If the parameter is omitted, the default `ingressClass` is used.
 
   recursiveSettings:

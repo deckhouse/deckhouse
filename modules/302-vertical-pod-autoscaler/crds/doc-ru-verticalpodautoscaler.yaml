@@ -13,19 +13,16 @@ spec:
             description: |-
               Определяет версионированную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
               Значение, представляющее REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           spec:
             description: |-
               Описание поведения автоскейлера.
 
-              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
             properties:
               recommenders:
                 description: |-
@@ -85,7 +82,6 @@ spec:
                     description: |-
                       Тип связанного объекта.
 
-                      Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
                   name:
                     description: |-
                       Имя связанного объекта.

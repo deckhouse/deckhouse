@@ -7,31 +7,6 @@ description: Примеры управления узлами кластера K
 
 ## Примеры описания NodeGroup
 
-<span id="пример-описания-nodegroup"></span>
-
-### Облачные узлы
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    zones:
-      - eu-west-1a
-      - eu-west-1b
-    minPerZone: 1
-    maxPerZone: 2
-    classReference:
-      kind: AWSInstanceClass
-      name: test
-  nodeTemplate:
-    labels:
-      tier: test
-```
-
 ### Статические узлы
 
 <span id="пример-описания-статической-nodegroup"></span>
@@ -96,10 +71,6 @@ spec:
 ```
 
 ### Узлы с GPU
-
-{% alert level="info" %}
-Функциональность управления GPU-узлами доступна только в Enterprise Edition.
-{% endalert %}
 
 Для работы узлов с GPU требуются **драйвер NVIDIA** и **NVIDIA Container Toolkit**. Возможны два варианта установки драйвера:
 

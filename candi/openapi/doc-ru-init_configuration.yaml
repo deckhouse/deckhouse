@@ -13,10 +13,6 @@ apiVersions:
           imagesRepo:
             description: |
               Адрес container registry с образами Deckhouse.
-
-              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
-
-              Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
           registryDockerCfg:
             description: |
               Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.

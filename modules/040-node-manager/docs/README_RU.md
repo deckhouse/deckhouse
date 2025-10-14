@@ -239,36 +239,7 @@ CAPS включается автоматически, если в NodeGroup за
 Переменные, которые доступны для использования в шаблонизаторе:
 <ul>
 <li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
-{% offtopic title="Пример данных..." %}
-```yaml
-cloudProvider:
-  instanceClassKind: OpenStackInstanceClass
-  machineClassKind: OpenStackMachineClass
-  openstack:
-    connection:
-      authURL: https://cloud.provider.com/v3/
-      domainName: Default
-      password: p@ssw0rd
-      region: region2
-      tenantName: mytenantname
-      username: mytenantusername
-    externalNetworkNames:
-    - public
-    instances:
-      imageName: ubuntu-22-04-cloud-amd64
-      mainNetwork: kube
-      securityGroups:
-      - kube
-      sshKeyPairName: kube
-    internalNetworkNames:
-    - kube
-    podNetworkMode: DirectRoutingWithPortSecurityEnabled
-  region: region2
-  type: openstack
-  zones:
-  - nova
-```
-{% endofftopic %}</li>
+</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
 <li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.

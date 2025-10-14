@@ -30,12 +30,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. '
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. '
             type: string
           metadata:
             type: object
@@ -55,7 +55,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: 'Name of the referent.
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -82,7 +82,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: 'Name of the referent.
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -101,7 +101,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: 'Name of the referent.
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be
@@ -137,7 +137,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -166,7 +166,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -185,7 +185,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -209,7 +209,7 @@ spec:
                         redirects. If unset, Prometheus uses its default value.
                       type: boolean
                     namespace:
-                      description: Namespaces are only supported in Consul Enterprise.
+                      description: Namespaces.
                       type: string
                     no_proxy:
                       description: Comma-separated string that can contain IPs, CIDR
@@ -238,7 +238,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -256,7 +256,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -275,7 +275,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -305,7 +305,7 @@ spec:
                       - tokenUrl
                       type: object
                     partition:
-                      description: Admin Partitions are only supported in Consul Enterprise.
+                      description: Admin Partitions.
                       type: string
                     proxy_connect_header:
                       additionalProperties:
@@ -316,7 +316,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -388,7 +388,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -406,7 +406,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -428,7 +428,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -446,7 +446,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -469,7 +469,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -492,7 +492,7 @@ spec:
                             be a valid secret key.
                           type: string
                         name:
-                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          description: 'Name of the referent.
                           type: string
                         optional:
                           description: Specify whether the Secret or its key must
@@ -599,7 +599,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -628,7 +628,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -647,7 +647,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -679,7 +679,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -697,7 +697,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -719,7 +719,7 @@ spec:
                                   description: The key to select.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the ConfigMap or its
@@ -737,7 +737,7 @@ spec:
                                     be a valid secret key.
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: 'Name of the referent.
                                   type: string
                                 optional:
                                   description: Specify whether the Secret or its key
@@ -760,7 +760,7 @@ spec:
                                 be a valid secret key.
                               type: string
                             name:
-                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                              description: 'Name of the referent.
                               type: string
                             optional:
                               description: Specify whether the Secret or its key must
@@ -1046,7 +1046,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -1064,7 +1064,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1085,7 +1085,7 @@ spec:
                             description: The key to select.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the ConfigMap or its key
@@ -1103,7 +1103,7 @@ spec:
                               be a valid secret key.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                            description: 'Name of the referent.
                             type: string
                           optional:
                             description: Specify whether the Secret or its key must
@@ -1125,7 +1125,7 @@ spec:
                           a valid secret key.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: 'Name of the referent.
                         type: string
                       optional:
                         description: Specify whether the Secret or its key must be

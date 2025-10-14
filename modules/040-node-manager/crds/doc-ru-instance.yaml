@@ -37,10 +37,10 @@ spec:
                   properties:
                     kind:
                       description: |
-                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        Тип объекта. Тип объекта указан в документации соответствующего модуля облачного провайдера.
                     name:
                       description: |
-                        Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                        Имя нужного `InstanceClass`-объекта.
                 machineRef:
                   description: Ссылка на объект узла облачного провайдера.
                   properties:

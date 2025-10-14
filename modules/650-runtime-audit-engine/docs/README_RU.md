@@ -37,7 +37,7 @@ description: Поиск угроз безопасности в кластере 
 
 ## Kubernetes Audit Webhook
 
-Режим [Webhook audit mode](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) должен быть настроен на получение событий аудита от `kube-apiserver`.
+Режим Webhook audit mode должен быть настроен на получение событий аудита от `kube-apiserver`.
 Если модуль [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) включен, настройки автоматически применятся при включении модуля `runtime-audit-engine`.
 
 В кластерах Kubernetes, в которых control plane не управляется Deckhouse, webhook необходимо настроить вручную. Для этого:
