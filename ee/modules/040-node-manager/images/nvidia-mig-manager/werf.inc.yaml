@@ -80,7 +80,7 @@ secrets:
 shell:
   beforeInstall:
   - yum install -y wget make git gcc && rm -rf /var/cache/yum/*
-  - wget -nv -O - https://storage.googleapis.com/golang/go1.22.6.linux-amd64.tar.gz | tar -C /usr/local -xz
+  - wget -nv -O - https://storage.googleapis.com/golang/go1.25.3.linux-amd64.tar.gz | tar -C /usr/local -xz
   install:
   - export GOPATH=/go
   - export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
