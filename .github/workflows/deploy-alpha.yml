@@ -45,8 +45,8 @@ env:
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  STAGE_REGISTRY_PATH: "${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss"
+  DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
@@ -283,47 +283,6 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-
-      # </template: import_secrets>
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
 
       # <template: login_readonly_registry_step>
       - name: Check readonly registry credentials
@@ -579,10 +538,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -614,27 +569,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -657,19 +601,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
@@ -713,10 +651,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -748,27 +682,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -791,19 +714,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
@@ -847,10 +764,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -882,27 +795,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -925,19 +827,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
@@ -981,10 +877,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -1016,27 +908,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -1059,19 +940,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
@@ -1115,10 +990,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -1150,27 +1021,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -1193,19 +1053,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
@@ -1249,10 +1103,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -1284,27 +1134,16 @@ jobs:
 
           #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
           #   to RELEASE_CHANNEL tag image in prod registry.
-          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
-          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
-          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG}
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
 
-          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
-          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
-          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG}
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
 
-          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
-          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG}
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
 
-          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
-
-            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
-            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
-          fi
-
-          #   5. Publish prod images to rw registry.
+          #   4. Publish prod images to rw registry.
           echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
           pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
 
@@ -1327,19 +1166,13 @@ jobs:
           echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
           docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
 
-          #   6. Report.
+          #   5. Report.
           echo "Deckhouse images published:"
           echo "  Source: ${SOURCE_IMAGE}"
           echo "  Prod: ${PROD_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_IMAGE}"
-          fi
           echo "Install images published:"
           echo "  Source: ${SOURCE_INSTALL_IMAGE}"
           echo "  Prod: ${PROD_INSTALL_IMAGE}"
-          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
-          echo "  Dev: ${DEV_INSTALL_IMAGE}"
-          fi
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
