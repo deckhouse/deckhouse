@@ -8,5 +8,4 @@ Before installing the platform, please complete the following steps to prepare t
 - Configure the servers:
   - Install a [supported operating system](../../../about/requirements.html#supported-os).
   - Set up SSH access using key authentication.
-  - Enable virtualization in the BIOS.
 - Ensure access to the container registry with Deckhouse images (by default, `registry.deckhouse.io`).

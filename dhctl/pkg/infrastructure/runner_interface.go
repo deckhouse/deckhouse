@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -25,17 +26,16 @@ type RunnerInterface interface {
 	Apply(ctx context.Context) error
 	Plan(ctx context.Context, destroy bool) error
 	Destroy(ctx context.Context) error
+	ShowPlan(ctx context.Context) ([]byte, error)
+
 	Stop()
 
 	ResourcesQuantityInState() int
 	GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error)
 	GetState() ([]byte, error)
-	GetStep() string
+	GetStep() Step
 	GetChangesInPlan() int
-	GetPlanDestructiveChanges() *PlanDestructiveChanges
-	GetPlanPath() string
+	GetPlanDestructiveChanges() *plan.DestructiveChanges
 	GetLogger() log.Logger
-	WorkerDir() string
-	GetExecutorProvider() ExecutorProvider
-	GetMasterDestruction() bool
+	HasVMDestruction() bool
 }

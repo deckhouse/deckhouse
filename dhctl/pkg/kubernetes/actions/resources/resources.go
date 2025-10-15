@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were creatated")
+var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
 
 // apiResourceListGetter discovery and cache APIResources list for group version kind
 type apiResourceListGetter struct {
@@ -344,7 +344,16 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 
 		select {
 		case <-endChannel:
-			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
+			if len(resources) > 0 {
+				return fmt.Errorf(
+					"Creating resources timed out after %s: resources cannot become ready. "+
+						"This could be due to lack of worker nodes in the cluster. "+
+						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
+					app.ResourcesTimeout,
+				)
+			}
+
+			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
 		case <-ticker.C:
 		}
 	}

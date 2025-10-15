@@ -84,18 +84,21 @@ spec:
             ephemeral-storage: 50Mi
             memory: 500Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+            - NET_RAW
             - NET_BIND_SERVICE
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
+        - mountPath: /opt/nginx-static/writable
+          name: writable
       - env:
         - name: NODE_NAME
           valueFrom:
@@ -113,10 +116,14 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
@@ -124,6 +131,9 @@ spec:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
       - args:
         - -web.listen-address=127.0.0.1:10354
         - -nginx.scrape-uri=http://127.0.0.1:10253/nginx_status
@@ -143,9 +153,11 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
       - args:
         - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208
         - --v=2
@@ -186,16 +198,47 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - command:
+        - /bin/bash
+        - -ec
+        - |
+          /usr/bin/cp /iptables-wrapper /sbin/ -rv
+          /usr/bin/cp /_sbin/* /sbin/ -rv
+          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+          /sbin/iptables --version
+          /usr/bin/rm /sbin/iptables-wrapper -v
+        image: registry.example.com@imageHash-ingressNginx-iptablesWrapperInit
+        name: iptables-wrapper-init
+        resources:
+          requests:
+            ephemeral-storage: 60Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsGroup: 64535
+        runAsNonRoot: true
+        runAsUser: 64535
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       tolerations:
@@ -216,6 +259,13 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
         name: xtables-lock
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+        name: sbin
+      - emptyDir:
+          medium: Memory
+        name: writable
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

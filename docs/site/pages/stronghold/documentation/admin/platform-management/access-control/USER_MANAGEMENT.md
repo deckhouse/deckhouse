@@ -202,7 +202,7 @@ spec:
 To create a generic application in Atlassian Crowd, follow these steps:
 
 1. Go to **Applications** → **Add application**.
-1. Use `Application Name` and `Password` that you receive in the [DexProvider](../../reference/cr/dexprovider.html) resource.
+1. Use `Application Name` and `Password` that you receive in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 1. Specify CROWD groups in lowercase for the `DexProvider` resource.
 
 ### Bitbucket Cloud
@@ -310,7 +310,7 @@ spec:
 #### Blitz Identity Provider
 
 When [registering an application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with Blitz Identity Provider, specify the URL to redirect users after authorization.
-When using `DexProvider`, specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster DNS name template [configured](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+When using `DexProvider`, specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster DNS name template [configured](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 Example of a manifest for configuring a provider to integrate with Blitz Identity Provider:
 

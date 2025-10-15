@@ -461,7 +461,7 @@ alerts:
         d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Deckhouse namespace contains PodMonitors not created by Deckhouse.
       severity: "9"
@@ -482,7 +482,7 @@ alerts:
         d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
       severity: "9"
@@ -806,7 +806,7 @@ alerts:
         d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
         ```
 
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
       summary: |
         Deckhouse namespace contains PrometheusRules not created by Deckhouse.
       severity: "9"
@@ -977,7 +977,7 @@ alerts:
            d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
       summary: |
         Deckhouse isn't subscribed to any regular release channels.
       severity: "9"
@@ -1488,7 +1488,7 @@ alerts:
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         There are pods with data plane version different from the control plane version.
       severity: "8"
@@ -1520,7 +1520,7 @@ alerts:
 
         Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
 
-        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        To learn how to upgrade Istio, refer to the [upgrade guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       summary: |
         The installed Istio version has been deprecated.
       severity: undefined
@@ -1768,7 +1768,7 @@ alerts:
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
 
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
+        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
 
         ```yaml
         - level: Metadata
@@ -1851,7 +1851,7 @@ alerts:
       description: |-
         Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
 
-        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
+        Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).
       summary: |
         Authorization parameters required for the ClusterLogDestination resource.
       severity: "9"
@@ -2389,9 +2389,9 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [`node-manager`](https://deckhouse.io/modules/node-manager/) module.
 
-        To resolve this issue, follow the [instructions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
+        To resolve this issue, follow the [instructions](https://deckhouse.io/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) how to clean up the node and add it to the cluster.
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -2504,7 +2504,7 @@ alerts:
         d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
         ```
 
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
         Services with the prometheus-custom-target label are being used for metric collection.
       severity: "9"
@@ -2700,35 +2700,10 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
-      markupFormat: markdown
-    - name: D8RuntimeAuditEngineNotScheduledInCluster
-      sourceFile: ee/modules/650-runtime-audit-engine/monitoring/prometheus-rules/runtime-audit-engine.yaml
-      moduleUrl: 650-runtime-audit-engine
-      module: runtime-audit-engine
-      edition: ee
-      description: |
-        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
-
-        Troubleshooting steps:
-
-        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
-
-           ```shell
-           d8 k -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
-           ```
-
-        2. Get a list of nodes where Pods are not in the Ready state:
-
-           ```shell
-           d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-           ```
-      summary: |
-        Runtime-audit-engine Pods cannot be scheduled.
-      severity: "4"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -3983,7 +3958,7 @@ alerts:
         Possible options to resolve the issue:
 
         * Build the kernel with [BTF type information](https://github.com/libbpf/libbpf?tab=readme-ov-file#bpf-co-re-compile-once--run-everywhere).
-        * [Disable ebpf_exporter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
+        * [Disable ebpf_exporter](https://deckhouse.io/modules/monitoring-kubernetes/configuration.html#parameters-ebpfexporterenabled).
       summary: |
         The BTF module required for ebpf_exporter is missing from the kernel.
       severity: "8"
@@ -4002,7 +3977,7 @@ alerts:
         * CPU overloads and container throttling.
         * `500` errors on Ingress.
         * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
-        * [Other alerts](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/) associated with this exporter.
+        * [Other alerts](https://deckhouse.io/modules/extended-monitoring/) associated with this exporter.
 
         To resolve this issue, investigate its possible causes:
 
@@ -5434,7 +5409,7 @@ alerts:
         ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
-      severity: "3"
+      severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
@@ -5897,9 +5872,9 @@ alerts:
         To resolve the time synchronization issues:
 
         - Fix network errors:
-          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
           - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
       summary: |
         Clock on the node {{$labels.node}} is drifting.
       severity: "5"
@@ -5953,9 +5928,9 @@ alerts:
 
         3. Resolve the time synchronization issues:
            - Fix network errors:
-             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
              - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
       summary: |
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
@@ -5975,7 +5950,7 @@ alerts:
         ```
 
         Renew or delete the expired certificate.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
       summary: |
         OpenVPN client certificate expired for {{ $labels.client }}
       severity: "4"
@@ -5989,7 +5964,7 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
         View certificate details to display the exact expiration date:
 
@@ -6009,7 +5984,7 @@ alerts:
         The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
 
         Renewal of certificate required.
-        Check [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
 
         View certificate details to display the exact expiration date:
 
@@ -6025,7 +6000,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "OpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nd8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
+      description: |-
+        OpenVPN CA certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+
+        The hook should rotate CA and server certificates before expiry.
       summary: |
         OpenVPN CA certificate has expired.
       severity: "4"
@@ -6035,7 +6021,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "\nOpenVPN CA certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).\n\nView certificate details to display the exact expiration date:\n\n```shell\nd8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```       \n\nThe hook should rotate CA and server certificates before expiry."
+      description: |-
+        OpenVPN CA certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
+
+        The hook should rotate CA and server certificates before expiry.
       summary: |
         OpenVPN CA certificate will expire tomorrow
       severity: "4"
@@ -6045,7 +6042,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nd8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```               "
+      description: |-
+        The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+        Renew the CA certificate if necessary.
+        After renewing the certificate, **you will need to reissue all client and server certificates**.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN CA certificate expires in less than 7 days.
       severity: "5"
@@ -6055,7 +6063,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN CA certificate is set to expire in {{ $value }} days.\n\nRenew the CA certificate if necessary.\nAfter renewing the certificate, **you will need to reissue all client and server certificates**.\nCheck [the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.\n\nView certificate details to display the exact expiration date:\n\n```shell\nd8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```                              "
+      description: |-
+        The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+        Renew the CA certificate if necessary.
+        After renewing the certificate, **you will need to reissue all client and server certificates**.
+        Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+        View certificate details to display the exact expiration date:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN CA certificate expires in less than 30 days.
       severity: "5"
@@ -6065,7 +6084,17 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN server certificate has expired.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires.\n```shell\nd8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
+      description: |-
+        The OpenVPN server certificate has expired.
+
+        OpenVPN server certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+        Check the certificate information and make sure it actually expires.
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN server certificate has expired.
       severity: "4"
@@ -6075,7 +6104,18 @@ alerts:
       moduleUrl: 500-openvpn
       module: openvpn
       edition: ce
-      description: "The OpenVPN server certificate is set to expire in less than 1 day.\n\nOpenVPN server certificate renews automatically 1 days before expiration.  \nAutomatic rotation did not work.  \nCheck the module status or perform [manual rotation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).\n\nCheck the certificate information and make sure it actually expires:\n\n```shell\nd8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\\.crt}' | base64 -d | openssl x509 -text -noout\n```          "
+      description: |-
+        The OpenVPN server certificate is set to expire in less than 1 day.
+
+        OpenVPN server certificate renews automatically 1 days before expiration.
+        Automatic rotation did not work.
+        Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+        Check the certificate information and make sure it actually expires:
+
+        ```shell
+        d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+        ```
       summary: |
         OpenVPN server certificate will expire tomorrow.
       severity: "4"
@@ -6249,7 +6289,7 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
+        The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
         This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
 
         To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
@@ -6271,7 +6311,7 @@ alerts:
         d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
 
-        Consider expanding disk size following the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-to-expand-disk-size).
+        Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).
       summary: |
         Prometheus disk usage exceeds 95%.
       severity: "4"
@@ -6639,7 +6679,6 @@ modules-having-alerts:
     - openvpn
     - operator-prometheus
     - prometheus
-    - runtime-audit-engine
     - secret-copier
     - terraform-manager
     - upmeter

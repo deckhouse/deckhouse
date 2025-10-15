@@ -14,17 +14,17 @@ If you need a different configuration, please refer to the documentation on [ins
 
 1. **Personal computer.** The computer from which the installation will be performed.  It is only needed to run the installer and will not be part of the cluster.
 
-   Requirements...
+   Requirements:
 
    - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 20.04+, Fedora 35+);
-   - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+   - installed Docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
    - HTTPS access to the `registry.deckhouse.io` container image registry;
    - SSH key access to the node, the **master node** of the future cluster;
    - SSH key access to the node, the **worker node** of the future cluster.
 
 1. **Physical server or virtual machine for the master node.**
 
-   Requirements...
+   Requirements:
 
    - at least 4 CPU cores
    - at least 8 GB of RAM
@@ -37,7 +37,7 @@ If you need a different configuration, please refer to the documentation on [ins
    - access to the default package repositories for the operating system you are using
    - SSH key access from the **personal computer** (section 1)
    - network access from the **personal computer** (section 1) via port `22/TCP`
-   - container runtime packages, such as containerd or docker, should not be installed on the node
+   - container runtime packages, such as containerd or Docker, should not be installed on the node
    - `cloud-utils` and `cloud-init` packages should be installed on the node.
 
 1. **Physical server or virtual machine for the worker node.**

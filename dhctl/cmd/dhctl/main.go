@@ -23,6 +23,7 @@ import (
 	"runtime/trace"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	terminal "golang.org/x/term"
@@ -32,6 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
@@ -317,42 +320,77 @@ func main() {
 	runApplication(kpApp)
 }
 
+type initer struct {
+	logFileMutex sync.Mutex
+	logFile      string
+}
+
+func newIniter() *initer {
+	return &initer{}
+}
+
+func (i *initer) initLogger(c *kingpin.ParseContext) error {
+	log.InitLogger(app.LoggerType)
+	if app.DoNotWriteDebugLogFile {
+		return nil
+	}
+
+	if c.SelectedCommand == nil {
+		return nil
+	}
+
+	logPath := app.DebugLogFilePath
+
+	if logPath == "" {
+		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+		logPath = path.Join(app.TmpDirName, logFile)
+	}
+
+	outFile, err := os.Create(logPath)
+	if err != nil {
+		return err
+	}
+
+	err = log.WrapWithTeeLogger(outFile, 1024)
+	if err != nil {
+		return err
+	}
+
+	log.InfoF("Debug log file: %s\n", logPath)
+
+	tomb.RegisterOnShutdown("Finalize logger", func() {
+		if err := log.FlushAndClose(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+			return
+		}
+	})
+
+	i.logFileMutex.Lock()
+	defer i.logFileMutex.Unlock()
+
+	i.logFile = logPath
+
+	return nil
+}
+
+func (i *initer) getLoggerPath() string {
+	i.logFileMutex.Lock()
+	defer i.logFileMutex.Unlock()
+
+	return i.logFile
+}
+
 func runApplication(kpApp *kingpin.Application) {
+	init := newIniter()
+
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		log.InitLogger(app.LoggerType)
-		if app.DoNotWriteDebugLogFile {
-			return nil
-		}
-
-		if c.SelectedCommand == nil {
-			return nil
-		}
-
-		logPath := app.DebugLogFilePath
-
-		if logPath == "" {
-			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
-			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
-			logPath = path.Join(app.TmpDirName, logFile)
-		}
-
-		outFile, err := os.Create(logPath)
-		if err != nil {
+		if err := init.initLogger(c); err != nil {
 			return err
 		}
 
-		err = log.WrapWithTeeLogger(outFile, 1024)
-		if err != nil {
-			return err
-		}
-
-		log.InfoF("Debug log file: %s\n", logPath)
-
-		tomb.RegisterOnShutdown("Finalize logger", func() {
-			if err := log.FlushAndClose(); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-				return
-			}
+		tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
+			infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLogger())
 		})
 
 		return nil
@@ -365,7 +403,14 @@ func runApplication(kpApp *kingpin.Application) {
 		errorCode := 0
 		if err != nil {
 			log.DebugLn(command)
-			log.ErrorLn(err)
+
+			msg := err.Error()
+
+			if logFile := init.getLoggerPath(); logFile != "" {
+				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
+			}
+
+			log.ErrorLn(msg)
 			errorCode = 1
 		}
 		tomb.Shutdown(errorCode)
@@ -491,6 +536,7 @@ func initGlobalVars() {
 	app.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
+	infrastructure.InitGlobalVars(dhctlPath)
 }
 
 func checkCommand(name string, allowedCommands []string) (bool, []string) {

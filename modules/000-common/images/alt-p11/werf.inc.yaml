@@ -1,8 +1,6 @@
 {{- define "alt archive repos" }}
-{{- $date := "2025-02-09" }}
-- sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64 classic|g" /etc/apt/sources.list.d/alt.list
-- sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
-- sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ noarch classic|g" /etc/apt/sources.list.d/alt.list
+{{- $date := "2025-10-12" }}
+- sed -i -E "s|http://ftp.altlinux.org/pub/distributions/archive/p11/date/[0-9]{4}/[0-9]{2}/[0-9]{2}/|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/|g" /etc/apt/sources.list.d/alt.list
 {{- end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

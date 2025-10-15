@@ -58,6 +58,8 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: setup
+git:
+{{- include "image mount points" $ }}
 shell:
   setup:
     - /tools/setcap cap_net_raw,cap_net_admin,cap_net_bind_service=+eip /proxy-failover-controller  # Need for run from deckhouse user

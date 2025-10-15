@@ -1,0 +1,9 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: ru/search-embedded-modules-index.json
+lang: ru
+---
+
+{%- include search-modules.liquid %}

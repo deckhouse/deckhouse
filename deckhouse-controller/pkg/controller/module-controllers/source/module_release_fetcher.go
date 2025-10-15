@@ -33,6 +33,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -378,9 +379,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			metricLabels["version"] = "v" + ver.String()
 
 			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingModuleIsNotValid, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			} else {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailedBrokenSequence, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingBrokenSequence, 1, metricLabels)
 			}
 		}
 

@@ -15,96 +15,26 @@
 package infrastructure
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"fmt"
-	"os/exec"
-	"regexp"
-	"sync"
-	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-// based on https://stackoverflow.com/a/43931246
-// https://regex101.com/r/qtIrSj/1
-var infrastructureLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
+type Step string
 
-func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
-	// Start infrastructure utility as a leader of the new process group to prevent
-	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+const (
+	BaseInfraStep  Step = "base-infrastructure"
+	MasterNodeStep Step = "master-node"
+	StaticNodeStep Step = "static-node"
+)
+
+func GetStepByNodeGroupName(nodeGroupName string) Step {
+	if nodeGroupName == global.MasterNodeGroupName {
+		return MasterNodeStep
 	}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stdout pipe: %v", err)
-	}
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stderr pipe: %v", err)
-	}
-
-	log.DebugLn(cmd.String())
-	err = cmd.Start()
-	if err != nil {
-		log.ErrorF("Cannot start cmd: %v\n", err)
-		return cmd.ProcessState.ExitCode(), err
-	}
-
-	var (
-		wg     sync.WaitGroup
-		errBuf bytes.Buffer
-	)
-
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-
-		e := bufio.NewScanner(stderr)
-		for e.Scan() {
-			txt := e.Text()
-			log.DebugLn(txt)
-
-			if !app.IsDebug {
-				if !infrastructureLogsMatcher.MatchString(txt) {
-					errBuf.WriteString(txt + "\n")
-				}
-			}
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		s := bufio.NewScanner(stdout)
-		for s.Scan() {
-			logger.LogInfoLn(s.Text())
-		}
-	}()
-
-	wg.Wait()
-
-	err = cmd.Wait()
-
-	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
-	if err != nil && exitCode != hasChangesExitCode {
-		logger.LogErrorF("Error while process exit code: %v\n", err)
-		err = fmt.Errorf(errBuf.String())
-		if app.IsDebug {
-			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
-		}
-	}
-
-	if exitCode == 0 {
-		err = nil
-	}
-	return exitCode, err
+	return StaticNodeStep
 }
 
 type ApplyOpts struct {
@@ -124,13 +54,24 @@ type PlanOpts struct {
 	DetailedExitCode bool
 }
 
+type OutputExecutor interface {
+	Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error)
+}
+
 type Executor interface {
-	Init(ctx context.Context, pluginsDir string) error
+	OutputExecutor
+
+	Init(ctx context.Context) error
 	Apply(ctx context.Context, opts ApplyOpts) error
 	Plan(ctx context.Context, opts PlanOpts) (exitCode int, err error)
 	Destroy(ctx context.Context, opts DestroyOpts) error
-	Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error)
 	Show(ctx context.Context, statePath string) (result []byte, err error)
+
+	// TODO need refactoring getting plan changes. I do not have more time for deep refactoring
+	IsVMChange(rc plan.ResourceChange) bool
+
+	GetStatesDir() string
+	Step() Step
 
 	SetExecutorLogger(logger log.Logger)
 	Stop()
@@ -149,9 +90,26 @@ type fakeExecutor struct {
 	showResp    fakeResponse
 	planResp    fakeResponse
 	destroyResp fakeResponse
+	VMResource  string
 }
 
-func (e *fakeExecutor) Init(ctx context.Context, pluginsDir string) error {
+func (e *fakeExecutor) IsVMChange(rc plan.ResourceChange) bool {
+	if e.VMResource == "" {
+		return false
+	}
+
+	return e.VMResource == rc.Type
+}
+
+func (e *fakeExecutor) GetStatesDir() string {
+	return ""
+}
+
+func (e *fakeExecutor) Step() Step {
+	return ""
+}
+
+func (e *fakeExecutor) Init(ctx context.Context) error {
 	return nil
 }
 
@@ -191,7 +149,23 @@ func NewDummyExecutor(logger log.Logger) *DummyExecutor {
 	}
 }
 
-func (e *DummyExecutor) Init(ctx context.Context, pluginsDir string) error {
+func (e *DummyExecutor) IsVMChange(rc plan.ResourceChange) bool {
+	e.logger.LogWarnLn("Call IsVMChange on dummy executor")
+
+	return false
+}
+
+func (e *DummyExecutor) GetStatesDir() string {
+	e.logger.LogWarnLn("Call GetStatesDir on dummy executor")
+	return ""
+}
+
+func (e *DummyExecutor) Step() Step {
+	e.logger.LogWarnLn("Call Step on dummy executor")
+	return ""
+}
+
+func (e *DummyExecutor) Init(ctx context.Context) error {
 	e.logger.LogWarnLn("Call Init on dummy executor")
 	return nil
 }
@@ -232,4 +206,20 @@ func (e *DummyExecutor) SetExecutorLogger(logger log.Logger) {
 
 func (e *DummyExecutor) Stop() {
 	e.logger.LogWarnLn("Call Stop on dummy executor")
+}
+
+type DummyOutputExecutor struct {
+	logger log.Logger
+}
+
+func NewDummyOutputExecutor(logger log.Logger) *DummyOutputExecutor {
+	return &DummyOutputExecutor{
+		logger: logger,
+	}
+}
+
+func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error) {
+	e.logger.LogWarnLn("Call Output on dummy output executor")
+
+	return nil, nil
 }

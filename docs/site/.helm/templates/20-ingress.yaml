@@ -45,7 +45,7 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if or (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
+{{- if or (eq $.Values.web.dc_name "prod-25") (hasPrefix "web-test" $.Values.web.env) }}
 {{- if eq .Lang "en" }}
       - path: /ru
         pathType: Prefix
@@ -125,13 +125,6 @@ spec:
             name: frontend
             port:
               name: http
-      - path: /modules
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
       - path: /products/kubernetes-platform/modules
         pathType: Prefix
         backend:
@@ -204,21 +197,21 @@ spec:
             port:
               name: http
 {{- end }}
+      - path: /modules
+        pathType: Prefix
+        backend:
+          service:
+            name: moduleslibrary
+            port:
+              name: http
       - path: /includes
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: router
             port:
               name: http
-      - path: /downloads/deckhouse-cli
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-      - path: /downloads/deckhouse-cli-trdl
+      - path: /downloads
         pathType: Prefix
         backend:
           service:
@@ -229,14 +222,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: frontend
             port:
               name: http
       - path: /products/kubernetes-platform/documentation/v1
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: frontend
             port:
               name: http
       - path: /products/code/documentation/

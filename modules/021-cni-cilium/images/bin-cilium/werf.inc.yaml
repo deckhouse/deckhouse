@@ -70,8 +70,9 @@ shell:
   - cd /src/cilium
   - go mod vendor && go mod verify
   #
-  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
-  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container`) | indent 4 }}
+  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-container-binary install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
   #
   - cd hubble
@@ -91,7 +92,7 @@ shell:
   - objcopy --strip-all /tmp/install/usr/bin/cilium-agent
   - objcopy --strip-all /tmp/install/usr/bin/cilium-bugtool
   - objcopy --strip-all /tmp/install/usr/bin/cilium-dbg
-  - objcopy --strip-all /tmp/install/usr/bin/cilium-health 
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health
   - objcopy --strip-all /tmp/install/usr/bin/cilium-health-responder
   - objcopy --strip-all /tmp/install/usr/bin/cilium-mount
   - objcopy --strip-all /tmp/install/usr/bin/cilium-sysctlfix

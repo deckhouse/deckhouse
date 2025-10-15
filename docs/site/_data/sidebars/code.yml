@@ -95,3 +95,7 @@ entries:
           en: Webhooks
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
+      - title:
+          en: Search
+          ru: Поиск
+        url: /code/documentation/user/search.html

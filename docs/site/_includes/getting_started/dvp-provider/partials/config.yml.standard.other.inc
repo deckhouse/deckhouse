@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -26,9 +26,9 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
 # [<en>] Settings for bootstrapping the Deckhouse cluster.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -38,9 +38,9 @@ deckhouse:
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/002-deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/002-deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -54,9 +54,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -76,9 +76,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] User-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -90,9 +90,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -101,9 +101,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cluster_configuration.html
+# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
@@ -130,7 +130,7 @@ masterNodeGroup:
         size: 8Gi
       # [<en>] The name of the VirtualMachineClass.
       # [<ru>] Имя VirtualMachineClass.
-      virtualMachineClassName: general
+      virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
       # [<en>] Static IP addresses (or Auto for automatic IP address assignment) to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
       # [<ru>] Статические IP-адреса (или Auto для автоматического назначения IP-адреса), назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
       ipAddresses:
@@ -143,18 +143,20 @@ masterNodeGroup:
       size: 50Gi
       # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
       # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: *!CHANGE_STORAGE_CLASS*
       # [<en>] Image parameters that will be used to create the virtual machine's root disk.
       # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
       image:
         # [<en>] Kind of the image source.
-        # [<ru>] Тип источника изображения.
+        # [<en>] You might consider changing this.
+        # [<ru>] Тип источника образа.
+        # [<ru>] Возможно, захотите изменить.
         kind: ClusterVirtualImage
         # [<en>] Name of the image that will be used to create the root disk.
         # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
         # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
         # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
-        name: ubuntu-2204
+        name: *!CHANGE_NAME*
     # [<en>] Settings for the etcd data disk.
     # [<ru>] Настройки для диска данных etcd.
     etcdDisk:
@@ -163,7 +165,7 @@ masterNodeGroup:
       size: 15Gi
       # [<en>] Name of the existing StorageClass will be used to create the etcd data disk.
       # [<ru>] Имя существующего StorageClass будет использоваться для создания диска данных etcd.
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: *!CHANGE_STORAGE_CLASS*
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
@@ -176,14 +178,16 @@ provider:
   # [<ru>] Kubeconfig для подключения к API Deckhouse Kubernetes Platform в кодировке Base64.
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
   # [<en>] Namespace in which DKP cluster resources will be created.
+  # [<en>] You might consider changing this.
   # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
+  # [<ru>] Возможно, захотите изменить.
   namespace: demo
 ---
 # [<en>] Section containing parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
+# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dvp/cr.html
-apiVersion: deckhouse.io/v1
+# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/cr.html
+apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
   name: worker
@@ -208,9 +212,11 @@ spec:
       size: 8Gi
     # [<en>] The name of the VirtualMachineClass.
     # [<ru>] Имя VirtualMachineClass.
-    virtualMachineClassName: general
+    virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
     # [<en>] Defines a bootloader for the virtual machine.
+    # [<en>] You might consider changing this.
     # [<ru>] Определяет загрузчик для виртуальной машины.
+    # [<ru>] Возможно, захотите изменить.
     bootloader: EFI
   # [<en>] Specifies settings for the root disk of the virtual machine.
   # [<ru>] Указывает настройки для корневого диска виртуальной машины.
@@ -220,23 +226,25 @@ spec:
     size: 50Gi
     # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
     # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
-    storageClass: ceph-pool-r2-csi-rbd-immediate
+    storageClass: *!CHANGE_STORAGE_CLASS*
     # [<en>] Image parameters that will be used to create the virtual machine's root disk.
     # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
     image:
       # [<en>] Kind of the image source.
-      # [<ru>] Тип источника изображения.
+      # [<en>] You might consider changing this.
+      # [<ru>] Тип источника образа.
+      # [<ru>] Возможно, захотите изменить.
       kind: ClusterVirtualImage
       # [<en>] Name of the image that will be used to create the root disk.
       # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
       # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
       # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
-      name: ubuntu-2204
+      name: *!CHANGE_NAME*
 ---
 # [<en>] Section containing parameters of worker node group.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/modules/040-node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -257,9 +265,9 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing parameters of the NGINX Ingress controller.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<en>] https://deckhouse.io/modules/402-ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры NGINX Ingress controller.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] https://deckhouse.ru/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -273,9 +281,9 @@ spec:
     node.deckhouse.io/group: worker
 ---
 # [<en>] RBAC and authorization settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/modules/140-user-authz/cr.html#clusterauthorizationrule
 # [<ru>] Настройки RBAC и авторизации.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/modules/140-user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -288,9 +296,9 @@ spec:
   portForwarding: true
 ---
 # [<en>] Parameters of the static user.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#user
+# [<en>] https://deckhouse.io/modules/150-user-authn/cr.html#user
 # [<ru>] Данные статического пользователя.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/modules/150-user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:

@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -46,7 +47,7 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(clusterConfig + initConfig)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider())
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}

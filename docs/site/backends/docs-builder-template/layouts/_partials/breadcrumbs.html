@@ -5,7 +5,6 @@
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
 
-
 {{- range sort $channelsInfo "stability" "desc" }}
   {{- $code := .code }}
   {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}

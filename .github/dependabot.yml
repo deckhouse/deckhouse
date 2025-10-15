@@ -169,15 +169,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/650-runtime-audit-engine/hack/far-converter"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src"
   labels:
   - "type/dependencies"
@@ -628,6 +619,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/340-extended-monitoring/images/extended-monitoring-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
   labels:
   - "type/dependencies"
@@ -818,15 +818,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
-  directory: "/ee/modules/650-runtime-audit-engine/images/rules-loader/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "pip"
   directory: "/modules/002-deckhouse/images/webhook-handler/src"
   labels:
   - "type/dependencies"
@@ -837,15 +828,6 @@ updates:
 
 - package-ecosystem: "pip"
   directory: "/modules/300-prometheus/images/grafana-dashboard-provisioner/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "pip"
-  directory: "/modules/340-extended-monitoring/images/extended-monitoring-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

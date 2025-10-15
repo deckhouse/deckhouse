@@ -4,7 +4,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
+      Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 

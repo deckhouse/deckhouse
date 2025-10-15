@@ -22,7 +22,7 @@
            d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
     expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
@@ -366,8 +366,8 @@
         ```
 
   - alert: DeckhouseHighMemoryUsage
-    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.9)
-    for: 1m
+    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.85)
+    for: 30s
     labels:
       severity_level: "3"
     annotations:

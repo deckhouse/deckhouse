@@ -271,6 +271,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 
 func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source *v1alpha1.ModuleSource, message string) error {
 	err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
 		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.Message = message
 		return true

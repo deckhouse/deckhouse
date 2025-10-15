@@ -86,6 +86,11 @@ spec:
             - "-config.expand-env"
             - "-log.format=json"
             - "-log.level=info"
+          env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
           volumeMounts:
             - mountPath: /etc/mimir/config.yaml
               name: aggregating-proxy-config

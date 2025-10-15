@@ -1,6 +1,5 @@
 files:
 - /run/xtables.lock
 dirs:
-- /etc/kube-rbac-proxy
 - /var/lib/kube-proxy
 - /lib/modules

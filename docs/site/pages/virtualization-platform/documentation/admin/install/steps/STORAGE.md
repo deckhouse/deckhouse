@@ -3,66 +3,67 @@ title: "Set up storage"
 permalink: en/virtualization-platform/documentation/admin/install/steps/storage.html
 ---
 
-## Storage Configuration
-
 After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](/products/virtualization-platform/documentation/about/requirements.html#supported-storage-systems).
 
-Next, we will consider enabling and configuring the software-defined storage `sds-replicated-volume`. This storage allows you to create replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
+Next, we will consider using software-defined replicated block storage based on DRBD, which allows creating replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
 
-## Adding sds-replicated-volume
+{% alert level=“info” %}
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+{% endalert %}
 
-To add the `sds-replicated-volume` storage, you need to enable two Deckhouse modules by creating ModuleConfig resources:
+## Enabling the use of replicated storage
 
-```yaml
-sudo -i d8 k create -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: snapshot-controller
-spec:
-  enabled: true
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-replicated-volume
-spec:
-  enabled: true
-EOF
-```
+Enable the `sds-node-configurator`, `sds-replicated-volume`, and `snapshot-controller` modules using either the administrator web interface or the CLI:
 
-Wait for the module to be enabled:
+1. Enable the `sds-node-configurator` module:
 
-```shell
-sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
-```
+   ```shell
+   sudo -i d8 s module enable sds-node-configurator
+   ```
 
-Ensure that all the pods of the `sds-replicated-volume` module are in the `Running` state (this may take some time):
+1. Wait until the `sds-node-configurator` module reaches the `Ready` state:
 
-```shell
-sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
-```
+   ```shell
+   d8 k get module sds-node-configurator -w
+   ```
 
-## Configuration of sds-replicated-volume
+1. Enable the `snapshot-controller` module:
+
+   ```shell
+   sudo -i d8 s module enable snapshot-controller
+   ```
+
+1. Enable the `sds-replicated-volume` module:
+
+   ```shell
+   sudo -i d8 s module enable sds-replicated-volume
+   ```
+
+1. Wait until the `sds-replicated-volume` module reaches the `Ready` state:
+
+   ```shell
+   sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+   ```
+
+1. Verify that in the `d8-sds-node-configurator`, `d8-snapshot-controller`, and `d8-sds-replicated-volume` namespaces, all pods are in the `Running` or `Completed` status:
+
+   ```shell
+   sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
+   sudo -i d8 k -n d8-sds-node-configurator get pod -owide -w
+   sudo -i d8 k -n d8-sds-node-configurator get pod -owide -w
+   ```
+
+## Configuration of replicated storage
 
 Configuring the storage involves combining the available block devices on the nodes into pools, from which a StorageClass will then be created.
 
 1. Retrieve the available block devices:
 
    ```shell
-   sudo -i d8 k get blockdevices.storage.deckhouse.io
+   d8 k get blockdevices.storage.deckhouse.io
    ```
 
-   Example output with additional sda disks:
+   {% offtopic title="Example output with additional sda disks..." %}
 
    ```console
    NAME                                           NODE           CONSUMABLE   SIZE          PATH        AGE
@@ -71,16 +72,18 @@ Configuring the storage involves combining the available block devices on the no
    dev-b1c720a7cec32ae4361de78b71f08da1965b1d0c   dvp-worker-2   false        468851544Ki   /dev/sda    8m12s
    ```
 
+   {% endofftopic %}
+
 1. Create a VolumeGroup on each node.
 
-   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
+   On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource.
 
-   To create the LVMVolumeGroup resource on the node, use the following commands:
+   To create the LVMVolumeGroup resource, use the following commands on each node (specify the node name and block device name):
 
-   ```yaml
-   export NODE_NAME="dvp-worker-1"
-   export DEV_NAME="dev-40bf7a561aee502f20b81cf1eff873a0455a95cb"
-   sudo -i d8 k apply -f - <<EOF
+   ```shell
+   export NODE_NAME="<NODE_NAME>"
+   export DEV_NAME="<BLOCK_DEVICE_NAME>"
+   d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: LVMVolumeGroup
    metadata:
@@ -100,15 +103,13 @@ Configuring the storage involves combining the available block devices on the no
    EOF
    ```
 
-   Repeat the actions for each node whose block device is planned to be used. In the example, this includes all three nodes: `master-0`, `dvp-master-1`, and `dvp-master-2`.
-
    Wait for all the created LVMVolumeGroup resources to transition to the `Ready` state:
 
    ```shell
-   sudo -i d8 k get lvg -w
+   d8 k get lvg -w
    ```
 
-   Example output:
+   {% offtopic title="Example output..." %}
 
    ```console
    NAME                THINPOOLS  CONFIGURATION APPLIED   PHASE   NODE          SIZE       ALLOCATED SIZE VG   AGE
@@ -117,49 +118,54 @@ Configuring the storage involves combining the available block devices on the no
    vg-on-dvp-worker-2  0/0        True                    Ready   dvp-worker-2  360484Mi   30064Mi        vg-1 6s
    ```
 
+   {% endofftopic %}
+
 1. Create a pool of LVM volume groups.
 
-   The created volume groups need to be combined into a pool for replication. The pool is defined in the `ReplicatedStoragePool` resource:
+   Created volume groups need to be assembled into a pool for replication (specifies in ReplicatedStoragePool resource). To do this, run the following command (specify the names of the created volume groups):
 
-   ```yaml
-   sudo -i d8 k apply -f - <<EOF
-    apiVersion: storage.deckhouse.io/v1alpha1
-    kind: ReplicatedStoragePool
-    metadata:
-      name: sds-pool
-    spec:
-      type: LVM
-      lvmVolumeGroups:
-        - name: vg-on-dvp-worker-01
-        - name: vg-on-dvp-worker-02
-        - name: vg-on-master
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: ReplicatedStoragePool
+   metadata:
+     name: sds-pool
+   spec:
+     type: LVM
+     lvmVolumeGroups:
+       # Укажите свои имена групп томов.
+       - name: vg-on-dvp-worker-01
+       - name: vg-on-dvp-worker-02
+       - name: vg-on-master
    EOF
    ```
 
    Wait for the resource to transition to the `Completed` state:
 
    ```shell
-   sudo -i d8 k get rsp data -w
+   d8 k get rsp data -w
    ```
 
-   Example output:
+   {% offtopic title="Example output..." %}
 
    ```console
    NAME         PHASE       TYPE   AGE
    sds-pool     Completed   LVM    32s
    ```
 
+   {% endofftopic %}
+
 1. Set StorageClass parameters.
 
-   The `sds-replicated-volume` module uses the `ReplicatedStorageClass` resources to automatically create StorageClasses with the required characteristics. The following parameters are important in this resource:
+   The `sds-replicated-volume` module uses the ReplicatedStorageClass resources to automatically create StorageClasses with the required characteristics. The following parameters are important in this resource:
 
-   - `replication` — replication parameters, for 2 replicas, the value `Availability` will be used;
-   - `storagePool` — the name of the pool created earlier, in this example, it is `sds-pool`.
+   - `replication`: Replication parameters, for 2 replicas, the value `Availability` will be used.
+   - `storagePool`: The name of the pool created earlier, in this example, it is `sds-pool`.
 
-   Other parameters are described in the [ReplicatedStorageClass resource documentation](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Other parameters are described in the [ReplicatedStorageClass resource documentation](/modules/sds-replicated-volume/cr.html#replicatedstorageclassreplicatedstorageclass.html).
 
-   ```yaml
-   sudo -i d8 k apply -f - <<EOF
+   ```shell
+   d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
    metadata:
@@ -175,20 +181,21 @@ Configuring the storage involves combining the available block devices on the no
    Check that the corresponding StorageClass has appeared in the cluster:
 
    ```shell
-   sudo -i d8 k get sc
+   d8 k get sc
    ```
 
-   Example output:
+   {% offtopic title="Example output..." %}
 
    ```console
    NAME     PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```
 
-1. Set the default StorageClass:
+   {% endofftopic %}
+
+1. Set the default StorageClass (specify the name of your StorageClass object):
 
    ```shell
-   # Specify the name of your StorageClass object.
-   DEFAULT_STORAGE_CLASS=sds-r2
+   DEFAULT_STORAGE_CLASS=<DEFAULT_STORAGE_CLASS_NAME>
    sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```

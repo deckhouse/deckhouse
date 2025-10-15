@@ -44,17 +44,20 @@ var logTypeDHCTL = slog.String("type", "dhctl")
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
-	podName  string
-	cacheDir string
-
-	schemaStore *config.SchemaStore
+	params ServiceParams
 }
 
-func New(podName, cacheDir string, schemaStore *config.SchemaStore) *Service {
+type ServiceParams struct {
+	TmpDir      string
+	CacheDir    string
+	PodName     string
+	SchemaStore *config.SchemaStore
+	IsDebug     bool
+}
+
+func New(params ServiceParams) *Service {
 	return &Service{
-		podName:     podName,
-		cacheDir:    cacheDir,
-		schemaStore: schemaStore,
+		params: params,
 	}
 }
 

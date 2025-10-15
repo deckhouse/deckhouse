@@ -8,7 +8,51 @@ title: "Managing control plane: FAQ"
 
 > It is important to have an odd number of masters to ensure a quorum.
 
-Adding a master node to a static or hybrid cluster has no difference from adding a regular node to a cluster. To do this, use the corresponding [examples](../node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
+When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../ node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: master
+```
+
+Next, when adding master nodes to the cluster using CAPS, specify the label specified in `spec.staticInstances.labelSelector` NodeGroup `master` in the corresponding `StaticInstance`. Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-master-1
+  labels:
+    # The label specified in spec.staticInstances.labelSelector NodeGroup master.
+    role: master
+spec:
+  # Specify the IP address of the static node server.
+  address: "<SERVER-IP>"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+{% alert level="info" %}
+When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
+
+When bootstrapping the cluster, the configuration specifies the first master node on which the installation takes place.
+If, after bootstrapping, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
+
+For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
+{% endalert %}
+
+Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](../node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
@@ -48,7 +92,7 @@ The following describes the conversion of a single-master cluster into a multi-m
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
@@ -109,7 +153,7 @@ The steps described below must be performed from the first in order of the maste
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
@@ -422,6 +466,126 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 
 1. Change the [maxDbSize](configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings  to match the value specified in the manifest.
 
+## How to defragment etcd
+
+{% alert level="warning" %}
+Before defragmenting, [back up etcd](#how-to-manually-backup-etcd).
+{% endalert %}
+
+To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  endpoint status --cluster -w table
+```
+
+Output example (the size of the etcd database on the node is specified in the `DB SIZE` column):
+
+```console
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+|          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+```
+
+### How to defragment an etcd node in a single-master cluster
+
+{% alert level="warning" %}
+Defragmenting etcd is a resource-intensive operation that temporarily blocks etcd from running on that node.
+Keep this in mind when choosing a time to perform the operation in a cluster with a single master node.
+{% endalert %}
+
+To defragment etcd in a cluster with a single master node, use the following command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+```
+
+Example output when the operation is successful:
+
+```console
+Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+```
+
+> If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+
+### How to defragment etcd in a cluster with multiple master nodes
+
+To defragment etcd in a cluster with multiple master nodes:
+
+1. Get a list of etcd pods. To do this, use the following command:
+
+   ```bash
+   d8 k -n kube-system get pod -l component=etcd -o wide
+   ```
+
+   Example output:
+
+   ```console
+   NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
+   etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
+   etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
+   etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
+   ```
+
+1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
+
+   ```bash
+   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cert=/etc/kubernetes/pki/etcd/server.crt \
+     --key=/etc/kubernetes/pki/etcd/server.key \
+     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+     endpoint status --cluster -w table
+   ```
+
+   Output example (the leader in the `IS LEADER` column will have the value `true`):
+
+   ```console
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   ```
+
+1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
+
+   > Important: Defragment the leader last.
+   >
+   > Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
+
+      ```bash
+   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+   ```
+
+   Example output when the operation is successful:
+
+   ```console
+   Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+   ```
+
+   > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+
 ## How do I configure additional audit policies?
 
 1. Enable [the auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) flag in the module configuration:
@@ -699,7 +863,7 @@ Follow these steps to restore a single-master cluster on master node:
 
 Follow these steps to restore a multi-master cluster:
 
-1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
 
 1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) for cloud clusters or independently remove static master-node from the cluster.
 

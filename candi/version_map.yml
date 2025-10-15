@@ -8,6 +8,7 @@ bashible: &bashible
     "10":
     "11":
     "12":
+    "13":
   centos:
     "7":
     "8":
@@ -85,7 +86,7 @@ k8s:
   "1.31":
     default: true
     status: available
-    patch: 12
+    patch: 13
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
@@ -109,7 +110,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.32":
     status: available
-    patch: 8
+    patch: 9
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
@@ -133,7 +134,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.33":
     status: preview
-    patch: 4
+    patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
@@ -156,7 +157,7 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.18.0
+  d8CliVersion: v0.20.7
 jq:
   version: 1.7.1
 yq:

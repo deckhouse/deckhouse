@@ -19,7 +19,9 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -31,9 +33,10 @@ type KubeClientGetter interface {
 type KubeTerraStateLoader struct {
 	kubeGetter KubeClientGetter
 	stateCache state.Cache
+	logger     log.Logger
 }
 
-func NewCachedTerraStateLoader(kubeGetter KubeClientGetter, stateCache state.Cache) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeGetter KubeClientGetter, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeGetter: kubeGetter,
 		stateCache: stateCache,
@@ -65,7 +68,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(
+		ctx,
+		kubeCl,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(s.logger),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}

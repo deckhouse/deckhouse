@@ -84,7 +84,7 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -224,7 +224,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -287,7 +287,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
 
           > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
@@ -322,7 +322,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -424,7 +424,7 @@ apiVersions:
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html) to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/modules/cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string

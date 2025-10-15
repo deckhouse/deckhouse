@@ -4,22 +4,24 @@ permalink: ru/virtualization-platform/documentation/admin/install/steps/ingress.
 lang: ru
 ---
 
+{% alert level="info" %}
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+{% endalert %}
+
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`.
-
-Выполните на **master-узле** следующую команду:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`:
 
 ```shell
-sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
+d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 
 Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller:
 
 ```yaml
-sudo -i d8 k apply -f - <<EOF
+d8 k apply -f - <<EOF
 # Секция, описывающая параметры NGINX Ingress controller.
-# https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -45,7 +47,7 @@ EOF
 Запуск Ingress-контроллера может занять какое-то время. Убедитесь, что поды Ingress-контроллера перешли в статус `Running`, выполнив команду:
 
 ```shell
-sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
+d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 
 {% offtopic title="Пример вывода..." %}
@@ -67,40 +69,39 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 
 ### Использование Wildcard-домена
 
-Убедитесь, что поддомены резолвятся на IP-адрес узла, на котором работает nginx-controller. В данном случае это `master-0`. Также проверьте, что шаблон имён соответствует формату `%s.<домен>`:
+Убедитесь, что поддомены разрешаются на IP-адрес узла, на котором работает Ingress controller. Также проверьте, что шаблон имён соответствует формату `%s.<домен>`:
 
 ```shell
-sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
+d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
 
-Пример вывода, если использовался свой Wildcard-домен:
+Пример вывода, если использовался свой wildcard-домен:
 
 ```console
 %s.my-dvp-cluster.example.com
 ```
 
-Пример вывода, если использовался домен от сервиса ssslip.io:
+Пример вывода, если использовался домен от сервиса sslip.io:
 
 ```console
 %s.54.43.32.21.sslip.io
 ```
 
-### Использование отдельных доменов вместо Wildcard-домена
+### Использование отдельных доменов вместо wildcard-домена
 
-Если в шаблоне используется не Wildcard-домен, необходимо вручную добавить дополнительные A или CNAME-записи, указывающие на публичный IP-адрес узла, где работает nginx-controller. Эти записи требуются для всех сервисов Deckhouse.
+Если в шаблоне используется не wildcard-домен, необходимо вручную добавить дополнительные A или CNAME-записи, указывающие на публичный IP-адрес узла, где работает nginx-controller. Эти записи требуются для всех сервисов Deckhouse.
 
 Например, для домена `my-dvp-cluster.example.com` и шаблона с поддоменами `%s.my-dvp-cluster.example.com`, записи будут выглядеть так:
 
 ```console
 api.my-dvp-cluster.example.com
-argocd.my-dvp-cluster.example.com
+console.my-dvp-cluster.example.com
 dashboard.my-dvp-cluster.example.com
-documentation.my-dvp-cluster.example.com
+deckhouse-tools.my-dvp-cluster.example.com
 dex.my-dvp-cluster.example.com
+documentation.my-dvp-cluster.example.com
 grafana.my-dvp-cluster.example.com
 hubble.my-dvp-cluster.example.com
-istio.my-dvp-cluster.example.com
-istio-api-proxy.my-dvp-cluster.example.com
 kubeconfig.my-dvp-cluster.example.com
 openvpn-admin.my-dvp-cluster.example.com
 prometheus.my-dvp-cluster.example.com
@@ -112,14 +113,13 @@ upmeter.my-dvp-cluster.example.com
 
 ```console
 api-my-dvp-cluster.example.com
-argocd-my-dvp-cluster.example.com
+console-my-dvp-cluster.example.com
 dashboard-my-dvp-cluster.example.com
-documentation-my-dvp-cluster.example.com
+deckhouse-tools-my-dvp-cluster.example.com
 dex-my-dvp-cluster.example.com
+documentation-my-dvp-cluster.example.com
 grafana-my-dvp-cluster.example.com
 hubble-my-dvp-cluster.example.com
-istio-my-dvp-cluster.example.com
-istio-api-proxy-my-dvp-cluster.example.com
 kubeconfig-my-dvp-cluster.example.com
 openvpn-admin-my-dvp-cluster.example.com
 prometheus-my-dvp-cluster.example.com
@@ -136,14 +136,13 @@ export PUBLIC_IP="<PUBLIC_IP>"
 export CLUSTER_DOMAIN="my-dvp-cluster.example.com"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.$CLUSTER_DOMAIN
-$PUBLIC_IP argocd.$CLUSTER_DOMAIN
+$PUBLIC_IP console.$CLUSTER_DOMAIN
 $PUBLIC_IP dashboard.$CLUSTER_DOMAIN
-$PUBLIC_IP documentation.$CLUSTER_DOMAIN
+$PUBLIC_IP deckhouse-tools.$CLUSTER_DOMAIN
 $PUBLIC_IP dex.$CLUSTER_DOMAIN
+$PUBLIC_IP documentation.$CLUSTER_DOMAIN
 $PUBLIC_IP grafana.$CLUSTER_DOMAIN
 $PUBLIC_IP hubble.$CLUSTER_DOMAIN
-$PUBLIC_IP istio.$CLUSTER_DOMAIN
-$PUBLIC_IP istio-api-proxy.$CLUSTER_DOMAIN
 $PUBLIC_IP kubeconfig.$CLUSTER_DOMAIN
 $PUBLIC_IP openvpn-admin.$CLUSTER_DOMAIN
 $PUBLIC_IP prometheus.$CLUSTER_DOMAIN
@@ -167,9 +166,8 @@ EOF
 
 1. Создайте пользователя:
 
-   ```yaml
-   sudo -i d8 k create -f - <<EOF
-   ---
+   ```shell
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: ClusterAuthorizationRule
    metadata:
@@ -201,4 +199,9 @@ EOF
 {% endalert %}
 
 Модуль `console` позволит управлять компонентами виртуализации через веб-интерфейс Deckhouse.
-Чтобы включить его, воспользуйтесь инструкцией из раздела [Веб-интерфейс](https://deckhouse.ru/modules/console/stable/).
+
+Чтобы включить модуль, выполните следующую команду:
+
+```shell
+d8 s module enable console
+```

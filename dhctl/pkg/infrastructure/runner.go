@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -31,7 +28,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -44,18 +42,10 @@ const (
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
 
-	hasChangesExitCode = 2
-
 	infrastructurePipelineAbortedMessage = `
 Infrastructure pipeline aborted.
 If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
 `
-)
-
-const (
-	PlanHasNoChanges = iota
-	PlanHasChanges
-	PlanHasDestructiveChanges
 )
 
 var (
@@ -64,9 +54,13 @@ var (
 )
 
 type (
-	ExecutorProvider func(string, log.Logger) Executor
-	StateChecker     func([]byte) error
+	StateChecker func([]byte) error
 )
+
+type destructiveChangesReport struct {
+	changes      *plan.DestructiveChanges
+	hasVMChanges bool
+}
 
 type AutoApproveSettings struct {
 	AutoApprove bool
@@ -85,10 +79,8 @@ type ChangeActionSettings struct {
 }
 
 type Runner struct {
-	name       string
-	prefix     string
-	step       string
-	workingDir string
+	name   string
+	prefix string
 
 	statePath     string
 	planPath      string
@@ -98,8 +90,8 @@ type Runner struct {
 
 	allowedCachedState     bool
 	changesInPlan          int
-	planDestructiveChanges *PlanDestructiveChanges
-	hasMasterDestruction   bool
+	planDestructiveChanges *plan.DestructiveChanges
+	hasVMDestruction       bool
 	stateCache             state.Cache
 
 	stateSaver   *StateSaver
@@ -114,52 +106,27 @@ type Runner struct {
 	// Odd number - infrastructure utility is running
 	// Even number - runner is in standby mode
 	infrastructureUtilityRunningCounter int32
-	infraExecutor                       Executor
-	infraExecutorProvider               ExecutorProvider
 
-    hook InfraActionHook
+	infraExecutor Executor
 
-    vmTypeMu  sync.Mutex
-    vmTypeMap map[string]string
+	hook InfraActionHook
 }
 
-func NewRunner(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
-	provider := cfg.ProviderName
+func NewRunner(cfg *config.MetaConfig, stateCache state.Cache, executor Executor) *Runner {
 	prefix := cfg.ClusterPrefix
-	layout := cfg.Layout
 
-	workingDir := infrastructure.GetInfrastructureModulesForRunningDir(provider, layout, step)
 	logger := log.GetDefaultLogger()
 
-	// in terraform >= 0.14 creates special file contains hashes for used providers between runs terraform
-	// it needs for prevent using different providers versions for same infrastructure
-	// because user can use constraints for definition provider version and terraform can upgrade version without
-	// user permission. Now if user get conflict between versions user should confirm upgrade with command
-	// terraform init -upgrade
-	// https://developer.hashicorp.com/terraform/tutorials/configuration-language/provider-versioning
-	// unfortunately we can use different provider version between runs. For example cloud provider vcd works
-	// in two modes in legacy (for old vcd instances (yes, some our customers cannot upgrade vcd version)) and latest.
-	// user can switch from and to legacy mode in between dhctl runs in same container (in commander for example)
-	// and in this situation user will get provider lock error.
-	// we made a decision that we will remove lock file before infrastructure running
-	err := releaseInfrastructureProviderLock(infrastructure.GetDhctlPath(), infrastructure.GetInfrastructureModulesDir(provider), step, workingDir, logger)
-	if err != nil {
-		// yes, we panic here because returns error in many places and this will lead to a major refactoring, and
-		// we don't expect any problems with file deletion, only in critical situations
-		panic(fmt.Errorf("failed to release infrastructure lock: %v", err))
-	}
+	step := executor.Step()
 
 	r := &Runner{
-		prefix:                prefix,
-		step:                  step,
-		name:                  step,
-		workingDir:            workingDir,
-		confirm:               input.NewConfirmation,
-		stateCache:            stateCache,
-		changeSettings:        ChangeActionSettings{},
-		infraExecutor:         executorProvider(workingDir, logger),
-		logger:                logger,
-		infraExecutorProvider: executorProvider,
+		prefix:         prefix,
+		name:           string(step),
+		confirm:        input.NewConfirmation,
+		stateCache:     stateCache,
+		changeSettings: ChangeActionSettings{},
+		infraExecutor:  executor,
+		logger:         logger,
 	}
 
 	var destinations []SaverDestination
@@ -172,12 +139,12 @@ func NewRunner(cfg *config.MetaConfig, step string, stateCache state.Cache, exec
 	return r
 }
 
-func NewRunnerFromConfig(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
-	return NewRunner(cfg, step, stateCache, executorProvider)
+func NewRunnerFromConfig(cfg *config.MetaConfig, stateCache state.Cache, executor Executor) *Runner {
+	return NewRunner(cfg, stateCache, executor)
 }
 
-func NewImmutableRunnerFromConfig(cfg *config.MetaConfig, step string, executorProvider ExecutorProvider) *Runner {
-	return NewRunner(cfg, step, cache.Dummy(), executorProvider)
+func NewImmutableRunnerFromConfig(cfg *config.MetaConfig, executor Executor) *Runner {
+	return NewRunner(cfg, cache.Dummy(), executor)
 }
 
 func (r *Runner) WithCache(cache state.Cache) *Runner {
@@ -210,24 +177,18 @@ func (r *Runner) WithHook(h InfraActionHook) *Runner {
 	return r
 }
 
-func (r *Runner) WorkerDir() string {
-	return r.workingDir
-}
-
-func (r *Runner) GetExecutorProvider() ExecutorProvider {
-	return r.infraExecutorProvider
-}
-
 func (r *Runner) WithState(stateData []byte) *Runner {
-	tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhouseClusterStateSuffix)
+	step := r.infraExecutor.Step()
+
+	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(step)+deckhouseClusterStateSuffix)
 	if err != nil {
-		log.ErrorF("can't save infrastructure state for runner %s: %s\n", r.step, err)
+		log.ErrorF("can't save infrastructure state for runner %s: %s\n", step, err)
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), stateData, 0o600)
 	if err != nil {
-		log.ErrorF("can't write infrastructure state for runner %s: %s\n", r.step, err)
+		log.ErrorF("can't write infrastructure state for runner %s: %s\n", step, err)
 		return r
 	}
 
@@ -236,15 +197,17 @@ func (r *Runner) WithState(stateData []byte) *Runner {
 }
 
 func (r *Runner) WithVariables(variablesData []byte) *Runner {
-	tmpFile, err := os.CreateTemp(app.TmpDirName, varFileName)
+	step := r.infraExecutor.Step()
+
+	tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), varFileName)
 	if err != nil {
-		log.ErrorF("can't save infrastructure variables for runner %s: %s\n", r.step, err)
+		log.ErrorF("can't save infrastructure variables for runner %s: %s\n", step, err)
 		return r
 	}
 
 	err = os.WriteFile(tmpFile.Name(), variablesData, 0o600)
 	if err != nil {
-		log.ErrorF("can't write infrastructure variables for runner %s: %s\n", r.step, err)
+		log.ErrorF("can't write infrastructure variables for runner %s: %s\n", step, err)
 		return r
 	}
 
@@ -352,7 +315,7 @@ func (r *Runner) Init(ctx context.Context) error {
 			if len(stateData) > 0 {
 				err := fs.WriteContentIfNeed(r.statePath, stateData)
 				if err != nil {
-					err := fmt.Errorf("can't write infrastructure state for runner %s: %s", r.step, err)
+					err := fmt.Errorf("can't write infrastructure state for runner %s: %s", r.infraExecutor.Step(), err)
 					r.logger.LogErrorLn(err)
 					return err
 				}
@@ -367,7 +330,7 @@ func (r *Runner) Init(ctx context.Context) error {
 
 	return r.logger.LogProcess("default", "infrastructure init ...", func() error {
 		_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
-			err := r.infraExecutor.Init(ctx, fmt.Sprintf("%s/plugins", strings.TrimRight(infrastructure.GetDhctlPath(), "/")))
+			err := r.infraExecutor.Init(ctx)
 			return 0, err
 		})
 
@@ -376,7 +339,7 @@ func (r *Runner) Init(ctx context.Context) error {
 }
 
 func (r *Runner) stateName() string {
-    return fmt.Sprintf("%s.tfstate", r.name)
+	return fmt.Sprintf("%s.tfstate", r.name)
 }
 
 func (r *Runner) getHook() InfraActionHook {
@@ -414,12 +377,12 @@ func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 
 func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 	// first verify destructive change
-	if r.changesInPlan == PlanHasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
+	if r.changesInPlan == plan.HasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
 		return true, nil
 	}
 
-	if r.changesInPlan == PlanHasNoChanges {
+	if r.changesInPlan == plan.HasNoChanges {
 		// if plan has not changes we will run apply
 		return false, nil
 	}
@@ -507,13 +470,30 @@ func (r *Runner) Apply(ctx context.Context) error {
 	})
 }
 
+func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
+	if r.stopped {
+		return nil, ErrRunnerStopped
+	}
+
+	rawPlan, err := r.infraExecutor.Show(ctx, r.GetPlanPath())
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+	}
+
+	return rawPlan, nil
+}
+
 func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
 
 	return r.logger.LogProcess("default", "infrastructure plan ...", func() error {
-		tmpFile, err := os.CreateTemp(app.TmpDirName, r.step+deckhousePlanSuffix)
+		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("can't create temp file for plan: %w", err)
 		}
@@ -528,17 +508,18 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 			})
 		})
 
-		if exitCode == hasChangesExitCode {
-			r.changesInPlan = PlanHasChanges
+		// todo need refactor
+		if exitCode == infraexec.HasChangesExitCode {
+			r.changesInPlan = plan.HasChanges
 			report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
-			destructiveChanges := report.Changes
+			destructiveChanges := report.changes
 			if err != nil {
 				return err
 			}
 			if destructiveChanges != nil {
-				r.changesInPlan = PlanHasDestructiveChanges
+				r.changesInPlan = plan.HasDestructiveChanges
 				r.planDestructiveChanges = destructiveChanges
-				r.hasMasterDestruction = report.hasMasterDestruction
+				r.hasVMDestruction = report.hasVMChanges
 			}
 		} else if err != nil {
 			return err
@@ -678,19 +659,19 @@ func (r *Runner) GetState() ([]byte, error) {
 	return os.ReadFile(r.statePath)
 }
 
-func (r *Runner) GetStep() string {
-	return r.step
+func (r *Runner) GetStep() Step {
+	return r.infraExecutor.Step()
 }
 
 func (r *Runner) GetChangesInPlan() int {
 	return r.changesInPlan
 }
 
-func (r *Runner) GetMasterDestruction() bool {
-	return r.hasMasterDestruction
+func (r *Runner) HasVMDestruction() bool {
+	return r.hasVMDestruction
 }
 
-func (r *Runner) GetPlanDestructiveChanges() *PlanDestructiveChanges {
+func (r *Runner) GetPlanDestructiveChanges() *plan.DestructiveChanges {
 	return r.planDestructiveChanges
 }
 
@@ -725,22 +706,17 @@ func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ct
 	defer r.switchInfrastructureUtilityIsRunning()
 	r.infraExecutor.SetExecutorLogger(r.logger)
 	exitCode, err := executor(ctx)
-	r.logger.LogInfoF("Infrastructure runner %q process exited.\n", r.step)
+	r.logger.LogInfoF("Infrastructure runner %q process exited.\n", r.infraExecutor.Step())
 
 	return exitCode, err
 }
 
-func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*DestructiveChangesReport, error) {
+func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*destructiveChangesReport, error) {
 	var result []byte
 	var providerName string
-	var hasMasterInstanceDestructiveChanges bool
+	var hasVMChange bool
 
-    resTypeMap, err := r.getProviderVMTypes()
-    if err != nil {
-        return nil, err
-    }
-
-	_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		res, err := r.infraExecutor.Show(ctx, planFile)
 		if err != nil {
 			return 0, err
@@ -757,121 +733,45 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	var plan TfPlan
-	if err := json.Unmarshal(result, &plan); err != nil {
+	var pl plan.InfrastructurePlan
+	if err := json.Unmarshal(result, &pl); err != nil {
 		return nil, err
 	}
 
-	var destructiveChanges *PlanDestructiveChanges
-	getOrCreateDestructiveChanges := func() *PlanDestructiveChanges {
+	var destructiveChanges *plan.DestructiveChanges
+	getOrCreateDestructiveChanges := func() *plan.DestructiveChanges {
 		if destructiveChanges == nil {
-			destructiveChanges = &PlanDestructiveChanges{}
+			destructiveChanges = &plan.DestructiveChanges{}
 		}
 		return destructiveChanges
 	}
 
-	for _, resource := range plan.ResourceChanges {
-		if hasAction(resource.Change.Actions, "delete") {
+	for _, resource := range pl.ResourceChanges {
+		if resource.HasAction(plan.ActionDelete) {
 			if providerName == "" && resource.ProviderName != "" {
 				providerName = resource.ProviderName
 			}
-			if !hasMasterInstanceDestructiveChanges {
-				hasMasterInstanceDestructiveChanges = IsMasterInstanceDestructiveChanged(ctx, resource, resTypeMap)
+			if !hasVMChange {
+				hasVMChange = r.infraExecutor.IsVMChange(resource)
 			}
-			if hasAction(resource.Change.Actions, "create") {
+			if resource.HasAction(plan.ActionCreate) {
 				// recreate
-				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
+				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, plan.ValueChange{
 					CurrentValue: resource.Change.Before,
 					NextValue:    resource.Change.After,
 					Type:         resource.Type,
 				})
 			} else {
-				getOrCreateDestructiveChanges().ResourcesDeleted = append(getOrCreateDestructiveChanges().ResourcesDeleted, ValueChange{
+				getOrCreateDestructiveChanges().ResourcesDeleted = append(getOrCreateDestructiveChanges().ResourcesDeleted, plan.ValueChange{
 					CurrentValue: resource.Change.Before,
 					Type:         resource.Type,
 				})
 			}
 		}
 	}
-	log.DebugF("hasMasterDestruction: %s\n", hasMasterInstanceDestructiveChanges)
-	return &DestructiveChangesReport{
-		Changes:              destructiveChanges,
-		hasMasterDestruction: hasMasterInstanceDestructiveChanges,
+	log.DebugF("hasVMDestruction: %s\n", hasVMChange)
+	return &destructiveChangesReport{
+		changes:      destructiveChanges,
+		hasVMChanges: hasVMChange,
 	}, nil
-}
-
-func hasAction(actions []string, findAction string) bool {
-	for _, action := range actions {
-		if action == findAction {
-			return true
-		}
-	}
-	return false
-}
-
-func deleteLockFile(fileForDelete, logPrefix, nextActionLogString string, logger log.Logger) (pursue bool, err error) {
-	err = os.Remove(fileForDelete)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return false, err
-		}
-
-		logger.LogDebugF("%s file %s not found. %s\n", logPrefix, fileForDelete, nextActionLogString)
-		return true, nil
-	}
-
-	logger.LogDebugF("%s file %s was found and deleted. \n", logPrefix, fileForDelete)
-	return false, nil
-}
-
-func releaseInfrastructureProviderLock(dhctlDir, modulesDir, module, desiredModuleDir string, logger log.Logger) error {
-	logger.LogDebugF("Releasing infrastructure provider lock. dhctl dir: %s; modules dir %s; module: %s; desired module dir: %s .\n",
-		dhctlDir, modulesDir, module, desiredModuleDir)
-	defer logger.LogDebugF("Releasing infrastructure provider lock finished.\n")
-
-	// terraform and tofu use same file name for lock file
-	const lockFile = ".terraform.lock.hcl"
-
-	// first, we will process terraform case. Terraform 0.14 version save lock file in same location where terraform runs
-	terraformLockFile := filepath.Join(dhctlDir, lockFile)
-	logger.LogDebugF("Terraform lock file %s\n", terraformLockFile)
-
-	_, err := deleteLockFile(terraformLockFile, "Terraform lock", "", logger)
-	if err != nil {
-		return err
-	}
-
-	// we need to continue processing for tofu because commander can work in next sequence
-	// - converge tofu cluster
-	// - converge terraform cluster
-	// - converge tofu cluster
-	// in this case we release lock from terraform because terraform lock was present, but tofu lock presents from
-	// first run also present and is not deleted. So, we should continue to delete tofu locks in all cases
-	log.DebugLn("Try to delete tofu lock files regardless of existing terraform lock.")
-
-	// next, we will process tofu case. Latest terraform version and opentofu can save lock in modules dir (not in desired
-	// module where tofu will run) and in desired module. I do not understand because this behavior happens
-
-	tofuModulesLockFile := filepath.Join(modulesDir, module, lockFile)
-	logger.LogDebugF("Tofu modules lock file %s\n", tofuModulesLockFile)
-
-	pursue, err := deleteLockFile(tofuModulesLockFile, "Tofu modules lock", "Try to delete tofu lock file in module.", logger)
-	if err != nil {
-		return err
-	}
-
-	if !pursue {
-		logger.LogDebugF("Tofu modules lock file %s was deleted. Hence we do not need delete tofu 'in module' lock file.\n", tofuModulesLockFile)
-		return nil
-	}
-
-	tofuInModuleLockFile := filepath.Join(desiredModuleDir, lockFile)
-	logger.LogDebugF("Tofu 'in module' lock file %s\n", tofuInModuleLockFile)
-
-	_, err = deleteLockFile(tofuInModuleLockFile, "Tofu 'in module' lock", "", logger)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

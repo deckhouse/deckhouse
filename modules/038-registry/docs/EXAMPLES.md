@@ -1,6 +1,6 @@
 ---
 title: "Module registry: usage example"
-description: ""
+description: "Examples for switching between Direct and Unmanaged registry modes in Deckhouse Kubernets Platform, including configuration examples and status monitoring."
 ---
 
 ## Switching to the `Direct` Mode

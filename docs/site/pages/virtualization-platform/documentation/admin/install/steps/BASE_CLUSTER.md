@@ -11,15 +11,15 @@ To install the platform, you need to create an installation YAML configuration f
 
 The YAML installation configuration file includes parameters for several resources (manifests):
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — general cluster settings such as control plane version, networking parameters, CRI settings, and more.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster settings such as control plane version, networking parameters, CRI settings, and more.
 
   > The ClusterConfiguration resource should only be included in the configuration if the platform installation involves deploying a new Kubernetes cluster. It is not required when installing the platform into an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — settings for a Kubernetes cluster deployed on bare-metal servers.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — settings for a Kubernetes cluster deployed on bare-metal servers.
 
   > Similar to ClusterConfiguration, the StaticClusterConfiguration resource is not required if the platform is being installed in an existing Kubernetes cluster.
 
-- [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) — a set of resources containing configuration parameters for the platform's built-in modules.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for the platform's modules.
 
 For example, when planning the cluster parameters, the following values were chosen:
 
@@ -76,7 +76,7 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # Enabling access to the Kubernetes API through Ingress.
-    # https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -111,7 +111,7 @@ Depending on the chosen edition, authentication in the container registry `regis
 
 ### Choosing the installer image
 
-The installer runs as a Docker container. The container image is selected based on the edition and release channel:
+The installer runs as a container. The container image is selected based on the edition and release channel:
 
 ```shell
 registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
@@ -184,7 +184,7 @@ Mounting the `$HOME/.ssh` directory gives the installer access to the SSH config
 
 The installation time may range from 5 to 30 minutes, depending on the connection quality between the master node and the container registry.
 
-Example output upon successful completion of the installation:
+{% offtopic title="Example output upon successful completion of the installation..." %}
 
 ```console
 ...
@@ -200,25 +200,16 @@ Example output upon successful completion of the installation:
 🎉 Deckhouse cluster was created successfully!
 ```
 
-After the installation is complete, you can exit the running container and check the status of the master node with the following command:
+{% endofftopic %}
 
-```shell
-sudo -i d8 k get no
-```
-
-Example output:
-
-```console
-NAME           STATUS   ROLES                  AGE     VERSION
-master-0       Ready    control-plane,master   5m      v1.29.10
-```
+After the installation is successfully completed, you can exit the running container and proceed to [access configuration](access.html).
 
 ### Pre-Installation Checks
 
 List of checks performed by the installer before starting platform installation:
 
 1. General checks:
-   - The values of the parameters [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
    - The authentication data for the container image registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters;

@@ -57,4 +57,4 @@ EOF
 
 ## Generating a kubeconfig
 
-To generate a kubeconfig, follow the [user creation guide](/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access) starting from **step 3**.
+To generate a kubeconfig, follow the [instruction](/modules/user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).

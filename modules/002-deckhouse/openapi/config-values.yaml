@@ -66,7 +66,7 @@ properties:
 
             Confirmation is required for updating both minor and patch versions.
 
-          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](../../cr.html#deckhouserelease).
+          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
         enum:
           - 'AutoPatch'
           - 'Auto'
@@ -81,7 +81,7 @@ properties:
         description: |
           Update mode for disruptive Deckhouse releases:
           - `Auto` — a disruptive release is approved automatically.
-          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](../../cr.html#deckhouserelease) resource to apply the update).
+          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource to apply the update).
       windows:
         type: array
         description: |
@@ -289,7 +289,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   allowExperimentalModules:
     type: boolean
     x-examples: [false]

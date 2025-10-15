@@ -167,10 +167,7 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 }
 
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	discoveryData := &v1.VsphereCloudDiscoveryData{
-		Kind:       DiscoveryDataKind,
-		APIVersion: DiscoveryDataVersion,
-	}
+	discoveryData := new(v1.VsphereCloudDiscoveryData)
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
@@ -183,10 +180,24 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
 	}
 
+	stroragePolicies, err := d.vsphereClient.ListPolicies()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list Storage Policies: %v", err)
+	}
+
+	discoveryData.Kind = DiscoveryDataKind
+	discoveryData.APIVersion = DiscoveryDataVersion
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
 	discoveryData.VMFolderPath = d.vmFolderPath
+
+	for i := range stroragePolicies {
+		discoveryData.StoragePolicies = append(discoveryData.StoragePolicies, v1.VsphereStoragePolicy{
+			Name: stroragePolicies[i].Name,
+			ID:   stroragePolicies[i].ID,
+		})
+	}
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {

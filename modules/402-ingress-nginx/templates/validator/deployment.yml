@@ -1,21 +1,21 @@
 {{- define "ingress-validator" }}
-{{- $ctx := index . 0 }}
+{{- $context := index . 0 }}
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $checksum := toJson $crd | sha256sum }}
-{{- $version := $crd.spec.controllerVersion | default $ctx.Values.ingressNginx.defaultControllerVersion }}
+{{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resources := $crd.spec.resourcesRequests | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
 
-{{- if (has "vertical-pod-autoscaler" $ctx.Values.global.enabledModules) }}
+{{- if (has "vertical-pod-autoscaler" $context.Values.global.enabledModules) }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: validator-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "validator" "name" $name)) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -44,9 +44,9 @@ kind: PodDisruptionBudget
 metadata:
   name: validator-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "validator" "name" $name)) | nindent 2 }}
 spec:
-  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $ctx 1 0) }}
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}
   selector:
     matchLabels:
       app: validator
@@ -57,12 +57,12 @@ kind: Deployment
 metadata:
   name: validator-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $ctx (dict "app" "validator" "name" $name)) | nindent 2 }}
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "validator" "name" $name)) | nindent 2 }}
   annotations:
-    ingress-nginx-controller.deckhouse.io/validator-version: {{ $version | quote }}
+    ingress-nginx-controller.deckhouse.io/validator-version: {{ $controllerVersion | quote }}
     ingress-nginx-controller.deckhouse.io/checksum: {{ $checksum }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $ctx | nindent 2 }}
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $context | nindent 2 }}
   selector:
     matchLabels:
       app: validator
@@ -73,91 +73,150 @@ spec:
         app: validator
         name: {{ $name }}
     spec:
-      {{- include "helm_lib_node_selector" (tuple $ctx "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ctx (dict "app" "validator" "name" $name )) | nindent 6 }}
-      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "validator" "name" $name )) | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
       imagePullSecrets:
-        - name: deckhouse-registry
+      - name: deckhouse-registry
+      initContainers:
+      - image: {{ include "helm_lib_module_image" (list $context "init") }}
+        name: init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        volumeMounts:
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
+        command:
+        - /bin/bash
+        - -ec
+        - |
+          mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
+            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx /chroot/etc/ingress-controller/resolv \
+            /chroot/etc/ingress-controller/geoip /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/tmp/nginx
+          /usr/bin/touch /chroot/var/log/nginx/access.log
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          {{- if eq $controllerVersion "1.9" }}
+          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
+          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
+          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
+          {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "init_resources" $context | nindent 12 }}
+        {{- end }}
       containers:
-        - name: validator
-          image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_IP
-              value: "127.0.0.1"
-            {{- if $geoIP2.maxmindLicenseKey }}
-            - name: LUA_USE_GEOIP2
-              value: "true"
+      - name: validator
+        image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
+        securityContext:
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_IP
+            value: "127.0.0.1"
+          {{- if $geoIP2.maxmindLicenseKey }}
+          - name: LUA_USE_GEOIP2
+            value: "true"
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 10254
+          initialDelaySeconds: 10
+          periodSeconds: 2
+          timeoutSeconds: 5
+        args:
+          - /nginx-ingress-controller
+          - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
+          - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
+          - --healthz-port=10254
+          - --healthz-host=0.0.0.0
+          {{- if $geoIP2.maxmindLicenseKey }}
+          - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+          {{- if $geoIP2.maxmindEditionIDs }}
+          - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+          {{- end }}
+          {{- end }}
+          - --validating-webhook=:8443
+          - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
+          - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
+          - --watch-namespace=d8-ingress-nginx
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/wait-shutdown"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
+            {{- if eq ($resources.mode | default "") "Static" }}
+            {{- $resourcesRequestsStatic := $resources.static | default dict }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
+            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
+            {{- else if not $resources }}
+            cpu: "350m"
+            memory: "500Mi"
             {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 10254
-            initialDelaySeconds: 30
-            timeoutSeconds: 5
-            periodSeconds: 10
-            failureThreshold: 10
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 10254
-            initialDelaySeconds: 10
-            periodSeconds: 2
-            timeoutSeconds: 5
-          args:
-            - /nginx-ingress-controller
-            - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
-            - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
-            - --healthz-port=10254
-            - --healthz-host=0.0.0.0
-            {{- if $geoIP2.maxmindLicenseKey }}
-            - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
-            {{- if $geoIP2.maxmindEditionIDs }}
-            - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
-            {{- end }}
-            {{- end }}
-            - --validating-webhook=:8443
-            - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
-            - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
-            - --watch-namespace=d8-ingress-nginx
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/wait-shutdown"]
-          resources:
-            requests:
-              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-              {{- if eq ($resources.mode | default "") "Static" }}
-              {{- $resourcesRequestsStatic := $resources.static | default dict }}
-              cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
-              memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
-              {{- else if not $resources }}
-              cpu: "350m"
-              memory: "500Mi"
-              {{- end }}
-          ports:
-            - name: webhook
-              containerPort: 8443
-              protocol: TCP
-          volumeMounts:
-            - name: secret-nginx-auth-tls
-              mountPath: /chroot/etc/nginx/ssl/
-            - name: webhook-cert
-              mountPath: /chroot/etc/nginx/webhook-ssl/
-              readOnly: true
+        ports:
+          - name: webhook
+            containerPort: 8443
+            protocol: TCP
+        volumeMounts:
+          - name: secret-nginx-auth-tls
+            mountPath: /chroot/etc/nginx/ssl/
+          - name: webhook-cert
+            mountPath: /chroot/etc/nginx/webhook-ssl/
+            readOnly: true
+          - mountPath: /chroot/var/lib/nginx
+            name: var-lib-nginx
+          - mountPath: /chroot/var/log/nginx
+            name: var-log-nginx
+          - mountPath: /chroot/tmp
+            name: tmp
+          - mountPath: /chroot/etc/ingress-controller
+            name: etc-ingress-controller
       volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: etc-ingress-controller
+          emptyDir: {}
+        - name: var-lib-nginx
+          emptyDir: {}
+        - name: var-log-nginx
+          emptyDir: {}
         - name: secret-nginx-auth-tls
           secret:
             secretName: ingress-nginx-{{ $crd.name }}-auth-tls
@@ -166,9 +225,9 @@ spec:
             secretName: ingress-admission-certificate
 {{- end }}
 
-{{- $ctx := . }}
-{{- range $crd := $ctx.Values.ingressNginx.internal.ingressControllers }}
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if $crd.spec.validationEnabled }}
-  {{ include "ingress-validator" (list $ctx $crd $crd.name) }}
+  {{ include "ingress-validator" (list $context $crd $crd.name) }}
   {{- end }}
 {{- end }}

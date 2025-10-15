@@ -67,7 +67,7 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
-      - name: deckhouse-registry
+      - name: deckhouse-rpp-registry
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-no-csi")  | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
@@ -85,6 +85,8 @@ spec:
         - "--cache-retention-size=1Gi"
         env:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        - name: GOGC
+          value: "50"
         livenessProbe:
           httpGet:
             path: /healthz

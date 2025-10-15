@@ -8,4 +8,5 @@ package nodecondition
 const (
 	StatusTrue  = "True"
 	StatusFalse = "False"
+	StatusUnknown = "Unknown"
 )

@@ -49,6 +49,8 @@ import:
     add: /descheduler
     to: /descheduler
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/descheduler"]

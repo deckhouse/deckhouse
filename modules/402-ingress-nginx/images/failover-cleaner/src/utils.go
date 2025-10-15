@@ -17,18 +17,37 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
 )
 
+func isNotExist(err error) bool {
+	e, ok := err.(*iptables.Error)
+	if !ok {
+		return false
+	}
+
+	if e.IsNotExist() {
+		return true
+	}
+
+	if strings.Contains(err.Error(), "Couldn't find target") {
+		return true
+	}
+
+	return false
+}
+
 func cleanup(iptablesMgr *iptables.IPTables) error {
 	var errs []error
 
 	log.Println("Cleaning up jump rule...")
-	if err := iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...); err != nil {
+	if err := iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...); err != nil && !isNotExist(err) {
 		errs = append(errs, fmt.Errorf("failed to delete jump rule: %w", err))
 	}
 
@@ -51,13 +70,19 @@ func cleanup(iptablesMgr *iptables.IPTables) error {
 	}
 
 	log.Println("Deleting dummy interface...")
-	if err := deleteLink(); err != nil {
+	if err := deleteLink(); err != nil && !errors.As(err, &netlink.LinkNotFoundError{}) {
 		errs = append(errs, fmt.Errorf("failed to delete dummy link: %w", err))
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("cleanup finished with %d error(s)", len(errs))
+		errorsStr := make([]string, 0, len(errs))
+		for _, e := range errs {
+			errorsStr = append(errorsStr, e.Error())
+		}
+
+		return fmt.Errorf("cleanup finished with %d error(s): %s", len(errs), strings.Join(errorsStr, ","))
 	}
+
 	return nil
 }
 

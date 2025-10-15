@@ -31,7 +31,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.24" "builder/golang-alpine-svace-1.24" }}
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
@@ -46,6 +46,15 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+{{- if eq $.SVACE_ENABLED "true" }}
+- image: {{ .ModuleName }}/golang-artifact
+  add: /
+  to: /
+  includePaths:
+  - opt/svace
+  - usr/local/bin/svace
+  before: install
+{{- end }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}

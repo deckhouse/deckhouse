@@ -59,7 +59,7 @@ apiServer:
     {{- if eq .apiserver.auditLog.output "File" }}
     - name: kube-audit-log
       hostPath: "{{ .apiserver.auditLog.path }}"
-      mountPath: "{{ .apiserver.auditLog.path }}"
+      mountPath: /var/log/kube-audit
       readOnly: false
       pathType: DirectoryOrCreate
     {{- end }}
@@ -92,7 +92,7 @@ apiServer:
       value: json
     {{- if eq .apiserver.auditLog.output "File" }}
     - name: audit-log-path
-      value: "{{ .apiserver.auditLog.path }}/audit.log"
+      value: "/var/log/kube-audit/audit.log"
     - name: audit-log-truncate-enabled
       value: "true"
     - name: audit-log-maxage

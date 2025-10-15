@@ -39,12 +39,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -59,9 +61,6 @@ import (
 )
 
 const (
-	metricUpdatingGroup = "d8_updating"
-	metricUpdatingName  = "d8_is_updating"
-
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
@@ -70,6 +69,33 @@ const (
 )
 
 const defaultCheckInterval = 15 * time.Second
+
+type ReleaseUpdateInfo struct {
+	TaskCalculation struct {
+		TaskType string `json:"taskType,omitempty"`
+		IsPatch  bool   `json:"isPatch"`
+		IsMajor  bool   `json:"isMajor"`
+		IsFromTo bool   `json:"isFromTo"`
+		IsSingle bool   `json:"isSingle"`
+		IsLatest bool   `json:"isLatest"`
+	} `json:"taskCalculation"`
+
+	UpdatePolicy struct {
+		Mode string `json:"mode,omitempty"`
+	} `json:"updatePolicy"`
+
+	ForceRelease struct {
+		IsForced bool `json:"isForced"`
+	} `json:"forceRelease"`
+
+	PodReadiness struct {
+		IsReady bool `json:"isReady"`
+	} `json:"podReadiness"`
+
+	RequirementsCheck struct {
+		RequirementsMet bool `json:"requirementsMet"`
+	} `json:"requirementsCheck"`
+}
 
 type MetricsUpdater interface {
 	UpdateReleaseMetric(string, releaseUpdater.MetricLabels)
@@ -93,6 +119,7 @@ type deckhouseReleaseReconciler struct {
 
 	registrySecret *utils.DeckhouseRegistrySecret
 	metricsUpdater MetricsUpdater
+	eventRecorder  record.EventRecorder
 
 	deckhouseVersion string
 }
@@ -118,6 +145,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
+		eventRecorder:  mgr.GetEventRecorderFor("deckhouse-release-controller"),
 	}
 
 	// Add Preflight Check
@@ -367,11 +395,28 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return res, err
 	}
 
+	// Initialize release update info structure for collecting processing information
+	updateInfo := &ReleaseUpdateInfo{}
+
+	// Collect task calculation information
+	updateInfo.TaskCalculation.TaskType = task.TaskType.String()
+	updateInfo.TaskCalculation.IsPatch = task.IsPatch
+	updateInfo.TaskCalculation.IsSingle = task.IsSingle
+	updateInfo.TaskCalculation.IsLatest = task.IsLatest
+	updateInfo.TaskCalculation.IsFromTo = task.IsFromTo
+	updateInfo.TaskCalculation.IsMajor = task.IsMajor
+
+	// Collect update policy information
+	updateInfo.UpdatePolicy.Mode = r.updateSettings.Get().Update.Mode
+
 	if dr.GetForce() {
+		// Collect force release information
+		updateInfo.ForceRelease.IsForced = true
+
 		r.logger.Warn("forced release found")
 
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
-		err := r.ApplyRelease(ctx, dr, task)
+		err := r.ApplyRelease(ctx, dr, task, updateInfo)
 		if err != nil {
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
@@ -428,6 +473,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	// Collect pod readiness information - if we reached here, pod is ready
+	updateInfo.PodReadiness.IsReady = true
+
 	checker, err := releaseUpdater.NewDeckhouseReleaseRequirementsChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.exts, r.metricStorage, releaseUpdater.WithLogger(r.logger))
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
@@ -469,14 +517,18 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
+	// Collect requirements check information - requirements are met
+	updateInfo.RequirementsCheck.RequirementsMet = true
+
 	// handling error inside function
+	// we do not pass update info, because if we have an error - we can't apply release and set update info
 	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	err = r.ApplyRelease(ctx, dr, task)
+	err = r.ApplyRelease(ctx, dr, task, updateInfo)
 	if err != nil {
 		return res, fmt.Errorf("apply predicted release: %w", err)
 	}
@@ -496,6 +548,7 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	timeResult := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
 
 	if timeResult == nil {
+		// No delay, ready to deploy immediately
 		return nil
 	}
 
@@ -644,7 +697,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 }
 
 // ApplyRelease applies predicted release
-func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task) error {
+func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, updateInfo *ReleaseUpdateInfo) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
 	defer span.End()
 
@@ -654,7 +707,7 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 		dri = task.DeployedReleaseInfo
 	}
 
-	err := r.runReleaseDeploy(ctx, dr, dri)
+	err := r.runReleaseDeploy(ctx, dr, dri, updateInfo)
 	if err != nil {
 		return fmt.Errorf("run release deploy: %w", err)
 	}
@@ -668,8 +721,11 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 // 2) bump previous deployment status superseded (retry if error)
 // 3) bump release annotations (retry if error)
 // 3) bump release status to deployed (retry if error)
-func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
+func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo, updateInfo *ReleaseUpdateInfo) error {
 	r.logger.Info("applying release", slog.String("name", dr.GetName()))
+
+	// Record event about release update process
+	r.recordReleaseUpdateEvent(dr, updateInfo)
 
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
@@ -692,8 +748,18 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 			v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 		}
 
+		// Serialize update info to JSON and add to annotations
+		if updateInfo != nil {
+			updateInfoJSON, jsonErr := json.Marshal(updateInfo)
+			if jsonErr != nil {
+				r.logger.Warn("failed to marshal update info to JSON", log.Err(jsonErr))
+			} else {
+				annotations[v1alpha1.DeckhouseReleaseAnnotationUpdateInfo] = string(updateInfoJSON)
+			}
+		}
+
 		if len(dr.Annotations) == 0 {
-			dr.Annotations = make(map[string]string, 2)
+			dr.Annotations = make(map[string]string, len(annotations))
 		}
 
 		for k, v := range annotations {
@@ -904,16 +970,16 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		return fmt.Errorf("registry (%s) client init failed: %s", repo, err)
 	}
 
-	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckTotal, 1, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseKubeImageDigestCheckTotal, 1, map[string]string{})
 
 	repoDigest, err := regClient.Digest(ctx, tag)
 	if err != nil {
-		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
+		r.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckErrorsTotal, 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
 	}
 
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseKubeImageDigestCheckSuccess, 1.0, map[string]string{})
 
 	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
 		return nil
@@ -1029,7 +1095,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = "true"
-			r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
+			r.metricStorage.Grouped().ExpireGroupMetrics(metrics.D8Updating)
 
 			return nil
 		})
@@ -1051,7 +1117,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 	}
 
 	if dr.GetIsUpdating() {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"deployingRelease": dr.GetName()})
+		r.metricStorage.Grouped().GaugeSet(metrics.D8Updating, metrics.D8IsUpdating, 1, map[string]string{"deployingRelease": dr.GetName()})
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
@@ -1105,4 +1171,19 @@ func newDeckhouseReleaseWithName(name string) *v1alpha1.DeckhouseRelease {
 			Name: name,
 		},
 	}
+}
+
+// recordReleaseUpdateEvent records a Kubernetes event for release update process
+func (r *deckhouseReleaseReconciler) recordReleaseUpdateEvent(release *v1alpha1.DeckhouseRelease, updateInfo *ReleaseUpdateInfo) {
+	if updateInfo == nil || r.eventRecorder == nil {
+		return
+	}
+
+	r.eventRecorder.Eventf(release, corev1.EventTypeNormal, "ReleaseUpdateInitiated",
+		"Release update initiated: task=%s, updateMode=%s, force=%t, podReady=%t, requirementsMet=%t",
+		updateInfo.TaskCalculation.TaskType,
+		updateInfo.UpdatePolicy.Mode,
+		updateInfo.ForceRelease.IsForced,
+		updateInfo.PodReadiness.IsReady,
+		updateInfo.RequirementsCheck.RequirementsMet)
 }

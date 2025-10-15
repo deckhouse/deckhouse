@@ -84,11 +84,11 @@ spec:
 
                           To change a minor version (for example, from `v1.15.*` to `v1.16.*`), confirmation is required.
 
-                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
+                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
 
                         - `Auto` — all updates are applied automatically.
 
-                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
 
                         - `Manual` — confirmation is required for updating both minor and patch versions.
 
@@ -268,11 +268,11 @@ spec:
 
                           To change a minor version (for example, from `v1.15.*` to `v1.16.*`), confirmation is required.
 
-                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
+                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
 
                         - `Auto` — all updates are applied automatically.
 
-                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](./modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
 
                         - `Manual` — confirmation is required for updating both minor and patch versions.
 

@@ -1,17 +1,3 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
-image: {{ .ModuleName }}/distroless-proxy-failover-iptables-artifact
-fromImage: builder/src
-final: false
-shell:
-  install:
-  - mkdir -p /relocate/usr/sbin
-  - |
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore iptables-legacy iptables-legacy-save iptables-legacy-restore ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore iptables-nft iptables-nft-save iptables-nft-restore ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
-      ln -f -s /iptables-wrapper "/relocate/usr/sbin/${cmd}"
-    done
-    # broken symlinks are not imported from the artifact
-    touch /iptables-wrapper
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
@@ -42,31 +28,19 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
-  - chown -R 64535:64535 failover
+  - chown -R 0:0 failover
   - chmod 0700 failover
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
+fromCacheVersion: "2025-09-18-1"
 import:
-- image: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
-  add: /relocate
-  to: /
-  before: setup
 - image: {{ .ModuleName }}/failover-artifact
   add: /src/failover
   to: /failover
   before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /usr/sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/failover"]

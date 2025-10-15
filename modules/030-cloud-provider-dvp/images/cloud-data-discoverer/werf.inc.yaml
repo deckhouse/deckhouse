@@ -15,7 +15,7 @@ final: false
 fromImage: common/src-artifact
 fromCacheVersion: 2025-03-04.01
 git:
-- add: /go_lib/cloud-data
+- add: {{ .gitPrefix }}/go_lib/cloud-data
   to: /go_lib/cloud-data
   excludePaths:
   - "**/*.md"

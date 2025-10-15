@@ -68,6 +68,8 @@ import:
     add: /pause
     to: /pause
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/auth_server"]

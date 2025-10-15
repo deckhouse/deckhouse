@@ -56,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -129,6 +130,10 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 
 		if errors.Is(err, frontend.ErrBashibleTimeout) {
 			return frontend.ErrBashibleTimeout
+		}
+
+		if errors.Is(err, gossh.ErrBashibleTimeout) {
+			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -312,7 +317,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -331,9 +336,10 @@ func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData,
 	}
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
 
-	go proxy.Serve()
+	go proxy.Serve(proxyConfig)
 
 	go func() {
 		<-ctx.Done()
@@ -497,7 +503,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
-	err = StartRegistryPackagesProxy(ctx, cfg.Registry, clusterDomain)
+	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)
 	if err != nil {
 		return fmt.Errorf("failed to start registry packages proxy: %v", err)
 	}
@@ -525,7 +531,9 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
+		BreakIf(func(err error) bool {
+			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
+		}).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 
@@ -798,7 +806,7 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
-		case strings.HasPrefix(name, "base-infrastructure"):
+		case strings.HasPrefix(name, string(infrastructure.BaseInfraStep)):
 			fallthrough
 		case strings.HasPrefix(name, "uuid"):
 			fallthrough

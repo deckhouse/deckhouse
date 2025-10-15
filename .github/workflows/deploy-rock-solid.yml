@@ -50,13 +50,16 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   # </template: werf_envs>
   DEPLOY_CHANNEL: rock-solid
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
 
@@ -279,24 +282,45 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
 
@@ -1339,7 +1363,7 @@ jobs:
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          bash ./.github/scripts/send-report.sh --custom-message "🛑Deploy to channel rock-solid failed!🛑\n[URL]($WORKFLOW_URL)"
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Deploy to channel rock-solid failed!🛑\n[URL]($WORKFLOW_URL)"
 
       # <template: update_comment_on_finish>
       - name: Update comment on finish

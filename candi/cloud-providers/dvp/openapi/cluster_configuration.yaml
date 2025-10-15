@@ -296,7 +296,7 @@ apiVersions:
                       description: |
                         Name of the existing StorageClass will be used to create the virtual machine's root disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../reference/api/global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
                       description: |
@@ -357,7 +357,7 @@ apiVersions:
                       description: |
                         Name of the existing StorageClass will be used to create the etcd data disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../reference/api/global.html#parameters-modules-storageclass) setting.
                 additionalLabels:
                   type: object
                   description: |
@@ -490,7 +490,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts](../cloud-provider-dvp/layouts.html).
+            [Read more about possible provider layouts](/modules/cloud-provider-aws/dvp/layouts.html).
           enum: [Standard]
 
         region:

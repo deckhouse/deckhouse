@@ -22,11 +22,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -39,21 +39,22 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		var sshClient node.SSHClient
+		var err error
 		if len(app.SSHHosts) != 0 {
-			if app.SSHLegacyMode {
-				sshClient = clissh.NewClientFromFlags()
-			} else {
-				var err error
-				sshClient, err = gossh.NewClientFromFlags()
-				if err != nil {
-					return err
-				}
+			sshClient, err = sshclient.NewClientFromFlags()
+			if err != nil {
+				return err
 			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
 		})
 		return bootstraper.InstallDeckhouse(context.Background())
 	})
@@ -68,20 +69,18 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewClientFromFlagsWithHosts()
-		} else {
-			sshClient, err = gossh.NewClientFromFlagsWithHosts()
-		}
+		logger := log.GetDefaultLogger()
 
+		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
 		})
 		return bootstraper.ExecuteBashible(context.Background())
 	})
@@ -97,21 +96,23 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		var sshClient node.SSHClient
+		var err error
+
 		if len(app.SSHHosts) != 0 {
-			if app.SSHLegacyMode {
-				sshClient = clissh.NewClientFromFlags()
-			} else {
-				var err error
-				sshClient, err = gossh.NewClientFromFlags()
-				if err != nil {
-					return err
-				}
+			sshClient, err = sshclient.NewClientFromFlags()
+			if err != nil {
+				return err
 			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
 		})
 		return bootstraper.CreateResources(context.Background())
 	})
@@ -128,18 +129,18 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		if app.SSHLegacyMode {
-			sshClient = clissh.NewClientFromFlags()
-		} else {
-			var err error
-			sshClient, err = gossh.NewClientFromFlags()
-			if err != nil {
-				return err
-			}
+		logger := log.GetDefaultLogger()
+
+		sshClient, err := sshclient.NewClientFromFlags()
+		if err != nil {
+			return err
 		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
 		})
 		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
 	})
@@ -153,7 +154,13 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineDropCacheFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		logger := log.GetDefaultLogger()
+
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:  app.TmpDirName,
+			Logger:  logger,
+			IsDebug: app.IsDebug,
+		})
 		return bootstraper.BaseInfrastructure(context.Background())
 	})
 
@@ -166,19 +173,18 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewClientFromFlagsWithHosts()
-		} else {
-			sshClient, err = gossh.NewClientFromFlagsWithHosts()
-		}
+		logger := log.GetDefaultLogger()
+
+		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
 		})
 		return bootstraper.ExecPostBootstrap(context.Background())
 	})

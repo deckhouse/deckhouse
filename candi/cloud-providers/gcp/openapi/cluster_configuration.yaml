@@ -111,7 +111,7 @@ apiVersions:
           instanceClass:
             type: object
             required: [machineType, image]
-            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+            description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
             properties:
               machineType: &instanceClassMachineType
                 type: string
@@ -230,7 +230,7 @@ apiVersions:
             instanceClass:
               required: [machineType, image]
               type: object
-              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
+              description: Partial contents of the [GCPInstanceClass](https://deckhouse.io/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) fields.
               properties:
                 machineType: *instanceClassMachineType
                 image: *instanceClassImage
@@ -245,9 +245,9 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#standard)
+          `Standard` - set [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits) mode. [More info...](https://deckhouse.io/modules/cloud-provider-gcp/layouts.html#standard)
 
-          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/layouts.html#withoutnat)
+          `WithoutNAT` - a dedicated VPC is created for the cluster. All cluster nodes have public IP addresses. [More info...](https://deckhouse.io/modules/cloud-provider-gcp/layouts.html#withoutnat)
         x-unsafe: true
       standard:
         type: object

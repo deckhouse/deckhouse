@@ -10,16 +10,6 @@ linters-settings:
       readiness-probe:
         - kind: DaemonSet
           name: failover-cleaner
-      read-only-root-filesystem:
-        - kind: DaemonSet
-          name: failover-cleaner
-          container: failover-cleaner
-        - kind: Deployment
-          name: kruise-controller-manager
-          container: kruise
-        - kind: Deployment
-          name: kruise-controller-manager
-          container: kruise-state-metrics
   templates:
     exclude-rules:
       vpa:

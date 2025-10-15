@@ -37,3 +37,10 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
     echo "Skip (no placeholder): ${module_file_name}"
   fi
 done
+
+MODULES_DIR=${MODULES_DIR:-/src}
+OUTPUT_DIR="_data/schemas/crds"
+
+mkdir -p "$OUTPUT_DIR"
+
+find "$MODULES_DIR" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "$OUTPUT_DIR/" \;

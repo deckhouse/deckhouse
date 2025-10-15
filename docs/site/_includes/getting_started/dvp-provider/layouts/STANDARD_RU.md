@@ -20,16 +20,16 @@ masterNodeGroup:
         size: 8Gi
       ipAddresses:
         - Auto
-      virtualMachineClassName: generic
+      virtualMachineClassName: <VIRTUAL_MACHINE_CLASS_NAME>
     rootDisk:
       size: 50Gi
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: <STORAGE_CLASS>
       image:
         kind: ClusterVirtualImage
-        name: ubuntu-2204
+        name: <CLUSTER_VIRTUAL_IMAGE_NAME>
     etcdDisk:
       size: 15Gi
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: <STORAGE_CLASS>
 provider:
   kubeconfigDataBase64: <KUBE_CONFIG>
   namespace: demo

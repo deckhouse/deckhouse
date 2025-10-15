@@ -1,0 +1,59 @@
+{{/*
+  Hugo partial that retrieves the modules and their stablest channel (excluding rock-solid)
+
+  Returns a data structure containing array of items with the following fields:
+  - name: module name
+  - channel: stablest channel name
+  - version: version of the stablest channel
+
+  Example of usage:
+  {{ $modulesData := partial "get-stablest-modules-list.html" . }}
+  {{ range $modulesData.modules }}
+    <div>{{ .name }} ({{ .channel }})</div>
+  {{ end }}
+*/}}
+
+{{- $modulesList := .Site.Data.modules.channels -}}
+{{- $channelsInfo := .Site.Data.channels.info -}}
+{{- $modulesEditions := .Site.Data.modules_all -}}
+{{- $lang := .Site.Language.Lang -}}
+{{- $modulesData := slice -}}
+
+{{- range $module, $data := $modulesList -}}
+  {{- $moduleChannel := "" -}}
+  {{- $moduleVersion := "" -}}
+
+  {{/* Find the stablest channel (excluding rock-solid) */}}
+  {{- range sort $channelsInfo "stability" "desc" -}}
+    {{- $code := .code -}}
+    {{- if eq $code "rock-solid" -}}
+      {{- continue -}}
+    {{- end -}}
+
+    {{/* Check if this channel exists for the module */}}
+    {{- with $.GetPage (printf "modules/%s/%s/README.md" $module $code) -}}
+
+      {{- if not $moduleChannel -}}
+        {{- $moduleChannel = $code -}}
+        {{/* Get version from channels data */}}
+        {{- if isset (index $modulesList $module) "channels" -}}
+          {{- if isset (index (index $modulesList $module) "channels") $code -}}
+            {{- $moduleVersion = index (index (index $modulesList $module) "channels") $code "version" -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{/* Only include modules that have a valid channel */}}
+  {{- if $moduleChannel -}}
+    {{- $moduleData := dict
+        "name" $module
+        "channel" $moduleChannel
+        "version" $moduleVersion
+    -}}
+    {{- $modulesData = $modulesData | append $moduleData -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return $modulesData -}}

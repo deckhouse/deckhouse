@@ -10,7 +10,7 @@ require (
 	github.com/deckhouse/virtualization/api v0.15.0
 	github.com/golang/protobuf v1.5.4
 	github.com/kubernetes-csi/csi-lib-utils v0.20.0
-	golang.org/x/sys v0.28.0
+	golang.org/x/sys v0.31.0
 	google.golang.org/grpc v1.70.0
 	k8s.io/apimachinery v0.32.1
 	k8s.io/klog/v2 v2.130.1
@@ -45,10 +45,10 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.32.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241216192217-9240e9c98484 // indirect
 	google.golang.org/protobuf v1.36.0 // indirect

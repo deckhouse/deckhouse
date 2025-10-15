@@ -154,7 +154,17 @@ cloudProviderVsphere:
 		  "ZONE-TEST"
 		]
 	  }
-  ]
+  ],
+   "storagePolicies":[
+      {
+         "name":"Management Storage Policy - Large",
+         "id":"cd8f7c94-3e11-67fc-17f5-4e96d91a5beb"
+      },
+      {
+         "name":"VVol No Requirements Policy",
+         "id":"f4e5bade-15a2-4805-bf8e-52318c4ce443"
+      }
+   ]
 }
 `
 
@@ -183,34 +193,97 @@ data:
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["ZONE-TEST"]`))
 			Expect(f.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
-  {
-	"datastoreType": "DatastoreCluster",
-	"datastoreURL": "",
-	"name": "test-1-k8s-3cf5ce84",
-	"path": "/DCTEST/datastore/test_1_k8s",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  },
-  {
-	"datastoreType": "Datastore",
-    "datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
-	"name": "test-1-lun101-b39d82fa",
-	"path": "/DCTEST/datastore/test_1_Lun101",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  },
-  {
-	"datastoreType": "Datastore",
-    "datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
-	"name": "test-1-lun102-0403073a",
-	"path": "/DCTEST/datastore/test_1_Lun102",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  }
-]
+          {
+            "name": "test-1-k8s-3cf5ce84",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-k8s-3cf5ce84-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-k8s-3cf5ce84-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": "VVol No Requirements Policy"
+          },
+          {
+            "name": "test-1-lun101-b39d82fa",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-lun101-b39d82fa-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-lun101-b39d82fa-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_Lun101",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+            "storagePolicyName": "VVol No Requirements Policy"
+          },
+          {
+            "name": "test-1-lun102-0403073a",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-lun102-0403073a-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-lun102-0403073a-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_Lun102",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "Datastore",
+            "datastoreURL": "ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+            "storagePolicyName": "VVol No Requirements Policy"
+          }
+        ]
 `))
 		})
 
@@ -229,15 +302,36 @@ data:
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
 [
-  {
-	"datastoreType": "DatastoreCluster",
-	"datastoreURL": "",
-	"name": "test-1-k8s-3cf5ce84",
-	"path": "/DCTEST/datastore/test_1_k8s",
-	"zones": [
-	  "ZONE-TEST"
-	]
-  }
+          {
+            "name": "test-1-k8s-3cf5ce84",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": ""
+          },
+          {
+            "name": "test-1-k8s-3cf5ce84-management-storage-policy---large",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": "Management Storage Policy - Large"
+          },
+          {
+            "name": "test-1-k8s-3cf5ce84-vvol-no-requirements-policy",
+            "path": "/DCTEST/datastore/test_1_k8s",
+            "zones": [
+              "ZONE-TEST"
+            ],
+            "datastoreType": "DatastoreCluster",
+            "datastoreURL": "",
+            "storagePolicyName": "VVol No Requirements Policy"
+          }
 ]
 `))
 		})

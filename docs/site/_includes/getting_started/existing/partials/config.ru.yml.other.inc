@@ -1,7 +1,7 @@
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -13,9 +13,9 @@ deckhouse:
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -29,9 +29,9 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -64,9 +64,9 @@ spec:
         - SystemLoad
 ---
 # [<en>] cert-manager module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html
+# [<en>] https://deckhouse.io/modules/cert-manager/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html
+# [<ru>] https://deckhouse.ru/modules/cert-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -76,9 +76,9 @@ spec:
   enabled: true
 ---
 # [<en>] documentation module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/documentation/configuration.html
+# [<en>] https://deckhouse.io/modules/documentation/configuration.html
 # [<ru>] Настройки модуля documentation.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/documentation/configuration.html
+# [<ru>] https://deckhouse.ru/modules/documentation/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

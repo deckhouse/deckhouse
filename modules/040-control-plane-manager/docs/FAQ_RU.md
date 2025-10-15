@@ -8,7 +8,52 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-Добавление master-узла в статический или гибридный кластер ничем не отличается от добавления обычного узла в кластер. Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
+В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра меток (label) по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: master
+```
+
+Далее при добавлении в кластер master-узлов с помощью CAPS указывайте в соответствующих им `StaticInstance` лейбл, заданный в `spec.staticInstances.labelSelector` NodeGroup `master`. Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-master-1
+  labels:
+    # Лейбл, указанный в spec.staticInstances.labelSelector NodeGroup master.
+    role: master
+spec:
+  # Укажите IP-адрес сервера статического узла.
+  address: "<SERVER-IP>"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+{% alert level="info" %}
+При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
+
+При бутстрапе кластера в конфигурации указывается первый master-узел, на который происходит установка.
+Если после бутстрапа нужно сделать мультимастер и добавить master-узлы с помощь CAPS, в параметре `spec.staticInstances.count` NodeGroup `master` необходимо указать количество узлов на один меньше желаемого.
+
+Например, если нужно сделать мультимастер с тремя master-узлами в `spec.staticInstances.count` NodeGroup `master` укажите значение `2` и создайте два `staticInstances` для добавляемых узлов. После их добавления в кластер количество master-узлов будет равно трём: master-узел, на который происходила установка и два master-узла, добавленные с помощью CAPS.
+{% endalert %}
+
+В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла.
+Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
 <div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
 
@@ -48,7 +93,7 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud**, при использовании внешних адресов на master-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   > Для **Yandex Cloud**, при использовании внешних адресов на master-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству master-узлов.
    >
    > Например, при трех master-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
@@ -102,7 +147,7 @@ title: "Управление control plane: FAQ"
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
    >
    > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
@@ -399,6 +444,126 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
 1. Измените параметр [maxDbSize](configuration.html#parameters-etcd-maxdbsize) в настройках `control-plane-manager` на тот, который был задан в манифесте.
 
+## Как выполнить дефрагментацию etcd
+
+{% alert level="warning" %}
+Перед дефрагментацией [создайте резервную копию etcd](#как-сделать-резервную-копию-etcd-вручную).
+{% endalert %}
+
+Для просмотра размера БД etcd на определенном узле перед дефрагментацией и после ее выполнения используйте команду (здесь `NODE_NAME` — имя master-узла):
+
+```bash
+d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  endpoint status --cluster -w table
+```
+
+Пример вывода (размер БД etcd на узле указывается в колонке `DB SIZE`):
+
+```console
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+|          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+```
+
+### Как выполнить дефрагментацию etcd узла в кластере с одним master-узлом
+
+{% alert level="warning" %}
+Дефрагментация etcd — ресурсоемкая операция, которая на время полностью блокирует работу etcd на данном узле.
+Учитывайте это при выборе времени для проведения операции в кластере с одним master-узлом.
+{% endalert %}
+
+Чтобы выполнить дефрагментацию etcd в кластере с одним master-узлом, используйте следующую команду (здесь `NODE_NAME` — имя master-узла):
+
+```bash
+d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+```
+
+Пример вывода при успешном выполнении операции:
+
+```console
+Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+```
+
+> При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
+
+### Как выполнить дефрагментацию etcd в кластере с несколькими master-узлами
+
+Чтобы выполнить дефрагментацию etcd в кластере с несколькими master-узлами:
+
+1. Получите список подов etcd. Для этого используйте следующую команду:
+
+   ```bash
+   d8 k -n kube-system get pod -l component=etcd -o wide
+   ```
+
+   Пример вывода:
+
+   ```console
+   NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
+   etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
+   etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
+   etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
+   ```
+
+1. Определите master-узел — лидер. Для этого обратитесь к любому поду etcd и получите список узлов — участников кластера etcd с помощью команды (где `NODE_NAME` — имя master-узла):
+
+   ```bash
+   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cert=/etc/kubernetes/pki/etcd/server.crt \
+     --key=/etc/kubernetes/pki/etcd/server.key \
+     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+     endpoint status --cluster -w table
+   ```
+
+   Пример вывода (у лидера в колонке `IS LEADER` будет значение `true`):
+
+   ```console
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   ```
+
+1. Поочередно выполните дефрагментацию etcd узлов — участников etcd кластера. Для дефрагментации используйте команду (здесь `NODE_NAME` — имя master-узла):
+
+   > Важно: дефрагментацию лидера необходимо выполнять в последнюю очередь.
+   >
+   > Восстановление etcd на узле после дефрагментации может занять некоторое время. Рекомендуется подождать не менее минуты прежде чем переходить к дефрагментации etcd следующего узла.
+
+   ```bash
+   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+   ```
+
+   Пример вывода при успешном выполнении операции:
+
+   ```console
+   Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+   ```
+
+   > При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
+
 ## Как настроить дополнительные политики аудита?
 
 1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
@@ -675,13 +840,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Перезапустите master-узел.
 
-<div id='восстановление-кластерa-multi-master'></div>
+<div id='восстановление-кластера-multi-master'></div>
 
 #### Восстановление мультимастерного кластера
 
 Для корректного восстановления выполните следующие шаги:
 
-1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
+1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
 
 1. Переведите кластер в режим с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров, или самостоятельно выведите статические master-узлы из кластера.
 
