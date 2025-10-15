@@ -64,6 +64,7 @@ func NewApplicationLoader(cli client.Client, appsDir string, logger *log.Logger)
 	}
 }
 
+// Load lists applications instances in the cluster and then matches them with packages on fs
 func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Application, error) {
 	ctx, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
@@ -91,6 +92,7 @@ func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Applicat
 	return result, nil
 }
 
+// loadInstance matches application instance with package`s version on fs
 func (l *ApplicationLoader) loadInstance(ctx context.Context, instance ApplicationInstance) (*apps.Application, error) {
 	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "loadInstance")
 	defer span.End()
@@ -108,12 +110,14 @@ func (l *ApplicationLoader) loadInstance(ctx context.Context, instance Applicati
 
 	logger.Debug("load application from directory", slog.String("path", l.appsDir))
 
+	// <apps>/<package>
 	pkgPath := filepath.Join(l.appsDir, instance.Package)
 	if _, err := os.Stat(pkgPath); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
+	// <apps>/<package>/<version>
 	pkgVersionPath := filepath.Join(pkgPath, instance.Version)
 	if _, err := os.Stat(pkgVersionPath); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrVersionNotFound.Error())

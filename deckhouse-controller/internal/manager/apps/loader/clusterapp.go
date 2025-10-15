@@ -46,6 +46,7 @@ func NewClusterAppLoader(appsDir string, logger *log.Logger) *ClusterAppLoader {
 	}
 }
 
+// Load traverses over apps dir and loads cluster applications from packages
 func (l *ClusterAppLoader) Load(ctx context.Context) (map[string]*apps.ClusterApplication, error) {
 	ctx, span := otel.Tracer(clusterAppLoaderTracer).Start(ctx, "Load")
 	defer span.End()
@@ -68,6 +69,7 @@ func (l *ClusterAppLoader) Load(ctx context.Context) (map[string]*apps.ClusterAp
 	return res, nil
 }
 
+// loadPackages parses package definitions and builds cluster applications from them
 func (l *ClusterAppLoader) loadPackages(dir string) ([]*packages.Definition, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
