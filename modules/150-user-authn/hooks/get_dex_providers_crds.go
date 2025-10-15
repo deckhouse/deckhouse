@@ -71,8 +71,8 @@ func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
 				// skip disabled provider
 				continue
 			}
-			// if not a bool, treat as enabled (backward-compatible)
 		}
+		// Keep 'enabled' field in internal values for transparency and debugging
 		filtered = append(filtered, p)
 	}
 
