@@ -54,7 +54,7 @@ In this example, DKP will not create StorageClass resources for any `network-ssd
 
 By default, DKP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
 
-To explicitly set a different default StorageClass, use the global DKP parameter [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+To explicitly set a different default StorageClass, use the global DKP parameter [`global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass).
 You can modify it with the following command:
 
 ```shell

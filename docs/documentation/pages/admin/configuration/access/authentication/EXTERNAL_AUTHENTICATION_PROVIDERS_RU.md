@@ -100,7 +100,7 @@ DKP поддерживает подключение следующих внеш�
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 {% alert level="info" %}
-При регистрации приложения в любом OIDC-провайдере необходимо указать адрес перенаправления (Redirect URI). Для интеграции с DexProvider используйте следующий формат: `https://dex.<publicDomainTemplate>/callback`, где [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) — шаблон DNS-имен вашего кластера, определенный в модуле `global`.
+При регистрации приложения в любом OIDC-провайдере необходимо указать адрес перенаправления (Redirect URI). Для интеграции с DexProvider используйте следующий формат: `https://dex.<publicDomainTemplate>/callback`, где [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — шаблон DNS-имен вашего кластера, определенный в модуле `global`.
 {% endalert %}
 
 {% alert level="info" %}
@@ -118,7 +118,7 @@ DKP поддерживает подключение следующих внеш�
 
 1. Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `Group Membership` («Client scopes» → «Client scope details» → «Mappers» → «Configure a new mapper»). В поле «Name» и «Token Claim Name» впишите `groups`, в параметре «Full group path» задайте `off`.
 1. В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-1. В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+1. В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
 Пример настройки провайдера для интеграции с Keycloak:
 
