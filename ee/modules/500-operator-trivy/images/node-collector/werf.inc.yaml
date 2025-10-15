@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /node-collector
