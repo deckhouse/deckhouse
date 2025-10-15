@@ -55,17 +55,24 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	dstBytes, _ = os.ReadFile(dst)
-
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
-	if bytes.Equal(srcBytes, dstBytes) {
-		log.Info("file is not changed, skipping", slog.String("path", dst))
-		return nil
-	}
+	if _, statErr := os.Stat(dst); statErr == nil {
+		dstBytes, err = os.ReadFile(dst)
+		if err != nil {
+			return err
+		}
 
-	if err := backupFile(dst); err != nil {
-		log.Warn("Backup failed", log.Err(err))
+		if bytes.Equal(srcBytes, dstBytes) {
+			log.Info("file is not changed, skipping", slog.String("path", dst))
+			return nil
+		}
+
+		if err := backupFile(dst); err != nil {
+			log.Warn("Backup failed", log.Err(err))
+		}
+	} else if !os.IsNotExist(statErr) {
+		return statErr
 	}
 
 	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
