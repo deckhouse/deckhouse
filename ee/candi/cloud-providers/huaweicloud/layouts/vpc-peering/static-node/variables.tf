@@ -75,14 +75,17 @@ locals {
     lookup(local.instance_class, "mainNetwork", null),
     local.fallback_primary_subnet_id
   )
-
   additional_network_ids = (
     length(var.additionalNetworks) > 0
     ? var.additionalNetworks
     : (
-        try(type(local.instance_class.additionalNetworks) == string, false)
-        ? [local.instance_class.additionalNetworks]
-        : try(local.instance_class.additionalNetworks, [])
+        can(tolist(local.instance_class.additionalNetworks))
+        ? tolist(local.instance_class.additionalNetworks)
+        : (
+            can(tostring(local.instance_class.additionalNetworks))
+            ? [tostring(local.instance_class.additionalNetworks)]
+            : []
+          )
       )
   )
   enterprise_project_id = lookup(var.providerClusterConfiguration.provider, "enterpriseProjectID", "")
