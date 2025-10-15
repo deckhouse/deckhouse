@@ -615,13 +615,15 @@ You can check the current status of versions in the release channels at [release
 
    where:
 
-   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted;
-   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key;
+   - `--source` — address of the Deckhouse Kubernetes Platform container registry.
+   - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
+   - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
+   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — directory where the image packages will be placed. It will be created if it does not exist.
 
    > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
 
-   You can also use the following command options:
+   {% offtopic title="Other command parameters available for use:" %}
 
    - `--no-pull-resume` — force the download to start from the beginning;
    - `--no-platform` — skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`);
@@ -639,20 +641,23 @@ You can check the current status of versions in the release channels at [release
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
    - `--deckhouse-tag` — download only the specific DKP version (regardless of update channels). Cannot be used with `--since-version`;
    - `--gost-digest` — calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball;
-   - `--source` — specify the source image registry address (default: `registry.deckhouse.ru/deckhouse/ee`);
-   - use the `--license` parameter with a valid license key to authenticate with the official DKP image registry;
    - use the `--source-login` and `--source-password` parameters to authenticate with an external image registry;
    - `--images-bundle-chunk-size=N` — set the maximum file size (in GB) to split the image archive. As a result, instead of one image archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (e.g., `d8.tar` for files `d8.tar.NNNN.chunk`);
    - `--tmp-dir` — path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
+  
+   {% endofftopic %}
 
-   Additional configuration parameters for the `d8 mirror` command family are available as environment variables:
+   Additional configuration parameters for the `d8 mirror` command family are available as environment variables.
 
-   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable;
-   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying;
-   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used;
-   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
-   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry;
+   {% offtopic title="More details:" %}
 
+   - `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable.
+   - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying.
+   - `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used.
+   - `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
+   - `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry.
+
+   {% endofftopic %}
 
    Example command to download all DKP EE versions starting from version 1.59 (specify your license key):
 
