@@ -182,10 +182,6 @@ pull_request_info:
     build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
     build_ee: ${{ steps.pr_props.outputs.build_ee }}
 
-  permissions:
-      contents: read
-      pull-requests: read
-
   # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
   if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
   steps:
