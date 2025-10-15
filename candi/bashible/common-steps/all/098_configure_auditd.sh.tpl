@@ -49,7 +49,10 @@ EOF
 --backlog_wait_time 0
 EOF
 fi
-command -v auditctl &>/dev/null && auditctl --backlog_wait_time 0 -b 65536
+if command -v auditctl &>/dev/null; then
+  auditctl --backlog_wait_time 0 -b 65536 || bb-log-warning "failed to configure auditctl backlog; continuing with defaults"
+else
+  bb-log-info "auditctl is not installed; skipping backlog configuration"
+fi
 
 {{- end }}
-
