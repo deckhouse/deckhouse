@@ -35,7 +35,7 @@ type Definition struct {
 	Descriptions Descriptions `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
 	Requirements Requirements `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 
-	path string
+	DisableOptions DisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 }
 
 type Descriptions struct {
@@ -45,6 +45,19 @@ type Descriptions struct {
 
 type Requirements struct {
 	Modules map[string]string `yaml:"modules" json:"modules"`
+}
+
+type DisableOptions struct {
+	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
+	Message      string `json:"message" yaml:"message"`
+}
+
+func (o *DisableOptions) NeedConfirmation() (bool, string) {
+	if o.Confirmation {
+		return true, o.Message
+	}
+
+	return false, ""
 }
 
 func LoadDefinition(packageDir string) (*Definition, error) {
@@ -59,8 +72,6 @@ func LoadDefinition(packageDir string) (*Definition, error) {
 	if err = yaml.Unmarshal(content, def); err != nil {
 		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
 	}
-
-	def.path = path
 
 	return def, nil
 }

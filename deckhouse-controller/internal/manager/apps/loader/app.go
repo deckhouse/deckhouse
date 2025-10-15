@@ -42,7 +42,7 @@ var (
 )
 
 type ApplicationLoader struct {
-	cli     client.Client
+	client  client.Client
 	appsDir string
 
 	logger *log.Logger
@@ -57,7 +57,7 @@ type ApplicationInstance struct {
 
 func NewApplicationLoader(cli client.Client, appsDir string, logger *log.Logger) *ApplicationLoader {
 	return &ApplicationLoader{
-		cli:     cli,
+		client:  cli,
 		appsDir: appsDir,
 
 		logger: logger.Named(appLoaderTracer),
@@ -78,7 +78,7 @@ func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Applicat
 	span.SetAttributes(attribute.String("path", l.appsDir))
 	l.logger.Debug("load applications from directory", slog.String("path", l.appsDir))
 
-	result := make(map[string]*apps.Application)
+	result := make(map[string]*apps.Application, len(instances))
 	for _, inst := range instances {
 		app, err := l.loadInstance(ctx, inst)
 		if err != nil {
@@ -86,7 +86,7 @@ func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Applicat
 			return nil, fmt.Errorf("load application instance '%s/%s': %w", inst.Namespace, inst.Name, err)
 		}
 
-		result[inst.Name] = app
+		result[app.Name()] = app
 	}
 
 	return result, nil

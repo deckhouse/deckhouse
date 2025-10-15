@@ -67,7 +67,7 @@ func (l *ClusterAppLoader) Load(ctx context.Context) (map[string]*apps.ClusterAp
 
 	span.SetAttributes(attribute.Int("found", len(entries)))
 
-	res := make(map[string]*apps.ClusterApplication)
+	res := make(map[string]*apps.ClusterApplication, len(entries))
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
