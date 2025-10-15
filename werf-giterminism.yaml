@@ -31,8 +31,6 @@ config:
       - DECKHOUSE_PRIVATE_REPO
       - REGISTRY_USER
       - REGISTRY_PASSWORD
-      - COSIGN_LOGIN
-      - COSIGN_PASSWORD
       - COSIGN_VAULT_ADRESS
       - COSIGN_VAULT_TOKEN
       - COSIGN_VAULT_KEY
@@ -42,4 +40,3 @@ config:
       allowBuildDir: true
       allowFromPaths:
         - ~/go-pkg-cache
-        - ~/.docker

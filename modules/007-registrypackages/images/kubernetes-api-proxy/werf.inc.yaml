@@ -1,4 +1,4 @@
-{{- $version := "28.08.25" }}
+{{- $version := "08.04.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/scratch
@@ -29,9 +29,6 @@ import:
   add: /crane
   to: /crane
   before: setup
-- image: tools/jq
-  add: /usr/bin/jq
-  before: setup
 dependencies:
 - image: control-plane-manager/kubernetes-api-proxy
   before: setup
@@ -49,8 +46,12 @@ shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
   - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
-  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /kubernetes-api-proxy.tar
   - rm -f ~/.docker/config.json
-  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:kubernetes-api-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
-  - tar -C /tmp/image -cf /kubernetes-api-proxy.tar .
-  - rm -rf /tmp/image
+  - mkdir /tmp/kubernetes-api-proxy
+  - tar -xf /kubernetes-api-proxy.tar -C /tmp/kubernetes-api-proxy
+  - cd /tmp/kubernetes-api-proxy
+  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
+  - rm /kubernetes-api-proxy.tar
+  - tar -cvf /kubernetes-api-proxy.tar ./
+  - rm -rf /tmp/kubernetes-api-proxy

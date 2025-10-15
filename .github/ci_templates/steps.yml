@@ -37,19 +37,19 @@
 - name: Check dev registry credentials
   id: check_dev_registry
   env:
-    HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+    HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
   run: |
     if [[ -n $HOST ]]; then
       echo "has_credentials=true" >> $GITHUB_OUTPUT
-      echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
     fi
 - name: Login to dev registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
   with:
-    registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-    username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-    password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
     logout: false
 # </template: login_dev_registry_step>
 {!{- end -}!}
@@ -284,30 +284,6 @@
     WORKFLOW_NAME: ${{ github.workflow }}
     WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
   run: |
-    bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+    bash ./.github/scripts/send-report.sh
 # </template: send_fail_report>
-{!{- end -}!}
-
-
-{!{ define "import_secrets" }!}
-# <template: import_secrets>
-- name: Split repository name
-  id: split
-  env:
-    REPO: ${{ github.repository }}
-  run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-- name: Import secrets
-  id: secrets
-  uses: hashicorp/vault-action@v2
-  with:
-    url: https://seguro.flant.com
-    path: github
-    role: "${{ steps.split.outputs.name }}"
-    method: jwt
-    jwtGithubAudience: github-access-aud
-    secrets: |
-      {!{ range . }!}
-      {!{- index . 0 }!} {!{ index . 1 }!} | {!{ index . 2 }!} ;
-      {!{ end }!}
-# </template: import_secrets>
 {!{- end -}!}
