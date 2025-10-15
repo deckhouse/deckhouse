@@ -22,6 +22,12 @@ featureSections:
           ce: supported
           ee: supported
       - title:
+          ru: Балансировка использования ресурсов гипервизора при ВМ на локальном хранилище
+          en: Balancing hypervisor resource usage for VMs on local storage
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
           ru: Режим обслуживания гипервизоров
           en: Hypervisor maintenance mode
         editions:
@@ -44,6 +50,23 @@ featureSections:
         editions:
           ce: supported
           ee: supported
+      - title:
+          ru: Централизованное управление кластерами DVP c помощью <a target='_blank' href='https://deckhouse.ru/products/commander/'>Commander</a>
+          en: Centralized management of DVP clusters using <a target='_blank' href='https://deckhouse.io/products/commander/'>Commander</a>
+        editions:
+          ce: partly
+          ee: partly
+        restriction_message:
+          ce:
+            en: |
+              Licensed separately
+            ru: |
+              Лицензируется <a target='_blank' href='https://deckhouse.ru/products/virtualization-platform/licensing-dvp/'>отдельно</a>
+          ee:
+            en: |
+              For more information about Commander licensing, see <a target='_blank' href='https://deckhouse.io/products/commander/'>here</a>
+            ru: |
+              Подробнее о лицензировании Commander см. <a target='_blank' href='https://deckhouse.ru/products/virtualization-platform/licensing-dvp/'>здесь</a>
       - title:
           ru: Поддержка вложенной виртуализации
           en: Nested virtualization support
@@ -87,11 +110,21 @@ featureSections:
             en: "In read only mode"
             ru: "В режиме только для чтения"
       - title:
+          ru: Веб-интерфейс пользователя
+          en: User web interface
+        editions:
+          ce: supported
+          ee: supported
+      - title:
           ru: Управление через CLI и доступ через API
           en: Management through CLI and access via API
         editions:
           ce: supported
           ee: supported
+  - title:
+      ru: Управление виртуальными машинами
+      en: Virtual machine management
+    features:
       - title:
           ru: Импорт образов и дисков ВМ (qcow, vmdk, raw, vdi)
           en: Importing VM images and disks (qcow, vmdk, raw, vdi)
@@ -140,14 +173,14 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Экспорт дисков и снимков
-          en: Disk and snapshot export
+          ru: Клонирование ВМ
+          en: VM cloning
         editions:
-          ce: not_supported
+          ce: supported
           ee: supported
       - title:
-          ru: Экспорт ВМ
-          en: VM export
+          ru: Экспорт дисков и снимков
+          en: Disk and snapshot export
         editions:
           ce: not_supported
           ee: supported
@@ -162,6 +195,18 @@ featureSections:
           en: Live migration optimization policies
         editions:
           ce: supported
+          ee: supported
+      - title:
+          ru: Живая миграция между хранилищами разных типов
+          en: Live migration between storage types
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Живая миграция между узлами при использовании локального хранилища
+          en: Live migration between nodes when using local storage
+        editions:
+          ce: not_supported
           ee: supported
       - title:
           ru: Политики запуска ВМ (Always On/Always Off/Manual)
@@ -204,8 +249,8 @@ featureSections:
           ce: not_supported
           ee: supported
       - title:
-          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE)
-          en: Support for hardware storage systems using API (Yadro, Huawei, HPE)
+          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE, NetApp)
+          en: Support for hardware storage systems using API (Yadro, Huawei, HPE, NetApp)
         editions:
           ce: not_supported
           ee: supported
