@@ -68,8 +68,12 @@ locals {
     local.fallback_primary_subnet_id
   )
   additional_network_ids = (
-     try(type(local.instance_class.additionalNetworks) == string, false)
-     ? [local.instance_class.additionalNetworks]
-     : try(local.instance_class.additionalNetworks, [])
-   )
+    can(tolist(local.instance_class.additionalNetworks))
+    ? tolist(local.instance_class.additionalNetworks)
+    : (
+        can(tostring(local.instance_class.additionalNetworks))
+        ? [tostring(local.instance_class.additionalNetworks)]
+        : []
+      )
+  )
 }
