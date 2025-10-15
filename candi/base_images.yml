@@ -1,4 +1,4 @@
-# version=v0.5.32
+# version=v0.5.33
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:6181c0922d240f806ed69842e0c35b2881db7e28f936b00241969fbe39545cde" # fromImage: builder/scratch
@@ -8,10 +8,10 @@ base/python: "sha256:e950f729f0fdd4cd8e8c9d9afc1873892f2a600d7f2e1ea91a52e2f70d1
 base/python-v3.12.10: "sha256:e950f729f0fdd4cd8e8c9d9afc1873892f2a600d7f2e1ea91a52e2f70d125e64" # fromImage: builder/scratch
 base/redis: "sha256:ba60b9d444a32475b48abc76e482d269a025c92bf2184dc6f9dff708f2bc7cf1" # fromImage: builder/scratch
 base/redis-7.4.5: "sha256:ba60b9d444a32475b48abc76e482d269a025c92bf2184dc6f9dff708f2bc7cf1" # fromImage: builder/scratch
-base/ruby: "sha256:9ddebc6293bf438796ee95cca20642b2c4d25729e2567cbedba9270b2ce812a5" # fromImage: base/distroless
-base/ruby-bundler: "sha256:6a7aedb4896603ca11eca47e58594c7cec307ef13173c4c66ab0659119173203" # fromImage: builder/alpine-build-artifact-3.21
-base/ruby-bundler-v3_4_5: "sha256:6a7aedb4896603ca11eca47e58594c7cec307ef13173c4c66ab0659119173203" # fromImage: builder/alpine-build-artifact-3.21
-base/ruby-v3_4_5: "sha256:9ddebc6293bf438796ee95cca20642b2c4d25729e2567cbedba9270b2ce812a5" # fromImage: base/distroless
+base/ruby: "sha256:8ec69bec3b3b1678dd572af84b8ae33b5e0b929abb8285ed8f2878eb978e5e8c" # fromImage: base/distroless
+base/ruby-bundler: "sha256:6b9669064d63c45624a6a8ece31b4bf3460d7b1b25a708b64a6d4f63bbc45fd3" # fromImage: builder/alpine-build-artifact-3.21
+base/ruby-bundler-v3_4_7: "sha256:6b9669064d63c45624a6a8ece31b4bf3460d7b1b25a708b64a6d4f63bbc45fd3" # fromImage: builder/alpine-build-artifact-3.21
+base/ruby-v3_4_7: "sha256:8ec69bec3b3b1678dd572af84b8ae33b5e0b929abb8285ed8f2878eb978e5e8c" # fromImage: base/distroless
 base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # fromImage: builder/scratch
 base/shell-operator: "sha256:dba9b1a2ecc093f46da18768d26ec69569697dacfab277fdf7ab0b1c31914930" # fromImage: builder/scratch
 base/shell-operator-v1.9.3: "sha256:dba9b1a2ecc093f46da18768d26ec69569697dacfab277fdf7ab0b1c31914930" # fromImage: builder/scratch
