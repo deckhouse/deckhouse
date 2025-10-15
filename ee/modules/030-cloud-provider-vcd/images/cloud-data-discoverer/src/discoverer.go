@@ -442,44 +442,6 @@ func (d *Discoverer) getLoadBalancer(vcdClient *govcd.VCDClient) (*types.NsxtAlb
 			return nil, fmt.Errorf("network is not connected to edge gateway")
 		}
 
-	// loadBalancerUrl, err := url.Parse(d.config.Href)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to parse vcd url: %v", err)
-	// }
-
-	// if strings.HasSuffix(loadBalancerUrl.Path, "/api") {
-	// 	loadBalancerUrl.Path = fmt.Sprintf("%s/cloudapi", strings.TrimSuffix(loadBalancerUrl.Path, "/api"))
-	// } else {
-	// 	loadBalancerUrl.Path = fmt.Sprintf("%s/cloudapi", loadBalancerUrl.Path)
-	// }
-
-	// loadBalancerUrl = loadBalancerUrl.JoinPath("1.0.0", "edgeGateways", network.OpenApiOrgVdcNetwork.Connection.RouterRef.ID, "loadBalancer")
-
-	// edgeRawRequest := vcdClient.Client.NewRequest(nil, http.MethodGet, *(loadBalancerUrl), nil)
-	// edgeRawRequest.Header.Set("Accept", "application/json;version=37.2")
-	// edgeRawRequest.Header.Set("Content-Type", "application/json")
-
-	// edgeRawResponse, err := vcdClient.Client.Http.Do(edgeRawRequest)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to request load balancer info: %v", err)
-	// }
-	// defer edgeRawResponse.Body.Close()
-
-	// if edgeRawResponse.StatusCode != http.StatusOK {
-	// 	return false, fmt.Errorf("failed to get load balancer info: %v", edgeRawResponse.Status)
-	// }
-
-	// body, err := io.ReadAll(edgeRawResponse.Body)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to read load balancer info: %v", err)
-	// }
-
-	// var lb loadBalancerInfo
-	// err = json.Unmarshal(body, &lb)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to unmarshal load balancer info: %v", err)
-	// }
-
 	edge, err := vdc.GetNsxtEdgeGatewayById(network.OpenApiOrgVdcNetwork.Connection.RouterRef.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get edge gateway: %v", err)

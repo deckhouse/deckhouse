@@ -13,8 +13,7 @@
     {{- end -}}
   {{- end -}}
 {{- end -}}
-
-{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) -}}
 
 {{- define "vcd_cloud_controller_manager_resources" }}
 cpu: 25m
