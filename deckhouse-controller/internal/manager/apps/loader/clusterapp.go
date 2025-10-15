@@ -23,6 +23,13 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+)
+
+const (
+	clusterAppLoaderTracer = "cluster-app-loader"
 )
 
 type ClusterAppLoader struct {
@@ -35,15 +42,23 @@ func NewClusterAppLoader(appsDir string, logger *log.Logger) *ClusterAppLoader {
 	return &ClusterAppLoader{
 		appsDir: appsDir,
 
-		logger: logger.Named("cluster-application-loader"),
+		logger: logger.Named(clusterAppLoaderTracer),
 	}
 }
 
-func (l *ClusterAppLoader) Load(_ context.Context) (map[string]*apps.ClusterApplication, error) {
+func (l *ClusterAppLoader) Load(ctx context.Context) (map[string]*apps.ClusterApplication, error) {
+	ctx, span := otel.Tracer(clusterAppLoaderTracer).Start(ctx, "Load")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", l.appsDir))
+
 	definitions, err := l.loadPackages(l.appsDir)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load cluster apps: %w", err)
 	}
+
+	span.SetAttributes(attribute.Int("found", len(definitions)))
 
 	res := make(map[string]*apps.ClusterApplication)
 	for _, def := range definitions {

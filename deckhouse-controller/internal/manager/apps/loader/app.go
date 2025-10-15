@@ -18,14 +18,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	appLoaderTracer = "application-loader"
 )
 
 var (
@@ -52,19 +60,28 @@ func NewApplicationLoader(cli client.Client, appsDir string, logger *log.Logger)
 		cli:     cli,
 		appsDir: appsDir,
 
-		logger: logger.Named("application-loader"),
+		logger: logger.Named(appLoaderTracer),
 	}
 }
 
 func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Application, error) {
+	ctx, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
+	defer span.End()
+
 	var instances []ApplicationInstance
 
 	// TODO(ipaqsa): list instances in cluster
+
+	span.SetAttributes(attribute.Int("found", len(instances)))
+
+	span.SetAttributes(attribute.String("path", l.appsDir))
+	l.logger.Debug("load applications from directory", slog.String("path", l.appsDir))
 
 	result := make(map[string]*apps.Application)
 	for _, inst := range instances {
 		app, err := l.loadInstance(ctx, inst)
 		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
 			return nil, fmt.Errorf("load application instance '%s/%s': %w", inst.Namespace, inst.Name, err)
 		}
 
@@ -74,20 +91,40 @@ func (l *ApplicationLoader) Load(ctx context.Context) (map[string]*apps.Applicat
 	return result, nil
 }
 
-func (l *ApplicationLoader) loadInstance(_ context.Context, instance ApplicationInstance) (*apps.Application, error) {
-	pkgPath := filepath.Join(l.appsDir, instance.Package)
+func (l *ApplicationLoader) loadInstance(ctx context.Context, instance ApplicationInstance) (*apps.Application, error) {
+	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "loadInstance")
+	defer span.End()
 
+	span.SetAttributes(attribute.String("name", instance.Name))
+	span.SetAttributes(attribute.String("namespace", instance.Namespace))
+	span.SetAttributes(attribute.String("package", instance.Package))
+	span.SetAttributes(attribute.String("version", instance.Version))
+
+	logger := l.logger.With(
+		slog.String("name", instance.Name),
+		slog.String("namespace", instance.Namespace),
+		slog.String("package", instance.Package),
+		slog.String("version", instance.Version))
+
+	logger.Debug("load application from directory", slog.String("path", l.appsDir))
+
+	pkgPath := filepath.Join(l.appsDir, instance.Package)
 	if _, err := os.Stat(pkgPath); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
 	pkgVersionPath := filepath.Join(pkgPath, instance.Version)
 	if _, err := os.Stat(pkgVersionPath); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrVersionNotFound.Error())
 		return nil, ErrVersionNotFound
 	}
 
+	span.SetAttributes(attribute.String("path", pkgVersionPath))
+
 	def, err := packages.LoadDefinition(pkgVersionPath)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package '%s': %v", pkgVersionPath, err)
 	}
 
