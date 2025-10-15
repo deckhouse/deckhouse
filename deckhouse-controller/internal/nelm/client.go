@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	// nelmTracer is the name used for the logger instance
+	// logger and telemetry name
 	nelmTracer = "nelm"
 
 	// release label for storing checksum
@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	// ErrReleaseNotFound is returned when a Helm release doesn't exist
+	// ErrReleaseNotFound is returned when a nelm release doesn't exist
 	ErrReleaseNotFound = errors.New("release not found")
 	// ErrLabelNotFound is returned when a requested label is not present in the release
 	ErrLabelNotFound = errors.New("label not found")
@@ -68,21 +68,21 @@ func WithHistoryMax(max int32) Option {
 	}
 }
 
-// WithTimeout sets the timeout duration for Helm operations
+// WithTimeout sets the timeout duration for nelm operations
 func WithTimeout(timeout time.Duration) Option {
 	return func(o *Options) {
 		o.Timeout = timeout
 	}
 }
 
-// WithLabels sets labels to be applied to all Kubernetes resources
+// WithLabels sets labels to be applied to all releases
 func WithLabels(labels map[string]string) Option {
 	return func(o *Options) {
 		maps.Copy(o.Labels, labels)
 	}
 }
 
-// WithAnnotations sets annotations to be applied to all Kubernetes resources
+// WithAnnotations sets annotations to be applied to all releases
 func WithAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
 		maps.Copy(o.Annotations, annotations)
@@ -351,7 +351,7 @@ func (c *Client) Install(ctx context.Context, releaseName string, opts InstallOp
 	return nil
 }
 
-// Render renders a Helm chart to YAML manifests without installing it
+// Render renders a nelm chart to YAML manifests without installing it
 // Returns the rendered manifests as a YAML string
 func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOptions) (string, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
@@ -415,7 +415,7 @@ func (c *Client) Render(ctx context.Context, releaseName string, opts InstallOpt
 	return result.String(), nil
 }
 
-// Delete uninstalls a Helm release
+// Delete uninstalls a nelm release
 // Returns nil if the release doesn't exist (idempotent)
 func (c *Client) Delete(ctx context.Context, releaseName string) error {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
