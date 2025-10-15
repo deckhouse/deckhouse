@@ -10,7 +10,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 ### For containerd v2
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -116,7 +116,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -233,7 +233,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 - During the switch, [custom registry configurations](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry) for containerd v1 will be temporarily unavailable.
 {% endalert %}
 
-1. Switch the registry to `Unmanaged` mode. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/) module documentation for proper configuration.
+1. Switch the registry to `Unmanaged` mode. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    Example configuration:
 
