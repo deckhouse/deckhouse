@@ -22,10 +22,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+var (
+	runMu           sync.Mutex
+	running         bool
+	reloadRequested bool
 )
 
 func main() {
@@ -61,11 +68,11 @@ func main() {
 
 	removeOrphanFiles()
 
-	runAllPhases(ctx)
+	safeRunAllPhases(ctx)
 
 	go watchConfigDir(configPath, func() {
 		log.Info("Configuration changed — reloading phases...")
-		runAllPhases(ctx)
+		safeRunAllPhases(ctx)
 	})
 
 	controlPlaneManagerIsReady = true
@@ -139,6 +146,39 @@ func watchConfigDir(path string, onChange func()) {
 			}
 			log.Errorf("watch error: %v", err)
 		}
+	}
+}
+
+func safeRunAllPhases(parent context.Context) {
+	runMu.Lock()
+	if running {
+		reloadRequested = true
+		log.Warn("Phases already running, reload scheduled after completion.")
+		runMu.Unlock()
+		return
+	}
+	controlPlaneManagerIsReady = false
+	running = true
+	runMu.Unlock()
+
+	for {
+
+		ctx, cancel := context.WithTimeout(parent, 10*time.Minute)
+		log.Info("Starting converge phases...")
+		runAllPhases(ctx)
+		cancel()
+
+		runMu.Lock()
+		if !reloadRequested {
+			running = false
+			controlPlaneManagerIsReady = true
+			runMu.Unlock()
+			break
+		}
+		reloadRequested = false
+		runMu.Unlock()
+
+		log.Info("Detected pending reload request — running again.")
 	}
 }
 
