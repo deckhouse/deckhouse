@@ -378,7 +378,7 @@ dhctl bootstrap \
 
 1. Общие проверки:
    - Значения параметров [PublicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
-   - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
+   - Данные аутентификации для container registry, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;
      - Состоит только из строчных букв;
@@ -401,7 +401,7 @@ dhctl bootstrap \
      - доступ к стандартным системным репозиториям для установки зависимостей;
      - в случае с РЕД ОС — убедитесь, что установлены `yum` и `which` (по умолчанию могут отсутствовать).
    - На сервере (ВМ) для master-узла установлен Python.
-   - Хранилище образов контейнеров доступно через прокси (если настройки прокси указаны в конфигурации установки).
+   - Container registry доступен через прокси (если настройки прокси указаны в конфигурации установки).
    - На сервере (ВМ) для master-узла и в хосте инсталлятора свободны порты, необходимые для процесса установки.
    - DNS должен разрешать `localhost` в IP-адрес 127.0.0.1.
    - На сервере (ВМ) пользователю доступна команда `sudo`.
@@ -625,9 +625,9 @@ echo "$MYRESULTSTRING"
 
    где:
 
-   - `--source` — адрес источника хранилища образов Deckhouse Kubernetes Platform.
+   - `--source` — адрес источника (container registry) Deckhouse Kubernetes Platform.
    - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен.
-   - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном хранилище образов.
+   - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном container registry
    - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform.
    - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
@@ -651,7 +651,7 @@ echo "$MYRESULTSTRING"
    - `--since-version=X.Y` — чтобы скачать все версии DKP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указана версия выше чем версия находящаяся на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
    - `--deckhouse-tag` — чтобы скачать только конкретную версию DKP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
    - `--gost-digest` — для расчета контрольной суммы итогового набора образов DKP в формате ГОСТ Р 34.11-2012 (Стрибог). Контрольная сумма будет отображена и записана в файл с расширением `.tar.gostsum` в папке с tar-архивом, содержащим образы DKP;
-   - Для аутентификации в стороннем хранилище образов нужно использовать параметры `--source-login` и `--source-password`;
+   - Для аутентификации в стороннем container registry нужно использовать параметры `--source-login` и `--source-password`;
    - `--images-bundle-chunk-size=N` — для указания максимального размера файла (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор `.chunk`-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`);
    - `--tmp-dir` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточное количество свободного дискового пространства, чтобы вместить весь загружаемый пакет образов. По умолчанию используется поддиректория `.tmp` в директории с пакетами образов.
 
@@ -686,7 +686,7 @@ echo "$MYRESULTSTRING"
    /home/user/d8-bundle
    ```
 
-   Пример команды для загрузки образов DKP из стороннего хранилища образов:
+   Пример команды для загрузки образов DKP из стороннего container registry:
 
    ```shell
    d8 mirror pull \
@@ -751,12 +751,12 @@ echo "$MYRESULTSTRING"
    /home/user/d8-bundle
    ```
 
-1. На хост с доступом к хранилищу, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](../cli/d8/).
+1. На хост с доступом к container registry, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](../cli/d8/).
 
-1. Загрузите образы DKP в хранилище с помощью команды `d8 mirror push`.
+1. Загрузите образы DKP в container registry с помощью команды `d8 mirror push`.
 
-   Команда `d8 mirror push` загружает в репозиторий образы из всех пакетов, которые присутствуют в переданной директории.
-   При необходимости выгрузить в репозиторий только часть пакетов, вы можете либо выполнить команду для каждого необходимого пакета образов передав ей прямой путь до пакета tar вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
+   Команда `d8 mirror push` загружает в container registry образы из всех пакетов, которые присутствуют в переданной директории.
+   При необходимости выгрузить в container registry только часть пакетов, вы можете либо выполнить команду для каждого необходимого пакета образов передав ей прямой путь до пакета tar вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
 
    Пример команды для загрузки пакетов образов из директории `/mnt/MEDIA/d8-images` (укажите данные для авторизации при необходимости):
 
@@ -765,15 +765,15 @@ echo "$MYRESULTSTRING"
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   Перед загрузкой образов убедитесь, что путь для загрузки в хранилище образов существует (в примере — `/sys/deckhouse`) и у используемой учетной записи есть права на запись.
+   Перед загрузкой образов убедитесь, что путь для загрузки в container registry существует (в примере — `/sys/deckhouse`) и у используемой учетной записи есть права на запись.
 
    Если вы используете Harbor, вы не сможете выгрузить образы в корень проекта, используйте выделенный репозиторий в проекте для размещения образов DKP.
 
-1. После загрузки образов в хранилище можно переходить к установке DKP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
+1. После загрузки образов в container registry можно переходить к установке DKP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-   При запуске установщика используйте не официальное публичное хранилище образов DKP, а хранилище в которое ранее были загружены образы. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable`, вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+   При запуске установщика используйте не официальный публичный container registry DKP, а container registry в который ранее были загружены образы. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable`, вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   В ресурсе [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
+   В ресурсе [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) при установке также используйте адрес вашего container registry и данные авторизации (параметры [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
 ### Создание кластера и запуск DKP без использования каналов обновлений
 

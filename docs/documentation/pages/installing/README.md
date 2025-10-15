@@ -615,9 +615,9 @@ You can check the current status of versions in the release channels at [release
 
    where:
 
-   - `--source` — address of the Deckhouse Kubernetes Platform image repository source.
+   - `--source` — address of the Deckhouse Kubernetes Platform container registry.
    - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
-   - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official image repository.
+   - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
    - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
    - `/home/user/d8-bundle` — directory where the image packages will be placed. It will be created if it does not exist.
 
