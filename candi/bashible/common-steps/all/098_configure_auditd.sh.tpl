@@ -28,9 +28,9 @@ _on_audit_rules_changed() {
 if [ -d /etc/audit/rules.d ]; then
   bb-sync-file /etc/audit/rules.d/containerd-deckhouse.rules - << "EOF"
 
-# exclude containerd internal operations
+# exclude containerd internal operations such as image unpacking and others. A large number of operations can create a heavy load on auditd.
 -a never,exit -F dir=/var/lib/containerd -F exe=/opt/deckhouse/bin/containerd
-# exclude runc internal operations
+# exclude runc internal operations such as image unpacking and others. A large number of operations can create a heavy load on auditd.
 -a never,exit -F dir=/var/lib/containerd -F exe=/opt/deckhouse/bin/runc
 # watch containerd config changes
 -w /etc/containerd/config.toml -p wa -k containerd
