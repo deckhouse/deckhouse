@@ -1,0 +1,95 @@
+diff --git a/go.mod b/go.mod
+index 28994d80..002eb589 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,12 +1,14 @@
+ module github.com/NVIDIA/k8s-device-plugin
+ 
+-go 1.22.2
++go 1.23.0
++
++toolchain go1.24.2
+ 
+ require (
+ 	github.com/NVIDIA/go-gpuallocator v0.5.0
+-	github.com/NVIDIA/go-nvlib v0.7.1
++	github.com/NVIDIA/go-nvlib v0.7.2
+ 	github.com/NVIDIA/go-nvml v0.12.4-1
+-	github.com/NVIDIA/nvidia-container-toolkit v1.17.6
++	github.com/NVIDIA/nvidia-container-toolkit v1.17.8
+ 	github.com/fsnotify/fsnotify v1.7.0
+ 	github.com/google/renameio v1.0.1
+ 	github.com/google/uuid v1.6.0
+@@ -62,11 +64,11 @@ require (
+ 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
+ 	github.com/x448/float16 v0.8.4 // indirect
+ 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+-	golang.org/x/net v0.33.0 // indirect
+-	golang.org/x/oauth2 v0.21.0 // indirect
+-	golang.org/x/sys v0.28.0 // indirect
+-	golang.org/x/term v0.27.0 // indirect
+-	golang.org/x/text v0.21.0 // indirect
++	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/oauth2 v0.27.0 // indirect
++	golang.org/x/sys v0.31.0 // indirect
++	golang.org/x/term v0.30.0 // indirect
++	golang.org/x/text v0.23.0 // indirect
+ 	golang.org/x/time v0.5.0 // indirect
+ 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
+ 	google.golang.org/protobuf v1.34.2 // indirect
+diff --git a/go.sum b/go.sum
+index 696959d5..a0f12de6 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,11 +1,11 @@
+ github.com/NVIDIA/go-gpuallocator v0.5.0 h1:166ICvPv2dU9oZ2J3kJ4y3XdbGCi6LhXgFZJtrqeu3A=
+ github.com/NVIDIA/go-gpuallocator v0.5.0/go.mod h1:zos5bTIN01hpQioOyu9oRKglrznImMQvm0bZllMmckw=
+-github.com/NVIDIA/go-nvlib v0.7.1 h1:7HHPZxoCjSLm1NgaRRjuhI8ffMCpc5Vgpg5yxQYUff8=
+-github.com/NVIDIA/go-nvlib v0.7.1/go.mod h1:2Kh2kYSP5IJ8EKf0/SYDzHiQKb9EJkwOf2LQzu6pXzY=
++github.com/NVIDIA/go-nvlib v0.7.2 h1:7sy/NVUa4sM9FLKwH6CjBfHSWrJUmv8emVyxLTzjfOA=
++github.com/NVIDIA/go-nvlib v0.7.2/go.mod h1:2Kh2kYSP5IJ8EKf0/SYDzHiQKb9EJkwOf2LQzu6pXzY=
+ github.com/NVIDIA/go-nvml v0.12.4-1 h1:WKUvqshhWSNTfm47ETRhv0A0zJyr1ncCuHiXwoTrBEc=
+ github.com/NVIDIA/go-nvml v0.12.4-1/go.mod h1:8Llmj+1Rr+9VGGwZuRer5N/aCjxGuR5nPb/9ebBiIEQ=
+-github.com/NVIDIA/nvidia-container-toolkit v1.17.6 h1:WaSzAz4oy8NZptk3pRNTOcfXpWHmjya7mtz8bB9Ctsk=
+-github.com/NVIDIA/nvidia-container-toolkit v1.17.6/go.mod h1:wu/FGhiKrPRtMlwieSEYXnfCJyw42dEU7dV0JAHHZrE=
++github.com/NVIDIA/nvidia-container-toolkit v1.17.8 h1:ndE23TKvQBicsZT88mzZudygn6JNOe6+UsIgqk6gGvw=
++github.com/NVIDIA/nvidia-container-toolkit v1.17.8/go.mod h1:khOgMW80+g8eX/1zPlO4demLShHht9I0YEm8ngcPgwk=
+ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
+ github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
+ github.com/cpuguy83/go-md2man/v2 v2.0.5 h1:ZtcqGrnekaHpVLArFSe4HK5DoKx1T0rq2DwVB0alcyc=
+@@ -147,10 +147,10 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
+ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+-golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
+-golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
+-golang.org/x/oauth2 v0.21.0 h1:tsimM75w1tF/uws5rbeHzIWxEqElMehnc+iW793zsZs=
+-golang.org/x/oauth2 v0.21.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
++golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
++golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
++golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -161,14 +161,14 @@ golang.org/x/sys v0.0.0-20191115151921-52ab43148777/go.mod h1:h1NjWce9XRLGQEsW7w
+ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.28.0 h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=
+-golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+-golang.org/x/term v0.27.0 h1:WP60Sv1nlK1T6SupCHbXzSaN0b9wUmsPoRS9b61A23Q=
+-golang.org/x/term v0.27.0/go.mod h1:iMsnZpn0cago0GOrHO2+Y7u7JPn5AylBrcoWkElMTSM=
++golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
++golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
++golang.org/x/term v0.30.0 h1:PQ39fJZ+mfadBm0y5WlL4vlM7Sx1Hgf13sMIY2+QS9Y=
++golang.org/x/term v0.30.0/go.mod h1:NYYFdzHoI5wRh/h5tDMdMqCqPJZEuNqVR5xJLd/n67g=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+-golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
+-golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
++golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
++golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
+ golang.org/x/time v0.5.0 h1:o7cqy6amK/52YcAKIPlM3a+Fpj35zvRj2TP+e1xFSfk=
+ golang.org/x/time v0.5.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
