@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"github.com/fsnotify/fsnotify"
 	"net/http"
 	"os"
 	"os/signal"
@@ -60,6 +61,25 @@ func main() {
 
 	removeOrphanFiles()
 
+	runAllPhases(ctx)
+
+	go watchConfigDir(configPath, func() {
+		log.Info("Configuration changed — reloading phases...")
+		runAllPhases(ctx)
+	})
+
+	controlPlaneManagerIsReady = true
+	// pause loop
+	<-config.ExitChannel
+}
+
+func httpServerClose() {
+	if err := server.Close(); err != nil {
+		log.Fatalf("HTTP close error: %v", err)
+	}
+}
+
+func runAllPhases(ctx context.Context) {
 	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
 		return annotateNode()
 	}, "annotate node"))
@@ -85,15 +105,40 @@ func main() {
 	runPhase(config.writeLastAppliedConfigurationChecksum())
 
 	cleanup()
-
-	controlPlaneManagerIsReady = true
-	// pause loop
-	<-config.ExitChannel
 }
 
-func httpServerClose() {
-	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
+func watchConfigDir(path string, onChange func()) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Errorf("failed to create watcher: %v", err)
+		return
+	}
+	defer watcher.Close()
+
+	err = watcher.Add(path)
+	if err != nil {
+		log.Errorf("failed to watch %s: %v", path, err)
+		return
+	}
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+
+			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) != 0 {
+				log.Info("Config file change detected: %s (%s)", event.Name, event.Op.String())
+				onChange()
+			}
+
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Errorf("watch error: %v", err)
+		}
 	}
 }
 

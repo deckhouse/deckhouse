@@ -211,7 +211,6 @@ spec:
       labels:
         app: d8-control-plane-manager
       annotations:
-        checksum/config: {{ include "control_plane_config" (list . $tpl_context) | sha256sum }}
         checksum/pki: {{ .Values.controlPlaneManager.internal.pkiChecksum | quote }}
         rollout-epoch: {{ .Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
