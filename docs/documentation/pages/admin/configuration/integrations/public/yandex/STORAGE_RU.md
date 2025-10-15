@@ -49,7 +49,7 @@ settings:
 
 По умолчанию DKP выбирает StorageClass на основе аннотации `storageclass.kubernetes.io/is-default-class=true`.
 
-Чтобы задать другой StorageClass по умолчанию, необходимо использовать [глобальный параметр DKP `global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Изменить его можно следующей командой:
+Чтобы задать другой StorageClass по умолчанию, необходимо использовать [глобальный параметр DKP `global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass). Изменить его можно следующей командой:
 
 ```shell
 d8 k edit mc global

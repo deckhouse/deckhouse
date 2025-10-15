@@ -269,7 +269,7 @@ After new control plane nodes are added:
 - The label `node-role.kubernetes.io/control-plane=""` is applied.
 - A DaemonSet launches control plane pods on the new nodes.
 - DKP creates or updates files in `/etc/kubernetes`: manifests, configuration files, certificates, etc.
-- All DKP modules that support high availability will enable it automatically, unless the global setting [`highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) is manually overridden.
+- All DKP modules that support high availability will enable it automatically, unless the global setting [`highAvailability`](../../../../reference/api/global.html#parameters-highavailability) is manually overridden.
 
 Control plane node removal is performed in reverse:
 
