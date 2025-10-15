@@ -15,6 +15,9 @@
 package apps
 
 import (
+	"fmt"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -30,15 +33,17 @@ type Application struct {
 	logger *log.Logger
 }
 
-func NewApplication(path, name, namespace, version string, deps map[string]string) *Application {
+func NewApplication(path, name, namespace string, def *packages.Definition) *Application {
+	name = fmt.Sprintf("%s-%s-%s", namespace, name, def.Name)
+
 	return &Application{
 		path: path,
 
 		name:      name,
 		namespace: namespace,
-		version:   version,
+		version:   def.Version,
 
-		dependencies: deps,
+		dependencies: def.Requirements.Modules,
 
 		logger: log.NewLogger().Named(name),
 	}

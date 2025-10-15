@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/apps"
 )
 
 const (
@@ -34,8 +32,8 @@ type Definition struct {
 	Version string `yaml:"version" json:"version"`
 	Stage   string `yaml:"stage" json:"stage"`
 
-	Descriptions *Descriptions `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
-	Requirements *Requirements `yaml:"requirements,omitempty" json:"requirements,omitempty"`
+	Descriptions Descriptions `json:"descriptions,omitempty" yaml:"descriptions,omitempty"`
+	Requirements Requirements `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 
 	path string
 }
@@ -65,25 +63,4 @@ func LoadDefinition(packageDir string) (*Definition, error) {
 	def.path = path
 
 	return def, nil
-}
-
-func (d *Definition) ToApplication(name, namespace string) *apps.Application {
-	var deps map[string]string
-	if d.Requirements != nil {
-		deps = d.Requirements.Modules
-	}
-
-	// <namespace>-<instance>-<package>
-	name = fmt.Sprintf("%s-%s-%s", namespace, name, d.Name)
-
-	return apps.NewApplication(name, namespace, d.Name, d.Version, deps)
-}
-
-func (d *Definition) ToClusterApplication() *apps.ClusterApplication {
-	var deps map[string]string
-	if d.Requirements != nil {
-		deps = d.Requirements.Modules
-	}
-
-	return apps.NewClusterApplication(d.path, d.Name, d.Version, deps)
 }

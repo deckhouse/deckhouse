@@ -20,12 +20,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/apps"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -53,47 +54,34 @@ func (l *ClusterAppLoader) Load(ctx context.Context) (map[string]*apps.ClusterAp
 
 	span.SetAttributes(attribute.String("path", l.appsDir))
 
-	definitions, err := l.loadPackages(l.appsDir)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("load cluster apps: %w", err)
-	}
-
-	span.SetAttributes(attribute.Int("found", len(definitions)))
-
-	res := make(map[string]*apps.ClusterApplication)
-	for _, def := range definitions {
-		res[def.Name] = def.ToClusterApplication()
-	}
-
-	return res, nil
-}
-
-// loadPackages parses package definitions and builds cluster applications from them
-func (l *ClusterAppLoader) loadPackages(dir string) ([]*packages.Definition, error) {
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(l.appsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("read directory '%s': %v", dir, err)
+		span.SetStatus(codes.Error, err.Error())
+
+		return nil, fmt.Errorf("read directory '%s': %v", l.appsDir, err)
 	}
 
-	var result []*packages.Definition
+	span.SetAttributes(attribute.Int("found", len(entries)))
+
+	res := make(map[string]*apps.ClusterApplication)
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
-		path := filepath.Join(dir, entry.Name())
-		def, err := packages.LoadDefinition(path)
+		appPath := filepath.Join(l.appsDir, entry.Name())
+		def, err := packages.LoadDefinition(appPath)
 		if err != nil {
-			return nil, fmt.Errorf("load package '%s': %v", path, err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, fmt.Errorf("load package '%s': %v", appPath, err)
 		}
 
-		result = append(result, def)
+		res[def.Name] = apps.NewClusterApplication(appPath, def)
 	}
 
-	return result, nil
+	return res, nil
 }

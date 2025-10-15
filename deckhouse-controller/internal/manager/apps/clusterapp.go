@@ -17,6 +17,7 @@ package apps
 import (
 	"path"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/manager/packages"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -35,16 +36,16 @@ type ClusterApplication struct {
 	logger *log.Logger
 }
 
-func NewClusterApplication(path, name, version string, deps map[string]string) *ClusterApplication {
+func NewClusterApplication(path string, def *packages.Definition) *ClusterApplication {
 	return &ClusterApplication{
 		path: path,
 
-		name:    name,
-		version: version,
+		name:    def.Name,
+		version: def.Version,
 
-		dependencies: deps,
+		dependencies: def.Requirements.Modules,
 
-		logger: log.NewLogger().Named(name),
+		logger: log.NewLogger().Named(def.Name),
 	}
 }
 
