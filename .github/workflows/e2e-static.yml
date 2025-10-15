@@ -433,8 +433,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -454,6 +452,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -918,8 +920,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -939,6 +939,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1403,8 +1407,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1424,6 +1426,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1888,8 +1894,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1909,6 +1913,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2373,8 +2381,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2394,6 +2400,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2858,8 +2868,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2879,6 +2887,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -3343,8 +3355,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -3364,6 +3374,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -3828,8 +3842,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -3849,6 +3861,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -4313,8 +4329,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -4334,6 +4348,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -4798,8 +4816,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -4819,6 +4835,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -5283,8 +5303,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -5304,6 +5322,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -5768,8 +5790,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -5789,6 +5809,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -6253,8 +6277,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -6274,6 +6296,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -6738,8 +6764,6 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -6759,6 +6783,10 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
