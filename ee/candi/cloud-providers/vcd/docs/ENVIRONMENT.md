@@ -314,8 +314,10 @@ shutdown -P now
 
 ## Using the load balancers
 
-* VCD supports the use of Service resources of type LoadBalancer.
+* The DKP components support the use of Service resources of type LoadBalancer in VCD environments.
+* The VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used to provide the load balancers functionality.
 * Load balancers are supported only when using the `NSX-T` network virtualization platform.
 * Load balancer functionality must be explicitly enabled in the Edge Gateway by your VMware Cloud Director service provider. You can check the status in Edge Gateway under Load Balancer -> General Settings; the State should be set to Active.
+* If the load balancer functionality was enabled after successful cluster installation, then respective changes in the DKP components will be applied within an hour.
 * A load balancer is created as a combination of a Pool and a Virtual Service for each exposed port.
 * If a firewall is used, a rule allowing traffic to the external address and ports must be created.
