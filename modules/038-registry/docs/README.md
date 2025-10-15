@@ -12,7 +12,7 @@ The internal registry allows for optimizing the downloading and storage of image
 The module can operate in the following modes:
 
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
-- `Unmanaged` — operation without using the internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html).
+- `Unmanaged` — operation without using the internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](/products/kubernetes-platform/documentation/v1.72/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](/products/kubernetes-platform/documentation/v1.72/admin/configuration/registry/third-party.html).
 
 ## Restrictions and features of using the module
 
@@ -26,7 +26,7 @@ Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The clu
 
 The module works under the following conditions:
 
-- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
+- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1.72/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
 
 ### Mode switching restrictions

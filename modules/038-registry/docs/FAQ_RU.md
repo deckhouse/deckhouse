@@ -41,12 +41,12 @@ tree /etc/containerd/registry.d
       auth = "<base64>"
 ```
 
-Перед переключением убедитесь, что на узлах с containerd v1 отсутствуют [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), расположенные в директории `/etc/containerd/conf.d`.
+Перед переключением убедитесь, что на узлах с containerd v1 отсутствуют [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1.72/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), расположенные в директории `/etc/containerd/conf.d`.
 
 Если такие конфигурации существуют:
 
 {% alert level="danger" %}
-- После удаления [пользовательских конфигураций реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) из директории `/etc/containerd/conf.d` сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
+- После удаления [пользовательских конфигураций реестра](/products/kubernetes-platform/documentation/v1.72/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) из директории `/etc/containerd/conf.d` сервис containerd будет перезапущен. Удалённые конфигурации перестанут работать.
 
 - Новые Mirror Auth-конфигурации, добавленные в `/etc/containerd/registry.d`, вступят в силу только после перехода в режим `Direct`.
 {% endalert %}
@@ -106,7 +106,7 @@ tree /etc/containerd/registry.d
 {% alert level="danger" %}
 - Переключение возможно только в режиме `Unmanaged`.
 - При переключении на старую конфигурацию авторизации `Containerd V1` пользовательские конфигурации в `/etc/containerd/registry.d` перестанут работать.
-- Добавить [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) для старой схемы авторизации (в каталог `/etc/containerd/conf.d`) можно только после переключения на неё.
+- Добавить [пользовательские конфигурации реестра](/products/kubernetes-platform/documentation/v1.72/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) для старой схемы авторизации (в каталог `/etc/containerd/conf.d`) можно только после переключения на неё.
 {% endalert %}
 
 Чтобы переключиться на предыдущую конфигурацию авторизации containerd v1, выполните следующие шаги:

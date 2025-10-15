@@ -51,7 +51,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    registry   38     ...  Ready   True                         True
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](../deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](/modules/deckhouse/v1.72/) module documentation for correct configuration.
 
    Configuration example:
 
