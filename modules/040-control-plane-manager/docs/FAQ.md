@@ -176,11 +176,14 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. `drain` the nodes being deleted:
@@ -229,10 +232,14 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
    ```bash
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Exec to the node and run the following commands:
@@ -294,11 +301,14 @@ The steps described below must be performed from the first in order of the maste
 1. Make sure that the node is no longer listed as an etcd cluster member:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. **In the installer container**, run the following command to perform nodes upgrade:
@@ -323,11 +333,14 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Make sure `control-plane-manager` is running on the node:
@@ -354,11 +367,14 @@ Use the `etcdctl member list` command.
 Example:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Warning.** The last parameter in the output table shows etcd member is in [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in `leader` state.
@@ -370,10 +386,14 @@ To obtain information about etcd cluster nodes in tabular form, use the `etcdctl
 Example:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key endpoint status --cluster -w table check etcd cluster status
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 ## What if something went wrong?

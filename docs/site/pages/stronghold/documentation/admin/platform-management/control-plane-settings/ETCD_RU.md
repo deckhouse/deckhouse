@@ -253,10 +253,14 @@ d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Внимание.** Последний параметр в таблице вывода показывает, что узел кластера etcd находится в состоянии [learner](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии leader.
@@ -268,10 +272,14 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key endpoint status --cluster -w table check etcd cluster status
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table check etcd cluster status
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 ## Пересборка кластера etcd

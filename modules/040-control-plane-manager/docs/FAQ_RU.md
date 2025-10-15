@@ -170,10 +170,14 @@ spec:
 1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
 
    ```bash
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Выполните `drain` для удаляемых узлов:
@@ -222,11 +226,14 @@ spec:
 1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Зайдите на узел и выполните следующие команды:
@@ -296,11 +303,14 @@ spec:
 1. Проверьте, что узел etcd отобразился в списке узлов кластера:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Убедитесь, что `control-plane-manager` функционирует на узле.
@@ -331,26 +341,33 @@ spec:
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
 
 ### Вариант 2
 
-Используйте команду `etcdctl endpoint status`. В пятом столбце таблицы вывода будет указано значение `true` для лидера.
+Используйте команду `etcdctl endpoint status`. Для лидера в столбце `IS LEADER` будет указано значение `true`.
 
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key endpoint status --cluster -w table check etcd cluster status
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 ## Что делать, если что-то пошло не так?
