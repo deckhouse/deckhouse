@@ -454,9 +454,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -482,10 +479,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -941,9 +938,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -969,10 +963,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -1428,9 +1422,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1456,10 +1447,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -1915,9 +1906,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1943,10 +1931,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -2402,9 +2390,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2430,10 +2415,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -2889,9 +2874,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2917,10 +2899,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -3376,9 +3358,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -3404,10 +3383,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -3863,9 +3842,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -3891,10 +3867,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -4350,9 +4326,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -4378,10 +4351,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -4837,9 +4810,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -4865,10 +4835,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -5324,9 +5294,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -5352,10 +5319,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -5811,9 +5778,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -5839,10 +5803,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -6298,9 +6262,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -6326,10 +6287,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -6785,9 +6746,6 @@ jobs:
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-          DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -6813,10 +6771,10 @@ jobs:
           echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
           if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
             # Use stage-registry for release branches.
-            BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
             # Use dev-registry for Git branches.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then

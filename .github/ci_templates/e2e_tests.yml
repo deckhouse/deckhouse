@@ -531,9 +531,6 @@ check_e2e_labels:
         fi
         DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
 
-        DEV_REGISTRY_PATH: "${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-        STAGE_REGISTRY_PATH: "${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-
         if [[ "${MANUAL_RUN}" == "false" ]] ; then
           # for jobs which run multiple providers concurrency (daily e2e, for example)
           # add provider suffix to prevent "directory already exists" error
@@ -570,10 +567,10 @@ check_e2e_labels:
         echo "CI_COMMIT_REF_SLUG = $CI_COMMIT_REF_SLUG" #TODO debug
         if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
           # Use stage-registry for release branches.
-          BRANCH_REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
         else
           # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         fi
 
         if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -935,9 +932,9 @@ check_e2e_labels:
 {!{- if eq $provider "eks" }!}
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
         if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-          BRANCH_REGISTRY_PATH=${STAGE_REGISTRY_PATH}
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
         else
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         fi
         TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 {!{- end }!}
