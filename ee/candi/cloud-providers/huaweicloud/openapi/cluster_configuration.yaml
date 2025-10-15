@@ -221,6 +221,21 @@ apiVersions:
                 Partial contents of the fields.
               properties:
                 <<: *instanceClassProperties
+
+                mainNetwork:
+                  type: string
+                  x-doc-required: false
+                  description: |
+                    Primary network ID for the VM's main NIC.
+                    If empty, the discovered subnet from the layout is used.
+                additionalNetworks:
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                  description: |
+                    Secondary network IDs for extra NICs attached after the main NIC.
+
             volumeTypeMap:
               description: |
                 A dictionary mapping availability zones to disk types for the group’s worker nodes.
