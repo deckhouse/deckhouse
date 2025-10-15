@@ -62,6 +62,20 @@ func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	input.Values.Set("userAuthn.internal.providers", providers)
+	// Filter out providers with spec.enabled == false. Absence of the field is treated as enabled=true.
+	filtered := make([]map[string]interface{}, 0, len(providers))
+	for _, p := range providers {
+		// p corresponds to the .spec map with injected "id"
+		if enabledRaw, ok := p["enabled"]; ok {
+			if enabledBool, ok := enabledRaw.(bool); ok && !enabledBool {
+				// skip disabled provider
+				continue
+			}
+			// if not a bool, treat as enabled (backward-compatible)
+		}
+		filtered = append(filtered, p)
+	}
+
+	input.Values.Set("userAuthn.internal.providers", filtered)
 	return nil
 }

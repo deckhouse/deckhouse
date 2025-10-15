@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company Github
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
