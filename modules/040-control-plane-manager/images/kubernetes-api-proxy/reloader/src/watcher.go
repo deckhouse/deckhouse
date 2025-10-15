@@ -51,7 +51,10 @@ func nginxReload() error {
 		return nil
 	}
 
-	output, err := exec.Command("nginx", "-t", "-c", nginxNewConf).CombinedOutput()
+	log.Printf("%s differs from %s, validating and reloading nginx...", nginxNewConf, nginxConf)
+
+	// Force nginx to log config test errors to stderr.
+	output, err := exec.Command("nginx", "-t", "-c", nginxNewConf, "-e", "/dev/stderr", "-g", "error_log stderr;").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("nginx configuration test failed: %s", string(output))
 	}
@@ -67,6 +70,7 @@ func nginxReload() error {
 		return fmt.Errorf("failed to send SIGHUP to nginx process: %s", err)
 	}
 
+	log.Printf("nginx reload finished successfully")
 	return nil
 }
 
