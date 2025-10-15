@@ -73,7 +73,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	return writeFileAtomically(dst, srcBytes, perm)
 }
 
-// writeFileAtomically: write data to a temporary file in the same directory,
+// Write data to a temporary file in the same directory,
 // fsync it, apply permissions, and atomically rename it over the target path.
 func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	dstDir := filepath.Dir(dst)
