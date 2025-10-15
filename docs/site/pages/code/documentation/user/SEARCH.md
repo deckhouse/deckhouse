@@ -63,6 +63,8 @@ General procedure for searching in Deckhouse Code:
 3. Press **Enter** — results will appear on the search page.
 4. Use filters to refine results by group, project, or object type.
 
+![Search](/images/code/search_en.png)
+
 ### Limitations
 
 The following query length limitations apply to search in Deckhouse Code:
