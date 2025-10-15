@@ -311,7 +311,8 @@ func (in *ApplicationSpec) DeepCopyInto(out *ApplicationSpec) {
 	*out = *in
 	if in.Settings != nil {
 		in, out := &in.Settings, &out.Settings
-		*out = (*in).DeepCopy()
+		*out = new(v1.JSON)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -669,7 +670,8 @@ func (in *ClusterApplicationSpec) DeepCopyInto(out *ClusterApplicationSpec) {
 	*out = *in
 	if in.Settings != nil {
 		in, out := &in.Settings, &out.Settings
-		*out = (*in).DeepCopy()
+		*out = new(v1.JSON)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

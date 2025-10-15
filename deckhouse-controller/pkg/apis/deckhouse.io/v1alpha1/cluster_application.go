@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -74,10 +75,11 @@ type ClusterApplication struct {
 }
 
 type ClusterApplicationSpec struct {
-	Repository     string          `json:"repository,omitempty"`
-	Version        string          `json:"version"`
-	ReleaseChannel string          `json:"releaseChannel,omitempty"`
-	Settings       *SettingsValues `json:"settings,omitempty"`
+	Repository     string `json:"repository,omitempty"`
+	Version        string `json:"version"`
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Settings *apiextensionsv1.JSON `json:"settings,omitempty"`
 }
 
 type ClusterApplicationStatus struct {
@@ -93,12 +95,12 @@ type ClusterApplicationStatusVersion struct {
 }
 
 type ClusterApplicationStatusCondition struct {
-	Type               string                `json:"type"`
+	Type               string                 `json:"type"`
 	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                `json:"reason,omitempty"`
-	Message            string                `json:"message,omitempty"`
-	LastProbeTime      metav1.Time           `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time           `json:"lastTransitionTime,omitempty"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
+	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
+	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -110,4 +112,3 @@ type ClusterApplicationList struct {
 
 	Items []ClusterApplication `json:"items"`
 }
-

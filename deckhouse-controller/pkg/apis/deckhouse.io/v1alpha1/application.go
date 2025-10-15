@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -73,11 +74,12 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	ApplicationPackageName string          `json:"applicationPackageName"`
-	Repository             string          `json:"repository,omitempty"`
-	Version                string          `json:"version"`
-	ReleaseChannel         string          `json:"releaseChannel,omitempty"`
-	Settings               *SettingsValues `json:"settings,omitempty"`
+	ApplicationPackageName string `json:"applicationPackageName"`
+	Repository             string `json:"repository,omitempty"`
+	Version                string `json:"version"`
+	ReleaseChannel         string `json:"releaseChannel,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Settings *apiextensionsv1.JSON `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
@@ -110,4 +112,3 @@ type ApplicationList struct {
 
 	Items []Application `json:"items"`
 }
-
