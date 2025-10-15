@@ -22,12 +22,12 @@ git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo-init
 {{ if ne .ModuleName "website-docs" }}
-{{- include "image mount points" . | nindent 2 }}
     excludePaths:
     - config/production/
     - data/dkp/embedded_modules.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo-init/config/production/hugo.yaml
+{{- include "image mount points" . | nindent 2 }}
 {{ end }}
 
 ---
