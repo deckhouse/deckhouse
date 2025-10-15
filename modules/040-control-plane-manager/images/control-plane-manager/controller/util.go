@@ -70,16 +70,22 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 
 	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
 
-	// Atomic write: write into temp file, fsync, rename over the target
+	return writeFileAtomically(dst, srcBytes, perm)
+}
+
+// writeFileAtomically: write data to a temporary file in the same directory,
+// fsync it, apply permissions, and atomically rename it over the target path.
+func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	dstDir := filepath.Dir(dst)
 	base := filepath.Base(dst)
+
 	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
 	if err != nil {
 		return err
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
-	if _, err := tmpFile.Write(srcBytes); err != nil {
+	if _, err := tmpFile.Write(data); err != nil {
 		_ = tmpFile.Close()
 		return err
 	}
@@ -90,6 +96,7 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	if err := tmpFile.Close(); err != nil {
 		return err
 	}
+
 	if err := os.Chmod(tmpFile.Name(), perm); err != nil {
 		return err
 	}
@@ -102,7 +109,6 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	// Fsync the directory
 	if dirFd, err := os.Open(dstDir); err == nil {
 		_ = dirFd.Sync()
 		_ = dirFd.Close()
