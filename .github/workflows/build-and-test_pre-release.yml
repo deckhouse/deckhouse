@@ -158,7 +158,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_fe:
@@ -343,7 +343,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -405,10 +404,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -435,6 +445,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -446,6 +457,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -713,7 +727,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -775,10 +788,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -805,6 +829,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -816,6 +841,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1083,7 +1111,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1145,10 +1172,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -1175,6 +1213,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1186,6 +1225,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1453,7 +1495,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          ACTIONS_ID_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1515,10 +1556,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -1545,6 +1597,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1556,6 +1609,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1571,6 +1627,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1679,7 +1743,7 @@ jobs:
       - name: Check dev registry credentials
         id: check_dev_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -1815,7 +1879,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1877,10 +1940,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -1907,6 +1981,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1918,6 +1993,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1933,6 +2011,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -2177,7 +2263,6 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -2239,10 +2324,21 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
+            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            AUTH_ROLE="dh-signer_dh-signer"
+            export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+            ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+            export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+            ACTIONS_ID_TOKEN="null" #clear value
+            AUTH_ROLE="null" #clear value
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -2269,6 +2365,7 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -2280,6 +2377,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+
+          werf config render > werf-rendered.yaml
+
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2526,7 +2626,7 @@ jobs:
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
         uses: docker/login-action@v2.1.0
@@ -2806,9 +2906,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
 
