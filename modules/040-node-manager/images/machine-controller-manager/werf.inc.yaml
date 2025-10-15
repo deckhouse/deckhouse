@@ -20,6 +20,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  - echo "2025-10-15 17:56 - Change me to rebuild mcm on new commit in branch."
   - git clone --depth 1 --branch nested-virt-2025-09 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
   - rm -rf /src/.git
 ---
