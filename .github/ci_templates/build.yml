@@ -87,10 +87,12 @@ steps:
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
       DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+      STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
 {!{- end }!}
 {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
       GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}

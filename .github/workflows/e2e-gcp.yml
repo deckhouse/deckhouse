@@ -61,8 +61,7 @@ env:
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss"
+  REGISTRY_PATH: "sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
@@ -434,6 +433,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -913,6 +914,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1392,6 +1395,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1871,6 +1876,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2350,6 +2357,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2829,6 +2838,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -3308,6 +3319,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -3787,6 +3800,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -4266,6 +4281,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -4745,6 +4762,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -5224,6 +5243,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -5703,6 +5724,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -6182,6 +6205,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -6661,6 +6686,8 @@ jobs:
         id: setup
         env:
           DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
+          STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}

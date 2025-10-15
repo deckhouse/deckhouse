@@ -31,8 +31,7 @@ env:
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-  STAGE_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss"
+  REGISTRY_PATH: "sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
@@ -520,6 +519,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -808,6 +808,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1096,6 +1097,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1384,6 +1386,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1672,6 +1675,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1960,6 +1964,7 @@ jobs:
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_PATH: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/${REGISTRY_PATH}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
