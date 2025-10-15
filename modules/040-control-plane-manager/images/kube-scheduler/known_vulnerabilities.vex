@@ -1,51 +1,23 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-e837687ca73b6d97b720c72228fa886b2d159aae2fc408b7d6125c2bc7a72d2f",
-  "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-05-07T22:06:23.7823+03:00",
+  "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
+  "author": "Unknown Author",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2023-45142"
+        "name": "CVE-2024-28180"
       },
-      "timestamp": "2025-05-06T14:17:49.782779+03:00",
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+          "@id": "pkg:golang/gopkg.in/square/go-jose.v2"
         }
       ],
       "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2023-45142"
-      },
-      "timestamp": "2025-05-07T22:05:46.082802+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2023-47108"
-      },
-      "timestamp": "2025-05-06T14:17:33.774559+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Telemetry cannot enabled in the Deckhouse control-plane components."
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2024-28180 описывает переполнение ресурсов в go-jose, возникающее при попытке распаковать зашифрованные сообщения JWE (JSON Web Encryption - формат JOSE для шифрования полезной нагрузки). Kubernetes не создает и не обрабатывает JWE, используя библиотеку только для подписанных JWT, ччто подтверждено в обсуждении: https://github.com/kubernetes/kubernetes/pull/123253#issuecomment-1940379993 https://github.com/kubernetes/sig-security/issues/116#issuecomment-2197995745",
+      "timestamp": "2025-10-10T08:22:16.678302Z"
     }
-  ]
+  ],
+  "timestamp": "2025-10-10T08:22:16Z"
 }

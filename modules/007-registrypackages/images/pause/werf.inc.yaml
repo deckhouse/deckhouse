@@ -29,6 +29,9 @@ import:
   add: /crane
   to: /crane
   before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
 dependencies:
 - image: common/pause
   before: setup
@@ -39,19 +42,15 @@ dependencies:
     targetEnv: IMAGE_REPO
 secrets:
 - id: REGISTRY_USER
-  value: {{ .RegistryUser }}
+  env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
-  value: {{ .RegistryPassword }}
+  env: REGISTRY_PASSWORD
 shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
   - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
-  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /pause.tar
+  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
   - rm -f ~/.docker/config.json
-  - mkdir /tmp/pause
-  - tar -xf /pause.tar -C /tmp/pause
-  - cd /tmp/pause
-  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
-  - rm /pause.tar
-  - tar -cvf /pause.tar ./
-  - rm -rf /tmp/pause
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:pause"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /pause.tar .
+  - rm -rf /tmp/image

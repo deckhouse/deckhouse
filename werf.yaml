@@ -88,13 +88,6 @@ build:
 # goproxy settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
 
-# cosign  settings
-{{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
-{{- $_ := set . "RegistryPassword" (env "REGISTRY_PASSWORD" "test") }}
-{{- $_ := set . "CosignVaultAdress"  (env "COSIGN_VAULT_ADRESS" "https://example.com") }}
-{{- $_ := set . "CosignVaultToken" (env "COSIGN_VAULT_TOKEN" "test")  }}
-{{- $_ := set . "CosignVaultKey" (env "COSIGN_VAULT_KEY" "test") }}
-{{- $_ := set . "CosignTransitSecret" (env "COSIGN_TRANSIT_SECRET_ENGINE_PATH" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}

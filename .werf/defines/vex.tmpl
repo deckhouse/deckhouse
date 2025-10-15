@@ -14,31 +14,30 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
-fromImage: builder/alpine
-final: false
+fromImage: base-for-vex
+final: true
 secrets:
 - id: REGISTRY_USER
-  value: {{ $context.RegistryUser }}
+  env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
-  value: {{ $context.RegistryPassword }}
-- id: COSIGN_VAULT_ADRESS
-  value: {{ $context.CosignVaultAdress }}
-- id: COSIGN_VAULT_TOKEN
-  value: {{ $context.CosignVaultToken }}
+  env: REGISTRY_PASSWORD
+#- id: COSIGN_VAULT_ADDRESS
+#  env: COSIGN_VAULT_ADDRESS
 - id: COSIGN_VAULT_KEY
-  value: {{ $context.CosignVaultKey }}
+  env: COSIGN_VAULT_KEY
+#- id: COSIGN_AUTH_ROLE
+#  env: COSIGN_AUTH_ROLE
 - id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
-  value: {{ $context.CosignTransitSecret }}
-import:
-- image: tools/cosign
-  add: /usr/bin/cosign
-  to: /usr/bin/cosign
-  before: install
+  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+- id: ACTIONS_ID_TOKEN_REQUEST_URL
+  env: ACTIONS_ID_TOKEN_REQUEST_URL
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
   stageDependencies:
-    setup:
+    install:
     - 'known_vulnerabilities.vex'
 dependencies:
 - image: {{ $imageName }}
@@ -49,22 +48,34 @@ dependencies:
   - type: ImageRepo
     targetEnv: IMAGE_REPO
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" $context | nindent 2 }}
-  - apk add --no-cache curl jq
   install:
+  - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
+  - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
+  - export VAULT_ADDR="https://seguro.flant.com"
+  - export COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)"
+  - export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+  - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
+  - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
+  - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
   - |
-    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
-    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    VAULT_TOKEN="$(eval "$(cat /run/secrets/COSIGN_VAULT_TOKEN)" | jq -r '.auth.client_token')" \
+    ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
+    VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
     cosign attest \
-      --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
-      --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
+      --registry-username="${REGISTRY_USER}" \
+      --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY) \
+      --key hashivault://${COSIGN_VAULT_KEY} \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
+#    REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)" \
+#    REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)" \
+#    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)" \
+#    COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)" \
+#    COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)" \
+#    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
+#    ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" \
+#    ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)" \
