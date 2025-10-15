@@ -730,6 +730,10 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /admin/configuration/storage/external/huawei.html
                     - title:
+                        en: NetApp data storage
+                        ru: Хранилище данных NetApp
+                      url: /admin/configuration/storage/external/netapp.html
+                    - title:
                         en: NFS storage
                         ru: Сетевое файловое хранилище NFS
                       url: /admin/configuration/storage/external/nfs.html
