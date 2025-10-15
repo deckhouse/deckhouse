@@ -34,6 +34,7 @@ type Config struct {
 	Org      string `json:"org"`
 	Href     string `json:"href"`
 	VDC      string `json:"vdc"`
+	Network  string `json:"network"`
 	Insecure bool   `json:"insecure"`
 	Token    string `json:"token"`
 }
@@ -65,6 +66,12 @@ func parseEnvToConfig() (*Config, error) {
 		return nil, fmt.Errorf("VCD_VDC env should be set")
 	}
 	c.VDC = vdc
+
+	network := os.Getenv("VCD_NETWORK")
+	if network == "" {
+		return nil, fmt.Errorf("VCD_NETWORK env should be set")
+	}
+	c.Network = network
 
 	insecure := os.Getenv("VCD_INSECURE")
 	if insecure == "true" {
@@ -201,6 +208,12 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 		return nil, fmt.Errorf("could not get VCD API version: %v", err)
 	}
 	discoveryData.VCDAPIVersion = vcdAPIVersion
+
+	lbInfo, err := d.getLoadBalancer(vcdClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover loadbalancer: %v", err)
+	}
+	discoveryData.LoadBalancer = lbInfo
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {
@@ -395,4 +408,85 @@ func removeDuplicatesInstanceTypes(list []v1alpha1.InstanceType) []v1alpha1.Inst
 		return uniqueList[i].Name < uniqueList[j].Name
 	})
 	return uniqueList
+}
+
+func (d *Discoverer) getLoadBalancer(vcdClient *govcd.VCDClient) (*types.NsxtAlbConfig, error) {
+	org, err := govcd.GetOrgByName(vcdClient, d.config.Org)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get org: %v", err)
+	}
+
+	vdc, err := org.GetVDCByName(d.config.VDC, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vdc: %v", err)
+	}
+
+	network, err := vdc.GetOpenApiOrgVdcNetworkByName(d.config.Network)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get org vdc network: %v", err)
+	}
+
+	if network.OpenApiOrgVdcNetwork == nil {
+		return nil, fmt.Errorf("network is empty")
+	}
+
+	if network.OpenApiOrgVdcNetwork.BackingNetworkType != types.OpenApiOrgVdcNetworkBackingTypeNsxt {
+		return &types.NsxtAlbConfig{
+			Enabled: false,
+		}, nil
+	}
+
+	if (network.OpenApiOrgVdcNetwork.Connection == nil || network.OpenApiOrgVdcNetwork.Connection.RouterRef == types.OpenApiReference{}) {
+			return nil, fmt.Errorf("network is not connected to edge gateway")
+		}
+
+	// loadBalancerUrl, err := url.Parse(d.config.Href)
+	// if err != nil {
+	// 	return false, fmt.Errorf("failed to parse vcd url: %v", err)
+	// }
+
+	// if strings.HasSuffix(loadBalancerUrl.Path, "/api") {
+	// 	loadBalancerUrl.Path = fmt.Sprintf("%s/cloudapi", strings.TrimSuffix(loadBalancerUrl.Path, "/api"))
+	// } else {
+	// 	loadBalancerUrl.Path = fmt.Sprintf("%s/cloudapi", loadBalancerUrl.Path)
+	// }
+
+	// loadBalancerUrl = loadBalancerUrl.JoinPath("1.0.0", "edgeGateways", network.OpenApiOrgVdcNetwork.Connection.RouterRef.ID, "loadBalancer")
+
+	// edgeRawRequest := vcdClient.Client.NewRequest(nil, http.MethodGet, *(loadBalancerUrl), nil)
+	// edgeRawRequest.Header.Set("Accept", "application/json;version=37.2")
+	// edgeRawRequest.Header.Set("Content-Type", "application/json")
+
+	// edgeRawResponse, err := vcdClient.Client.Http.Do(edgeRawRequest)
+	// if err != nil {
+	// 	return false, fmt.Errorf("failed to request load balancer info: %v", err)
+	// }
+	// defer edgeRawResponse.Body.Close()
+
+	// if edgeRawResponse.StatusCode != http.StatusOK {
+	// 	return false, fmt.Errorf("failed to get load balancer info: %v", edgeRawResponse.Status)
+	// }
+
+	// body, err := io.ReadAll(edgeRawResponse.Body)
+	// if err != nil {
+	// 	return false, fmt.Errorf("failed to read load balancer info: %v", err)
+	// }
+
+	// var lb loadBalancerInfo
+	// err = json.Unmarshal(body, &lb)
+	// if err != nil {
+	// 	return false, fmt.Errorf("failed to unmarshal load balancer info: %v", err)
+	// }
+
+	edge, err := vdc.GetNsxtEdgeGatewayById(network.OpenApiOrgVdcNetwork.Connection.RouterRef.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get edge gateway: %v", err)
+	}
+
+	lbInfo, err := edge.GetAlbSettings()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get load balancer general params: %v", err)
+	}
+
+	return lbInfo, nil
 }

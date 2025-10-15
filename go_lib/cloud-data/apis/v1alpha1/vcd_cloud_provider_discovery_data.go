@@ -14,6 +14,10 @@
 
 package v1alpha1
 
+import (
+	"github.com/vmware/go-vcloud-director/v2/types/v56"
+)
+
 type VCDCloudProviderDiscoveryData struct {
 	APIVersion string `json:"apiVersion,omitempty"`
 	Kind       string `json:"kind,omitempty"`
@@ -23,6 +27,7 @@ type VCDCloudProviderDiscoveryData struct {
 	StorageProfiles        []VCDStorageProfile `json:"storageProfiles,omitempty"`
 	VCDAPIVersion          string              `json:"vcdAPIVersion,omitempty"`
 	VCDInstallationVersion string              `json:"vcdInstallationVersion,omitempty"`
+	LoadBalancer           *types.NsxtAlbConfig `json:"loadBalancer,omitempty"`
 }
 
 type VCDStorageProfile struct {

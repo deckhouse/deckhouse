@@ -10,6 +10,11 @@ memory: 50Mi
   {{- $ccmImageName = "cloudControllerManager" }}
 {{- end }}
 
+{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle"}}
+{{- if .Values.cloudProviderVcd.internal.discoveryData.loadBalancer.enabled -}}
+  {{- $ccmEnabledControllers = printf "%s,service" $ccmEnabledControllers }}
+{{- end }}
+
 {{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
 {{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -91,7 +96,7 @@ spec:
           - --cloud-provider=vmware-cloud-director
           - --allow-untagged-cloud=true
           - --configure-cloud-routes=false
-          - --controllers=cloud-node,cloud-node-lifecycle,service
+          - --controllers={{ $ccmEnabledControllers }}
           - --bind-address=127.0.0.1
           - --secure-port=10471
           - --v=4
