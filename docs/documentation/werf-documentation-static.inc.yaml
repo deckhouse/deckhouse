@@ -41,13 +41,14 @@ shell:
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 {{ if ne .ModuleName "website-docs" }}
-        # Syncing file from the documentation to the main site...
+        echo "Syncing file from the documentation to the main site..."
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb,navigation_helper.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
 
-        # "Converting public documentation links to internal relative..."
-        grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
-          xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
+        echo "Converting public documentation links to internal relative..."
+        if grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | tee /tmp/grep_result.txt | grep -q .; then
+          xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$' < /tmp/grep_result.txt
+        fi
 
         cat <<'EOD' > /tmp/_config_additional.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
