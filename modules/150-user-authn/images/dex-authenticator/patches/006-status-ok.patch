@@ -1,8 +1,23 @@
 diff --git a/oauthproxy.go b/oauthproxy.go
-index 10a69b31..f8205808 100644
+index 10a69b31..bed541bc 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -945,7 +945,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+@@ -932,6 +932,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	session, err := p.getAuthenticatedSession(rw, req)
+ 	if err != nil {
+ 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
++		rw.Header().Set("Oauth2-Proxy", "Unauthorized")
+ 		return
+ 	}
+ 
+@@ -939,13 +940,14 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	// subrequest architectures
+ 	if !authOnlyAuthorize(req, session) {
+ 		http.Error(rw, http.StatusText(http.StatusForbidden), http.StatusForbidden)
++		rw.Header().Set("Oauth2-Proxy", "Forbidden")
+ 		return
+ 	}
+ 
  	// we are authenticated
  	p.addHeadersForProxying(rw, session)
  	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
