@@ -5,17 +5,14 @@ description: "Configuration management of DKP component registry and organizatio
 
 ## Description
 
-The module manages the configuration of the registry of Deckhouse components and provides an internal container image storage (container registry, registry).
+The module implements the internal container image registry.
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
 The module can operate in the following modes:
 
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
-- `Unmanaged` — operation without using the internal registry. Access within the cluster is performed directly to the external registry.
-  There are two types of the `Unmanaged` mode:
-  - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
-  - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) using the (deprecated) `helper change registry` command.
+- `Unmanaged` — operation without using the internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html).
 
 ## Restrictions and features of using the module
 
@@ -23,9 +20,7 @@ The `registry` module has a number of limitations and features related to instal
 
 ### Cluster installation limitations
 
-DKP cluster bootstrap is only supported in non-configurable `Unmanaged` mode. Registry settings during bootstrap are specified through [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
+Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The cluster is deployed with settings for `Unmanaged` mode.
 
 ### Operating conditions restrictions
 
@@ -38,8 +33,9 @@ The module works under the following conditions:
 
 Mode switching restrictions are as follows:
 
-- For the first switch, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](./faq.html) section.
-- Switching to the non-configurable `Unmanaged` mode is only available from the `Unmanaged` mode. For more details, see the [Registry Module: FAQ](./faq.html) section.
+- Switching to `Direct` mode is possible if there are no user registry configurations on the nodes. For more details, see the [Registry Module: FAQ](./faq.html) section.
+- Switching to `Unmanaged` mode is only available from `Direct` mode.
+- In `Unmanaged` mode, changing registry settings is not supported. To change settings, you need to switch to `Direct` mode, make the necessary changes, and then switch back to `Unmanaged` mode.
 
 ## Direct Mode Architecture
 

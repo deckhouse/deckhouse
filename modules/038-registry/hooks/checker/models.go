@@ -29,7 +29,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -45,9 +44,8 @@ type queueItem struct {
 }
 
 type Params struct {
-	Registries map[string]RegistryParams    `json:"registries,omitempty"`
-	CheckMode  registry_const.CheckModeType `json:"checkMode,omitempty"`
-	Version    string                       `json:"version,omitempty"`
+	Registries map[string]RegistryParams `json:"registries,omitempty"`
+	Version    string                    `json:"version,omitempty"`
 }
 
 func (params Params) Validate() error {
@@ -173,7 +171,7 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	}
 
 	if isNewConfig {
-		state.Message = state.buildMessage(inputs.Params.CheckMode)
+		state.Message = state.buildMessage()
 		return nil
 	}
 
@@ -236,7 +234,7 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 			return fmt.Errorf("cannot parse registry %q params: %w", name, err)
 		}
 
-		repoImages, err := buildRepoQueue(inputs.ImagesInfo, repo, inputs.Params.CheckMode)
+		repoImages, err := buildRepoQueue(inputs.ImagesInfo, repo)
 		if err != nil {
 			return fmt.Errorf("cannot build registry %q queue: %w", name, err)
 		}
@@ -258,7 +256,7 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 
 	// fast path
 	if !state.hasItems() {
-		state.Message = state.buildMessage(inputs.Params.CheckMode)
+		state.Message = state.buildMessage()
 		state.Ready = true
 		return 0, nil
 	}
@@ -343,18 +341,17 @@ func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (
 		return 0, errors.Join(errs...)
 	}
 
-	state.Message = state.buildMessage(inputs.Params.CheckMode)
+	state.Message = state.buildMessage()
 	state.Ready = !state.hasItems()
 
 	return processedCount, nil
 }
 
-func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string {
+func (state *stateModel) buildMessage() string {
 	var (
 		msg    = new(strings.Builder)
 		qNames = make([]string, 0, len(state.Queues))
 	)
-	fmt.Fprintf(msg, "Mode: %v\n", mode)
 
 	for name := range state.Queues {
 		qNames = append(qNames, name)

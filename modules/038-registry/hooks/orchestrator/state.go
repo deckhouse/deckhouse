@@ -121,10 +121,7 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 	case registry_const.ModeDirect:
 		return state.transitionToDirect(log, inputs)
 	case registry_const.ModeUnmanaged:
-		if inputs.Params.ImagesRepo != "" {
-			return state.transitionToConfigurableUnmanaged(inputs)
-		}
-		return state.transitionToUnmanaged(inputs)
+		return state.transitionToUnmanaged(log, inputs)
 	default:
 		return fmt.Errorf("unsupported mode: %v", state.TargetMode)
 	}
@@ -144,7 +141,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 
 	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 	if err != nil {
-		return fmt.Errorf("cannot process checker on upstream: %w", err)
+		return fmt.Errorf("cannot process checkper on upstream: %w", err)
 	}
 
 	if !checkerReady {
@@ -181,7 +178,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 			CA:         inputs.Params.CA,
 		},
 	}
-	bashibleParams := bashible.Params{
+	bashibleParam := bashible.Params{
 		RegistrySecret: inputs.RegistrySecret,
 		ModeParams: bashible.ModeParams{
 			Direct: &bashible.DirectModeParams{
@@ -203,7 +200,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
+	processedBashible, err := state.processBashibleTransition(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -241,7 +238,7 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	}
 
 	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParams, inputs)
+	processedBashible, err = state.processBashibleFinalize(bashibleParam, inputs)
 	if err != nil {
 		return err
 	}
@@ -269,116 +266,8 @@ func (state *State) transitionToDirect(log go_hook.Logger, inputs Inputs) error 
 	return nil
 }
 
-func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
-	// check upstream registry
-	checkerRegistryParams := checker.RegistryParams{
-		Address:  inputs.Params.ImagesRepo,
-		Scheme:   strings.ToUpper(inputs.Params.Scheme),
-		CA:       string(encodeCertificateIfExist(inputs.Params.CA)),
-		Username: inputs.Params.UserName,
-		Password: inputs.Params.Password,
-	}
-
-	checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
-	if err != nil {
-		return fmt.Errorf("cannot process checker on upstream: %w", err)
-	}
-
-	if !checkerReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Preflight Checks
-	if !state.bashiblePreflightCheck(inputs) {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	bashibleParams := bashible.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		ModeParams: bashible.ModeParams{
-			Unmanaged: &bashible.UnmanagedModeParams{
-				ImagesRepo: inputs.Params.ImagesRepo,
-				Scheme:     inputs.Params.Scheme,
-				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
-				Username:   inputs.Params.UserName,
-				Password:   inputs.Params.Password,
-			},
-		},
-	}
-	registrySecretParams := registryswitcher.Params{
-		RegistrySecret: inputs.RegistrySecret,
-		UnmanagedMode: &registryswitcher.UnmanagedModeParams{
-			ImagesRepo: inputs.Params.ImagesRepo,
-			Scheme:     inputs.Params.Scheme,
-			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
-			Username:   inputs.Params.UserName,
-			Password:   inputs.Params.Password,
-		},
-	}
-
-	// Bashible with actual params
-	processedBashible, err := state.processBashibleTransition(bashibleParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Update Deckhouse-registry secret and wait
-	processedRegistrySwitcher, err := state.processRegistrySwitcher(registrySecretParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedRegistrySwitcher {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Bashible only input params
-	processedBashible, err = state.processBashibleFinalize(bashibleParams, inputs)
-	if err != nil {
-		return err
-	}
-	if !processedBashible {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	// Cleanup
-	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
-
-	state.RegistryService = registryservice.ModeDisabled
-
-	state.IngressEnabled = false
-
-	if !inClusterProxyReady {
-		state.setReadyCondition(false, inputs)
-		return nil
-	}
-
-	state.PKI = pki.State{}
-	state.Secrets = secrets.State{}
-	state.Users = users.State{}
-
-	// All done
-	state.Mode = state.TargetMode
-	state.Bashible.UnmanagedParams = &bashible.UnmanagedModeParams{
-		ImagesRepo: inputs.Params.ImagesRepo,
-		Scheme:     inputs.Params.Scheme,
-		CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
-		Username:   inputs.Params.UserName,
-		Password:   inputs.Params.Password,
-	}
-	state.setReadyCondition(true, inputs)
-
-	return nil
-}
-
-func (state *State) transitionToUnmanaged(inputs Inputs) error {
+func (state *State) transitionToUnmanaged(log go_hook.Logger, inputs Inputs) error {
+	_ = log
 	if state.Mode != registry_const.ModeUnmanaged &&
 		state.Mode != registry_const.ModeProxy &&
 		state.Mode != registry_const.ModeDirect {
@@ -425,7 +314,7 @@ func (state *State) transitionToUnmanaged(inputs Inputs) error {
 
 		checkerReady, err := state.processCheckerUpstream(checkerRegistryParams, inputs)
 		if err != nil {
-			return fmt.Errorf("cannot process checker on upstream: %w", err)
+			return fmt.Errorf("cannot process checkper on upstream: %w", err)
 		}
 
 		if !checkerReady {
@@ -666,7 +555,6 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 	checkerVersion, err := helpers.ComputeHash(
 		params,
 		state.TargetMode,
-		inputs.Params.CheckMode,
 	)
 	if err != nil {
 		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
@@ -677,8 +565,7 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 		Registries: map[string]checker.RegistryParams{
 			registryAddr: params,
 		},
-		CheckMode: inputs.Params.CheckMode,
-		Version:   checkerVersion,
+		Version: checkerVersion,
 	}
 
 	isReady := state.setCheckerCondition(inputs)

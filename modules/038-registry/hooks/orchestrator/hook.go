@@ -276,7 +276,6 @@ func configFromSecret(secret v1core.Secret) (Params, error) {
 		TTL:        string(secret.Data["ttl"]),
 		Scheme:     string(secret.Data["scheme"]),
 		Generation: secret.Generation,
-		CheckMode:  registry_const.ToCheckModeType(string(secret.Data["checkMode"])),
 	}
 
 	if rawCA := secret.Data["ca"]; len(rawCA) > 0 {

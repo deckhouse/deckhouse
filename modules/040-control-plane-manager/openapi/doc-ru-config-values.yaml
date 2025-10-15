@@ -11,7 +11,7 @@ properties:
             description: |
               Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
 
-              Издатель по умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
+              Издатель по-умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
 
               **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:

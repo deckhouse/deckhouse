@@ -76,14 +76,14 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
-  # Example for Static nodes.
+  # Example for Static nodes
   nodeType: Static
   staticInstances:
     count: 2
     labelSelector:
       matchLabels:
         role: system
-  # Example for CloudEphemeral nodes.
+  # Example for CloudEphemeral nodes
   # nodeType: CloudEphemeral
   # cloudInstances:
   #   classReference:
@@ -104,8 +104,8 @@ GPU-node management is available in the Enterprise edition only.
 GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two ways to install the driver:
 
 1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
-1. **Automation via `NodeGroupConfiguration`** (more details in the
-   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster) section).
+1. **Automation via `NodeGroupConfiguration`** (see the
+   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
 
 After the driver is detected and the NodeGroup includes the `spec.gpu` section,
 `node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
@@ -165,8 +165,8 @@ spec:
 A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
 
-For a complete list of supported GPUs and their profiles you can see it by using
-[instructions](../node-manager/faq.html#how-to-view-available-mig-profiles-in-a-cluster).(../node-manager/faq.html#how-to-list-available-mig-profiles).
+For a complete list of supported GPUs and their profiles, see the
+[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles).
 
 ```yaml
 spec:
@@ -645,4 +645,4 @@ spec:
 
 ### Adding the ability to download images from insecure container registry to containerd
 
-The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the [How to add configuration for an additional registry](faq.html#how-to-add-configuration-for-an-additional-registry).
+The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the section  ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
