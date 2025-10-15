@@ -195,7 +195,6 @@ const moduleValuesC = `
             storageProfile: nvme
 `
 
-
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 	BeforeSuite(func() {
@@ -283,8 +282,7 @@ spec:
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
-			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(
-`
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
 - --cloud-config=/etc/cloud/cloud-config
 - --cloud-provider=vmware-cloud-director
@@ -293,8 +291,7 @@ spec:
 - --controllers=cloud-node,cloud-node-lifecycle
 - --bind-address=127.0.0.1
 - --secure-port=10471
-- --v=4
-`))
+- --v=4`))
 		})
 	})
 
@@ -311,8 +308,7 @@ spec:
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
-			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(
-`
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
 - --cloud-config=/etc/cloud/cloud-config
 - --cloud-provider=vmware-cloud-director
@@ -339,8 +335,7 @@ spec:
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
-			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(
-`
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
 - --cloud-config=/etc/cloud/cloud-config
 - --cloud-provider=vmware-cloud-director
