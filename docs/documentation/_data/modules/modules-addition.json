@@ -248,6 +248,13 @@
     "external": "true",
     "path": "/modules/operator-argo/stable/"
   },
+  "payload-registry": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
+  },
   "pod-reloader": {
     "editions": [
       "ce",
