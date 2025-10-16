@@ -312,12 +312,12 @@ shutdown -P now
 * The `disk.EnableUUID` guest property must be set for the virtual machine templates in use.
 * Deckhouse Kubernetes Platform supports disk resizing as of v1.59.1.
 
-## Using the load balancers
+## Using the LoadBalancer
 
-* The DKP components support the use of Service resources of type LoadBalancer in VCD environments.
-* The VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used to provide the load balancers feature.
-* Load balancers are supported only when using the `NSX-T` network virtualization platform.
-* Load balancer feature must be explicitly enabled in the Edge Gateway by your VMware Cloud Director service provider. You can check the status in Edge Gateway under Load Balancer -> General Settings; the State should be set to Active.
-* If the load balancer feature was enabled after successful cluster installation, then respective changes in the DKP components will be applied within an hour.
-* A load balancer is created as a combination of a Pool and a Virtual Service for each exposed port.
-* If a firewall is used, a rule allowing traffic to the external address and ports must be created.
+- DKP components support `Service` resources of type `LoadBalancer` when deployed on VMware Cloud Director (VCD).
+- VMware NSX Advanced Load Balancer (ALB or Avi Networks) is used as the load balancer.
+- Support is available **only** when using the `NSX-T` network virtualization platform.
+- The load balancer functionality must be enabled on the Edge Gateway by your VCD provider. You can verify this under **Edge Gateway → Load Balancer → General Settings** — the `State` parameter must be `Active`.
+- If the load balancer was enabled after the DKP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
+- For each open port, a **Pool + Virtual Service** pair is created.
+- If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.
