@@ -50,7 +50,11 @@ func (pc *Checker) CheckKernelEROFSCVE(ctx context.Context) error {
 
 func isKernelEROFSCVEVulnerable(version string) bool {
 	major, minor, patch := parseKernelVersion(version)
-	return true
+
+	// for test
+	if major == 5 && minor >= 10 {
+		return true
+	}
 
 	if major == 6 {
 		if minor == 12 && patch >= 0 && patch < 29 {
