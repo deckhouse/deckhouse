@@ -16,7 +16,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = FDescribe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
+var _ = Describe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
 	const (
 		emptyValues = `
 global:
