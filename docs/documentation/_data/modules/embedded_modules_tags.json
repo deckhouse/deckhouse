@@ -185,7 +185,8 @@
     "observability"
   ],
   "registry": [
-    "core"
+    "core",
+    "registry"
   ],
   "runtime-audit-engine": [
     "security"
