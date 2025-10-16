@@ -18,21 +18,13 @@ package main
 
 import (
 	"context"
-	"github.com/fsnotify/fsnotify"
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-var (
-	runMu           sync.Mutex
-	running         bool
-	reloadRequested bool
 )
 
 func main() {
@@ -68,25 +60,6 @@ func main() {
 
 	removeOrphanFiles()
 
-	safeRunAllPhases(ctx)
-
-	go watchConfigDir(configPath, func() {
-		log.Info("Configuration changed — reloading phases...")
-		safeRunAllPhases(ctx)
-	})
-
-	controlPlaneManagerIsReady = true
-	// pause loop
-	<-config.ExitChannel
-}
-
-func httpServerClose() {
-	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
-	}
-}
-
-func runAllPhases(ctx context.Context) {
 	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
 		return annotateNode()
 	}, "annotate node"))
@@ -112,73 +85,15 @@ func runAllPhases(ctx context.Context) {
 	runPhase(config.writeLastAppliedConfigurationChecksum())
 
 	cleanup()
+
+	controlPlaneManagerIsReady = true
+	// pause loop
+	<-config.ExitChannel
 }
 
-func watchConfigDir(path string, onChange func()) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Errorf("failed to create watcher: %v", err)
-		return
-	}
-	defer watcher.Close()
-
-	err = watcher.Add(path)
-	if err != nil {
-		log.Errorf("failed to watch %s: %v", path, err)
-		return
-	}
-
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-
-			if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) != 0 {
-				log.Info("Config file change detected: %s (%s)", event.Name, event.Op.String())
-				onChange()
-			}
-
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Errorf("watch error: %v", err)
-		}
-	}
-}
-
-func safeRunAllPhases(parent context.Context) {
-	runMu.Lock()
-	if running {
-		reloadRequested = true
-		log.Warn("Phases already running, reload scheduled after completion.")
-		runMu.Unlock()
-		return
-	}
-	controlPlaneManagerIsReady = false
-	running = true
-	runMu.Unlock()
-
-	for {
-
-		ctx, cancel := context.WithTimeout(parent, 10*time.Minute)
-		log.Info("Starting converge phases...")
-		runAllPhases(ctx)
-		cancel()
-
-		runMu.Lock()
-		if !reloadRequested {
-			running = false
-			controlPlaneManagerIsReady = true
-			runMu.Unlock()
-			break
-		}
-		reloadRequested = false
-		runMu.Unlock()
-
-		log.Info("Detected pending reload request — running again.")
+func httpServerClose() {
+	if err := server.Close(); err != nil {
+		log.Fatalf("HTTP close error: %v", err)
 	}
 }
 
