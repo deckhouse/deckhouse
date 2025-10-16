@@ -30,8 +30,8 @@ Run a container with the installer:
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:earlyaccess
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:earlyaccess{% endif %} bash
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
@@ -46,8 +46,8 @@ Run a container with the installer:
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:earlyaccess
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:earlyaccess{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 </div>
 {% else %}
@@ -69,13 +69,13 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 {%- if page.platform_type == "cloud" %} \
   -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:earlyaccess
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:earlyaccess{% endif %} bash
 ```
 {%- if page.platform_code == "bm-private" %}
 > If you are installing the Deckhouse Kubernetes Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DKP SE+):
 > ```text
-> docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
+> docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:earlyaccess bash
 > ```
 {% endif %}
 </div>
@@ -86,13 +86,13 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
 {%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if page.platform_type == "cloud" or page.platform_code == "bm" %}earlyaccess{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:earlyaccess
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:earlyaccess{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
 > If you are installing the Deckhouse Kubernetes Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DKP SE+):
 > ```text
-> docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
+> docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:earlyaccess bash
 > ```
 {% endif %}
 </div>
