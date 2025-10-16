@@ -236,7 +236,6 @@ jobs:
       # </template: checkout_step>
       - name: Check for tag
         run: |
-          exit 0 #TODO to delete, debug
           if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
             echo "Not a tag push, skipping changelog check."
             exit 0
@@ -539,10 +538,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -910,10 +906,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1281,10 +1274,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1640,10 +1630,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1999,10 +1986,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2358,10 +2342,7 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
-          echo WERF_REPO #TODO debug
-          echo $WERF_REPO | base64 #TODO debug
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo $WERF_REPO | base64 #TODO debug
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
