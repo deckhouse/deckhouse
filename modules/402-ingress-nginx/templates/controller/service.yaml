@@ -17,6 +17,43 @@
       {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
       {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
     {{- end }}
+
+    {{- $previousLoadBalancerClass := "" }}
+    {{- $serviceName := printf "%s-load-balancer" $crd.name }}
+    {{- $existingService := lookup "v1" "Service" "d8-ingress-nginx" $serviceName }}
+    {{- if $existingService }}
+      {{- $previousLoadBalancerClass = $existingService.spec.loadBalancerClass | default "" }}
+    {{- end }}
+
+    {{- if or (and (not $previousLoadBalancerClass) $loadBalancerClass) (and $previousLoadBalancerClass (ne $previousLoadBalancerClass $loadBalancerClass)) }}
+  ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cleanup-service-{{ $crd.name }}-{{ $loadBalancerClass | default "no-class" | sha1sum | trunc 8 }}-{{ randAlphaNum 5 | lower }}
+  namespace: d8-ingress-nginx
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: ingress-nginx
+      restartPolicy: OnFailure
+      containers:
+        - name: cleanup
+          image: {{ include "helm_lib_module_image" (list $context "kubectl") }}
+          command:
+            - /kubectl
+            - delete
+            - service
+            - {{ $crd.name }}-load-balancer
+            - -n
+            - d8-ingress-nginx
+            - --ignore-not-found=true
+            - --wait=false
+    {{- end }}
 ---
 apiVersion: v1
 kind: Service

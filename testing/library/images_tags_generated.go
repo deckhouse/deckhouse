@@ -265,6 +265,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",
+		"kubectl":               "imageHash-ingressNginx-kubectl",
 		"nginxExporter":         "imageHash-ingressNginx-nginxExporter",
 		"nginxStaticArtifact":   "imageHash-ingressNginx-nginxStaticArtifact",
 		"protobufExporter":      "imageHash-ingressNginx-protobufExporter",

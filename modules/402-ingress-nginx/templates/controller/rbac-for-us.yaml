@@ -56,3 +56,34 @@ subjects:
 - kind: ServiceAccount
   name: ingress-nginx
   namespace: d8-ingress-nginx
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: controller-clean-service
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["delete", "get"]
+    resourceNames:
+    {{- range $crd := .Values.ingressNginx.internal.ingressControllers }}
+      {{ $name := printf "%s-load-balancer" $crd.name }}
+    - {{ $name }}
+    {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: controller-clean-service
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: ingress-nginx
+    namespace: d8-ingress-nginx
+roleRef:
+  kind: Role
+  name: controller-clean-service
+  apiGroup: rbac.authorization.k8s.io
