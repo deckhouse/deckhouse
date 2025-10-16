@@ -1,4 +1,4 @@
-2510
+2512
 1GB
 2GB
 5XX
@@ -56,8 +56,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 aren
 argocd
@@ -96,6 +96,7 @@ autoscaler
 autoscalers
 autoscaling
 autounattend
+Avi
 aws
 AWS
 awscli
@@ -265,8 +266,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -409,8 +410,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -957,7 +958,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -966,6 +966,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1484,6 +1485,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDC
 VDI
 ve
 vectoradd
