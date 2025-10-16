@@ -90,7 +90,7 @@ func setReplicasFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var minr, maxr int32
@@ -120,7 +120,7 @@ func setReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return setReplicasMachineDeployment{
@@ -135,7 +135,7 @@ func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var replicas int32

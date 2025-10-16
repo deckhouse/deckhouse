@@ -16,6 +16,7 @@ package libapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -29,13 +30,17 @@ type Duration struct {
 }
 
 func (d *Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
+	b, err := json.Marshal(d.String())
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return b, nil
 }
 
 func (d *Duration) UnmarshalJSON(b []byte) error {
 	var v interface{}
 	if err := json.Unmarshal(b, &v); err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 	switch value := v.(type) {
 	case float64:
@@ -45,7 +50,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 		var err error
 		d.Duration, err = time.ParseDuration(value)
 		if err != nil {
-			return err
+			return fmt.Errorf("parse duration: %w", err)
 		}
 		return nil
 	default:

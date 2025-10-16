@@ -47,7 +47,7 @@ func applyModuleConfigFilterForAlerts(obj *unstructured.Unstructured) (go_hook.F
 	mc := &ModuleConfig{}
 	err := sdk.FromUnstructured(obj, mc)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert Metallb ModuleConfig: %v", err)
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return mc, nil
 }
@@ -57,7 +57,7 @@ func applyServiceFilterForAlerts(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if service.Spec.Type != v1.ServiceTypeLoadBalancer {

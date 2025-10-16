@@ -159,7 +159,7 @@ func parseNodeGroupValues(values sdkpkg.PatchableValuesCollector) ([]*nodeGroupV
 
 	err := json.Unmarshal([]byte(ngsJSON.Raw), &ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	for i := range ng {
 		indexKey := fmt.Sprintf("%s.%d", nodeGroupsPath, i)

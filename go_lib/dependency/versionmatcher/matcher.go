@@ -52,7 +52,7 @@ func (m *Matcher) GetBaseVersion() *semver.Version {
 func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
-		return err
+		return fmt.Errorf("new constraint: %w", err)
 	}
 
 	m.installed[name] = constraint
@@ -95,7 +95,7 @@ func (m *Matcher) Validate(name string) error {
 func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	parsed, err := semver.NewVersion(baseVersion)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("new version: %w", err)
 	}
 
 	for module, installed := range m.installed {
@@ -110,7 +110,7 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
-		return err
+		return fmt.Errorf("new constraint: %w", err)
 	}
 
 	if m.withBaseVersionLock {

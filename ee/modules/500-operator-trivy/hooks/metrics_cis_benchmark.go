@@ -57,7 +57,7 @@ func filterClusterComplianceReport(obj *unstructured.Unstructured) (go_hook.Filt
 
 	err := sdk.FromUnstructured(obj, compReport)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	filteredResult := filteredComplianceReport{}

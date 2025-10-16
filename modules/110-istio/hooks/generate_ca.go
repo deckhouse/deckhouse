@@ -89,13 +89,13 @@ func generateCA(_ context.Context, input *go_hook.HookInput) error {
 				A: "rsa",
 				S: 2048,
 			}))
+			if err != nil {
+				return fmt.Errorf("generate ca: %w", err)
+			}
 			istioCA.Cert = selfSignedCA.Cert
 			istioCA.Key = selfSignedCA.Key
 			istioCA.Chain = selfSignedCA.Cert
 			istioCA.Root = selfSignedCA.Cert
-			if err != nil {
-				return err
-			}
 		}
 	}
 

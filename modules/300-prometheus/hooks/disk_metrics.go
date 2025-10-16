@@ -103,7 +103,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func prometheusDiskMetrics(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	for pod, err := range sdkobjectpatch.SnapshotIter[PodFilter](input.Snapshots.Get("pods")) {
@@ -198,7 +198,7 @@ func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName,
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("in cluster config: %w", err)
 	}
 
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())

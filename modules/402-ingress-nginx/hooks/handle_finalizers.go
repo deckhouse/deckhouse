@@ -116,7 +116,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	var svc corev1.Service
 	err := sdk.FromUnstructured(obj, &svc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return svc.Name, nil
@@ -127,7 +127,7 @@ func applyDaemonSetCruiseFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 
 	err := sdk.FromUnstructured(obj, &ds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ds.Name, nil
@@ -137,7 +137,7 @@ func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hoo
 	var wh admissionregistrationv1.ValidatingWebhookConfiguration
 	err := sdk.FromUnstructured(obj, &wh)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	webhooks := make([]string, 0, len(wh.Webhooks))

@@ -57,7 +57,7 @@ func discoveryFilterSecrets(unstructured *unstructured.Unstructured) (go_hook.Fi
 
 	err := sdk.FromUnstructured(unstructured, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return discoveryCM{Namespace: cm.Namespace, Data: cm.Data}, nil

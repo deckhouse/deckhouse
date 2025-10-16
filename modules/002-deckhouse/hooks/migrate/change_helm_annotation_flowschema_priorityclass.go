@@ -67,7 +67,7 @@ func changeAnnotationUnstructured(
 
 	list, err := client.List(ctx, labelSelector)
 	if err != nil {
-		return err
+		return fmt.Errorf("list: %w", err)
 	}
 
 	for _, v := range list.Items {
@@ -75,7 +75,7 @@ func changeAnnotationUnstructured(
 
 		annotations, found, err := unstructured.NestedStringMap(obj.Object, "metadata", "annotations")
 		if err != nil {
-			return err
+			return fmt.Errorf("nested string map: %w", err)
 		}
 		if !found {
 			continue
@@ -88,11 +88,11 @@ func changeAnnotationUnstructured(
 		annotations[helmAnnotation] = "deckhouse"
 
 		if err := unstructured.SetNestedStringMap(obj.Object, annotations, "metadata", "annotations"); err != nil {
-			return err
+			return fmt.Errorf("set nested string map: %w", err)
 		}
 
 		if _, err := client.Update(ctx, &obj, v1.UpdateOptions{}); err != nil {
-			return err
+			return fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -109,7 +109,7 @@ func changeAnnotation(_ context.Context, input *go_hook.HookInput, dc dependency
 
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	schemas := []schema.GroupVersionResource{

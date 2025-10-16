@@ -72,7 +72,7 @@ func (pp PodPhase) Index() Index {
 func NewPodPhase(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	phase, found, err := unstructured.NestedString(obj.Object, "status", "phase")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string: %w", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("failed to find Pod phase in the unstructured")

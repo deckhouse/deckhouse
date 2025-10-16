@@ -37,7 +37,7 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 	err := sdk.FromUnstructured(obj, &egp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	excludeCIDRs := []string{}
@@ -51,7 +51,7 @@ func applyEgressGatewayPolicyFilter(obj *unstructured.Unstructured) (go_hook.Fil
 		Selectors:         egp.Spec.Selectors,
 		DestinationCIDRs:  egp.Spec.DestinationCIDRs,
 		ExcludedCIDRs:     excludeCIDRs,
-	}, err
+	}, nil
 }
 
 func handleEgressGatewayPolicies(_ context.Context, input *go_hook.HookInput) error {

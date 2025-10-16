@@ -182,7 +182,7 @@ func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error)
 	var value alertmanagerService
 	serviceName, ok, err := unstructured.NestedString(am.Spec, "external", "service", "name")
 	if err != nil {
-		return value, err
+		return value, fmt.Errorf("nested string: %w", err)
 	}
 	if !ok {
 		return value, fmt.Errorf("service name required: %v", am.Spec)
@@ -190,7 +190,7 @@ func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error)
 
 	serviceNamespace, ok, err := unstructured.NestedString(am.Spec, "external", "service", "namespace")
 	if err != nil {
-		return value, err
+		return value, fmt.Errorf("nested string: %w", err)
 	}
 	if !ok {
 		return value, fmt.Errorf("service namespace required: %v", am.Spec)
@@ -203,7 +203,7 @@ func parseServiceCR(am Alertmanager, k8 k8s.Client) (alertmanagerService, error)
 
 	svc, err := k8.CoreV1().Services(serviceNamespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
 	if err != nil {
-		return value, err
+		return value, fmt.Errorf("get: %w", err)
 	}
 
 	value.ResourceName = am.Name
@@ -234,7 +234,7 @@ func parseTargetCR(am Alertmanager) (alertmanagerAddress, error) {
 
 	parsedAddress, err := url.Parse(address)
 	if err != nil {
-		return value, err
+		return value, fmt.Errorf("parse: %w", err)
 	}
 
 	ca, _, _ := unstructured.NestedString(am.Spec, "external", "tls", "ca")
@@ -275,7 +275,7 @@ func parseTargetCR(am Alertmanager) (alertmanagerAddress, error) {
 func parseInternalCR(am Alertmanager) (alertmanagerInternal, error) {
 	value, ok, err := unstructured.NestedMap(am.Spec, "internal")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested map: %w", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("internal spec field required: %v", am.Spec)

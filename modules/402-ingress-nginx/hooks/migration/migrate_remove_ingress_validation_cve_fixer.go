@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -47,35 +48,35 @@ func removeFixer(_ context.Context, _ *go_hook.HookInput, dc dependency.Containe
 	kubeClient := dc.MustGetK8sClient()
 
 	if err := kubeClient.CoreV1().ServiceAccounts(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.CoreV1().Secrets(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.CoreV1().Services(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.CoreV1().ConfigMaps(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.AppsV1().Deployments(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.RbacV1().ClusterRoles().Delete(context.Background(), fixerRBACName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.RbacV1().ClusterRoleBindings().Delete(context.Background(), fixerRBACName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	if err := kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.Background(), fixerName+"-hooks", metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	return nil

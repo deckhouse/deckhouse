@@ -30,7 +30,7 @@ func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 		deprecatesK8sVersionsRaw, exists := getter.Get(hooks.K8sVersionsWithDeprecations)
 		if !exists {

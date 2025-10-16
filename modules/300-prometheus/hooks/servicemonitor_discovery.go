@@ -57,7 +57,7 @@ func filterServiceMonitor(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	var sm serviceMonitor
 	err := sdk.FromUnstructured(obj, &sm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return sm, nil

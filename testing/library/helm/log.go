@@ -17,6 +17,7 @@ package helm
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -43,5 +44,9 @@ func (w *FilteredHelmWriter) Write(p []byte) (int, error) {
 	}
 
 	result := strings.TrimSuffix(builder.String(), "\n")
-	return w.Writer.Write([]byte(result))
+	n, err := w.Writer.Write([]byte(result))
+	if err != nil {
+		return n, fmt.Errorf("write: %w", err)
+	}
+	return n, nil
 }

@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func filterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	data, found, err := unstructured.NestedStringMap(obj.Object, "data")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string map: %w", err)
 	}
 
 	if !found {

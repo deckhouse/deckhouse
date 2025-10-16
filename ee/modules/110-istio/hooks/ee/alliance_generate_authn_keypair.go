@@ -63,12 +63,12 @@ func generateKeypair(_ context.Context, input *go_hook.HookInput) error {
 	} else {
 		pub, priv, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
-			return err
+			return fmt.Errorf("generate ed25519 key: %w", err)
 		}
 
 		privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal private key: %w", err)
 		}
 		privBlock := &pem.Block{
 			Type:  "ED25519 PRIVATE KEY",
@@ -78,7 +78,7 @@ func generateKeypair(_ context.Context, input *go_hook.HookInput) error {
 
 		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal public key: %w", err)
 		}
 		pubBlock := &pem.Block{
 			Type:  "ED25519 PUBLIC KEY",

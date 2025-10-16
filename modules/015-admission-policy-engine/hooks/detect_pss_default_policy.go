@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -116,7 +117,7 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 func getVersion(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	version, _, err := unstructured.NestedString(obj.Object, "data", "version")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("nested string: %w", err)
 	}
 
 	return version, nil

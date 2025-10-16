@@ -43,7 +43,7 @@ func getAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if node.Spec.Unschedulable {

@@ -74,7 +74,7 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if service.Spec.Type != v1.ServiceTypeExternalName {

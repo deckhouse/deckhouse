@@ -52,7 +52,7 @@ func hostNetworkFalse(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	err := sdk.FromUnstructured(obj, ds)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if !ds.Spec.Template.Spec.HostNetwork {
@@ -93,6 +93,9 @@ func handleHostNetworkFalseWithHostPorts(_ context.Context, input *go_hook.HookI
 	}
 
 	_, err = k8sClient.AppsV1().DaemonSets("kube-system").Update(context.TODO(), ds, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
 
-	return err
+	return nil
 }

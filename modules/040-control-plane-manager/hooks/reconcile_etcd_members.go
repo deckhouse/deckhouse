@@ -63,7 +63,7 @@ func reconcicleEtcdFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 
 	err := sdk.FromUnstructured(unstructured, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var internalIP, externalIP string

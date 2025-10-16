@@ -34,7 +34,7 @@ func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_h
 	secret := new(v1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return secret.Data["static-cluster-configuration.yaml"], nil
@@ -93,7 +93,7 @@ func internalNetworkFromStaticConfiguration(ctx context.Context, data []byte) (i
 		),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config from data: %w", err)
 	}
 
 	intNet := metaConfig.StaticClusterConfig["internalNetworkCIDRs"]

@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -33,14 +34,14 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	var moduleConfiguration v1.OpenstackModuleConfiguration
 	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderOpenstack").String()), &moduleConfiguration)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	var discoveryData v1.OpenstackCloudDiscoveryData
 	if providerDiscoveryData != nil {
 		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
 		if err != nil {
-			return err
+			return fmt.Errorf("from unstructured: %w", err)
 		}
 	}
 	providerClusterConfiguration.PatchWithModuleConfig(moduleConfiguration)
@@ -78,11 +79,11 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 	err = json.Unmarshal(b, out)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoveryServicesForMigrate(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	// Get ModuleConfig and check requirements
@@ -46,7 +46,7 @@ func discoveryServicesForMigrate(_ context.Context, input *go_hook.HookInput, dc
 	var moduleConfig ModuleConfig
 	err = sdk.FromUnstructured(unstructuredMC, &moduleConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("from unstructured: %w", err)
 	}
 	if moduleConfig.Spec.Version >= 2 {
 		input.Values.Set("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete", true)

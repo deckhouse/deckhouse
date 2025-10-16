@@ -69,7 +69,7 @@ func handleVolumeAttachments(_ context.Context, input *go_hook.HookInput) error 
 			var v storagev1.VolumeAttachment
 			err := sdk.FromUnstructured(obj, &v)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("from unstructured: %w", err)
 			}
 			v.ObjectMeta.Finalizers = nil
 			return sdk.ToUnstructured(&v)

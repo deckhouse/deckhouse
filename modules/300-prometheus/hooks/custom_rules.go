@@ -41,7 +41,7 @@ func filterCustomRule(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	groupsRaw, ok, err := unstructured.NestedSlice(obj.Object, "spec", "groups")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested slice: %w", err)
 	}
 	if !ok {
 		return nil, errors.New("no groups field")

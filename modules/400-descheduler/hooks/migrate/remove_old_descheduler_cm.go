@@ -45,7 +45,7 @@ func removeOldDeschedulerSecret(_ context.Context, input *go_hook.HookInput, dc 
 			input.Logger.Info("Descheduler legacy CM d8-system/descheduler-config-migration is not found, skipping migration")
 			return nil
 		}
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	input.Logger.Info("Descheduler legacy CM d8-system/descheduler-config-migration is deleted")

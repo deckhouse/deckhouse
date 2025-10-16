@@ -141,7 +141,7 @@ func generateSecretEncryptionKey() ([]byte, error) {
 	secret := make([]byte, 32)
 	_, err := rand.Read(secret)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, fmt.Errorf("read: %w", err)
 	}
 
 	return secret, nil

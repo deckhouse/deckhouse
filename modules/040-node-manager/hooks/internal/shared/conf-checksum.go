@@ -17,6 +17,8 @@ limitations under the License.
 package shared
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -53,7 +55,7 @@ func filterChecksumSecret(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	err := sdk.FromUnstructured(obj, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	data := make(map[string]string, len(sec.Data))

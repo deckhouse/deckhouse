@@ -112,7 +112,7 @@ func vpaCertHandler(_ context.Context, input *go_hook.HookInput) error {
 
 		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon([]byte(vpaCert.ServerCert), time.Hour*7*24)
 		if err != nil {
-			return err
+			return fmt.Errorf("check certificate expiry: %w", err)
 		}
 	}
 

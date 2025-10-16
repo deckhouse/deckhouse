@@ -100,7 +100,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 		for _, excludePattern := range excludeStorageClasses {
 			var r, err = regexp.Compile(excludePattern.String())
 			if err != nil {
-				return false, err
+				return false, fmt.Errorf("compile regexp: %w", err)
 			}
 			if r.MatchString(storageClassName) {
 				return true, nil

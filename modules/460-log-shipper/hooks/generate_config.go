@@ -45,7 +45,7 @@ func filterPodLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, &src)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return src, nil
 }
@@ -55,7 +55,7 @@ func filterClusterLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterR
 
 	err := sdk.FromUnstructured(obj, &src)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return src, nil
 }
@@ -65,7 +65,7 @@ func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &dst)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return dst, nil
 }
@@ -75,7 +75,7 @@ func filterNamespaceName(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, &namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return namespace.GetName(), nil
 }
@@ -85,7 +85,7 @@ func filterLogShipperTokenSecret(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return string(secret.Data["token"]), nil
@@ -95,7 +95,7 @@ func filterLogShipperTLSSecrets(obj *unstructured.Unstructured) (go_hook.FilterR
 	secret := new(corev1.Secret)
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	return secret, nil
 }
@@ -105,7 +105,7 @@ func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 	err := sdk.FromUnstructured(obj, endpoints)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var lokiEndpoint endpoint
@@ -328,12 +328,12 @@ func generateConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	composerFromInput, err := composer.FromInput(input, destinations)
 	if err != nil {
-		return err
+		return fmt.Errorf("from input: %w", err)
 	}
 
 	configContent, err := composerFromInput.Do()
 	if err != nil {
-		return err
+		return fmt.Errorf("do: %w", err)
 	}
 
 	activated := len(configContent) != 0

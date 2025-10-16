@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) This is a validation library, we don't want to wrap errors in it due to its architecture
+//
+//nolint:wrapcheck
 package checker
 
 import (
@@ -140,10 +143,14 @@ func buildPuller(params RegistryParams) (*gcr_remote.Puller, error) {
 		}
 	}
 
-	return gcr_remote.NewPuller(
+	puller, err := gcr_remote.NewPuller(
 		gcr_remote.WithTransport(transport),
 		gcr_remote.WithAuth(auth),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("new puller: %w", err)
+	}
+	return puller, nil
 }
 
 func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryParams) (int, error) {

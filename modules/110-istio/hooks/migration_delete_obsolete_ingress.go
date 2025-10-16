@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -43,7 +44,7 @@ func deleteIngress(_ context.Context, _ *go_hook.HookInput, dc dependency.Contai
 	kubeClient := dc.MustGetK8sClient()
 
 	if err := kubeClient.NetworkingV1().Ingresses(istioNs).Delete(context.Background(), obsoleteIngress, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("delete: %w", err)
 	}
 
 	return nil

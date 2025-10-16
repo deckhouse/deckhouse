@@ -44,7 +44,7 @@ func applyServiceFilterForStatusUpdater(obj *unstructured.Unstructured) (go_hook
 	var service v1.Service
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
@@ -64,7 +64,7 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, &l2LBService)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ip := "unknown"

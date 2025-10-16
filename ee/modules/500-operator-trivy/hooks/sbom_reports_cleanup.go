@@ -72,7 +72,7 @@ func applyConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 	err := sdk.FromUnstructured(obj, &mc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return mc.Spec.Settings.DisableSBOMGeneration, nil
@@ -112,12 +112,12 @@ func cleanUpReports(_ context.Context, input *go_hook.HookInput, dc dependency.C
 
 		list, err := k8sClient.Dynamic().Resource(sbomGVR).Namespace(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 		if err != nil {
-			return err
+			return fmt.Errorf("list: %w", err)
 		}
 
 		for _, item := range list.Items {
 			if err = k8sClient.Dynamic().Resource(sbomGVR).Namespace(item.GetNamespace()).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{}); err != nil {
-				return err
+				return fmt.Errorf("delete: %w", err)
 			}
 		}
 

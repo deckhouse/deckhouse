@@ -67,11 +67,11 @@ func handleValidationKinds(_ context.Context, input *go_hook.HookInput, _ depend
 	mutateRes := make([]matchResource, 0)
 
 	if err := yaml.Unmarshal([]byte(resourcesRaw[0].ValidateData), &validateRes); err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	if err := yaml.Unmarshal([]byte(resourcesRaw[0].MutateData), &mutateRes); err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.trackedConstraintResources", validateRes)
@@ -85,7 +85,7 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return matchData{

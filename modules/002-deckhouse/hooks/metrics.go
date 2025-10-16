@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -44,7 +45,7 @@ func collectMetrics(_ context.Context, input *go_hook.HookInput) error {
 	if exists {
 		windows, err := update.FromJSON([]byte(windowsData.Raw))
 		if err != nil {
-			return err
+			return fmt.Errorf("from json: %w", err)
 		}
 
 		for _, windows := range windows {

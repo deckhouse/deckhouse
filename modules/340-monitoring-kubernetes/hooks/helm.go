@@ -147,7 +147,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
@@ -159,20 +159,23 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	// only cluster configuration, provider preparation and validation do not need here
 	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config from data: %w", err)
 	}
 
 	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("raw message to string: %w", err)
 	}
 
-	return kubernetesVersion, err
+	return kubernetesVersion, nil
 }
 func rawMessageToString(message json.RawMessage) (string, error) {
 	var result string
 	err := json.Unmarshal(message, &result)
-	return result, err
+	if err != nil {
+		return result, fmt.Errorf("unmarshal: %w", err)
+	}
+	return result, nil
 }
 
 func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -202,7 +205,7 @@ func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
@@ -275,7 +278,10 @@ loop:
 
 		case <-ctx.Done():
 			if ctx.Err() != nil {
-				return "", context.Cause(ctx)
+				if err := context.Cause(ctx); err != nil {
+					return "", fmt.Errorf("cause: %w", err)
+				}
+				return "", nil
 			}
 			break loop
 		}
@@ -578,7 +584,7 @@ func helm3DecodeRelease(data string) (*Release, error) {
 	// base64 decode string
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 
 	// For backwards compatibility with releases that were stored before
@@ -587,12 +593,12 @@ func helm3DecodeRelease(data string) (*Release, error) {
 	if bytes.Equal(b[0:3], magicGzip) {
 		r, err := gzip.NewReader(bytes.NewReader(b))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new reader: %w", err)
 		}
 		defer r.Close()
 		b2, err := io.ReadAll(r)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read all: %w", err)
 		}
 		b = b2
 	}
@@ -600,7 +606,7 @@ func helm3DecodeRelease(data string) (*Release, error) {
 	var rls Release
 	// unmarshal release object bytes
 	if err := json.Unmarshal(b, &rls); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return &rls, nil
 }
@@ -610,7 +616,7 @@ func helm2DecodeRelease(data string) (*Release, error) {
 	// base64 decode string
 	b, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode string: %w", err)
 	}
 
 	// For backwards compatibility with releases that were stored before
@@ -619,11 +625,11 @@ func helm2DecodeRelease(data string) (*Release, error) {
 	if bytes.Equal(b[0:3], magicGzip) {
 		r, err := gzip.NewReader(bytes.NewReader(b))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new reader: %w", err)
 		}
 		b2, err := io.ReadAll(r)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read all: %w", err)
 		}
 		b = b2
 	}
@@ -631,7 +637,7 @@ func helm2DecodeRelease(data string) (*Release, error) {
 	var rls Release
 	// unmarshal protobuf bytes
 	if err := proto.Unmarshal(b, &rls); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return &rls, nil
 }

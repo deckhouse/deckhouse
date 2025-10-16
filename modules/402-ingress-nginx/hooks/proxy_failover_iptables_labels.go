@@ -76,7 +76,7 @@ func applyProxyFailoverPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	pod := &corev1.Pod{}
 	err := sdk.FromUnstructured(obj, pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return Pod{
@@ -90,7 +90,7 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	var node corev1.Node
 	err := sdk.FromUnstructured(obj, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	_, labeled := node.Labels[labelKey]

@@ -52,7 +52,7 @@ func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
 	if rl.Excludes != nil {
 		excludeCond, err := generateExcludesForDynamicTransform(rl.Excludes)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("generate excludes for dynamic transform: %w", err)
 		}
 		throttleTransform.DynamicArgsMap[excludeField] = excludeCond
 	}

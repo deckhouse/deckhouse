@@ -86,7 +86,7 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var replicas int32

@@ -125,7 +125,7 @@ func applyCAPSWebhookTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	var secret v1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return certificate.Certificate{

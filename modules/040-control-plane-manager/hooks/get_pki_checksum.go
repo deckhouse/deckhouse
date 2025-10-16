@@ -62,7 +62,7 @@ func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(unstructured, &sec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return secretData(sec.Data), nil

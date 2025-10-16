@@ -81,13 +81,17 @@ func (a *authConfig) MarshalJSON() ([]byte, error) {
 	if a.Username != "" && a.Password != "" {
 		a.Auth = base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Password))
 	}
-	return json.Marshal(a)
+	data, err := json.Marshal(a)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return data, nil
 }
 
 func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := new(corev1.Secret)
 	if err := sdk.FromUnstructured(obj, secret); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return dockerConfigBySecret(secret)

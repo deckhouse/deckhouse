@@ -19,6 +19,7 @@ package library
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,11 +58,11 @@ func getModulesImagesDigestsFromLocalPath(modulePath string) (map[string]interfa
 
 	imageDigestsRaw, err := os.ReadFile(filepath.Join(filepath.Dir(modulePath), "images_digests.json"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 	err = json.Unmarshal(imageDigestsRaw, &digests)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	return digests, nil
@@ -82,34 +83,34 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	// 0. Get values from values-default.yaml
 	globalValuesRaw, err := os.ReadFile(filepath.Join(filepath.Dir(filepath.Clean(modulePath)), "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	err = yaml.Unmarshal(globalValuesRaw, &globalValues)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	// 1. Get values from modules/[module_name]/template_tests/values.yaml
 	testsValuesRaw, err := os.ReadFile(filepath.Join(modulePath, "template_tests", "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	err = yaml.Unmarshal(testsValuesRaw, &testsValues)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	// 2. Get values from modules/[module_name]/values.yaml
 	moduleValuesRaw, err := os.ReadFile(filepath.Join(modulePath, "values.yaml"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	err = yaml.Unmarshal(moduleValuesRaw, &moduleValues)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	// 3. Get image digests
@@ -128,7 +129,7 @@ func InitValues(modulePath string, userDefinedValuesRaw []byte) (map[string]inte
 	// 4. Get user-supplied values
 	err = yaml.Unmarshal(userDefinedValuesRaw, &userDefinedValues)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	err = mergeValues(finalValues, moduleValues, testsValues, globalValues, moduleImagesValues, userDefinedValues)
@@ -153,7 +154,7 @@ func mergeValues(final *map[string]interface{}, iterations ...interface{}) error
 			}
 			err := mergo.Merge(final, newMap, mergo.WithOverride)
 			if err != nil {
-				return err
+				return fmt.Errorf("merge: %w", err)
 			}
 		}
 	}

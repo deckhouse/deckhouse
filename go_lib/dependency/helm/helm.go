@@ -147,7 +147,10 @@ func (client *helmClient) Upgrade(releaseName, releaseNamespace string, template
 		}
 
 		_, err = installObject.Run(ch, values)
-		return err
+		if err != nil {
+			return fmt.Errorf("run: %w", err)
+		}
+		return nil
 	}
 
 	if len(releases) > 0 {
@@ -223,7 +226,7 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 	// Create the rest config instance with ServiceAccount values loaded in them
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("in cluster config: %w", err)
 	}
 	// Create the ConfigFlags struct instance with initialized values from ServiceAccount
 	kubeConfig = genericclioptions.NewConfigFlags(false)
@@ -232,7 +235,7 @@ func getActionConfig(namespace string) (*action.Configuration, error) {
 	kubeConfig.CAFile = &config.CAFile
 	kubeConfig.Namespace = &namespace
 	if err := actionConfig.Init(kubeConfig, namespace, helmDriver, klog.Infof); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("init: %w", err)
 	}
 	return actionConfig, nil
 }

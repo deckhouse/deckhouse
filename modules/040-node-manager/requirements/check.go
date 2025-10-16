@@ -109,7 +109,7 @@ func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, 
 
 	desiredVersion, err := semver.NewVersion(normalizedRequirementValue)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("new version: %w", err)
 	}
 	switch osImage {
 	case "Ubuntu":
@@ -131,7 +131,7 @@ func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, 
 
 	currentVersion, err := semver.NewVersion(normalizedCurrentVersion)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("new version: %w", err)
 	}
 
 	if currentVersion.LessThan(desiredVersion) {

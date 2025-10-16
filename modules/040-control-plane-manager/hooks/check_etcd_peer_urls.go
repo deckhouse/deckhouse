@@ -74,7 +74,7 @@ func etcdPeersFilter(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var peerURL string

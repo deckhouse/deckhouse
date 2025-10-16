@@ -54,7 +54,7 @@ func filterTokenSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return string(secret.Data["token"]), nil

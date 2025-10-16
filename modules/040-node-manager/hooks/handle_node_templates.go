@@ -66,7 +66,7 @@ func desiredNodeSettingsFromNodeGroupFilter(obj *unstructured.Unstructured) (go_
 	nodeGroup := new(ngv1.NodeGroup)
 	err := sdk.FromUnstructured(obj, nodeGroup)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	settings := NodeSettings{
@@ -88,7 +88,7 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	nodeObj := new(v1.Node)
 	err := sdk.FromUnstructured(obj, nodeObj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	_, isClusterAPINode := nodeObj.Annotations[clusterAPIAnnotationKey]
 
@@ -196,7 +196,7 @@ func nodeTemplatesHandler(_ context.Context, input *go_hook.HookInput) error {
 			nodeObj := new(v1.Node)
 			err := sdk.FromUnstructured(obj, nodeObj)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("from unstructured: %w", err)
 			}
 
 			if nodeGroup.NodeType == ngv1.NodeTypeCloudEphemeral {

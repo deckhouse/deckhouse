@@ -54,7 +54,7 @@ func standbyNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	nodeGroup := new(ngv1.NodeGroup)
 	err := sdk.FromUnstructured(obj, nodeGroup)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var zonesCount int
@@ -111,7 +111,7 @@ func standbyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	node := new(v1.Node)
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	isReady := false
@@ -142,7 +142,7 @@ func standbyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	pod := new(v1.Pod)
 	err := sdk.FromUnstructured(obj, pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	isReady := false

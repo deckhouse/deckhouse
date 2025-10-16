@@ -52,7 +52,7 @@ type existingStatus struct {
 func applyNodeUsersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	_, exists, err := unstructured.NestedFieldNoCopy(obj.Object, "status")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested field no copy: %w", err)
 	}
 
 	return existingStatus{
@@ -86,7 +86,7 @@ func addStatusSubresourceForNodeUser(_ context.Context, input *go_hook.HookInput
 			}
 			err := unstructured.SetNestedField(objCopy.Object, status, "status")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("set nested field: %w", err)
 			}
 			return objCopy, nil
 		}, "deckhouse.io/v1", "NodeUser", "", nu.UserName)

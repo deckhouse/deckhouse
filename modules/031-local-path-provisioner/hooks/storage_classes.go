@@ -73,7 +73,7 @@ func applyModuleCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	lpp := new(v1alpha1.LocalPathProvisioner)
 	err := sdk.FromUnstructured(obj, lpp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return StorageClass{

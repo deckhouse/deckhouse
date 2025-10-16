@@ -54,7 +54,7 @@ type probeObject struct {
 func filterProbeObject(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	value, ok, err := unstructured.NestedString(obj.Object, "spec", "inited")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string: %w", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("no spec.inited field")
@@ -88,7 +88,7 @@ func mirrorProbeValue(_ context.Context, input *go_hook.HookInput) error {
 
 		patch, err := json.Marshal(patchRaw)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal: %w", err)
 		}
 
 		input.PatchCollector.PatchWithMerge(patch, apiVersion, kind, namespace, obj.Name)

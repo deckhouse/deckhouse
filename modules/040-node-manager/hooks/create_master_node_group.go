@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -64,7 +65,7 @@ func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) 
 	}
 	o, err := sdk.ToUnstructured(&ng)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("to unstructured: %w", err)
 	}
 
 	return o, nil

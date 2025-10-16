@@ -36,7 +36,7 @@ func filterDynamicProbeNodeGroups(obj *unstructured.Unstructured) (go_hook.Filte
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	// Filter only cloud node groups

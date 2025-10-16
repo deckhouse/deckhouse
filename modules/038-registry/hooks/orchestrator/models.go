@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) This is a validation library, we don't want to wrap errors in it due to its architecture
+//
+//nolint:wrapcheck
 package orchestrator
 
 import (

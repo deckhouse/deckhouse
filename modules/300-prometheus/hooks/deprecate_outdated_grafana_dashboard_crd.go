@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -52,7 +53,7 @@ func handleGrafanaDashboardCRDs(_ context.Context, input *go_hook.HookInput, dc 
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	ctx := context.Background()
@@ -166,7 +167,7 @@ type DashboardCRDSpec struct {
 func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]*DashboardCRD, error) {
 	unstructuredList, err := dynamicClient.Resource(dashboardCRDSchema).List(ctx, v1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list dashboard crds: %w", err)
 	}
 	list := make([]*DashboardCRD, 0, len(unstructuredList.Items))
 	for _, unstructuredListItem := range unstructuredList.Items {
@@ -175,7 +176,7 @@ func listDashboardCRDs(ctx context.Context, dynamicClient dynamic.Interface) ([]
 			unstructuredListItem.UnstructuredContent(), &dashboardCRD,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("from unstructured: %w", err)
 		}
 		list = append(list, &dashboardCRD)
 	}

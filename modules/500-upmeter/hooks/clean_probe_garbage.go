@@ -110,7 +110,7 @@ func (r *configMapRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		ConfigMaps("d8-upmeter").
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -120,7 +120,11 @@ func (r *configMapRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *configMapRepo) Delete(ctx context.Context, name string) error {
-	return r.k.CoreV1().ConfigMaps("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	err := r.k.CoreV1().ConfigMaps("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 var certificateGVR = schema.GroupVersionResource{
@@ -151,10 +155,14 @@ func (r *certRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *certRepo) Delete(ctx context.Context, name string) error {
-	return r.k.Dynamic().
+	err := r.k.Dynamic().
 		Resource(certificateGVR).
 		Namespace("d8-upmeter").
 		Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 type certSecretRepo struct {
@@ -167,7 +175,7 @@ func (r *certSecretRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		Secrets("d8-upmeter").
 		List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -181,9 +189,13 @@ func (r *certSecretRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *certSecretRepo) Delete(ctx context.Context, name string) error {
-	return r.k.CoreV1().
+	err := r.k.CoreV1().
 		Secrets("d8-upmeter").
 		Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 type namespaceRepo struct {
@@ -195,7 +207,7 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		Namespaces().
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -205,7 +217,11 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *namespaceRepo) Delete(ctx context.Context, name string) error {
-	return r.k.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	err := r.k.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 type podRepo struct {
@@ -217,7 +233,7 @@ func (r *podRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		Pods("d8-upmeter").
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -227,7 +243,11 @@ func (r *podRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *podRepo) Delete(ctx context.Context, name string) error {
-	return r.k.CoreV1().Pods("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	err := r.k.CoreV1().Pods("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 type deployRepo struct {
@@ -239,7 +259,7 @@ func (r *deployRepo) List(ctx context.Context) ([]metav1.Object, error) {
 		Deployments("d8-upmeter").
 		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 	objects := make([]metav1.Object, 0, len(list.Items))
 	for i := range list.Items {
@@ -249,7 +269,11 @@ func (r *deployRepo) List(ctx context.Context) ([]metav1.Object, error) {
 }
 
 func (r *deployRepo) Delete(ctx context.Context, name string) error {
-	return r.k.AppsV1().Deployments("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	err := r.k.AppsV1().Deployments("d8-upmeter").Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete: %w", err)
+	}
+	return nil
 }
 
 var upmeterHookProbeGVR = schema.GroupVersionResource{
@@ -277,5 +301,5 @@ func (r *upmeterHookProbeRepo) Delete(ctx context.Context, name string) error {
 		// Since we look for a specific name, it only deletes once
 		return nil
 	}
-	return err
+	return fmt.Errorf("delete: %w", err)
 }

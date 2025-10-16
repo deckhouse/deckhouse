@@ -148,7 +148,7 @@ func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filt
 
 	err := sdk.FromUnstructured(obj, &endpointSlices)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	addresses := make([]string, 0)
@@ -177,7 +177,7 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return service.Spec.ClusterIP, nil
@@ -193,16 +193,16 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 	url := fmt.Sprintf("https://%s/version?timeout=5s", endpoint)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new request: %w", err)
 	}
 	err = d8http.SetKubeAuthToken(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("set kube auth token: %w", err)
 	}
 
 	res, err := cl.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("do: %w", err)
 	}
 
 	defer res.Body.Close()
@@ -214,12 +214,12 @@ func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version
 	var info apimachineryversion.Info
 	err = json.NewDecoder(res.Body).Decode(&info)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
 	ver, err := semver.NewVersion(info.GitVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new version: %w", err)
 	}
 
 	return ver, nil
@@ -356,7 +356,7 @@ func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 
 	err = os.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
 	if err != nil {
-		return err
+		return fmt.Errorf("write file: %w", err)
 	}
 	input.Values.Set("global.discovery.kubernetesVersions", versions)
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)

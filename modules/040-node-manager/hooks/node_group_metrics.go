@@ -74,7 +74,7 @@ func filterNodeGroupStatus(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	err := sdk.FromUnstructured(obj, &nodeGroup)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var hasErrors float64

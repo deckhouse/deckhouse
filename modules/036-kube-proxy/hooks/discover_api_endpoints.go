@@ -55,7 +55,7 @@ func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.
 	endpoint := &v1.Endpoints{}
 	err := sdk.FromUnstructured(obj, endpoint)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	mh := &KubernetesAPIEndpoints{}

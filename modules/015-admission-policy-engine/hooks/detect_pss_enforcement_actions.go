@@ -99,7 +99,7 @@ func handleActions(_ context.Context, input *go_hook.HookInput) error {
 func filterNamespaces(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	action, _, err := unstructured.NestedString(obj.Object, "metadata", "labels", pssEnforcementActionLabel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string: %w", err)
 	}
 
 	return action, nil

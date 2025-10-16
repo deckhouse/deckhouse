@@ -105,7 +105,7 @@ func clusterStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if _, ok := secret.Labels["dhctl.deckhouse.io/state-backup"]; ok {
@@ -128,7 +128,7 @@ func clusterStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.
 
 	err = json.Unmarshal(stateRaw, &state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	return &StateClusterResult{
@@ -142,7 +142,7 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if _, ok := secret.Labels["dhctl.deckhouse.io/state-backup"]; ok {
@@ -161,7 +161,7 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 
 	err = json.Unmarshal(stateRaw, &state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	return &StateNodeResult{

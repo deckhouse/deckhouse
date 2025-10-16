@@ -91,9 +91,12 @@ func updateCloudConditionsFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	cm := new(v1.ConfigMap)
 	err := sdk.FromUnstructured(obj, cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	var conditions []CloudCondition
-	return conditions, json.Unmarshal([]byte(cm.Data["conditions"]), &conditions)
+	if err := json.Unmarshal([]byte(cm.Data["conditions"]), &conditions); err != nil {
+		return nil, fmt.Errorf("unmarshal: %w", err)
+	}
+	return conditions, nil
 }

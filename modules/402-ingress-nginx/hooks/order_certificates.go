@@ -122,7 +122,7 @@ func orderCertificate(_ context.Context, input *go_hook.HookInput) error {
 			if certData != nil && len(certData.Cert) > 0 && len(certData.Key) > 0 {
 				shouldGenerateNewCert, err := certificate.IsCertificateExpiringSoon([]byte(certData.Cert), time.Hour*24*365) // 1 year
 				if err != nil {
-					return err
+					return fmt.Errorf("is certificate expiring soon: %w", err)
 				}
 
 				if !shouldGenerateNewCert {
@@ -150,7 +150,7 @@ func orderCertificate(_ context.Context, input *go_hook.HookInput) error {
 		)
 
 		if err != nil {
-			return err
+			return fmt.Errorf("generate self signed cert: %w", err)
 		}
 
 		certificates = append(certificates, CertificateInfo{

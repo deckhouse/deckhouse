@@ -98,7 +98,7 @@ func applyIopFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	err := sdk.FromUnstructured(obj, &iop)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	result.Revision = iop.Spec.Revision
@@ -114,7 +114,7 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	var result IstioOperatorPodSnapshot
 	err := sdk.FromUnstructured(obj, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	result.Name = pod.Name

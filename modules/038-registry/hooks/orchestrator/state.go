@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// (registry) We don't want to wrap errors in this package due to its architecture
+//
+//nolint:wrapcheck
 package orchestrator
 
 import (

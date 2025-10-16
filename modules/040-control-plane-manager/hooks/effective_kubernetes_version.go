@@ -140,7 +140,7 @@ func ekvFilterControlPlaneAnnotations(unstructured *unstructured.Unstructured) (
 	var pod corev1.Pod
 	err := sdk.FromUnstructured(unstructured, &pod)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	annotations := pod.GetAnnotations()
 
@@ -157,13 +157,17 @@ func ekvFilterNode(unstructured *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(unstructured, &node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	rawV := node.Status.NodeInfo.KubeletVersion
 	rawV = strings.TrimPrefix(rawV, "v")
 
-	return semver.NewVersion(rawV)
+	v, err := semver.NewVersion(rawV)
+	if err != nil {
+		return nil, fmt.Errorf("new version: %w", err)
+	}
+	return v, nil
 }
 
 type kubernetesVersionsInSecret struct {
@@ -176,7 +180,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	versions := kubernetesVersionsInSecret{}
@@ -185,7 +189,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	if ok {
 		maxUsed, err := semver.NewVersion(string(rawMaxUsed))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new version: %w", err)
 		}
 		versions.MaxUsed = maxUsed
 	}
@@ -194,7 +198,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	if ok {
 		deckhouseDefault, err := semver.NewVersion(string(rawDeckhouseDefault))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new version: %w", err)
 		}
 		versions.DeckhouseDefault = deckhouseDefault
 	}
@@ -332,12 +336,12 @@ func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc depe
 
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("get k8s client: %w", err)
 		}
 
 		verInfo, err := k8sClient.Discovery().ServerVersion()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("server version: %w", err)
 		}
 
 		controlPlaneVersions = []controlPlanePod{{

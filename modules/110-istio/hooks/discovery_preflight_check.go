@@ -57,7 +57,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	ccYaml, ok := secret.Data["cluster-configuration.yaml"]
@@ -69,7 +69,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	// only cluster configuration, provider preparation and validation do not need here
 	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
@@ -110,8 +110,11 @@ func rawMessageToString(message json.RawMessage) (string, error) {
 	var result string
 	b, err := message.MarshalJSON()
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("marshal: %w", err)
 	}
 	err = json.Unmarshal(b, &result)
-	return result, err
+	if err != nil {
+		return result, fmt.Errorf("unmarshal: %w", err)
+	}
+	return result, nil
 }
