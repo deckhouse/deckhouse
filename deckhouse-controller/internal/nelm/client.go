@@ -130,6 +130,13 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 		opt(defaultOpts)
 	}
 
+	if len(defaultOpts.Annotations) > 0 {
+		defaultOpts.Annotations = make(map[string]string)
+	}
+
+	defaultOpts.Annotations["werf.io/skip-logs"] = "true"
+	defaultOpts.Annotations["werf.io/track-termination-mode"] = "NonBlocking"
+
 	// Build Kubernetes config flags from environment variables
 	defaultOpts.ConfigFlags = *buildConfigFlagsFromEnv(namespace, cli.New())
 
