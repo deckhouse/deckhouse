@@ -34,6 +34,14 @@ import:
   add: /usr/bin/cosign
   to: /usr/bin/cosign
   before: install
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
+- image: tools/curl
+  add: /usr/bin/curl
+  to: /usr/bin/curl
+  before: install
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
@@ -51,12 +59,11 @@ dependencies:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $context | nindent 2 }}
-  - apk add --no-cache curl jq
   install:
   - |
     VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    VAULT_TOKEN="$(eval "$(cat /run/secrets/COSIGN_VAULT_TOKEN)" | jq -r '.auth.client_token')" \
+    VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN | jq -r '.auth.client_token')" \
     cosign attest \
       --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
       --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
