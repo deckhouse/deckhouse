@@ -51,7 +51,7 @@ Below is an instruction on how you can restore the master node.
 
 ### Viewing etcd cluster members
 
-### Option 1
+#### Option 1
 
 Use the `etcdctl member list` command.
 
@@ -70,7 +70,7 @@ done
 
 **Warning.** The last parameter in the output table shows etcd member is in [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in `leader` state.
 
-### Option 2
+#### Option 2
 
 To obtain information about etcd cluster nodes in tabular form, use the `etcdctl endpoint status` command. For the leader, the `IS LEADER` column will show `true`.
 
