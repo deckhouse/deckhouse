@@ -75,7 +75,6 @@ func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 	}
 
 	if err := r.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
-		staticinstancelog.Error(err, "Address validation failed: belongs to master", "name", r.Name)
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 	return nil, nil
