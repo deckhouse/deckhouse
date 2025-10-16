@@ -259,7 +259,7 @@ for d8_tag in "${d8_tags[@]}"; do
       echo ""
       if [ "${additional_image_detected}" == true ]; then
         # CVE Scan
-        image_to_scan="${d8_image}${IMAGE_NAME/deckhouse-oss/""}:${d8_tag}" # replace deckhouse-oss with an empty string, but keep any other image_name for additional_image.
+        image_to_scan="${d8_image}/${IMAGE_NAME/deckhouse-oss/""}:${d8_tag}" # replace deckhouse-oss with an empty string, but keep any other image_name for additional_image.
         trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${image_to_scan/"/:"/:}"
         # License scan
         trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${image_to_scan/"/:"/:}"
