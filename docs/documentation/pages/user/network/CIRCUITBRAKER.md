@@ -4,7 +4,7 @@ permalink: en/user/network/circuit-breaker.html
 ---
 
 In Deckhouse Kubernetes Platform, the Circuit Breaker mechanism is implemented
-using Istio (the [`istio`](/modules/istio/) module) and provides the following capabilities:
+using Istio (the [istio](/modules/istio/) module) and provides the following capabilities:
 
 - Temporarily exclude an endpoint from load balancing if the error limit is exceeded.
 - Configure limits on the number of TCP connections and the number of requests to a single endpoint.

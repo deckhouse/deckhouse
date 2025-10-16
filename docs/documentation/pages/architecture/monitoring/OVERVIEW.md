@@ -183,9 +183,9 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ## Architecture of DKP component availability assessment (upmeter)
 
-Availability assessment in DKP is performed by the `upmeter` module.
+Availability assessment in DKP is performed by the [upmeter](/modules/upmeter/) module.
 
-Composition of the `upmeter` module:
+Composition of the [upmeter](/modules/upmeter/) module:
 
 - **agent**: Works on master nodes and performs availability probes, sends results to the server.
 - **upmeter**: Collects results and maintains an API server for their extraction.

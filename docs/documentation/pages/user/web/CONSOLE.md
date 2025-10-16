@@ -4,7 +4,7 @@ permalink: en/user/web/ui.html
 search: web UI, web interface
 ---
 
-The `console` module's web UI provides access to cluster management, including monitoring, parameter configuration, node and pod management, and security and network configuration. Most operations available on the command line via the d8 (Deckhouse CLI) or kubectl utilities are also performed through the web interface.
+The [console](/modules/console/) module's web UI provides access to cluster management, including monitoring, parameter configuration, node and pod management, and security and network configuration. Most operations available on the command line via the d8 (Deckhouse CLI) or kubectl utilities are also performed through the web interface.
 
 ## Accessing the console web UI
 
@@ -15,7 +15,7 @@ The `console` module's web UI provides access to cluster management, including m
    Check with your administrator for details.
 
 1. On your first login, enter the user credentials provided by your security administrator.
-   After a successful authentication, the main `console` web UI page will open.
+   After a successful authentication, the main [console](/modules/console/) web UI page will open.
    It includes the following sections:
 
    - [Deckhouse](#deckhouse)
@@ -264,7 +264,7 @@ The UI displays Prometheus instances, load status, and configuration options.
 The "Overview" subsection includes two tabs: Status and Configuration, which are intended to monitor and configure Prometheus instances.
 
 The "Status" tab lists active Pods with name, node, status, IP address, age, CPU and memory usage.
-You can see components of each Pod (such as `init-config-reloader`, `prometheus`, `config-reloader`, and `kube-rbac-proxy`).
+You can see components of each Pod (such as `init-config-reloader`, [prometheus](/modules/prometheus/), `config-reloader`, and `kube-rbac-proxy`).
 Pods can be deleted from here.
 
 ![Overview](../../images/console/monitoring_review.png)
