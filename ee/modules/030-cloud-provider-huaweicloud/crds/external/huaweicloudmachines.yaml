@@ -93,6 +93,12 @@ spec:
                     type: string
                   minItems: 1
                   type: array
+                vipAddress:
+                  description: Virtual IP address
+                  type: string
+                vipPortID:
+                  description: vipPortID contains ID for VIP port, if VIP is enabled
+                  type: string
               required:
                 - flavorName
                 - imageName

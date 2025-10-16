@@ -137,6 +137,9 @@ spec:
                             type: string
                           minItems: 1
                           type: array
+                        vipAddress:
+                          description: Virtual IP address
+                          type: string
                       required:
                         - flavorName
                         - imageName
