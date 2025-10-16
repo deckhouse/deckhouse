@@ -6,30 +6,17 @@ import:
     add: /node-collector
     to: /usr/local/bin/node-collector
     before: setup
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
+  - image: tools/procps
+    add: /bin/pgrep
+    to: /usr/bin/pgrep
     before: setup
-    includePaths:
-    - 'ps'
-    - 'pgrep'
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/lib64
-    to: /usr/lib64
+  - image: tools/procps
+    add: /bin/ps
+    to: /usr/bin/ps
     before: setup
-    includePaths:
-    - 'libproc2.so.0*'
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
-final: false
-shell:
-  setup:
-  - apt-get update
-  - apt-get install procps -y
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
