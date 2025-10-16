@@ -32,10 +32,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/cli"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -144,31 +140,6 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 
 		logger: logger.Named(nelmTracer),
 	}
-}
-
-// buildConfigFlagsFromEnv builds Kubernetes config flags from environment variables
-// Uses the Helm CLI environment settings to configure kubectl access
-func buildConfigFlagsFromEnv(ns string, env *cli.EnvSettings) *genericclioptions.ConfigFlags {
-	flags := genericclioptions.NewConfigFlags(true)
-
-	// Map Helm environment settings to Kubernetes config flags
-	flags.Namespace = ptr.To(ns)
-	flags.Context = &env.KubeContext
-	flags.BearerToken = &env.KubeToken
-	flags.APIServer = &env.KubeAPIServer
-	flags.CAFile = &env.KubeCaFile
-	flags.KubeConfig = &env.KubeConfig
-	flags.Impersonate = &env.KubeAsUser
-	flags.Insecure = &env.KubeInsecureSkipTLSVerify
-	flags.TLSServerName = &env.KubeTLSServerName
-	flags.ImpersonateGroup = &env.KubeAsGroups
-	// Apply burst limit to the rest config
-	flags.WrapConfigFn = func(config *rest.Config) *rest.Config {
-		config.Burst = env.BurstLimit
-		return config
-	}
-
-	return flags
 }
 
 // ListCharts returns a sorted list of all chart names from installed releases
