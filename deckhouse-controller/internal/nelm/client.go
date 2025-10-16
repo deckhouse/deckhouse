@@ -59,8 +59,6 @@ var (
 
 // Options contains configuration for the nelm client
 type Options struct {
-	genericclioptions.ConfigFlags
-
 	// HistoryMax defines the maximum number of release revisions to keep
 	HistoryMax int32
 	// Timeout for Helm operations
@@ -136,9 +134,6 @@ func New(namespace string, logger *log.Logger, opts ...Option) *Client {
 
 	defaultOpts.Annotations["werf.io/skip-logs"] = "true"
 	defaultOpts.Annotations["werf.io/track-termination-mode"] = "NonBlocking"
-
-	// Build Kubernetes config flags from environment variables
-	defaultOpts.ConfigFlags = *buildConfigFlagsFromEnv(namespace, cli.New())
 
 	return &Client{
 		opts: defaultOpts,
