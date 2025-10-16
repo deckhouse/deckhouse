@@ -3,7 +3,7 @@ title: "Secret management"
 permalink: en/user/web/stronghold.html
 ---
 
-The web interface for managing secrets (Stronghold web interface) is designed for managing secret mechanisms, authentication, and access control in a cluster. Operation is provided by the `stronghold` module.
+The web interface for managing secrets (Stronghold web interface) is designed for managing secret mechanisms, authentication, and access control in a cluster. Operation is provided by the [stronghold](/modules/stronghold/) module.
 
 It allows you to:
 
@@ -18,7 +18,7 @@ where `<CLUSTER_NAME_TEMPLATE>` is the DNS name template of the cluster
 defined in the global `modules.publicDomainTemplate` parameter.
 
 1. On your first login, enter the user credentials.
-1. After successful authentication, the main `stronghold` page will open:
+1. After successful authentication, the main [stronghold](/modules/stronghold/) page will open:
 
    ![Stronghold module web UI](../../images/stronghold/web-stronghold.png)
 
@@ -101,7 +101,7 @@ To add a new secrets engine:
 
 Access control is managed in the "Access" section.
 
-To open it, click **Access** in on the main page of `stronghold` web UI.
+To open it, click **Access** in on the main page of [stronghold](/modules/stronghold/) web UI.
 The left pane contains a navigation menu with a link to return to the main page.
 The central pane displays content for the selected subsection (by default it's "Authentication Methods").
 
@@ -166,7 +166,7 @@ To add a new user group:
 
 ### Entities and aliases
 
-Entities in `stronghold` are logical representations of users or applications.
+Entities in [stronghold](/modules/stronghold/) are logical representations of users or applications.
 They allow linking multiple authentication methods under a single identity.
 
 To manage entities and aliases, select **Entities** from the side menu of the "Access" section.
@@ -218,7 +218,7 @@ A search box will open that lets you find lease details by ID.
 
 ## Managing access control policies
 
-To manage access control policies in `stronghold`, click **Policies** from the "Access" menu.
+To manage access control policies in [stronghold](/modules/stronghold/), click **Policies** from the "Access" menu.
 The left pane shows navigation menu.
 The central pane contains a list of policies, a search filter, and a button to add a new policy.
 
@@ -239,7 +239,7 @@ Available actions for listed policies:
 
 ## Using additional tools
 
-The "Tools" section provides access to extra tools in `stronghold`.
+The "Tools" section provides access to extra tools in [stronghold](/modules/stronghold/).
 The left pane displays tool navigation.
 The center shows fields for the selected tool.
 
@@ -250,7 +250,7 @@ Available tools:
 
   ![Wrap](../../images/stronghold/wrap.png)
 
-- **Lookup**: Displays details about tokens, secrets, leases, and other objects in `stronghold`.
+- **Lookup**: Displays details about tokens, secrets, leases, and other objects in [stronghold](/modules/stronghold/).
   It can be used to view metadata, expiration dates, access policies, and other details associated with objects.
 
   ![Lookup](../../images/stronghold/lookup.png)
@@ -273,13 +273,13 @@ Available tools:
 
   ![Hash](../../images/stronghold/hash.png)
 
-- **API Explorer**: Used for interacting with `stronghold` API via GUI.
+- **API Explorer**: Used for interacting with [stronghold](/modules/stronghold/) API via GUI.
 
   ![API](../../images/stronghold/api.png)
 
 ## Monitoring stronghold Raft cluster
 
-Use the "Raft Storage" section to monitor the `stronghold` Raft cluster.
+Use the "Raft Storage" section to monitor the [stronghold](/modules/stronghold/) Raft cluster.
 The left menu contains a navigation menu; the central pane shows the cluster leader, nodes,
 and a **Snapshots** button for backing up or restoring Raft data from a snapshot.
 
@@ -287,7 +287,7 @@ and a **Snapshots** button for backing up or restoring Raft data from a snapshot
 
 ## Monitoring activity and load
 
-To monitor activity and assess `stronghold` workload, go to the "Client Count" section.
+To monitor activity and assess [stronghold](/modules/stronghold/) workload, go to the "Client Count" section.
 The left pane contains a navigation menu.
 
 The cental pane contains the following two tabs:
@@ -306,7 +306,7 @@ The "Seal Stronghold" section provides means to seal or unseal the secrets stora
 The left pane contains a navigation menu.
 The cental pane contains a button for sealing or unsealing the secret storage (depending on its current state).
 
-When the storage is sealed, `stronghold` can't read or write secrets.
+When the storage is sealed, [stronghold](/modules/stronghold/) can't read or write secrets.
 
 ![Sealing and unsealing the secrets storage](../../images/stronghold/sealing.png)
 
