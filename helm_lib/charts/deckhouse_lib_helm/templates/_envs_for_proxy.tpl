@@ -1,17 +1,8 @@
-{{- /* Usage: {{ include "helm_lib_envs_for_proxy" . }} or {{ include "helm_lib_envs_for_proxy" (list . "extra.ip1,extra.ip2") }} */ -}}
-{{- /* Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container, use extra for list additional no_proxy hosts  */ -}}
+{{- /* Usage: {{ include "helm_lib_envs_for_proxy" . }} */ -}}
+{{- /* Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container */ -}}
 {{- /* depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) */ -}}
 {{- define "helm_lib_envs_for_proxy" }}
   {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $extraNoProxy := "" -}}
-
-  {{- if kindIs "slice" . }}
-    {{- $context = index . 0 -}}
-    {{- if gt (len .) 1 }}
-      {{- $extraNoProxy = index . 1 -}}
-    {{- end }}
-  {{- end }}
-
   {{- if $context.Values.global.clusterConfiguration }}
     {{- if $context.Values.global.clusterConfiguration.proxy }}
       {{- if $context.Values.global.clusterConfiguration.proxy.httpProxy }}
@@ -26,17 +17,10 @@
 - name: https_proxy
   value: {{ $context.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
       {{- end }}
-
       {{- $noProxy := list "127.0.0.1" "169.254.169.254" $context.Values.global.clusterConfiguration.clusterDomain $context.Values.global.clusterConfiguration.podSubnetCIDR $context.Values.global.clusterConfiguration.serviceSubnetCIDR }}
       {{- if $context.Values.global.clusterConfiguration.proxy.noProxy }}
         {{- $noProxy = concat $noProxy $context.Values.global.clusterConfiguration.proxy.noProxy }}
       {{- end }}
-
-      {{- if $extraNoProxy }}
-        {{- $extraList := splitList "," $extraNoProxy }}
-        {{- $noProxy = concat $noProxy $extraList }}
-      {{- end }}
-
 - name: NO_PROXY
   value: {{ $noProxy | join "," | quote }}
 - name: no_proxy
