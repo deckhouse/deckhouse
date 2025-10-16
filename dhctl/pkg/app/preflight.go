@@ -37,6 +37,7 @@ var (
 	PreflightSkipDeckhouseUserCheck           = false
 	PreflightSkipYandexWithNatInstanceCheck   = false
 	PreflightSkipStaticInstancesIPDuplication = false
+	PreflightSkipKernelEROFSCVE               = false
 )
 
 const (
@@ -59,6 +60,7 @@ const (
 	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
 	YandexWithNatInstance            = "preflight-skip-yandex-with-nat-instance-check"
 	StaticInstancesIPDuplication     = "preflight-skip-staticinstances-ip-duplication"
+	KernelEROFSCVECheckArgName       = "preflight-skip-kernel-erofs-cve"
 )
 
 var PreflightSkipOptionsMap = map[string]*bool{
@@ -81,6 +83,7 @@ var PreflightSkipOptionsMap = map[string]*bool{
 	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
 	TimeDriftArgName:                 &PreflightSkipTimeDrift,
 	YandexWithNatInstance:            &PreflightSkipYandexWithNatInstanceCheck,
+	KernelEROFSCVECheckArgName:       &PreflightSkipKernelEROFSCVE,
 }
 
 func ApplyPreflightSkips(skips []string) {
@@ -152,4 +155,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(StaticInstancesIPDuplication, "Skip verifying StaticInstances IP intersection").
 		Envar(configEnvName("PREFLIGHT_SKIP_SI_IP_DUPLICATION")).
 		BoolVar(PreflightSkipOptionsMap[StaticInstancesIPDuplication])
+	cmd.Flag(KernelEROFSCVECheckArgName, "Skip verifying kernel CVE-2025-37999 (EROFS) vulnerability").
+		Envar(configEnvName("PREFLIGHT_SKIP_KERNEL_EROFS_CVE")).
+		BoolVar(PreflightSkipOptionsMap[KernelEROFSCVECheckArgName])
 }
