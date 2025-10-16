@@ -13,12 +13,59 @@
 
 На компьютере, имеющем сетевой доступ к развернутому кластеру, создайте файл `~/.kube/config` (для Linux/MacOS) или `%USERPROFILE%\.kube\config` (для Windows) и вставьте в него конфигурацию kubectl, приведенную на вкладке *Raw Config*.
 
-Вы настроили kubectl на этом компьютере для управления кластером. Дальнейшие команды выполняйте на этом компьютере. 
+Вы настроили kubectl на этом компьютере для управления кластером. Дальнейшие команды выполняйте на этом компьютере.
+
+Придумайте пароль для пользователя внутри виртуальной машины и сгенерируйте его хэш:
+
+```bash
+mkpasswd --method=SHA-512 --rounds=4096
+```
+
+Для добавления пользователя и ssh-ключа в виртуальную машину создайте файл `cloud-config`.
+В примере по желанию измените поля:
+
+- `name` содержит имя пользователя `test-user`, замените на своё.
+- `passwd` содержит в кавычках хэш пароля `test-user`, замените на свой хэш.
+- `ssh_authorized_keys` содержит публичный ssh-ключ, сгенерируйте свой и замените.
+
+```bash
+#cloud-config
+ssh_pwauth: True
+users:
+- name: test-user
+  passwd: '$6$rounds=4096$.ed4Qtpv1WeKmhH6$3ZCZGvv1QIe2bIsEGT549mAPnmCUVLG5TJAVsBr02bhdyKTGPt3HFC9Bc7x/NiGAwAqibIuUpRQk4SltW4Kd//'
+  shell: /bin/bash
+  sudo: ALL=(ALL) NOPASSWD:ALL
+  lock_passwd: False
+  ssh_authorized_keys:
+    - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFxcXHmwaGnJ8scJaEN5RzklBPZpVSic4GdaAsKjQoeA your_email@example.com
+packages:
+  - qemu-guest-agent
+runcmd:
+  - systemctl enable qemu-guest-agent --now
+  - chown -R cloud:cloud /home/cloud
+```
+
+Создайте файл секрета содержайщий `cloud-config` в формате base64.
+```yaml
+d8 k create -f - <<EOF
+---
+apiVersion: v1
+data:
+  userData: |
+    `cat cloud-config | base64 -w0`
+kind: Secret
+metadata:
+  name: secret-cloud-init
+  namespace: test-project
+type: provisioning.virtualization.deckhouse.io/cloud-init
+EOF
+```
 
 Создайте виртуальную машину:
 
 ```yaml
-kubectl create -f - <<EOF
+d8 k create -f - <<EOF
 ---
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -52,6 +99,11 @@ metadata:
   name: vm
   namespace: test-project
 spec:
+  provisioning:
+    type: UserDataRef
+    userDataRef:
+      kind: Secret
+      name: secret-cloud-init
   virtualMachineClassName: generic
   runPolicy: AlwaysOn
   blockDeviceRefs:
@@ -67,23 +119,25 @@ EOF
 Выведите список виртуальных машин, чтобы увидеть статус виртуальной машины:
 
 ```shell
-kubectl get vm -o wide
+d8 k get vm -o wide
 ```
 
 После успешного старта виртуальная машина должна перейти в статус `Running`.
 
 Пример вывода:
 ```console
-$ kubectl get vm -o wide
+$ d8 k get vm -o wide
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
 
-Подключитесь к виртуальной машине, введите логин (в примере — `test-user@deckhouse.io`) и пароль:
+Подключитесь к виртуальной машине, введите логин (в примере — `test-user`) и пароль:
 
 ```shell
 d8 v console -n test-project vm
 ```
+
+Для выхода из консоли нажмите `Ctrl+]`
 
 Поздравляем! Вы создали виртуальную машину и подключились к ней.
 
