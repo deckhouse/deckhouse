@@ -422,7 +422,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx, kubeCl, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx, kubeCl, nodeName, outputs.InfrastructureState, outputs.GetDataDevices())
 	if err != nil {
 		return outputs, err
 	}

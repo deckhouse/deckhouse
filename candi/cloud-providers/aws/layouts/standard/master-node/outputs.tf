@@ -23,3 +23,7 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = module.master-node.kubernetes_data_device_path
 }
+
+output "system_registry_data_device_path" {
+  value = module.master-node.system_registry_data_device_path
+}

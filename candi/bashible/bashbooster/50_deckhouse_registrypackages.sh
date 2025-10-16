@@ -17,7 +17,6 @@
 # TODO remove this file in the release after 1.59 after migrate to use bb-package-* functions in the all external modules
 
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
-bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 
 BB_RP_CURL_COMMON_ARGS=(
   --connect-timeout 10

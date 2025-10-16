@@ -6679,6 +6679,7 @@ modules-having-alerts:
     - openvpn
     - operator-prometheus
     - prometheus
+    - registry
     - secret-copier
     - terraform-manager
     - upmeter
