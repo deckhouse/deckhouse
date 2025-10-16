@@ -72,6 +72,23 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleSettingsDefinitionList{},
 		&DeckhouseRelease{},
 		&DeckhouseReleaseList{},
+		// Package system types
+		&PackageRepository{},
+		&PackageRepositoryList{},
+		&PackageRepositoryOperation{},
+		&PackageRepositoryOperationList{},
+		&ClusterApplicationPackageVersion{},
+		&ClusterApplicationPackageVersionList{},
+		&ClusterApplicationPackage{},
+		&ClusterApplicationPackageList{},
+		&ClusterApplication{},
+		&ClusterApplicationList{},
+		&ApplicationPackageVersion{},
+		&ApplicationPackageVersionList{},
+		&ApplicationPackage{},
+		&ApplicationPackageList{},
+		&Application{},
+		&ApplicationList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
