@@ -59,12 +59,12 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
-	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/application"
-	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/application-package-version"
-	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/cluster-application"
-	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/cluster-application-package-version"
-	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/package-repository"
-	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/package-system/package-repository-operation"
+	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	packageclusterapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application"
+	packageclusterapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/cluster-application-package-version"
+	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
+	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -133,7 +133,7 @@ func NewDeckhouseController(
 	// but otherwise we get a warning from the controller-runtime.
 	controllerruntime.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
-	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), controllerruntime.Options{
+	opts := controllerruntime.Options{
 		Scheme: scheme,
 		BaseContext: func() context.Context {
 			return ctx
@@ -190,18 +190,23 @@ func NewDeckhouseController(
 				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
-				// for package system apis
-				&v1alpha1.PackageRepository{}:                {},
-				&v1alpha1.PackageRepositoryOperation{}:       {},
-				&v1alpha1.ClusterApplicationPackageVersion{}: {},
-				&v1alpha1.ClusterApplicationPackage{}:        {},
-				&v1alpha1.ClusterApplication{}:               {},
-				&v1alpha1.ApplicationPackageVersion{}:        {},
-				&v1alpha1.ApplicationPackage{}:               {},
-				&v1alpha1.Application{}:                      {},
 			},
 		},
-	})
+	}
+
+	// Package system controllers (feature flag)
+	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplicationPackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ClusterApplication{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}

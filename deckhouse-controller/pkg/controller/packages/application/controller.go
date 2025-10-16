@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package packagerepositoryoperation
+package application
 
 import (
 	"context"
@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	controllerName = "d8-package-repository-operation-controller"
+	controllerName = "d8-application-controller"
 
-	maxConcurrentReconciles = 3
+	maxConcurrentReconciles = 1
 )
 
 type reconciler struct {
@@ -49,7 +49,7 @@ func RegisterController(
 		logger: logger,
 	}
 
-	packageRepositoryOperationController, err := controller.New(controllerName, runtimeManager, controller.Options{
+	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
 		Reconciler:              r,
 	})
@@ -58,41 +58,41 @@ func RegisterController(
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
-		For(&v1alpha1.PackageRepositoryOperation{}).
-		Complete(packageRepositoryOperationController)
+		For(&v1alpha1.Application{}).
+		Complete(applicationController)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Debug("reconciling PackageRepositoryOperation", slog.String("name", req.Name))
+	r.logger.Debug("reconciling Application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 
-	operation := new(v1alpha1.PackageRepositoryOperation)
-	if err := r.client.Get(ctx, req.NamespacedName, operation); err != nil {
+	application := new(v1alpha1.Application)
+	if err := r.client.Get(ctx, req.NamespacedName, application); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("package repository operation not found", slog.String("name", req.Name))
+			r.logger.Warn("application not found", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
 			return ctrl.Result{}, nil
 		}
-		r.logger.Error("failed to get package repository operation", slog.String("name", req.Name), log.Err(err))
+		r.logger.Error("failed to get application", slog.String("name", req.Name), slog.String("namespace", req.Namespace), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// handle delete event
-	if !operation.DeletionTimestamp.IsZero() {
-		r.logger.Debug("deleting package repository operation", slog.String("name", req.Name))
-		return r.delete(ctx, operation)
+	if !application.DeletionTimestamp.IsZero() {
+		r.logger.Debug("deleting application", slog.String("name", req.Name), slog.String("namespace", req.Namespace))
+		return r.delete(ctx, application)
 	}
 
 	// handle create/update events
-	return r.handle(ctx, operation)
+	return r.handle(ctx, application)
 }
 
-func (r *reconciler) handle(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	// TODO: implement package repository operation reconciliation logic
-	r.logger.Info("handling PackageRepositoryOperation", slog.String("name", operation.Name))
+func (r *reconciler) handle(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+	// TODO: implement application reconciliation logic
+	r.logger.Info("handling Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) delete(_ context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	// TODO: implement package repository operation deletion logic
-	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
+func (r *reconciler) delete(_ context.Context, application *v1alpha1.Application) (ctrl.Result, error) {
+	// TODO: implement application deletion logic
+	r.logger.Info("deleting Application", slog.String("name", application.Name), slog.String("namespace", application.Namespace))
 	return ctrl.Result{}, nil
 }

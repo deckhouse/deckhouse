@@ -32,7 +32,7 @@ import (
 const (
 	controllerName = "d8-cluster-application-package-version-controller"
 
-	maxConcurrentReconciles = 3
+	maxConcurrentReconciles = 1
 )
 
 type reconciler struct {
