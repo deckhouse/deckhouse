@@ -82,6 +82,45 @@ DKP создаёт диски виртуальных машин с типом `e
 DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
+### Подготовка образа для cloud-init на vSphere
+
+1. Установите необходимые пакеты:
+
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init # Для cloud-init ниже 21.3 требуется поддержка VMware GuestInfo.
+   ```
+
+1. Проверьте, что в файле `/etc/cloud/cloud.cfg` установлен параметр `disable_vmware_customization: false`.
+
+1. Добавьте datasource VMware GuestInfo — создайте файл `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
+
+   ```yaml
+   datasource:
+     VMware:
+       vmware_cust_file_max_wait: 10
+   ```
+
+1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`:
+
+   ```shell
+   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Очистите логи событий `cloud-init`:
+
+   ```shell
+   cloud-init clean --logs --seed
+   ```
+
+1. После запуска виртуальной машины проверьте, что запущены службы связанные с пакетами:
+
+   ```shell
+   cloud-config.service
+   cloud-final.service
+   cloud-init.service
+   ```
+
 ## Установка govc
 
 Для настройки окружения используется CLI-инструмент [`govc`](https://github.com/vmware/govmomi/tree/main/govc). После установки задайте переменные окружения:

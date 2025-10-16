@@ -138,11 +138,51 @@ You can read more in the [documentation](https://techdocs.broadcom.com/us/en/vmw
 Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
+#### Preparing the image for cloud-init on vSphere
+
+1. Install the required packages:
+
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init # For cloud-init versions below 21.3, VMware GuestInfo support is required.
+   ```
+
+1. Verify that the `disable_vmware_customization: false` parameter is set in `/etc/cloud/cloud.cfg`.
+
+1. Add the VMware GuestInfo datasource — create `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
+
+   ```yaml
+   datasource:
+     VMware:
+       vmware_cust_file_max_wait: 10
+   ```
+
+1. Before creating the VM template, reset identifiers and the `cloud-init` state:
+
+   ```shell
+   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Clear `cloud-init` event logs:
+
+   ```shell
+   cloud-init clean --logs --seed
+   ```
+
+1. After the virtual machine boots, verify that the following services (related to the packages above) are running:
+
+   ```shell
+   cloud-config.service
+   cloud-final.service
+   cloud-init.service
+   ```
+
 ## Infrastructure
 
 ### Networking
 
 A VLAN with DHCP and Internet access is required for the running cluster:
+
 * If the VLAN is public (public addresses), then you have to create a second network to deploy cluster nodes (DHCP is not needed in this network).
 * If the VLAN is private (private addresses), then this network can be used for cluster nodes.
 
