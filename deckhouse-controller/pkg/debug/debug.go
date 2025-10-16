@@ -309,58 +309,58 @@ func isFileExcluded(fileName string, excludeMap map[string]bool) bool {
 		return true
 	}
 
-	// Check without extension
 	fileNameWithoutExt := strings.TrimSuffix(fileName, ".json")
 	fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
 
 	return excludeMap[fileNameWithoutExt]
 }
 
+// List of files that can be excluded in alphabetical order:
 func getExcludableFiles() []string {
 	return []string{
-		"queue",
-		"global-values",
-		"deckhouse-enabled-modules",
-		"deckhouse-module-sources",
-		"deckhouse-module-pull-overrides",
-		"deckhouse-maintenance-modules",
-		"events",
-		"d8-all",
-		"node-groups",
-		"node-group-configuration",
-		"nodes",
-		"machines",
-		"instances",
-		"staticinstances",
-		"cloud-machine-deployment",
-		"static-machine-deployment",
-		"deckhouse-version",
-		"deckhouse-releases",
-		"deckhouse-logs",
+		"alerts",
+		"audit-policy",
+		"authorization-rules",
+		"bad-pods",
 		"capi-controller-manager",
 		"caps-controller-manager",
-		"machine-controller-manager",
-		"mcm-logs",
 		"ccm-logs",
-		"csi-controller-logs",
+		"cilium-health-status",
+		"cloud-machine-deployment",
+		"cluster-authorization-rules",
 		"cluster-autoscaler-logs",
+		"csi-controller-logs",
+		"d8-all",
+		"d8-istio-custom-resources",
+		"d8-istio-envoy-config",
+		"d8-istio-ingress-logs",
+		"d8-istio-resources",
+		"d8-istio-system-logs",
+		"d8-istio-users-logs",
+		"deckhouse-enabled-modules",
+		"deckhouse-logs",
+		"deckhouse-maintenance-modules",
+		"deckhouse-module-pull-overrides",
+		"deckhouse-module-sources",
+		"deckhouse-releases",
+		"deckhouse-version",
+		"events",
+		"global-values",
+		"instances",
+		"machine-controller-manager",
+		"machines",
+		"mcm-logs",
+		"module-configs",
+		"node-group-configuration",
+		"node-groups",
+		"nodes",
+		"prometheus-logs",
+		"queue",
+		"static-machine-deployment",
+		"staticinstances",
 		"vpa-admission-controller-logs",
 		"vpa-recommender-logs",
 		"vpa-updater-logs",
-		"prometheus-logs",
-		"alerts",
-		"bad-pods",
-		"cluster-authorization-rules",
-		"authorization-rules",
-		"module-configs",
-		"d8-istio-resources",
-		"d8-istio-custom-resources",
-		"d8-istio-envoy-config",
-		"d8-istio-system-logs",
-		"d8-istio-ingress-logs",
-		"d8-istio-users-logs",
-		"cilium-health-status",
-		"audit-policy",
 	}
 }
 
@@ -371,15 +371,19 @@ func printExcludableFiles() {
 	}
 }
 
-func parseExcludeFiles(excludeFiles string) []string {
-	if excludeFiles == "" {
+func parseExcludeFiles(excludeFiles []string) []string {
+	if len(excludeFiles) == 0 {
 		return nil
 	}
 
 	var result []string
-	for _, part := range strings.Fields(excludeFiles) {
-		if part != "" {
-			result = append(result, part)
+	for _, file := range excludeFiles {
+		for _, part := range strings.FieldsFunc(file, func(r rune) bool {
+			return r == ',' || r == ' '
+		}) {
+			if part != "" {
+				result = append(result, part)
+			}
 		}
 	}
 	return result
@@ -387,8 +391,8 @@ func parseExcludeFiles(excludeFiles string) []string {
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
-	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can specify multiple files separated by spaces.").String()
-	listFiles := collectDebug.Flag("list-exclude", "List all files that can be excluded from the debug archive.").Bool()
+	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can be specified multiple times or use comma/space separated values.").Strings()
+	listFiles := collectDebug.Flag("list-exclude", "List all files that can be excluded from the debug archive.").Short('l').Bool()
 
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
 		if *listFiles {
