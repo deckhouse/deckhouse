@@ -222,10 +222,7 @@ func (s *Client) Start() error {
 			return err
 		}
 		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	})
 	if err != nil {
 		lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
@@ -264,23 +261,23 @@ func (s *Client) keepAlive() {
 			session, err := s.sshClient.NewSession()
 			if err != nil {
 				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
-				if errorsCount > 2 {
+				if errorsCount > 3 {
 					s.restart()
 					return
 				}
 				errorsCount++
-				time.Sleep(10 * time.Second)
+				time.Sleep(5 * time.Second)
 				continue
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v\n", err)
-				if errorsCount > 2 {
+				if errorsCount > 3 {
 					s.restart()
 					return
 				}
 				errorsCount++
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
