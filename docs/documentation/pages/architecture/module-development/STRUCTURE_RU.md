@@ -127,6 +127,7 @@ lang: ru
 {% endalert %}
 
 В папке `/docs` находится документация к модулю. Следующие подпапки в папке docs игнорируются при сборке документации:
+
 - `internal`
 - `internals`
 - `development`
@@ -158,7 +159,7 @@ lang: ru
 
 Следующие файлы не обязательны, но имеют [предопределенное](https://github.com/deckhouse/deckhouse/blob/main/docs/site/backends/docs-builder-template/data/helpers.yaml#L1) название пункта в sidebar (меню слева) и заголовок страницы:
 
-* `EXAMPLES.md` и `EXAMPLES.ru.md` – примеры конфигурации модуля с описанием.
+* `EXAMPLES.md` и `EXAMPLES.ru.md` — примеры конфигурации модуля с описанием.
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы. Пример: "Примеры". Он же используется в навигации, если нет `linkTitle`.
@@ -178,7 +179,7 @@ lang: ru
   </details>
   </div>
 
-* `FAQ.md` и `FAQ.ru.md` – часто задаваемые вопросы, касающиеся эксплуатации модуля ("Какой сценарий выбрать: А или Б?").
+* `FAQ.md` и `FAQ.ru.md` — часто задаваемые вопросы, касающиеся эксплуатации модуля ("Какой сценарий выбрать: А или Б?").
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы.
@@ -198,7 +199,7 @@ lang: ru
   </details>
   </div>
   
-* `ADVANCED_USAGE.md` и `ADVANCED_USAGE.ru.md` -- расширенные инструкции по использованию и отладке модуля.
+* `ADVANCED_USAGE.md` и `ADVANCED_USAGE.ru.md` — расширенные инструкции по использованию и отладке модуля.
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы.
@@ -218,7 +219,7 @@ lang: ru
   </details>
   </div>
   
-* `CR.md` и `CR.ru.md` – файлы для генерации ресурсов из папки `/crds/`. Добавьте эти файлы, если необходима генерация ресурсов из папки `/crds` модуля.  
+* `CR.md` и `CR.ru.md` — файлы для генерации ресурсов из папки `/crds/`. Добавьте эти файлы, если необходима генерация ресурсов из папки `/crds` модуля.
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
@@ -232,7 +233,7 @@ lang: ru
   </details>
   </div>
 
-* `CONFIGURATION.md` и `CONFIGURATION.ru.md` – файлы для рендеринда OpenAPI-спецификаций из файлов `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml`. Добавьте эти файлы, если необходима генерация таких спецификаций.
+* `CONFIGURATION.md` и `CONFIGURATION.ru.md` — файлы для рендеринга OpenAPI-спецификаций из файлов `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml`. Добавьте эти файлы, если необходима генерация таких спецификаций.
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
