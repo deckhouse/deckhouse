@@ -58,16 +58,44 @@ remove_labels:
     echo "PR_NUMBER=$PR_NUMBER"
     REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
     if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-      TAG="pr${PR_NUMBER}"
+      SOURCE_TAG="pr${PR_NUMBER}"
     else
-      TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+      SOURCE_TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
     fi
-    echo "TAG=$TAG" >> $GITHUB_ENV
+    echo "SOURCE_TAG=$SOURCE_TAG" >> $GITHUB_ENV
 
 # </template: exctract_pr_number>
 {!{- end -}!}
+
+{!{ define "add_ssh_keys_for_cve_tests" }!}
+# <template: add_ssh_keys_for_cve_tests>
+- name: Start ssh-agent
+  uses: {!{ index (ds "actions") "ssh-agent" }!}
+  with:
+    ssh-private-key: |
+      ${{ steps.secrets.outputs.CVE_TESTS_SSH_PRIVATE_KEY }}
+- name: Add ssh_known_hosts
+  run: |
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.CVE_TESTS_REPO_GIT }})
+    echo "::add-mask::$HOST"
+    IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+    for IP in $IPS; do
+      echo "::add-mask::$IP"
+    done
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+      CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+      if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+      fi
+    done <<< "$HOST_KEYS"
+# </template: add_ssh_keys_for_cve_tests>
+{!{- end -}!}
+
 {!{ define "cve_scan_deckhouse_images" }!}
-# <template: cve_scan_deckhouse_images>
+# <template: cve_scan_deckhouse_images>  
 - name: Set scan target type
   run: |
     if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
@@ -77,26 +105,47 @@ remove_labels:
     elif [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
       echo "SCAN_TARGET=regular" >> $GITHUB_ENV
     fi
-- name: Run Deckhouse images CVE tests on ${{env.TAG}}
+
+- name: Download CVE scan script from private GitLab
+  run: |
+    echo "Cloning CVE scan script from private GitLab..."
+    
+    mkdir -p ${{ env.WORKDIR }}/scripts
+    git clone ${{ needs.secrets.outputs.CVE_TESTS_REPO_GIT }} ${{ env.WORKDIR }}/scripts
+    chmod +x "${{ env.WORKDIR }}/scripts/cve_scan.sh"
+    
+    echo "CVE scan script cloned successfully"
+
+- name: Run Deckhouse images CVE tests on ${{env.SOURCE_TAG}}
   env:
-    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
-    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
-    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
-    DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-    DEV_REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-    DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-    PROD_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-    PROD_REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-    PROD_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+    SOURCE_TAG: ${{env.SOURCE_TAG}}
+    CASE: "deckhouse"          
+    DD_URL: ${{steps.secrets.outputs.DD_DEV_URL}}
+    DD_TOKEN: ${{steps.secrets.outputs.DD_DEV_TOKEN}}
+    DEFAULT_BRANCH: ${{github.default_branch}}
+    COMMIT_TAG: ${{github.ref_name}}
+    COMMIT_SHA: ${{github.sha}}
+    EVENT_NAME: ${{github.event_name}}
+    TAG_TYPE: "release"
+    SCAN_SEVERAL_LATEST_RELEASES: "false"
+    MODULE_NAME: "Deckhouse"
+    DECKHOUSE_PRIVATE_REPO: ${{steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO}}
+    CODEOWNERS_REPO_TOKEN: ${{steps.secrets.outputs.CODEOWNERS_REPO_TOKEN}}
+    DEV_REGISTRY: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+    DEV_REGISTRY_USER: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER}}
+    DEV_REGISTRY_PASSWORD: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD}}
+    PROD_REGISTRY: ${{steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_HOST}}
+    PROD_REGISTRY_USER: ${{steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_USER}}
+    PROD_REGISTRY_PASSWORD: ${{steps.secrets.outputs.DECKHOUSE_REGISTRY_READ_PASSWORD}}
     TRIVY_BIN_VERSION: "v0.63.0"
     TRIVY_PROJECT_ID: "2181"
-    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
-    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
-    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+    TRIVY_DB_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
+    TRIVY_JAVA_DB_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
     SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   run: |
-    echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
-    ./.github/scripts/cve_scan.sh
+    echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${SOURCE_TAG}..."
+    ${{ env.WORKDIR }}/scripts/cve_scan.sh
 # </template: cve_scan_deckhouse_images>
 {!{- end -}!}
 
@@ -109,7 +158,7 @@ remove_labels:
 - name: Create fail artifact
   if: failure()
   run: |
-    echo "Trivy tests for ${TAG} have failed." > "${{ env.WORKDIR }}/artifacts/${TAG}_test-failed.txt"
+    echo "Trivy tests for ${SOURCE_TAG} have failed." > "${{ env.WORKDIR }}/artifacts/${SOURCE_TAG}_test-failed.txt"
     tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
 - name: Upload report artifacts
   if: success()
@@ -124,7 +173,7 @@ remove_labels:
   with:
     name: cve-reports
     path: |
-      ${{ env.WORKDIR }}/artifacts/${{ env.TAG }}_test-failed.txt
+      ${{ env.WORKDIR }}/artifacts/${{ env.SOURCE_TAG }}_test-failed.txt
       ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
 - name: Remove workdir
   run: |
