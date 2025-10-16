@@ -46,13 +46,12 @@ if [ -d /etc/audit/rules.d ]; then
 EOF
   bb-sync-file /etc/audit/rules.d/z99-deckhouse.rules - << "EOF"
 -b 65536
---backlog_wait_time 0
 EOF
 fi
 if command -v auditctl &>/dev/null; then
-  auditctl --backlog_wait_time 0 -b 65536 || bb-log-warning "failed to configure auditctl backlog; continuing with defaults"
+  auditctl -b 65536 || bb-log-warning "failed to configure auditctl backlog, continuing with defaults"
 else
-  bb-log-info "auditctl is not installed; skipping backlog configuration"
+  bb-log-info "auditctl is not installed, skipping backlog configuration"
 fi
 
 {{- end }}
