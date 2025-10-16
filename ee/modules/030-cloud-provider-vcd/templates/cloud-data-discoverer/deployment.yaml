@@ -69,7 +69,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/connection-info.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -91,22 +91,22 @@ spec:
           valueFrom:
             secretKeyRef:
               key: insecure
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_HREF
           valueFrom:
             secretKeyRef:
               key: host
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_VDC
           valueFrom:
             secretKeyRef:
               key: vdc
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_ORG
           valueFrom:
             secretKeyRef:
               key: org
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_USER
           valueFrom:
             secretKeyRef:
