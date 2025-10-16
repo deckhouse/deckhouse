@@ -4,7 +4,7 @@ permalink: ru/user/network/retry_istio.html
 lang: ru
 ---
 
-Для повторных попыток (Retry) для запросов можно использовать модуль [`istio`](/modules/istio/).
+Для повторных попыток (Retry) для запросов можно использовать модуль [istio](/modules/istio/).
 Перед настройкой убедитесь, что модуль включен в кластере.
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#retry -->

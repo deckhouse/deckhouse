@@ -6,14 +6,14 @@ permalink: en/user/network/ingress/alb.html
 ALB (Application Load Balancer) is implemented using Ingress resources and Gateways.
 ALB can handle the following types of traffic: HTTP, HTTPS, and gRPC.
 An administrator-configured Ingress controller is used to publish applications.
-In most cases, the [`ingress-nginx`](/modules/ingress-nginx/) module is used;
-for more complex tasks, the `istio` module may be used.
+In most cases, the [ingress-nginx](/modules/ingress-nginx/) module is used;
+for more complex tasks, the [istio](/modules/istio/) module may be used.
 
 ## Recommendations for choosing and ALB specifics with ingress-nginx and istio
 
 ### Ingress-nginx
 
-The [`ingress-nginx`](/modules/ingress-nginx/) ALB is based on the nginx web server.
+The [ingress-nginx](/modules/ingress-nginx/) ALB is based on the nginx web server.
 This option is suitable for:
 
 - Basic traffic routing based on domains or URLs.
@@ -21,8 +21,8 @@ This option is suitable for:
 
 ### Istio
 
-An ALB based on [`istio`](/modules/istio/) provides advanced traffic management capabilities.
-Consider an `istio`-based ALB if you need:
+An ALB based on [istio](/modules/istio/) provides advanced traffic management capabilities.
+Consider an istio-based ALB if you need:
 
 - Advanced routing, for example, to implement [canary deployment](../canary-deployment.html).
 - Traffic distribution between application versions and microservices.
@@ -57,7 +57,7 @@ To work with NGINX Ingress, the Deckhouse Kubernetes Platform administrator must
 the Ingress controller by adding an Istio sidecar to it.
 To do this,
 set the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter
-in the IngressNginxController custom resource of the `ingress-nginx` module.
+in the IngressNginxController custom resource of the [ingress-nginx](/modules/ingress-nginx/) module.
 
 To publish an application, prepare an Ingress resource that references a Service.
 Required annotations for the Ingress resource:
