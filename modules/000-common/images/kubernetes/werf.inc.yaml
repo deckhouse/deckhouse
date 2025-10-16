@@ -112,6 +112,7 @@ shell:
 
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
+{{- end }}
 
 # verify that all required patches present across all kubernetes versions
 {{- if .isEE}}
