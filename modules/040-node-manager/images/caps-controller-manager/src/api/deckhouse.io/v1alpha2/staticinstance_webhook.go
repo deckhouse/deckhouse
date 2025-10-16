@@ -63,7 +63,6 @@ func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 	staticinstancelog.Info("validate create", "name", r.Name)
 
 	ctx := context.Background()
-	staticinstancelog.Info("Context created", "name", r.Name)
 
 	mgr, err := ctrl.GetConfig()
 	if err != nil {
