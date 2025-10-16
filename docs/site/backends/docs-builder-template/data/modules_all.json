@@ -292,6 +292,16 @@
     "external": "true",
     "path": "/modules/pod-reloader/stable/"
   },
+  "payload-registry": {
+    "tags": [
+      "registry"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
+  },
   "runtime-audit-engine": {
     "tags": [
       "security"
