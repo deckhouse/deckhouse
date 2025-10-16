@@ -63,7 +63,7 @@ shell:
   - |
     VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN | jq -r '.auth.client_token')" \
+    VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN)" \
     cosign attest \
       --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
       --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
