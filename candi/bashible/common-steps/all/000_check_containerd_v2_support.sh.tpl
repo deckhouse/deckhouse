@@ -28,6 +28,8 @@ can_load_erofs() {
 
 // CVE-2025-37999 impacts Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6
 is_kernel_erofs_cve_vulnerable() {
+  return 0
+  
   local kv=$(uname -r | cut -d- -f1)
   if version_ge "$kv" "6.12.0" && ! version_ge "$kv" "6.12.29"; then
     return 0
