@@ -99,10 +99,9 @@ You can prevent overriding of rules in child projects or groups. To do this, unc
 
 1. If you enable the *"Verify committer email"* rule at the group level and disallow overriding, this rule will be enabled in all projects of that group and its subgroups, with no option to disable it.  
 
-2. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
+1. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
 
-3. If overriding is allowed, the rule will still be automatically updated when it changes at the parent level, but child groups and projects will be able to modify it afterwards.  
+1. If overriding is allowed, the rule will still be automatically updated when it changes at the parent level, but child groups and projects will be able to modify it afterwards.  
 
 The inheritance hierarchy is as follows:  
 **Instance → Group → Subgroup → Project**
-
