@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/action"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
@@ -215,40 +214,6 @@ func (c *Client) GetLabel(ctx context.Context, releaseName, labelName string) (s
 	}
 
 	return "", ErrLabelNotFound
-}
-
-// GetValues retrieves the values for a release and converts them to utils.Values format
-// The marshal/unmarshal cycle ensures proper type conversion
-func (c *Client) GetValues(ctx context.Context, releaseName string) (utils.Values, error) {
-	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "GetValues")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("release", releaseName))
-
-	res, err := c.getRelease(ctx, releaseName)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("get nelm release %q: %w", releaseName, err)
-	}
-
-	if res.Values == nil {
-		return nil, ErrValuesNotFound
-	}
-
-	// Marshal and unmarshal to convert to utils.Values type
-	raw, err := yaml.Marshal(res.Values)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("marshal values for release '%s': %w", releaseName, err)
-	}
-
-	values := make(utils.Values)
-	if err = yaml.Unmarshal(raw, &values); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("unmarshal values for release '%s': %w", releaseName, err)
-	}
-
-	return values, nil
 }
 
 // GetChecksum retrieves the module checksum for a release
