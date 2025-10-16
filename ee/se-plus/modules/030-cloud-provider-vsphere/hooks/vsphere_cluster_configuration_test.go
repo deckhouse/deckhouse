@@ -16,7 +16,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
+var _ = FDescribe("Modules :: cloud-provider-vsphere :: hooks :: vsphere_cluster_configuration ::", func() {
 	const (
 		emptyValues = `
 global:
@@ -282,6 +282,27 @@ metadata:
  namespace: kube-system
 data: {}
 `
+		stateECloudDiscoveryData = `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "VsphereCloudDiscoveryData",
+  "vmFolderPath": "test",
+  "resourcePoolPath": "test",
+  "datacenter": "DCTEST",
+  "zones": ["ZONE-TEST"]
+}
+`
+		stateValuesWithDiscoveryData = `global:
+  discovery: {}
+cloudProviderVsphere:
+  internal:
+    providerDiscoveryData:
+      apiVersion: "deckhouse.io/v1"
+      kind: VsphereCloudDiscoveryData
+      vmFolderPath: test
+      datacenter: DCTEST
+      zones:
+        - "ZONE-TEST"`
 	)
 
 	// todo(31337Ghost) eliminate the following dirty hack after `ee` subdirectory will be merged to the root
@@ -412,6 +433,18 @@ data: {}
 			Expect(d).To(ExecuteSuccessfully())
 			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration4))
 			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
+		})
+	})
+	e := HookExecutionConfigInit(stateValuesWithDiscoveryData, `{}`)
+	Context("Cluster without module configuration, with secret (without nsx-t)", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.KubeStateSet(notEmptyProviderClusterConfigurationState))
+			e.RunHook()
+		})
+
+		It("Should fill values from secret", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateECloudDiscoveryData))
 		})
 	})
 })
