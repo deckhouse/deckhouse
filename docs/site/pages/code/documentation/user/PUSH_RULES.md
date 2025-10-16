@@ -73,7 +73,7 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 
   Files larger than the specified size (in megabytes) will be rejected. To disable this rule, set the value to `0`.  
 
-## Enabling push rules
+## Configuring push rules
 
 To configure push rules for a project, open the project page and go to "Settings → Repository → Push Rules".  
 
