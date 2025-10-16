@@ -12,7 +12,7 @@ import:
   before: setup
 - image: d8-docs-artifacts
   add: /export/embedded_modules.json
-  to: /app/hugo/data/dkp/embedded_modules.json
+  to: /app/hugo-init/data/dkp/embedded_modules.json
   before: setup
 imageSpec:
   config:
