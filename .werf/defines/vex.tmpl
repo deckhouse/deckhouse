@@ -42,10 +42,10 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install
-- image: tools/curl
-  add: /usr/bin/curl
-  to: /usr/bin/curl
-  before: install
+#- image: tools/curl
+#  add: /usr/bin/curl
+#  to: /usr/bin/curl
+#  before: install
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
@@ -63,6 +63,7 @@ dependencies:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $context | nindent 2 }}
+  - apk add --no-cache curl
   install:
   - |
     REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)" \
