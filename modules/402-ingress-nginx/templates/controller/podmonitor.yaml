@@ -17,7 +17,7 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: nginx-ingress-controller
@@ -45,7 +45,7 @@ spec:
     tlsConfig:
       insecureSkipVerify: true
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: nginx-ingress-controller
