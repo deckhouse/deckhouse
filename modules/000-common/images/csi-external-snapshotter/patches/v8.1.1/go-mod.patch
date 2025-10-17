@@ -1,5 +1,5 @@
 diff --git a/client/go.mod b/client/go.mod
-index e3f8fd8f6..ece00d301 100644
+index e3f8fd8f6..4ff4da43e 100644
 --- a/client/go.mod
 +++ b/client/go.mod
 @@ -1,8 +1,6 @@
@@ -12,11 +12,13 @@ index e3f8fd8f6..ece00d301 100644
  
  require (
  	k8s.io/api v0.30.0
-@@ -35,13 +33,12 @@ require (
+@@ -34,14 +32,13 @@ require (
+ 	github.com/pkg/errors v0.9.1 // indirect
  	github.com/spf13/pflag v1.0.5 // indirect
  	golang.org/x/mod v0.15.0 // indirect
- 	golang.org/x/net v0.23.0 // indirect
+-	golang.org/x/net v0.23.0 // indirect
 -	golang.org/x/oauth2 v0.10.0 // indirect
++	golang.org/x/net v0.36.0 // indirect
 +	golang.org/x/oauth2 v0.27.0 // indirect
  	golang.org/x/sys v0.19.0 // indirect
  	golang.org/x/term v0.19.0 // indirect
