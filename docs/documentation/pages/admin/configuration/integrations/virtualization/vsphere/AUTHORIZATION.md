@@ -13,7 +13,7 @@ For the proper operation of the Deckhouse Kubernetes Platform with VMware vSpher
 - Networks with DHCP and internet access;
 - Available shared datastores on all ESXi hosts.
 
-* vSphere version: `v7.0U2` ([required](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) for the `Online volume expansion` feature to work).
+* vSphere version: `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
 * vCenter: must be accessible from within the cluster from the master nodes.
 * A created Datacenter containing:
   1. Virtual Machine template.
