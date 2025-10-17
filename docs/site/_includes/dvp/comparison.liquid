@@ -5,14 +5,14 @@
 <table class="supported_versions fixed-header-table table__small" style="table-layout: fixed">
   <colgroup>
     <col width="*">
-    <col width="64px">
-    <col width="64px">
+    <col width="100px">
+    <col width="100px">
   </colgroup>
 <thead class="versioning-table">
   <tr>
     <th style="text-align: lest; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
     {%- for edition in site.data.virtualization-platform.comparison.editions %}
-    <th style="text-align: center; white-space: nowrap;">{{edition | upcase }}</th>
+    <th style="text-align: center;">{{site.data.i18n[edition] | replace: ' / ', '<br>' }}</th>
     {%- endfor %}
   </tr>
 </thead>

@@ -4,7 +4,19 @@ permalink: ru/virtualization-platform/documentation/about/editions.html
 lang: ru
 ---
 
-Deckhouse Virtualization Platform поставляется в редакциях Community Edition (CE) и Enterprise Edition (EE). Deckhouse Virtualization Platform CSE, имеющая сертификат ФСТЭК, готовится к выходу в ближайшее время. Редакции DVP отличаются набором возможностей и уровнем доступной поддержки.
+Deckhouse Virtualization Platform (DVP) доступна как самостоятельный продукт и как модуль виртуализации, интегрированный в определённые редакции Deckhouse Kubernetes Platform (DKP).
+
+Поставляется в качестве модуля виртуализации:
+
+- DKP CE — Open Source-версия под лицензией Apache 2.0.
+- DKP EE — расширенная версия модуля виртуализации.
+- DKP SE+ — расширенная версия модуля виртуализации.
+- DKP CSE Pro — планируется поддержка модуля с сертификатом ФСТЭК.
+
+Как самостоятельный продукт:
+
+- DVP EE — коммерческая редакция для корпоративного использования.
+- DVP CSE — редакция с сертификатом ФСТЭК, готовящаяся к релизу.
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
