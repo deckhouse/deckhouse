@@ -35,7 +35,7 @@ force_searchable: true
 
 ## Требования к окружению
 
-* Требования к версии vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
+* Версия vSphere: `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
 * vCenter, до которого есть доступ изнутри кластера с master-узлов.
 * Создать Datacenter, в котором создать:
   1. VirtualMachine template.
