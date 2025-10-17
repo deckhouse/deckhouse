@@ -1,0 +1,61 @@
+diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
+index 1cf2b62a..26118490 100644
+--- a/connector/oidc/oidc.go
++++ b/connector/oidc/oidc.go
+@@ -531,12 +531,33 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+ 		return identity, fmt.Errorf("missing email claim, not found \"%s\" key", emailKey)
+ 	}
+ 
+-	emailVerified, found := claims["email_verified"].(bool)
+-	if !found {
+-		if c.insecureSkipEmailVerified {
+-			emailVerified = true
+-		} else if hasEmailScope {
+-			return identity, errors.New("missing \"email_verified\" claim")
++	var emailVerified bool
++	var skipEmailVerifiedClaim bool
++
++	if c.insecureSkipEmailVerified {
++		// Skip email verification entirely; warn because this is insecure.
++		c.logger.Warn("insecureSkipEmailVerified enabled: removing email_verified claim from identity (insecure)")
++		// Don't set emailVerified and mark to skip the claim entirely
++		skipEmailVerifiedClaim = true
++		// Remove the claim from the original claims map to prevent downstream usage
++		delete(claims, "email_verified")
++	} else {
++		v, ok := claims["email_verified"]
++		if !ok {
++			if hasEmailScope {
++				return identity, errors.New("missing \"email_verified\" claim")
++			}
++			// no email scope, default to false
++			emailVerified = false
++		} else {
++			switch t := v.(type) {
++			case bool:
++				emailVerified = t
++			case string:
++				emailVerified = strings.EqualFold(t, "true")
++			default:
++				return identity, fmt.Errorf("malformed \"email_verified\" claim: %T", v)
++			}
+ 		}
+ 	}
+ 
+@@ -632,11 +653,15 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+ 		Username:          name,
+ 		PreferredUsername: preferredUsername,
+ 		Email:             email,
+-		EmailVerified:     emailVerified,
+ 		Groups:            groups,
+ 		ConnectorData:     connData,
+ 	}
+ 
++	// Only set EmailVerified if we're not skipping the claim
++	if !skipEmailVerifiedClaim {
++		identity.EmailVerified = emailVerified
++	}
++
+ 	if c.userIDKey != "" {
+ 		userID, found := claims[c.userIDKey].(string)
+ 		if !found {
