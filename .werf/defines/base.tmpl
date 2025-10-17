@@ -44,6 +44,10 @@
   # Shell comfort: add bashrc for deckhouse
   rm -f /.bashrc
   ln -s /etc/bashrc /.bashrc
+  # Shell comfort: add bashrc for deckhouse root user
+  mkdir -p /root
+  rm -f /root/.bashrc
+  ln -s /etc/bashrc /root/.bashrc
   # Shell comfort: create /etc/vim
   mkdir -p /etc/vim/
   # Shell comfort: vimrc.local
