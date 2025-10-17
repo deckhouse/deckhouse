@@ -18,17 +18,19 @@ fromImage: builder/alpine
 final: true
 secrets:
 - id: REGISTRY_USER
-  value: {{ $context.RegistryUser }}
+  env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
-  value: {{ $context.RegistryPassword }}
-- id: COSIGN_VAULT_ADRESS
-  value: {{ $context.CosignVaultAdress }}
-- id: COSIGN_VAULT_TOKEN
-  value: {{ $context.CosignVaultToken }}
+  env: REGISTRY_PASSWORD
+- id: COSIGN_VAULT_ADDRESS
+  env: COSIGN_VAULT_ADDRESS
 - id: COSIGN_VAULT_KEY
-  value: {{ $context.CosignVaultKey }}
+  value: COSIGN_VAULT_KEY
 - id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
-  value: {{ $context.CosignTransitSecret }}
+  value: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+- id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+  value: ACTIONS_ID_TOKEN_REQUEST_TOKEN
+- id: ACTIONS_ID_TOKEN_REQUEST_URL
+  value: ACTIONS_ID_TOKEN_REQUEST_URL
 import:
 - image: tools/cosign
   add: /usr/bin/cosign
@@ -61,9 +63,11 @@ shell:
   {{- include "alpine packages proxy" $context | nindent 2 }}
   install:
   - |
-    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
+    ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
+    export VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+  - |
+    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN)" \
     cosign attest \
       --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
       --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
