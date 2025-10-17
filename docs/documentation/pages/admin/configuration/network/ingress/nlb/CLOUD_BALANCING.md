@@ -61,7 +61,7 @@ spec:
   type: ClusterIP
 ```
 
-### Example for VKCloud 
+### Example for VK Cloud 
 
 The following example is relevant when the internal balancer would be used.
 

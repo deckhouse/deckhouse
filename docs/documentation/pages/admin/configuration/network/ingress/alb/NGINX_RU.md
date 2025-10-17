@@ -156,7 +156,7 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
-### Пример для VKCloud 
+### Пример для VK Cloud 
 
 Пример подходит при необходимости заказать балансировщик внутри сети облака, без внешнего IP-адреса.
 
