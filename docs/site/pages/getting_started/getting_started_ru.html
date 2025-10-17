@@ -37,28 +37,52 @@ toc: false
     <div>
       <h3>Облачная платформа</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
-        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
-        {%- if provider[1].languages %}
-          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
-        {%- endif %}
-        {%- if provider[1].wip == true %}
-        <a
-          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
-        {%- else %}
-        <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
-          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
-          <span class="name">{{ provider[1].name[page.lang] }}</span>
-          {% if provider[1].extraIcons %}
-          <div class="footer">
-            {%- for extraIcon in provider[1].extraIcons %}
-            <img src="/{{extraIcon[1]}}" alt=""/>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </a>
-        {%- endif %}
-        {% endfor %}
+        {%- assign install_types = site.data.getting_started.dkp_data.installTypes %}
+        
+        {%- comment %}Creating an array for sorting{% endcomment %}
+        {%- assign providers_for_sorting = "" | split: "," %}
+        
+        {%- comment %}Select only the right providers{% endcomment %}
+        {%- for provider_pair in install_types %}
+          {%- assign provider_key = provider_pair[0] %}
+          {%- assign provider = provider_pair[1] %}
+          
+          {%- comment %}Apply filtres{% endcomment %}
+          {%- if provider.type != 'cloud' %}{% continue %}{% endif %}
+          {%- if provider.languages %}
+            {%- unless provider.languages contains "ru" %}{% continue %}{% endunless %}
+          {%- endif %}
+          
+          {%- comment %}Add in array for sorting{% endcomment %}
+          {%- assign sort_item = provider.name.ru | append: "|" | append: provider_key %}
+          {%- assign providers_for_sorting = providers_for_sorting | push: sort_item %}
+        {%- endfor %}
+        
+        {%- comment %}Sorting by ru name{% endcomment %}
+        {%- assign sorted_providers = providers_for_sorting | sort %}
+        
+        {%- comment %}Render sorted buttons{% endcomment %}
+        {%- for provider_str in sorted_providers %}
+          {%- assign provider_parts = provider_str | split: "|" %}
+          {%- assign provider_key = provider_parts[1] %}
+          {%- assign provider = install_types[provider_key] %}
+          
+          {%- if provider.wip == true %}
+            <a class="button button_default button_card button_disabled">{{ provider.name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+          {%- else %}
+            <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{{ provider_key }}/step2.html">
+              {% if provider.iconPath %}<div class="icon"><img src="/{{ provider.iconPath }}" alt="{{ provider.name[page.lang] }} icon"/></div>{% endif %}
+              <span class="name">{{ provider.name[page.lang] }}</span>
+              {% if provider.extraIcons %}
+                <div class="footer">
+                  {%- for extraIcon in provider.extraIcons %}
+                    <img src="/{{ extraIcon[1] }}" alt=""/>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </a>
+          {%- endif %}
+        {%- endfor %}
       </div>
       <p>
         <small>
