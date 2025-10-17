@@ -17,14 +17,17 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -59,6 +62,20 @@ var _ webhook.Validator = &StaticInstance{}
 func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 	staticinstancelog.Info("validate create", "name", r.Name)
 
+	ctx := context.Background()
+
+	mgr, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
+	}
+	cli, err := client.New(mgr, client.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
+	if err := r.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
+		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
+	}
 	return nil, nil
 }
 
@@ -93,4 +110,34 @@ func (r *StaticInstance) ValidateDelete() (admission.Warnings, error) {
 	}
 
 	return nil, nil
+}
+
+// validateAddressIfNoSkipBootstrap ensures that if StaticInstance does NOT have
+// annotation "static.node.deckhouse.io/skip-bootstrap-phase",
+// then its spec.address must NOT match any existing Node address.
+func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Client) error {
+	if _, hasSkipBootstrap := r.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; hasSkipBootstrap {
+		staticinstancelog.Info("skip-bootstrap annotation found, skipping address validation", "name", r.Name)
+		return nil
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := cli.List(ctx, nodes); err != nil {
+		return fmt.Errorf("failed to list cluster nodes: %w", err)
+	}
+
+	instanceAddr := r.Spec.Address
+	if instanceAddr == "" {
+		return errors.New("spec.address must not be empty")
+	}
+
+	for _, node := range nodes.Items {
+		for _, addr := range node.Status.Addresses {
+			if addr.Address == instanceAddr {
+				return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with static.node.deckhouse.io/skip-bootstrap-phase: \"\"", instanceAddr, node.Name)
+			}
+		}
+	}
+
+	return nil
 }
