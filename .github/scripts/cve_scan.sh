@@ -55,7 +55,7 @@ function send_report() {
   dd_engagement_name="[CVE] [IMAGES] [${dd_branch}]"
 
   tags_string="\"dkp\",\"images\",\"${dd_scan_type}\",\"${dd_release_or_dev_tag}\",\"${dd_image_version}\""
-  if [ -n "${dd_short_release_tag}" && -n "${dd_full_release_tag}" ]; then
+  if [[ -n "${dd_short_release_tag}" && -n "${dd_full_release_tag}" ]]; then
     tags_string+=",\"${dd_short_release_tag}\",\"${dd_full_release_tag}\""
   fi
 
@@ -66,7 +66,7 @@ function send_report() {
     --retry 10 \
     --retry-delay 20 \
     --retry-all-errors \
-    ${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
+    https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
     -H "accept: application/json" \
     -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
     -F "auto_create_context=True" \
