@@ -51,8 +51,11 @@ import:
   to: /bin/bash
   before: install
 - image: tools/coreutils
-  add: /usr/bin/cat
-  to: /usr/bin/cat
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/сat
+  - usr/bin/coreutils
   before: install
 git:
 - add: {{ $knownVulnPath }}
