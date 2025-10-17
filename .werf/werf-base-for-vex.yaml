@@ -1,6 +1,6 @@
 ---
 image: base-for-vex
-fromImage: base/coreutils
+fromImage: tools/coreutils
 final: false
 import:
 - image: tools/cosign
