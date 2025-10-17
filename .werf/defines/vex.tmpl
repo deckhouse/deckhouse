@@ -49,6 +49,7 @@ import:
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
+  before: install
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
@@ -64,9 +65,6 @@ dependencies:
   - type: ImageRepo
     targetEnv: IMAGE_REPO
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" $context | nindent 2 }}
-  - apk add --no-cache curl
   install:
   - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
   - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
