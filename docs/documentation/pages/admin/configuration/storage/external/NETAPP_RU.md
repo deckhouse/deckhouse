@@ -80,10 +80,3 @@ lang: ru
    d8 k get netappstorageclasses.storage.deckhouse.io <имя netappstorageclass>
    ```
 
-### Проверка работоспособности модуля
-
-Проверьте корректность работы модуля `csi-netapp`. Убедитесь, что все поды в пространстве имён `d8-csi-netapp` находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
-
-```shell
-d8 k -n d8-csi-netapp get pod -owide -w
-```
