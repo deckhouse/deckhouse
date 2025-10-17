@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -36,6 +35,7 @@ import (
 	rc "github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/requests_counter"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/status"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/validation"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -43,26 +43,38 @@ import (
 const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
 
 // Serve starts GRPC server
-func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDuration time.Duration) error {
+func Serve(params settings.ServerParams) error {
+	if err := params.Validate(); err != nil {
+		return err
+	}
+
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
 
+	dhctlProxy, err := NewStreamDirector(StreamDirectorParams{
+		MethodsPrefix: singlethreadedMethodsPrefix,
+		TmpDir:        params.TmpDir,
+	})
+
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
-	sem := make(chan struct{}, parallelTasksLimit)
+	sem := make(chan struct{}, params.ParallelTasksLimit)
 
-	dhctlProxy := NewStreamDirector(singlethreadedMethodsPrefix)
-
-	requestsCounter := rc.New(requestsCounterMaxDuration, sem)
+	requestsCounter := rc.New(params.RequestsCounterMaxDuration, sem)
 	requestsCounter.Run(ctx)
 
 	log.Info(
 		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
+		slog.String("network", params.Network),
+		slog.String("address", params.Address),
+		slog.String("tmp_dir", params.TmpDir),
 	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
@@ -71,7 +83,7 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 		log.Info("grpc server stopped")
 	})
 
-	listener, err := net.Listen(network, address)
+	listener, err := net.Listen(params.Network, params.Address)
 	if err != nil {
 		log.Error("failed to listen", logger.Err(err))
 		return err
