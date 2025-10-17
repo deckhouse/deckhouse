@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strconv"
@@ -56,6 +57,13 @@ type Etcd struct {
 
 func EtcdJoinConverge() error {
 	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+
+	log.Info("run kubeadm",
+		slog.String("phase", "etcd-join-converge"),
+		slog.String("component", "etcd"),
+		slog.Any("args", args),
+	)
+
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
