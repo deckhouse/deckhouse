@@ -19,4 +19,6 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-apiserver"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}
