@@ -33,7 +33,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
+
 	"strconv"
 	"strings"
 	"sync"
@@ -57,7 +57,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -66,7 +65,6 @@ import (
 
 const (
 	ManifestCreatedInClusterCacheKey  = "tf-state-and-manifests-in-cluster"
-	MasterHostsCacheKey               = "cluster-hosts"
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
 )
@@ -724,37 +722,6 @@ func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, m
 	})
 }
 
-func SaveMasterHostsToCache(hosts map[string]string) {
-	if err := cache.Global().SaveStruct(MasterHostsCacheKey, hosts); err != nil {
-		log.DebugF("Cannot save ssh hosts %v", err)
-	}
-}
-
-func GetMasterHostsIPs() ([]session.Host, error) {
-	inCache, err := cache.Global().InCache(MasterHostsCacheKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !inCache {
-		return make([]session.Host, 0), nil
-	}
-
-	var hosts map[string]string
-	err = cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
-	if err != nil {
-		return nil, err
-	}
-	mastersIPs := make([]session.Host, 0, len(hosts))
-	for name, ip := range hosts {
-		mastersIPs = append(mastersIPs, session.Host{Host: ip, Name: name})
-	}
-
-	sort.Sort(session.SortByName(mastersIPs))
-
-	return mastersIPs, nil
-}
-
 func SaveBastionHostToCache(host string) {
 	if err := cache.Global().Save(BastionHostCacheKey, []byte(host)); err != nil {
 		log.ErrorF("Cannot save ssh hosts: %v\n", err)
@@ -779,7 +746,7 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context) error {
+func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context, stateCache state.Cache) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -798,7 +765,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 			}
 			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
 
-			SaveMasterHostsToCache(addressTracker)
+			state.SaveMasterHostsToCache(stateCache, addressTracker)
 		}
 
 		return nil
