@@ -180,7 +180,6 @@ func prepareKubeconfig(componentName string, isTemp bool) error {
 	log.Info("run kubeadm",
 		slog.String("phase", "prepare-kubeconfig"),
 		slog.String("component", componentName),
-		slog.String("path", kubeadmPath),
 		slog.Any("args", args),
 		slog.Bool("temp_rootfs", isTemp),
 	)

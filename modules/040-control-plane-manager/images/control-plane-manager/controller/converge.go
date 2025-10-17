@@ -174,7 +174,6 @@ func prepareConverge(componentName string, isTemp bool) error {
 	log.Info("run kubeadm",
 		slog.String("phase", "prepare-converge"),
 		slog.String("component", componentName),
-		slog.String("path", kubeadmPath),
 		slog.Any("args", args),
 		slog.Bool("temp_rootfs", isTemp),
 	)

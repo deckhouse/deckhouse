@@ -61,7 +61,6 @@ func EtcdJoinConverge() error {
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),
 		slog.String("component", "etcd"),
-		slog.String("path", kubeadmPath),
 		slog.Any("args", args),
 	)
 
