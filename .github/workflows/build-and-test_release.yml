@@ -523,6 +523,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -533,10 +541,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
@@ -891,6 +895,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -901,10 +913,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
@@ -1259,6 +1267,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -1269,10 +1285,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
@@ -1615,6 +1627,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -1625,10 +1645,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
@@ -1971,6 +1987,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -1981,10 +2005,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
@@ -2327,6 +2347,14 @@ jobs:
             # Other build, set deckhouse registry as secondary
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
+            # Set cosign auth values
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
               IMAGE_EDITION=${WERF_ENV,,}
@@ -2337,10 +2365,6 @@ jobs:
           fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
