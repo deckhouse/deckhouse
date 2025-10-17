@@ -156,6 +156,25 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
+### Пример для VKCloud 
+
+Пример подходит при необходимости заказать балансировщик внутри сети облака, без внешнего IP-адреса.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  nodeSelector:
+    node.deckhouse.io/group: worker
+```
+
 ### Пример для bare metal
 
 ```yaml

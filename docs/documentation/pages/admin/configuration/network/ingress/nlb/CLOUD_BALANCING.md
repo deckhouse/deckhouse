@@ -60,3 +60,22 @@ spec:
     app: lab-4-backend
   type: ClusterIP
 ```
+
+### Example for VKCloud 
+
+The following example is relevant when the internal balancer would be used.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  nodeSelector:
+    node.deckhouse.io/group: worker
+```
