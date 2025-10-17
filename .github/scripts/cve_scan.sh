@@ -52,7 +52,8 @@ function send_report() {
   dd_report_file_path="${2}"
   dd_module_name="${3}"
   dd_image_name="${4}"
-  dd_engagement_name="[CVE] [IMAGES] [${dd_branch}]"
+
+  dd_engagement_name="[$(echo "${dd_scan_type}" | tr '[:lower:]' '[:upper:]')] [IMAGES] [${dd_branch}]"
 
   tags_string="\"dkp\",\"images\",\"${dd_scan_type}\",\"${dd_release_or_dev_tag}\",\"${dd_image_version}\""
   if [[ -n "${dd_short_release_tag}" && -n "${dd_full_release_tag}" ]]; then
