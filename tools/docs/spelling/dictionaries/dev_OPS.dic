@@ -1,4 +1,4 @@
-2512
+2516
 1GB
 2GB
 5XX
@@ -488,6 +488,7 @@ externalNetworkName
 externalNetworkNames
 ExternalSecret
 externalTargets
+ExtraConfig
 extraGroups
 extranet
 failover
@@ -688,6 +689,7 @@ internalNetworkCIDRs
 internalNetworkDNSServers
 internalNetworkNames
 internalNetworkSecurity
+internet
 interoperate
 interpod
 InterPodAntiAffinity
@@ -1057,6 +1059,7 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+OVF
 ovh
 OVH
 ovirt
@@ -1335,6 +1338,7 @@ SSZ
 stakater
 StandardSSD
 StandardWithInternalNetwork
+StandardWithNetwork
 StandardWithNoRouter
 Stapel
 startTLS
