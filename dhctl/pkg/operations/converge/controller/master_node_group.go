@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -237,6 +238,35 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		c.cloudConfig = nodeCloudConfig
 	}
 
+	// Update master hosts cache with all newly created masters
+	if len(masterIPForSSHList) > 0 {
+		log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
+
+		// Get current master hosts from cache
+		stateCache := ctx.StateCache()
+		currentHosts, err := state.GetMasterHostsIPs(stateCache)
+		if err != nil {
+			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+			currentHosts = []session.Host{}
+		}
+
+		hostsMap := make(map[string]string)
+		for _, host := range currentHosts {
+			hostsMap[host.Name] = host.Host
+		}
+
+		for _, newHost := range masterIPForSSHList {
+			hostsMap[newHost.Name] = newHost.Host
+			log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
+		}
+
+		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+
+		state.SaveMasterHostsToCache(stateCache, hostsMap)
+
+		log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
+	}
+
 	return nil
 }
 
@@ -322,8 +352,33 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	c.state.State[nodeName] = outputs.InfrastructureState
 
-	if c.nodeToHost != nil {
-		c.nodeToHost[nodeName] = outputs.MasterIPForSSH
+	// Update master hosts IP cache after successful master node creation/update
+	if outputs.MasterIPForSSH != "" {
+		log.DebugF("Updating master hosts cache: node %s got IP %s\n", nodeName, outputs.MasterIPForSSH)
+
+		// Get current master hosts from cache
+		stateCache := ctx.StateCache()
+		currentHosts, err := state.GetMasterHostsIPs(stateCache)
+		if err != nil {
+			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+			currentHosts = []session.Host{}
+		}
+
+		// Create map from current hosts for easier manipulation
+		hostsMap := make(map[string]string)
+		for _, host := range currentHosts {
+			hostsMap[host.Name] = host.Host
+		}
+
+		hostsMap[nodeName] = outputs.MasterIPForSSH
+
+		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+
+		state.SaveMasterHostsToCache(stateCache, hostsMap)
+
+		log.DebugF("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v\n", nodeName, outputs.MasterIPForSSH, hostsMap)
+	} else {
+		log.WarnF("No SSH IP received for master node %s, cache not updated\n", nodeName)
 	}
 
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
@@ -369,9 +424,48 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
-		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
+		// Collect names of nodes to be deleted for cache cleanup
+		nodesToDelete := make([]string, 0, len(nodesToDeleteInfo))
+		for _, nodeInfo := range nodesToDeleteInfo {
+			nodesToDelete = append(nodesToDelete, nodeInfo.name)
+		}
+
+		err := c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
 			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
 		})
+
+		// If deletion was successful, update master hosts cache
+		if err == nil && len(nodesToDelete) > 0 {
+			log.DebugF("Updating master hosts cache after deleting %d masters: %v\n", len(nodesToDelete), nodesToDelete)
+
+			// Get current master hosts from cache
+			stateCache := ctx.StateCache()
+			currentHosts, cacheErr := state.GetMasterHostsIPs(stateCache)
+			if cacheErr != nil {
+				log.DebugF("Could not load current master hosts from cache: %v\n", cacheErr)
+				return err
+			}
+
+			hostsMap := make(map[string]string)
+			for _, host := range currentHosts {
+				hostsMap[host.Name] = host.Host
+			}
+
+			for _, deletedNode := range nodesToDelete {
+				if _, exists := hostsMap[deletedNode]; exists {
+					delete(hostsMap, deletedNode)
+					log.DebugF("Removed deleted master from cache: %s\n", deletedNode)
+				}
+			}
+
+			log.DebugF("Saving updated master hosts to cache after deletion: %v\n", hostsMap)
+
+			state.SaveMasterHostsToCache(stateCache, hostsMap)
+
+			log.DebugF("Successfully updated master hosts cache after deleting %d masters. hostsMap: %v\n", len(nodesToDelete), hostsMap)
+		}
+
+		return err
 	})
 }
 
