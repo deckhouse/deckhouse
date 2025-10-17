@@ -39,7 +39,7 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="chore/cve-fix"
+  - export VERSION="v0.7.0"
   - export VERSION_COMMON="v0.5.0"
   - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-data-discoverer.git /src
   - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
