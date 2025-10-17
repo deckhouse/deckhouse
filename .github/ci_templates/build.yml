@@ -48,7 +48,7 @@ steps:
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
-  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
@@ -104,7 +104,7 @@ steps:
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 {!{- end }!}
-      SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+      SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
       CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
       OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
       DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"

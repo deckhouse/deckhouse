@@ -181,7 +181,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -286,7 +286,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
@@ -485,7 +485,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -590,7 +590,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
@@ -789,7 +789,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -894,7 +894,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
@@ -1093,7 +1093,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -1198,7 +1198,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
@@ -1397,7 +1397,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -1502,7 +1502,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
@@ -1701,7 +1701,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
@@ -1806,7 +1806,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO }}"
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
