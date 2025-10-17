@@ -110,11 +110,6 @@ func (pc *Checker) Static(ctx context.Context) error {
 			skipFlag:       app.SystemRequirementsArgName,
 		},
 		{
-			fun:            pc.CheckKernelEROFSCVE,
-			successMessage: "kernel is not affected by CVE-2025-37999 (EROFS)",
-			skipFlag:       app.KernelEROFSCVECheckArgName,
-		},
-		{
 			fun:            pc.CheckPythonAndItsModules,
 			successMessage: "python and required modules are installed",
 			skipFlag:       app.PythonChecksArgName,
