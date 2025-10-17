@@ -51,6 +51,7 @@ env:
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
 
@@ -250,7 +251,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: CE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -321,7 +322,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: EE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -392,7 +393,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: FE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -463,7 +464,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: BE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -534,7 +535,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -605,7 +606,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE-plus
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.

@@ -156,7 +156,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
       - name: Check push enabled
         id: check_push
         env:
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
           REPO: ${{github.repository}}
         run: |
           if [[ ${REPO} == "deckhouse/deckhouse" ]]; then
@@ -237,7 +237,7 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           WERF_ENV: {!{ $werfEnv }!}
-          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          SKIP_PUSH_FOR_DEPLOY: ${{vars.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
