@@ -15,6 +15,7 @@
 package clissh
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -68,7 +69,7 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	sshClient := NewClientFromFlags()
 	var err error
 
-	err = sshClient.Start()
+	err = sshClient.Start(context.TODO())
 	if err != nil {
 		return nil, err
 	}

@@ -118,7 +118,7 @@ type SSHClient interface {
 	// 	BeforeStart safe starting without create session. Should safe for next Start call
 	OnlyPreparePrivateKeys() error
 
-	Start() error
+	Start(ctx context.Context) error
 
 	// Tunnel is used to open local (L) and remote (R) tunnels
 	Tunnel(address string) Tunnel

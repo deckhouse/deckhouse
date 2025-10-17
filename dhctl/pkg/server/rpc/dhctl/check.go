@@ -249,7 +249,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	}
 
 	if !govalue.IsNil(sshClient) {
-		err = sshClient.Start()
+		err = sshClient.Start(ctx)
 		if err != nil {
 			return &pb.CheckResult{Err: err.Error()}
 		}

@@ -313,7 +313,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	}
 
 	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
+		err = sshClient.Start(ctx)
 		if err != nil {
 			return &pb.ConvergeResult{Err: err.Error()}
 		}

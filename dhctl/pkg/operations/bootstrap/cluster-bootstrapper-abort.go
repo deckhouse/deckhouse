@@ -53,7 +53,7 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
 }
 
-func (b *ClusterBootstrapper) initSSHClient() error {
+func (b *ClusterBootstrapper) initSSHClient(ctx context.Context) error {
 	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil // Local runs don't use ssh client.

@@ -270,7 +270,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				if err := terminal.AskBecomePassword(); err != nil {
 					return err
 				}
-				if err := sshClient.Start(); err != nil {
+				if err := sshClient.Start(ctx); err != nil {
 					return fmt.Errorf("unable to start ssh client: %w", err)
 				}
 			}
@@ -422,7 +422,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				if err := terminal.AskBecomePassword(); err != nil {
 					return err
 				}
-				if err := sshClient.Start(); err != nil {
+				if err := sshClient.Start(ctx); err != nil {
 					return fmt.Errorf("unable to start ssh client: %w", err)
 				}
 			}

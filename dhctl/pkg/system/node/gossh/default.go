@@ -15,6 +15,7 @@
 package gossh
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -76,7 +77,7 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 		return nil, err
 	}
 
-	err = sshClient.Start()
+	err = sshClient.Start(context.TODO())
 	if err != nil {
 		return nil, err
 	}

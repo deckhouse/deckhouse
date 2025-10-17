@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -218,7 +219,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	}
 	newSSHClient := sshclient.NewClient(sess, pkeys)
 
-	err = newSSHClient.Start()
+	err = newSSHClient.Start(context.TODO())
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}

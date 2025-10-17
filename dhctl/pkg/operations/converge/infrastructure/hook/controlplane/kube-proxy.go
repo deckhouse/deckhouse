@@ -104,7 +104,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
-	err = sshClient.Start()
+	err = sshClient.Start(ctx)
 	if err != nil {
 		return false, err
 	}

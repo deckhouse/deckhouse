@@ -36,7 +36,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
 
-	if err := wrapper.Client().Start(); err != nil {
+	if err := wrapper.Client().Start(ctx); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 

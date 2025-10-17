@@ -15,6 +15,7 @@
 package clissh
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -96,10 +97,10 @@ type Client struct {
 
 func (s *Client) OnlyPreparePrivateKeys() error {
 	// Double start is safe here because for initializing private keys we are using sync.Once
-	return s.Start()
+	return s.Start(context.Background())
 }
 
-func (s *Client) Start() error {
+func (s *Client) Start(_ context.Context) error {
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}

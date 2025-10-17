@@ -268,7 +268,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		}
 
 		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
+			err = sshClient.Start(ctx)
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
 			}

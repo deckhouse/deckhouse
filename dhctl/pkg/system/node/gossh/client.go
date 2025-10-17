@@ -90,7 +90,7 @@ func (s *Client) OnlyPreparePrivateKeys() error {
 	return s.initSigners()
 }
 
-func (s *Client) Start() error {
+func (s *Client) Start(ctx context.Context) error {
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
@@ -142,7 +142,7 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(ctx, func() error {
 			log.InfoF("Connect to %s\n", fullHost)
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
@@ -204,7 +204,7 @@ func (s *Client) Start() error {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).RunContext(ctx, func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
@@ -240,7 +240,7 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).RunContext(ctx, func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
@@ -277,11 +277,15 @@ func (s *Client) Start() error {
 }
 
 func (s *Client) keepAlive() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	defer log.DebugLn("keep-alive goroutine stopped")
 	for {
 		select {
 		case <-s.stopChan:
 			log.DebugLn("Stopping keep-alive goroutine.")
+			cancel()
 			close(s.stopChan)
 			s.stopChan = nil
 			return
@@ -291,7 +295,7 @@ func (s *Client) keepAlive() {
 				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
 				s.live = false
 				s.stopChan = nil
-				s.Start()
+				s.Start(ctx)
 				s.sessionList = nil
 				return
 			}
@@ -299,7 +303,7 @@ func (s *Client) keepAlive() {
 				log.DebugF("Keep-alive failed: %v\n", err)
 				s.live = false
 				s.stopChan = nil
-				s.Start()
+				s.Start(ctx)
 				s.sessionList = nil
 				return
 			}

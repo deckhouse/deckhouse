@@ -19,12 +19,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"log/slog"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -207,7 +207,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		}
 
 		if !govalue.IsNil(sshClient) {
-			err = sshClient.Start()
+			err = sshClient.Start(ctx)
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
 			}

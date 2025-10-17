@@ -108,7 +108,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		if len(nodesToDeleteInfo) > 0 && needReconnect {
 			err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
 				ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
-				err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
+				err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start(ctx.Ctx())
 				return err
 			})
 			if err != nil {

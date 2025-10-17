@@ -223,7 +223,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		}
 
 		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-			err = sshClient.Start()
+			err = sshClient.Start(ctx)
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
 			}
