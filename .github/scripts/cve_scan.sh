@@ -226,7 +226,7 @@ for d8_tag in "${d8_tags[@]}"; do
     trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
   echo "=============================================="
-  echo ("Scanning additional images:")
+  echo "Scanning additional images:"
   # Additional images to scan
   declare -a additional_images=("${d8_image}"
                 "${d8_image}/install"
