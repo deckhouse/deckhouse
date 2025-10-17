@@ -50,6 +50,10 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: install
+- image: tools/coreutils
+  add: /usr/bin/cat
+  to: /usr/bin/cat
+  before: install
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
