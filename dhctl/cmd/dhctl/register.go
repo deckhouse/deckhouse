@@ -105,6 +105,16 @@ func initParent(parrentCmdIndex int, kpApp *kingpin.Application) *kingpin.CmdCla
 }
 
 func registerCommands(kpApp *kingpin.Application) error {
+	// First, validate that all commands with parents have existing parents
+	for _, command := range commandList {
+		if command.Parrent != "" {
+			_, err := getParentIndex(commandList, command.Parrent)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	for i, command := range commandList {
 		firstNode, depth := getNestingDepth(command, commandList)
 		if depth == 0 {
