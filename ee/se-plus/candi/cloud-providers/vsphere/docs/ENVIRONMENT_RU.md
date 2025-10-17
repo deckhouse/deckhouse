@@ -162,6 +162,20 @@ Deckhouse использует `cloud-init` для настройки вирту
 * `cloud-final.service`
 * `cloud-init.service`
 
+Запустить службы можно с помощью команды:
+
+```shell
+systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
+```
+
+Пример вывода:
+
+```console
+enabled
+enabled
+enabled
+```
+
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}

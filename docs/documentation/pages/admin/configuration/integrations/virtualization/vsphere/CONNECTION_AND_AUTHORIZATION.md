@@ -97,6 +97,20 @@ Also, after the VM is started, the following services related to these packages 
 * `cloud-final.service`
 * `cloud-init.service`
 
+You can start the services using the command:
+
+```shell
+systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
+```
+
+Example output:
+
+```console
+enabled
+enabled
+enabled
+```
+
 To add an SSH key, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
 
 {% alert level="warning" %}

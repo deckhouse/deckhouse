@@ -98,6 +98,20 @@ DKP использует `cloud-init` для настройки виртуаль
 * `cloud-final.service`
 * `cloud-init.service`
 
+Запустить службы можно с помощью команды:
+
+```shell
+systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
+```
+
+Пример вывода:
+
+```console
+enabled
+enabled
+enabled
+```
+
 Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
 
 {% alert level="warning" %}
