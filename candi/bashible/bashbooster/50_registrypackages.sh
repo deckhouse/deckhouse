@@ -61,11 +61,17 @@ bb-package-fetch-blob() {
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
   local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
   
+  if [[ -z "$1" || "$1" == "<no value>" ]]; then
+    echo "Error: Digest is incorrect. Probably we pass incorrect package name and we cannot get correct digest"
+    return 1
+  fi
+  
   check_python
 
   cat - <<EOF | $python_binary
 import random
 import ssl
+import sys
 try:
   from urllib.request import urlopen, Request, HTTPError
 except ImportError:
@@ -74,6 +80,7 @@ endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
+response = None
 for ep in endpoints:
   url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
@@ -87,6 +94,9 @@ for ep in endpoints:
     print("Access to {} return Error: {}".format(url, e))
     continue
   break
+if response is None:
+  print("Error: All package proxy endpoints failed")
+  sys.exit(1)
 with open('$2', 'wb') as f:
     f.write(response.read())
 EOF
