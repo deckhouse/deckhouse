@@ -82,6 +82,52 @@ EOF
 set -Eeo pipefail
 shopt -s failglob
 
+function create_registry() {
+  decode_dockercfg=$(base64 -d <<< "${1}")
+  registry_address=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
+  registry_auth=$(jq -r ".auths.\"${registry_address}\".auth" <<< "$decode_dockercfg")
+  sleep_second=0
+  payload="{
+      \"name\": \"${PREFIX}\",
+      \"images_repo\": \"${registry_address}/sys/deckhouse-oss\",
+      \"scheme\": \"https\",
+      \"dev_branch\": \"${DEV_BRANCH}\",
+      \"auth\": \"${registry_auth}\"
+  }"
+  for (( j=1; j<=5; j++ )); do
+    sleep "$sleep_second"
+    sleep_second=5
+
+    response=$(curl -s -X POST  \
+      "https://${COMMANDER_HOST}/api/v1/registries" \
+      -H 'accept: application/json' \
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      -w "\n%{http_code}")
+
+    http_code=$(echo "$response" | tail -n 1)
+    response_body=$(echo "$response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response_body" >&2
+      continue
+    else
+      registry_id=$(jq -r '.id' <<< "$response_body")
+      break
+    fi
+  done
+
+  if [[ -n "$registry_id" ]]; then
+      echo "$registry_id"
+  else
+      echo "Failed to create registry." >&2
+      return 1
+  fi
+}
+
 function prepare_environment() {
     if [[ -z "$KUBERNETES_VERSION" ]]; then
       # shellcheck disable=SC2016
@@ -134,6 +180,13 @@ function prepare_environment() {
       fi
     else
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
+    fi
+
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+      registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+    else
+      registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
     fi
 
   case "$PROVIDER" in
@@ -1090,6 +1143,7 @@ function run-test() {
 
   payload="{
     \"name\": \"${PREFIX}\",
+    \"registry_id\": \"${registry_id}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": ${values}
   }"

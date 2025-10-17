@@ -80,7 +80,7 @@ jobs:
 
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
@@ -125,12 +125,6 @@ jobs:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
-{!{- $secrets := slice -}!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
-{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
-{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
-{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 
 {!{/*
@@ -139,7 +133,6 @@ Images:
 - deckhouse/release-channel image
 Destination registries:
 - DECKHOUSE_REGISTRY_HOST
-- DEV_REGISTRY_PATH
 */}!}
 {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
       - name: Publish suspend images for {!{ $werfEnv }!}
@@ -175,10 +168,6 @@ Destination registries:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes

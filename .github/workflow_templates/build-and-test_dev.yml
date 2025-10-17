@@ -36,6 +36,7 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  pull-requests: read
 
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
@@ -232,7 +233,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

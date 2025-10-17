@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# on push to default branch or on tags
+# on push to tags
 {!{- $ctx := dict -}!}
 {!{- $ctx = coll.Merge $ctx . }!}
 
@@ -51,12 +51,13 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  pull-requests: read
 
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
@@ -201,53 +202,6 @@ jobs:
           svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
           svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
-
-  tests:
-    name: Tests
-    needs:
-      - git_info
-      - check_branch_name
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
-
-  tests_python_webhooks:
-    name: Tests python webhooks
-    needs:
-      - git_info
-{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
-
-  tests_dmt_lint:
-    name: Tests DMT lint
-    needs:
-    - git_info
-{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
-
-  dhctl_tests:
-    name: Dhctl Tests
-    needs:
-      - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
-
-  golangci_lint:
-    name: GolangCI Lint
-    needs:
-      - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
-
-  openapi_test_cases:
-    name: OpenAPI Test Cases
-    needs:
-      - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
-
-  validators:
-    name: Validators
-    needs:
-      - git_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
   compare_internal_modules:
     name: Compare internal modules
