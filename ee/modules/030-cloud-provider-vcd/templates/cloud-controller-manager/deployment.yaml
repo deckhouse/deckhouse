@@ -1,21 +1,26 @@
+{{- $ccmImageName := "" -}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
+  {{- $ccmImageName = "cloudControllerManagerLegacy" -}}
+{{- else -}}
+  {{- $ccmImageName = "cloudControllerManager" -}}
+{{- end -}}
+
+{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
+{{- if hasKey .Values.cloudProviderVcd.internal.discoveryData "loadBalancer" -}}
+  {{- if hasKey .Values.cloudProviderVcd.internal.discoveryData.loadBalancer "enabled" -}}
+    {{- if .Values.cloudProviderVcd.internal.discoveryData.loadBalancer.enabled -}}
+      {{- $ccmEnabledControllers = printf "%s,service" $ccmEnabledControllers -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+
 {{- define "vcd_cloud_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- $ccmImageName := ""}}
-{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
-  {{- $ccmImageName = "cloudControllerManagerLegacy" }}
-{{- else -}}
-  {{- $ccmImageName = "cloudControllerManager" }}
-{{- end }}
-
-{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle"}}
-{{- if .Values.cloudProviderVcd.internal.discoveryData.loadBalancer.enabled -}}
-  {{- $ccmEnabledControllers = printf "%s,service" $ccmEnabledControllers }}
-{{- end }}
-
-{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
 {{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
