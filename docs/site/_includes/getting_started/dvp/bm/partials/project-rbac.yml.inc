@@ -22,6 +22,14 @@ spec:
     administrators:
       - subject: User
         name: test-user
+EOF
+# [<en>] Wait for the namespace to be created.
+# [<ru>] Дождитесь создания неймспейса.
+d8 k get ns test-project
+
+# [<en>] Create a user.
+# [<ru>] Создайте пользователя.
+d8 k create -f - <<EOF
 ---
 apiVersion: deckhouse.io/v1
 kind: User
