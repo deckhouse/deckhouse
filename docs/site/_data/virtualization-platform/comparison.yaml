@@ -22,8 +22,8 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Балансировка использования ресурсов гипервизора при ВМ на локальном хранилище
-          en: Balancing hypervisor resource usage for VMs on local storage
+          ru: Динамическая балансировка ресурсов гипервизора при размещении ВМ на локальном хранилище
+          en: Dynamic hypervisor resource balancing for VM placement on local storage
         editions:
           ce: not_supported
           ee: supported
@@ -51,8 +51,8 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Централизованное управление кластерами DVP c помощью <a target='_blank' href='https://deckhouse.ru/products/commander/'>Commander</a>
-          en: Centralized management of DVP clusters using <a target='_blank' href='https://deckhouse.io/products/commander/'>Commander</a>
+          ru: Централизованное управление кластерами DVP c помощью <a target='_blank' href='/products/commander/'>Commander</a>
+          en: Centralized management of DVP clusters using <a target='_blank' href='/products/commander/'>Commander</a>
         editions:
           ce: partly
           ee: partly
@@ -61,12 +61,12 @@ featureSections:
             en: |
               Licensed separately
             ru: |
-              Лицензируется <a target='_blank' href='https://deckhouse.ru/products/virtualization-platform/licensing-dvp/'>отдельно</a>
+              Лицензируется <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>отдельно</a>
           ee:
             en: |
-              For more information about Commander licensing, see <a target='_blank' href='https://deckhouse.io/products/commander/'>here</a>
+              For more information about Commander licensing, see <a target='_blank' href='/products/commander/'>here</a>
             ru: |
-              Подробнее о лицензировании Commander см. <a target='_blank' href='https://deckhouse.ru/products/virtualization-platform/licensing-dvp/'>здесь</a>
+              Подробнее о лицензировании Commander см. <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>здесь</a>
       - title:
           ru: Поддержка вложенной виртуализации
           en: Nested virtualization support
@@ -158,14 +158,14 @@ featureSections:
         restriction_message:
           ce:
             en: |
-              Available with <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/pricing/'>restrictions</a>
+              Available with <a target='_blank' href='/products/kubernetes-platform/pricing/'>restrictions</a>
             ru: |
-              Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
+              Доступно <a target='_blank' href='/products/kubernetes-platform/pricing/'>с ограничениями</a>
           ee:
             en: |
-              The storage must <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
+              The storage must <a target='_blank' href='/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
             ru: |
-              Хранилище должно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
+              Хранилище должно <a target='_blank' href='/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
       - title:
           ru: Восстановление дисков и конфигурации ВМ из снимка
           en: Restore VM disks and configuration from snapshot
