@@ -14,7 +14,7 @@ lang: ru
 - Сети с DHCP и интернетом;
 - Доступные shared datastore на всех ESXi.
 
-* Версия vSphere: `v7.0U2` ([необходимо](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) для работы механизма `Online volume expansion`).
+* Версия vSphere: `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
 * vCenter: доступен изнутри кластера с master-узлов.
 * Созданный Datacenter, в котором:
   1. VirtualMachine template.
