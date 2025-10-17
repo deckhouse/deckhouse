@@ -19,14 +19,12 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -144,7 +142,7 @@ func (s *Client) Start() error {
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
 		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
 			log.InfoF("Connect to %s\n", fullHost)
-			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
+			bastionClient, err = DialTimeout("tcp", bastionAddr, bastionConfig)
 			return err
 		})
 		if err != nil {
@@ -193,25 +191,18 @@ func (s *Client) Start() error {
 		return nil
 	}
 
-	noAuthMethodsRemain := func(err error) bool {
-		if s.Settings.User == global.ConvergeNodeUserName {
-			return false
-		}
-		return strings.Contains(err.Error(), "unable to authenticate")
-	}
-
 	if bastionClient == nil {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = ssh.Dial("tcp", addr, config)
+			client, err = DialTimeout("tcp", addr, config)
 			return err
 		})
 		if err != nil {
@@ -240,7 +231,7 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
@@ -278,6 +269,7 @@ func (s *Client) Start() error {
 
 func (s *Client) keepAlive() {
 	defer log.DebugLn("keep-alive goroutine stopped")
+	errorsCount := 0
 	for {
 		select {
 		case <-s.stopChan:
@@ -289,23 +281,59 @@ func (s *Client) keepAlive() {
 			session, err := s.sshClient.NewSession()
 			if err != nil {
 				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
-				s.live = false
-				s.stopChan = nil
-				s.Start()
-				s.sessionList = nil
-				return
+				if errorsCount > 3 {
+					s.restart()
+					return
+				}
+				errorsCount++
+				time.Sleep(5 * time.Second)
+				continue
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v\n", err)
-				s.live = false
-				s.stopChan = nil
-				s.Start()
-				s.sessionList = nil
-				return
+				if errorsCount > 3 {
+					s.restart()
+					return
+				}
+				errorsCount++
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
+}
+
+func (s *Client) restart() {
+	s.live = false
+	s.stopChan = nil
+	s.Start()
+	s.sessionList = nil
+}
+
+func DialTimeout(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := net.DialTimeout(network, addr, config.Timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	timeFactor := time.Duration(3)
+	err = conn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.SetDeadline(time.Time{})
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 // Tunnel is used to open local (L) and remote (R) tunnels
