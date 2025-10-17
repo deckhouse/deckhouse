@@ -55,25 +55,73 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	dstBytes, _ = os.ReadFile(dst)
-
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
-	if bytes.Equal(srcBytes, dstBytes) {
-		log.Info("file is not changed, skipping", slog.String("path", dst))
-		return nil
-	}
+	if _, statErr := os.Stat(dst); statErr == nil {
+		dstBytes, err = os.ReadFile(dst)
+		if err != nil {
+			return err
+		}
 
-	if err := backupFile(dst); err != nil {
-		log.Warn("Backup failed", log.Err(err))
+		if bytes.Equal(srcBytes, dstBytes) {
+			log.Info("file is not changed, skipping", slog.String("path", dst))
+			return nil
+		}
+
+		if err := backupFile(dst); err != nil {
+			log.Warn("Backup failed", log.Err(err))
+		}
+	} else if !os.IsNotExist(statErr) {
+		return statErr
 	}
 
 	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
-	if err := os.WriteFile(dst, srcBytes, perm); err != nil {
+
+	return writeFileAtomically(dst, srcBytes, perm)
+}
+
+// Write data to a temporary file in the same directory,
+// fsync it, apply permissions, and atomically rename it over the target path.
+func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
+	dstDir := filepath.Dir(dst)
+	base := filepath.Base(dst)
+
+	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
 		return err
 	}
 
-	return os.Chown(dst, 0, 0)
+	if err := os.Chmod(tmpFile.Name(), perm); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tmpFile.Name(), dst); err != nil {
+		return err
+	}
+
+	if err := os.Chown(dst, 0, 0); err != nil {
+		return err
+	}
+
+	if dirFd, err := os.Open(dstDir); err == nil {
+		_ = dirFd.Sync()
+		_ = dirFd.Close()
+	}
+
+	return nil
 }
 
 func backupFile(src string) error {

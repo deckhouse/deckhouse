@@ -80,7 +80,7 @@ func main() {
 	runPhase(renewCertificates())
 	runPhase(renewKubeconfigs())
 	runPhase(updateRootKubeconfig())
-	runPhase(installExtraFiles())
+	runPhase(syncExtraFiles())
 	runPhase(convergeComponents())
 	runPhase(config.writeLastAppliedConfigurationChecksum())
 
