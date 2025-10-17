@@ -25,7 +25,6 @@ on:
       - reopened
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:

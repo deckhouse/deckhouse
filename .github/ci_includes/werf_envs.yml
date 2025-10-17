@@ -13,18 +13,6 @@ WERF_FINAL_IMAGES_ONLY: true
 WERF_LOG_TERMINAL_WIDTH: "200"
 WERF_LOG_TIME: true
 WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
-# </template: werf_envs>
-{!{- end -}!}
-
-{!{ define "git_source_envs" }!}
-# <template: git_source_envs>
-# source repo git@my-repo.com:group
-SOURCE_REPO: "${{secrets.SOURCE_REPO_GIT}}"
-# cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
-CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
 GOPROXY: "${{vars.GOPROXY}}"
-# observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
-OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
-DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
-# </template: git_source_envs>
+# </template: werf_envs>
 {!{- end -}!}

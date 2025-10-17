@@ -51,6 +51,7 @@ env:
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
   DEPLOY_CHANNEL: alpha
 
