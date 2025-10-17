@@ -144,6 +144,13 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		// Skip internal documentation directories that should not be published
+		if strings.HasPrefix(fileName, "/internal/") ||
+			strings.HasPrefix(fileName, "/internals/") ||
+			strings.HasPrefix(fileName, "/development/") ||
+			strings.HasPrefix(fileName, "/dev/") {
+			return "", false
+		}
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
