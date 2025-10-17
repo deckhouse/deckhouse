@@ -22,7 +22,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
@@ -253,12 +252,6 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
-		}
 		return nil
 	})
 	if err != nil {

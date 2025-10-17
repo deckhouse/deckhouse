@@ -94,6 +94,11 @@ type Client struct {
 	kubeProxies []*frontend.KubeProxy
 }
 
+func (s *Client) OnlyPreparePrivateKeys() error {
+	// Double start is safe here because for initializing private keys we are using sync.Once
+	return s.Start()
+}
+
 func (s *Client) Start() error {
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
@@ -34,17 +35,18 @@ type DeckhouseDestroyerOptions struct {
 }
 
 type DeckhouseDestroyer struct {
-	convergeUnlocker func(fullUnlock bool)
-	sshClient        node.SSHClient
-	kubeCl           *client.KubernetesClient
-	state            *State
+	convergeUnlocker  func(fullUnlock bool)
+	sshClientProvider SSHProvider
+	sshClient         node.SSHClient
+	kubeCl            *client.KubernetesClient
+	state             *State
 
 	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient node.SSHClient, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(sshClientProvider SSHProvider, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
-		sshClient:                 sshClient,
+		sshClientProvider:         sshClientProvider,
 		state:                     state,
 		DeckhouseDestroyerOptions: opts,
 	}
@@ -58,7 +60,7 @@ func (g *DeckhouseDestroyer) UnlockConverge(fullUnlock bool) {
 }
 
 func (g *DeckhouseDestroyer) StopProxy() {
-	if g.kubeCl == nil {
+	if govalue.IsNil(g.kubeCl) {
 		return
 	}
 
@@ -71,7 +73,14 @@ func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.Kuberne
 		return g.kubeCl, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(g.sshClient))
+	sshClient, err := g.sshClientProvider()
+	if err != nil {
+		return nil, err
+	}
+
+	g.sshClient = sshClient
+
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 	if err != nil {
 		return nil, err
 	}
@@ -176,4 +185,12 @@ func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.
 	}
 
 	return nil
+}
+
+func (g *DeckhouseDestroyer) Cleanup() {
+	if govalue.IsNil(g.sshClient) {
+		return
+	}
+
+	g.sshClient.Stop()
 }
