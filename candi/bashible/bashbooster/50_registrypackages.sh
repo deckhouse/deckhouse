@@ -60,12 +60,12 @@ bb-package-fetch-blob() {
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
   local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
-  
-  if [[ -z "$1" || "$1" == "<no value>" ]]; then
+
+  if [[ -z "$1" || "$1" == "<no value>:" ]]; then
     echo "Error: Digest is incorrect. Probably we pass incorrect package name and we cannot get correct digest"
     return 1
   fi
-  
+
   check_python
 
   cat - <<EOF | $python_binary
