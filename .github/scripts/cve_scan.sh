@@ -55,7 +55,7 @@ function send_report() {
 
   dd_engagement_name="[$(echo "${dd_scan_type}" | tr '[:lower:]' '[:upper:]')] [IMAGES] [${dd_branch}]"
 
-  tags_string="\"dkp\",\"images\",\"${dd_scan_type}\",\"${dd_release_or_dev_tag}\",\"${dd_image_version}\""
+  tags_string="\"test_new_struct\",\"dkp\",\"images\",\"${dd_scan_type}\",\"${dd_release_or_dev_tag}\",\"${dd_image_version}\""
   if [[ -n "${dd_short_release_tag}" && -n "${dd_full_release_tag}" ]]; then
     tags_string+=",\"${dd_short_release_tag}\",\"${dd_full_release_tag}\""
   fi
