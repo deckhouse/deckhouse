@@ -61,28 +61,7 @@ DKP использует `cloud-init` для настройки виртуаль
 * `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
 
-Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
-
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
-
-Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
-
-{% alert level="warning" %}
-Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
-{% endalert %}
-
-{% alert %}
-DKP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
-Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
-{% endalert %}
-
-{% alert %}
-DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
-{% endalert %}
-
-### Подготовка образа для cloud-init на vSphere
+Пошаговая подготовка `cloud-init` на vSphere:
 
 1. Установите необходимые пакеты:
 
@@ -113,13 +92,26 @@ DKP использует интерфейс `ens192`, как интерфейс 
    cloud-init clean --logs --seed
    ```
 
-1. После запуска виртуальной машины проверьте, что запущены службы связанные с пакетами:
+Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
 
-   ```shell
-   cloud-config.service
-   cloud-final.service
-   cloud-init.service
-   ```
+* `cloud-config.service`
+* `cloud-final.service`
+* `cloud-init.service`
+
+Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
+
+{% alert level="warning" %}
+Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{% endalert %}
+
+{% alert %}
+DKP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
+Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
+{% endalert %}
+
+{% alert %}
+DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+{% endalert %}
 
 ## Установка govc
 

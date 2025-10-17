@@ -60,28 +60,7 @@ DKP uses `cloud-init` to configure the VM after it starts. The following package
 * `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if using `cloud-init` version lower than 21.3)
 
-Also, after the VM is started, the following services related to these packages must be running:
-
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
-
-To add an SSH key, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
-
-{% alert level="warning" %}
-The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
-{% endalert %}
-
-{% alert %}
-DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
-For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
-{% endalert %}
-
-{% alert %}
-DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
-{% endalert %}
-
-### Preparing the image for cloud-init on vSphere
+Preparing the image for `cloud-init` on vSphere:
 
 1. Install the required packages:
 
@@ -112,13 +91,26 @@ DKP uses the `ens192` interface as the default interface for VMs in vSphere. The
    cloud-init clean --logs --seed
    ```
 
-1. After the virtual machine boots, verify that the following services (related to the packages above) are running:
+Also, after the VM is started, the following services related to these packages must be running:
 
-   ```shell
-   cloud-config.service
-   cloud-final.service
-   cloud-init.service
-   ```
+* `cloud-config.service`
+* `cloud-final.service`
+* `cloud-init.service`
+
+To add an SSH key, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
+
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
+{% alert %}
+DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
+{% endalert %}
+
+{% alert %}
+DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
+{% endalert %}
 
 ## Installing govc
 

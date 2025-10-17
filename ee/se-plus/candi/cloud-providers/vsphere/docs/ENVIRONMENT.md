@@ -117,28 +117,7 @@ Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do 
 * `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used)
 
-Also, after the virtual machine is started, the following services associated with these packages must be started:
-
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
-
-To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
-
-{% alert level="warning" %}
-The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
-{% endalert %}
-
-{% alert level="warning" %}
-Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however, the disk type of the created VMs will be changed without any notice to match the `VM Storage Policy` as configured in vSphere.
-You can read more in the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
-{% endalert %}
-
-{% alert %}
-Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
-{% endalert %}
-
-#### Preparing the image for cloud-init on vSphere
+Preparing the image for `cloud-init` on vSphere:
 
 1. Install the required packages:
 
@@ -169,13 +148,26 @@ Deckhouse uses the `ens192` interface as the default interface for virtual machi
    cloud-init clean --logs --seed
    ```
 
-1. After the virtual machine boots, verify that the following services (related to the packages above) are running:
+Also, after the virtual machine is started, the following services associated with these packages must be started:
 
-   ```shell
-   cloud-config.service
-   cloud-final.service
-   cloud-init.service
-   ```
+* `cloud-config.service`
+* `cloud-final.service`
+* `cloud-init.service`
+
+To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
+
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
+{% alert level="warning" %}
+Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however, the disk type of the created VMs will be changed without any notice to match the `VM Storage Policy` as configured in vSphere.
+You can read more in the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
+{% endalert %}
+
+{% alert %}
+Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+{% endalert %}
 
 ## Infrastructure
 
