@@ -14,7 +14,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
-fromImage: base/distroless
+fromImage: base-for-vex
 final: true
 secrets:
 - id: REGISTRY_USER
@@ -33,30 +33,6 @@ secrets:
   env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
   env: ACTIONS_ID_TOKEN_REQUEST_URL
-import:
-- image: tools/cosign
-  add: /usr/bin/cosign
-  to: /usr/bin/cosign
-  before: install
-- image: tools/jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: install
-- image: tools/curl
-  add: /usr/bin/curl-static
-  to: /usr/bin/curl
-  before: install
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: install
-- image: tools/coreutils
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/сat
-  - usr/bin/coreutils
-  before: install
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
