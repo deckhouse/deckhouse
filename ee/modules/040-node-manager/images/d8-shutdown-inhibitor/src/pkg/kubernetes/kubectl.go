@@ -8,16 +8,24 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 )
 
-const KubectlPath = "/opt/deckhouse/bin/kubectl"
-const KubeConfigPath = "/etc/kubernetes/kubelet.conf"
-const CordonAnnotationKey = "node.deckhouse.io/cordoned-by"
-const CordonAnnotationValue = "shutdown-inhibitor"
+const (
+	KubectlPath           = "/opt/deckhouse/bin/kubectl"
+	KubeConfigPath        = "/etc/kubernetes/kubelet.conf"
+	AdminKubeConfigPath   = "/etc/kubernetes/admin.conf"
+	CordonAnnotationKey   = "node.deckhouse.io/cordoned-by"
+	CordonAnnotationValue = "shutdown-inhibitor"
+	NodeGroupLabelKey     = "node.deckhouse.io/group"
+)
+
+var ErrNodeIsNotNgManaged = errors.New("node is not managed by node group")
 
 type Kubectl struct {
 	kubectlPath    string
@@ -26,6 +34,10 @@ type Kubectl struct {
 
 func NewDefaultKubectl() *Kubectl {
 	return NewKubectlWithConf(KubectlPath, KubeConfigPath)
+}
+
+func NewAdmintKubectl() *Kubectl {
+	return NewKubectlWithConf(KubectlPath, AdminKubeConfigPath)
 }
 
 func NewKubectlWithConf(kubectlPath, kubeConfigPath string) *Kubectl {
@@ -66,6 +78,7 @@ func (k *Kubectl) GetAnnotationCordonedBy(nodeName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	annotationStr := fmt.Sprintf("%s", bytes.Trim(out, `"'`))
 
 	return annotationStr, nil
@@ -110,6 +123,55 @@ func (k *Kubectl) RemoveCordonAnnotation(nodeName string) ([]byte, error) {
 	return cmd.Output()
 }
 
+func (k *Kubectl) GetNodeGroup(nodeName string) (string, error) {
+	n, err := k.getNode(nodeName)
+	if err != nil {
+		return "", err
+	}
+
+	ngName := strings.TrimSpace(n.Metadata.Labels[NodeGroupLabelKey])
+	fmt.Printf("kubectl: node %q label %q = %q\n", nodeName, NodeGroupLabelKey, ngName)
+	if ngName == "" {
+		fmt.Printf("kubectl: node %q is considered unmanaged (empty label)\n", nodeName)
+		return "", ErrNodeIsNotNgManaged
+	}
+
+	return ngName, nil
+}
+
+func (k *Kubectl) getNode(nodeName string) (*Node, error) {
+	cmd, cancel := k.cmd("get", "node", nodeName, "-o", "json")
+	defer cancel()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("kubectl get node %s: %w (output: %s)", nodeName, err, strings.TrimSpace(string(out)))
+	}
+
+	var node Node
+	if err := json.Unmarshal(out, &node); err != nil {
+		return nil, fmt.Errorf("unmarshal node %s: %w", nodeName, err)
+	}
+
+	return &node, nil
+}
+func (k *Kubectl) CountNodes() (int, error) {
+	cmd, cancel := k.cmd("get", "nodes", "-o", "json")
+	defer cancel()
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("kubectl get nodes: %w (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+
+	var list NodeList
+	if err := json.Unmarshal(out, &list); err != nil {
+		return 0, fmt.Errorf("unmarshal nodes list: %w", err)
+	}
+
+	count := len(list.Items)
+	fmt.Printf("kubectl: total nodes count = %d\n", count)
+	return count, nil
+}
+
 func (k *Kubectl) GetCondition(nodeName, reason string) (*Condition, error) {
 	out, err := k.getCondition(nodeName, reason)
 	if err != nil {
@@ -128,7 +190,11 @@ func (k *Kubectl) getCondition(nodeName, reason string) ([]byte, error) {
 
 func (k *Kubectl) cmd(args ...string) (*exec.Cmd, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	kArgs := append([]string{}, "--kubeconfig", KubeConfigPath)
+	kubeConfig := k.kubeConfigPath
+	if kubeConfig == "" {
+		kubeConfig = KubeConfigPath
+	}
+	kArgs := append([]string{}, "--kubeconfig", kubeConfig)
 	kArgs = append(kArgs, args...)
 	return exec.CommandContext(ctx, k.kubectlPath, kArgs...), cancel
 }
