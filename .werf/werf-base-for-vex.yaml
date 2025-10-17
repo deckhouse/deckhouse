@@ -1,6 +1,6 @@
 ---
 image: base-for-vex
-fromImage: base/distroless
+fromImage: base/coreutils
 final: false
 import:
 - image: tools/cosign
@@ -18,11 +18,4 @@ import:
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
-  before: install
-- image: tools/coreutils
-  add: /
-  to: /
-  includePaths:
-  - usr/bin/coreutils
-  - usr/bin/сat
   before: install
