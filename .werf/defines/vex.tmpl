@@ -21,8 +21,8 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-- id: COSIGN_VAULT_ADDRESS
-  env: COSIGN_VAULT_ADDRESS
+#- id: COSIGN_VAULT_ADDRESS
+#  env: COSIGN_VAULT_ADDRESS
 - id: COSIGN_VAULT_KEY
   env: COSIGN_VAULT_KEY
 - id: COSIGN_AUTH_ROLE
@@ -67,7 +67,7 @@ shell:
   - |
     REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)" \
     REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)" \
-    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)" \
+    VAULT_ADDR="https://seguro.flant.com" \
     COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)" \
     COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
@@ -86,3 +86,4 @@ shell:
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
+#    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)"
