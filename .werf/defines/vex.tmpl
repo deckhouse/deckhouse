@@ -25,8 +25,8 @@ secrets:
 #  env: COSIGN_VAULT_ADDRESS
 - id: COSIGN_VAULT_KEY
   env: COSIGN_VAULT_KEY
-- id: COSIGN_AUTH_ROLE
-  env: COSIGN_AUTH_ROLE
+#- id: COSIGN_AUTH_ROLE
+#  env: COSIGN_AUTH_ROLE
 - id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
   env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
@@ -69,10 +69,10 @@ shell:
     REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)" \
     VAULT_ADDR="https://seguro.flant.com" \
     COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)" \
-    COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)" \
+    COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
-    ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" \
+    ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)" \
     ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
     VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
     cosign attest \
@@ -86,4 +86,11 @@ shell:
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
-#    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)"
+#    REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)" \
+#    REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)" \
+#    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)" \
+#    COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)" \
+#    COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)" \
+#    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
+#    ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" \
+#    ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)" \
