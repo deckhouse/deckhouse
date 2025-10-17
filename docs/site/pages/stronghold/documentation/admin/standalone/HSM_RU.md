@@ -66,7 +66,7 @@ Stronghold поддерживает шифрование Root-ключа с ис
      Access:     local
    ```
 
-   Пример конфигурации Stronhold (`config.hcl`)
+   Пример конфигурации Stronghold (`config.hcl`)
 
    ```console
    api_addr="https://0.0.0.0:8200"
