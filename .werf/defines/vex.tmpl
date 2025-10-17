@@ -14,7 +14,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
-fromImage: builder/alpine
+fromImage: base/distroless
 final: true
 secrets:
 - id: REGISTRY_USER
@@ -42,10 +42,13 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install
-#- image: tools/curl
-#  add: /usr/bin/curl
-#  to: /usr/bin/curl
-#  before: install
+- image: tools/curl
+  add: /usr/bin/curl-static
+  to: /usr/bin/curl
+  before: install
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
 git:
 - add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
@@ -69,7 +72,6 @@ shell:
   - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
   - export VAULT_ADDR="https://seguro.flant.com"
   - export COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)"
-  - echo hashivault://${COSIGN_VAULT_KEY}
   - export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
