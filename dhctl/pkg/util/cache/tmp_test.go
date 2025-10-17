@@ -16,12 +16,13 @@ package cache
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -228,5 +229,70 @@ func assertRemovedAll(t *testing.T, f testFunc, l []fileDirToCreate) {
 		_, err := os.Stat(fullPath)
 		require.Error(t, err, fullPath)
 		require.True(t, os.IsNotExist(err), fullPath)
+	}
+}
+
+func TestSortByDepthDescending(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name: "basic depth sorting",
+			input: []string{
+				"/tmp/a",
+				"/tmp/a/b",
+				"/tmp/a/b/c",
+				"/tmp/x",
+			},
+			expected: []string{
+				"/tmp/a/b/c",
+				"/tmp/a/b",
+				"/tmp/x",
+				"/tmp/a",
+			},
+		},
+		{
+			name: "paths with slashes in directory names",
+			input: []string{
+				"/tmp/dir",
+				"/tmp/dir/sub",
+				"/tmp/dir-with/slash",
+				"/tmp/dir-with/slash/deep",
+				"/tmp/dir-with",
+			},
+			expected: []string{
+				"/tmp/dir-with/slash/deep",
+				"/tmp/dir/sub",
+				"/tmp/dir-with/slash",
+				"/tmp/dir-with",
+				"/tmp/dir",
+			},
+		},
+		{
+			name: "same depth lexicographic order",
+			input: []string{
+				"/tmp/z",
+				"/tmp/a",
+				"/tmp/m",
+			},
+			expected: []string{
+				"/tmp/z",
+				"/tmp/m",
+				"/tmp/a",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			paths := make([]string, len(tt.input))
+			copy(paths, tt.input)
+
+			sortByDepthDescending(paths)
+
+			require.Equal(t, tt.expected, paths, "Paths should be sorted by depth descending")
+		})
 	}
 }

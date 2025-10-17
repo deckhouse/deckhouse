@@ -27,6 +27,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+// sortByDepthDescending sorts paths by depth (number of slashes) in descending order
+// This ensures that deeper directories are deleted first, preventing "directory not empty" errors
+func sortByDepthDescending(paths []string) {
+	sort.Slice(paths, func(i, j int) bool {
+		depthI := strings.Count(paths[i], string(filepath.Separator))
+		depthJ := strings.Count(paths[j], string(filepath.Separator))
+
+		if depthI != depthJ {
+			return depthI > depthJ
+		}
+
+		return paths[i] > paths[j]
+	})
+}
+
 type ClearTmpParams struct {
 	IsDebug         bool
 	RemoveTombStone bool
@@ -123,9 +138,9 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 			logger.LogDebugF("Error cleaning temp dir while walking '%s': %v\n", tmpDir, err)
 		}
 
-		sort.Sort(sort.Reverse(sort.StringSlice(dirsForDeletion)))
+		sortByDepthDescending(dirsForDeletion)
 
-		skipDeleTeDir := func(dir string) bool {
+		skipDeleteDir := func(dir string) bool {
 			for _, keep := range keepFiles {
 				if path.Dir(keep) == dir {
 					return true
@@ -138,7 +153,7 @@ func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
 		log.DebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
 
 		for _, dir := range dirsForDeletion {
-			if skipDeleTeDir(dir) {
+			if skipDeleteDir(dir) {
 				logger.LogDebugF("Skip cleaning temp dir '%s'\n", dir)
 				continue
 			}
