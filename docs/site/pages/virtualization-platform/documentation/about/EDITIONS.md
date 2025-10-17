@@ -3,7 +3,15 @@ title: "Platform editions"
 permalink: en/virtualization-platform/documentation/about/editions.html
 ---
 
-The Deckhouse Virtualization Platform is available in Community Edition (CE) and Enterprise Edition (EE). DVP editions differ in their set of features and the level of available support.
+Deckhouse Virtualization Platform (DVP) is available both as a standalone product and as a virtualization module integrated into certain editions of Deckhouse Kubernetes Platform (DKP).
+
+Supplied as a virtualization module:
+- DKP CE: Open Source edition under the Apache 2.0 license.
+- DKP EE: Extended version of the virtualization module.
+- DKP SE+: Extended version of the virtualization module.
+
+As a standalone product:
+- DVP EE: Commercial edition for enterprise use.
 
 The table below provides brief a comparison of editions listing its main features and functions:
 
