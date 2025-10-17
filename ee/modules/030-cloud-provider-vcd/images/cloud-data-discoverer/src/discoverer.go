@@ -213,7 +213,9 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover loadbalancer: %v", err)
 	}
-	discoveryData.LoadBalancer = lbInfo
+	discoveryData.LoadBalancer = &v1alpha1.VCDLoadBalancer{
+		Enabled: lbInfo.Enabled,
+	}
 
 	discoveryDataJson, err := json.Marshal(discoveryData)
 	if err != nil {

@@ -107,6 +107,11 @@ spec:
             secretKeyRef:
               key: org
               name: vcd-connection-info
+        - name: VCD_NETWORK
+          valueFrom:
+            secretKeyRef:
+              key: network
+              name: vcd-connection-info
         - name: VCD_USER
           valueFrom:
             secretKeyRef:
