@@ -13,4 +13,4 @@
       summary: Node count is approaching the maximum allowed.
       description: |-
         The cluster is currently running {{ $value }} nodes,
-        which is close to the maximum of {{ print "d8_max_nodes_amount{}" | query | first | value }} allowed nodes.
+        which is close to the maximum of {{ print "d8_max_nodes_amount_by_pod_cidr{}" | query | first | value }} allowed nodes.
