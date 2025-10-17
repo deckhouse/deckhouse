@@ -91,6 +91,10 @@ func (s *Client) OnlyPreparePrivateKeys() error {
 }
 
 func (s *Client) Start() error {
+	return s.StartContext(context.Background())
+}
+
+func (s *Client) StartContext(ctx context.Context) error {
 	if s.Settings == nil {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
@@ -142,7 +146,7 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(ctx, func() error {
 			log.InfoF("Connect to %s\n", fullHost)
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
@@ -204,14 +208,14 @@ func (s *Client) Start() error {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).RunContext(ctx, func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = ssh.Dial("tcp", addr, config)
+			client, err = DialContext(ctx, "tcp", addr, config)
 			return err
 		})
 		if err != nil {
@@ -240,7 +244,7 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).RunContext(ctx, func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
@@ -444,4 +448,32 @@ func (s *Client) stopKubeproxy() {
 	cmd := NewSSHCommand(s, "killall kubectl")
 	cmd.Sudo(context.Background())
 	cmd.Run(context.Background())
+}
+
+// DialContext copied from golang.org/x/crypto@v0.40.0/ssh/tcpip.go
+func DialContext(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	type connErr struct {
+		conn *ssh.Client
+		err  error
+	}
+	ch := make(chan connErr)
+	go func() {
+		conn, err := ssh.Dial(network, addr, config)
+		select {
+		case ch <- connErr{conn, err}:
+		case <-ctx.Done():
+			if conn != nil {
+				conn.Close()
+			}
+		}
+	}()
+	select {
+	case res := <-ch:
+		return res.conn, res.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }

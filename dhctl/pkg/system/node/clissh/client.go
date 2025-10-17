@@ -15,6 +15,7 @@
 package clissh
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -96,6 +97,10 @@ type Client struct {
 
 func (s *Client) OnlyPreparePrivateKeys() error {
 	// Double start is safe here because for initializing private keys we are using sync.Once
+	return s.Start()
+}
+
+func (s *Client) StartContext(_ context.Context) error {
 	return s.Start()
 }
 
