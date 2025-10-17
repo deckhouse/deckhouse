@@ -104,7 +104,7 @@ function send_report() {
       --retry 10 \
       --retry-delay 20 \
       --retry-all-errors \
-      "${DEFECTDOJO_HOST}/api/v2/engagements/${dd_engagement_id}/" \
+      "https://${DEFECTDOJO_HOST}/api/v2/engagements/${dd_engagement_id}/" \
       -H "accept: application/json" \
       -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
       -H "Content-Type: application/json" \
