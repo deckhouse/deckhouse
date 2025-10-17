@@ -192,8 +192,39 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}, nil
 }
 
+func (d *ClusterDestroyer) lockConverge(ctx context.Context) error {
+	if d.CommanderMode {
+		d.logger.LogDebugLn("Locking converge skipped for commander")
+		return nil
+	}
+
+	locked, err := d.state.IsConvergeLocked()
+	if err != nil {
+		return err
+	}
+
+	if locked {
+		d.logger.LogDebugLn("Locking converge skipped because locked in previous run")
+		return nil
+	}
+
+	if err := d.d8Destroyer.LockConverge(ctx); err != nil {
+		return err
+	}
+
+	if err := d.state.SetConvergeLocked(); err != nil {
+		// try to unlock because we cannot save in state
+		d.d8Destroyer.UnlockConverge(true)
+		return err
+	}
+
+	d.logger.LogDebugLn("Converge was locked successfully and write to state")
+
+	return nil
+}
+
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	defer d.d8Destroyer.UnlockConverge(true)
+	// we do not need unlock converge because we save lock in state
 
 	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
 		return err
@@ -222,6 +253,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	var infraDestroyer Destroyer
 	switch clusterType {
 	case config.CloudClusterType:
+		if err := d.lockConverge(ctx); err != nil {
+			return err
+		}
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
 		nodeIPs, err := d.GetMasterNodesIPs(ctx)
@@ -286,16 +320,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 
 	d.logger.LogDebugF("Resources were destroyed set\n")
 
-	// why only unwatch lock without request unlock
-	// user may not delete resources and converge still working in cluster
-	// all node groups removing may still in long time run and
-	// we get race (destroyer destroy node group, auto applayer create nodes)
-	d.d8Destroyer.UnlockConverge(false)
 	// Stop proxy because we have already got all info from kubernetes-api
-	d.d8Destroyer.StopProxy()
-	if clusterType == config.CloudClusterType {
-		d.d8Destroyer.Cleanup()
-	}
+	// also stop ssh client for cloud clusters
+	d.d8Destroyer.Cleanup(clusterType == config.CloudClusterType)
 
 	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
