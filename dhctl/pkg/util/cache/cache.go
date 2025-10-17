@@ -43,7 +43,7 @@ func NewStateCache(dir string) (*StateCache, error) {
 		return nil, fmt.Errorf("can't create cache directory: %w", err)
 	}
 
-	_, err := os.Stat(filepath.Join(dir, ".tombstone"))
+	_, err := os.Stat(filepath.Join(dir, state.TombstoneKey))
 	if os.IsNotExist(err) {
 		return &StateCache{dir: dir}, nil
 	}

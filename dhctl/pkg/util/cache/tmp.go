@@ -16,45 +16,139 @@ package cache
 
 import (
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/name212/govalue"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ClearInfrastructureDir() {
-	// do not clean tmp dir, because user may need temporary files to debug infra
-	if app.IsDebug {
-		return
-	}
+type ClearTmpParams struct {
+	IsDebug         bool
+	RemoveTombStone bool
 
-	_ = os.RemoveAll(filepath.Join(app.TmpDirName, "tf_dhctl"))
+	TmpDir        string
+	DefaultTmpDir string
+
+	LoggerProvider func() log.Logger
 }
 
-func ClearTemporaryDirs() {
-	// do not clean tmp dir, because user may need temporary files to debug infra
-	if app.IsDebug {
-		return
+func defaultLoggerProvider() log.Logger {
+	return log.GetDefaultLogger()
+}
+
+func GetClearTemporaryDirsFunc(params ClearTmpParams) func() {
+	loggerProvider := params.LoggerProvider
+	if loggerProvider == nil {
+		loggerProvider = defaultLoggerProvider
 	}
 
-	_ = filepath.Walk(app.TmpDirName, func(path string, info os.FileInfo, err error) error {
-		// If tmp folder doesn't exist
-		if info == nil {
-			return nil
+	logger := loggerProvider()
+	if govalue.IsNil(logger) {
+		logger = defaultLoggerProvider()
+	}
+
+	tmpDir := path.Clean(params.TmpDir)
+
+	if tmpDir == "" || tmpDir == "/" || tmpDir == "." {
+		return func() {
+			logger.LogDebugF("Skip clean tmp dir because pass empty tmp dir or incorrect: '%s'", tmpDir)
 		}
-		if info.IsDir() {
-			if path != app.TmpDirName {
-				return filepath.SkipDir
+	}
+
+	suffixesForSkip := []string{
+		".log",
+	}
+
+	if !params.RemoveTombStone {
+		suffixesForSkip = append(suffixesForSkip, state.TombstoneKey)
+	}
+
+	return func() {
+		logger.LogDebugF("Clear temp dir: %s\n", tmpDir)
+		// do not clean tmp dir, because user may need temporary files to debug infra
+		if params.IsDebug {
+			logger.LogDebugF("Skip cleaning temp dir '%s' because dhctl work in debug mode\n", tmpDir)
+			return
+		}
+
+		dirsForDeletion := make([]string, 0)
+		keepFiles := make([]string, 0)
+
+		err := filepath.Walk(params.TmpDir, func(fullPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				log.DebugF("Skip cleaning temp %s because walk returns err: %v\n", fullPath, err)
+				return nil
+			}
+
+			// If tmp folder doesn't exist
+			if info == nil {
+				return nil
+			}
+
+			if info.IsDir() {
+				if fullPath == "/" {
+					logger.LogWarnF("Found root dir '/' Skip all\n")
+					return filepath.SkipDir
+				}
+
+				if fullPath == params.DefaultTmpDir {
+					logger.LogDebugF("Skip cleaning default temp dir '%s'\n", fullPath)
+					return nil
+				}
+
+				dirsForDeletion = append(dirsForDeletion, fullPath)
+				return nil
+			}
+
+			for _, suffix := range suffixesForSkip {
+				if strings.HasSuffix(fullPath, suffix) {
+					keepFiles = append(keepFiles, fullPath)
+					return nil
+				}
+			}
+
+			err = os.Remove(fullPath)
+			if err != nil {
+				logger.LogDebugF("Error deleting temp file '%s': %v\n", fullPath, err)
 			}
 			return nil
+		})
+
+		if err != nil {
+			logger.LogDebugF("Error cleaning temp dir while walking '%s': %v\n", tmpDir, err)
 		}
 
-		// skip log files
-		if strings.HasSuffix(path, ".log") {
-			return nil
+		sort.Sort(sort.Reverse(sort.StringSlice(dirsForDeletion)))
+
+		skipDeleTeDir := func(dir string) bool {
+			for _, keep := range keepFiles {
+				if path.Dir(keep) == dir {
+					return true
+				}
+			}
+
+			return false
 		}
 
-		_ = os.Remove(path)
-		return nil
-	})
+		log.DebugF("Cleaning temp dir. Keep next files: %v\nDirs for deletion: %v\n", keepFiles, dirsForDeletion)
+
+		for _, dir := range dirsForDeletion {
+			if skipDeleTeDir(dir) {
+				logger.LogDebugF("Skip cleaning temp dir '%s'\n", dir)
+				continue
+			}
+
+			err := os.Remove(dir)
+			if err != nil {
+				if !os.IsNotExist(err) {
+					logger.LogDebugF("Error cleaning temp dir '%s': %v\n", dir, err)
+				}
+			}
+		}
+	}
 }

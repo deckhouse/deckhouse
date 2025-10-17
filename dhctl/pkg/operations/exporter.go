@@ -248,7 +248,17 @@ func (c *ConvergeExporter) Start(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
-	c.recordStatistic(c.getStatistic(ctx))
+	clearTmp := cache.GetClearTemporaryDirsFunc(cache.ClearTmpParams{
+		IsDebug:         c.isDebug,
+		RemoveTombStone: true,
+		TmpDir:          c.tmpDir,
+		DefaultTmpDir:   c.tmpDir, // do not remove root tmp dir
+		LoggerProvider: func() log.Logger {
+			return c.logger
+		},
+	})
+
+	c.recordStatistic(c.getStatistic(ctx, clearTmp))
 
 	ticker := time.NewTicker(c.CheckInterval)
 	defer ticker.Stop()
@@ -256,7 +266,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			c.recordStatistic(c.getStatistic(ctx))
+			c.recordStatistic(c.getStatistic(ctx, clearTmp))
 		case <-ctx.Done():
 			log.ErrorLn("Stop exporter...")
 			return
@@ -264,7 +274,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	}
 }
 
-func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
+func (c *ConvergeExporter) getStatistic(ctx context.Context, clearTmp func()) (*check.Statistics, bool) {
 	metaConfig, err := config.ParseConfigInCluster(
 		ctx,
 		c.kubeCl,
@@ -305,7 +315,8 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 			c.logger.LogErrorF("Cannot cleanup provider after getting statistic: %v\n", err)
 			c.CounterMetrics["errors"].WithLabelValues().Inc()
 		}
-		cache.ClearTemporaryDirs()
+
+		clearTmp()
 	}()
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)

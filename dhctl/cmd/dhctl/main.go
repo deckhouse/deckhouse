@@ -17,16 +17,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime/pprof"
-	"runtime/trace"
-	"slices"
 	"strings"
-	"sync"
-	"time"
 
-	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
@@ -34,18 +27,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 var (
-	allowedCommands []string
-	commandList     = []Command{
+	commandList = []Command{
 		{
 			Name:       "server",
 			Help:       "Start dhctl as GRPC server.",
@@ -282,24 +272,18 @@ var (
 	}
 )
 
-type Command struct {
-	Name       string
-	Help       string
-	DefineFunc func(cmd *kingpin.CmdClause) *kingpin.CmdClause
-	Parrent    string
-	cmd        *kingpin.CmdClause
-}
-
 func main() {
-	_ = os.Mkdir(app.TmpDirName, 0o755)
-
 	initGlobalVars()
 
-	tomb.RegisterOnShutdown("Trace", EnableTrace())
+	tracesShutdownFn, err := enableTrace()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	tomb.RegisterOnShutdown("Trace", tracesShutdownFn)
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
 	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
-	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.ClearTemporaryDirs)
-	tomb.RegisterOnShutdown("Clear infrastructure data temporary directory", cache.ClearInfrastructureDir)
 
 	go tomb.WaitForProcessInterruption()
 
@@ -312,88 +296,18 @@ func main() {
 		return nil
 	})
 
-	err := registerCommands(kpApp)
-	if err != nil {
+	if err := registerCommands(kpApp); err != nil {
 		panic(err)
 	}
 
 	runApplication(kpApp)
 }
 
-type initer struct {
-	logFileMutex sync.Mutex
-	logFile      string
-}
-
-func newIniter() *initer {
-	return &initer{}
-}
-
-func (i *initer) initLogger(c *kingpin.ParseContext) error {
-	log.InitLogger(app.LoggerType)
-	if app.DoNotWriteDebugLogFile {
-		return nil
-	}
-
-	if c.SelectedCommand == nil {
-		return nil
-	}
-
-	logPath := app.DebugLogFilePath
-
-	if logPath == "" {
-		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
-		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
-		logPath = path.Join(app.TmpDirName, logFile)
-	}
-
-	outFile, err := os.Create(logPath)
-	if err != nil {
-		return err
-	}
-
-	err = log.WrapWithTeeLogger(outFile, 1024)
-	if err != nil {
-		return err
-	}
-
-	log.InfoF("Debug log file: %s\n", logPath)
-
-	tomb.RegisterOnShutdown("Finalize logger", func() {
-		if err := log.FlushAndClose(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-			return
-		}
-	})
-
-	i.logFileMutex.Lock()
-	defer i.logFileMutex.Unlock()
-
-	i.logFile = logPath
-
-	return nil
-}
-
-func (i *initer) getLoggerPath() string {
-	i.logFileMutex.Lock()
-	defer i.logFileMutex.Unlock()
-
-	return i.logFile
-}
-
 func runApplication(kpApp *kingpin.Application) {
-	init := newIniter()
+	initer := newActionIniter()
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		if err := init.initLogger(c); err != nil {
-			return err
-		}
-
-		tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
-			infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLogger())
-		})
-
-		return nil
+		return initer.init(c)
 	})
 
 	kpApp.Version(app.AppVersion).Author("Flant")
@@ -406,7 +320,7 @@ func runApplication(kpApp *kingpin.Application) {
 
 			msg := err.Error()
 
-			if logFile := init.getLoggerPath(); logFile != "" {
+			if logFile := initer.getLoggerPath(); logFile != "" {
 				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
 			}
 
@@ -419,88 +333,6 @@ func runApplication(kpApp *kingpin.Application) {
 	// Block "main" function until teardown callbacks are finished.
 	exitCode := tomb.WaitShutdown()
 	os.Exit(exitCode)
-}
-
-func EnableTrace() func() {
-	traceFileName := os.Getenv("DHCTL_TRACE")
-	cpuProfileFileName := traceFileName + ".prof.cpu"
-
-	if traceFileName == "" || traceFileName == "0" || traceFileName == "no" {
-		return func() {}
-	}
-	if traceFileName == "1" || traceFileName == "yes" {
-		traceFileName = "trace.out"
-		cpuProfileFileName = "pprof.cpu"
-	}
-
-	fns := make([]func(), 0)
-
-	traceF, err := os.Create(traceFileName)
-	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", traceFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		func() {
-			if err := traceF.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", traceFileName, err)
-				os.Exit(1)
-			}
-		},
-	}, fns...)
-
-	profCPU, err := os.Create(cpuProfileFileName)
-	if err != nil {
-		log.InfoF("failed to create pprof cpu file '%s': %v", cpuProfileFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		func() {
-			if err := profCPU.Close(); err != nil {
-				log.InfoF("failed to close pprof cpu file '%s': %v", cpuProfileFileName, err)
-				os.Exit(1)
-			}
-		},
-	}, fns...)
-
-	if err := trace.Start(traceF); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", traceFileName, err)
-		os.Exit(1)
-	}
-	fns = append([]func(){
-		trace.Stop,
-	}, fns...)
-
-	if err := pprof.StartCPUProfile(profCPU); err != nil {
-		log.InfoF("failed to start profile cpu to '%s': %v", cpuProfileFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		pprof.StopCPUProfile,
-	}, fns...)
-
-	return func() {
-		for _, fn := range fns {
-			fn()
-		}
-	}
-}
-
-func restoreTerminal() func() {
-	fd := int(os.Stdin.Fd())
-	if !terminal.IsTerminal(fd) {
-		return func() {}
-	}
-
-	state, err := terminal.GetState(fd)
-	if err != nil {
-		panic(err)
-	}
-
-	return func() { _ = terminal.Restore(fd, state) }
 }
 
 func initGlobalVars() {
@@ -537,113 +369,4 @@ func initGlobalVars() {
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
-}
-
-func checkCommand(name string, allowedCommands []string) (bool, []string) {
-	if len(allowedCommands) == 0 || slices.Index(allowedCommands, name) != -1 {
-		return true, []string{}
-	}
-
-	for _, cm := range allowedCommands {
-		c := strings.Split(cm, " ")
-		if c[0] == name {
-			return true, c
-		}
-	}
-
-	return false, []string{}
-}
-
-func checkSubcommand(name string, subcommands []string) bool {
-	ex, _ := checkCommand(name, subcommands)
-	if len(subcommands) == 2 && subcommands[1] == "*" || ex {
-		return true
-	}
-
-	return false
-}
-
-func getParrentIndex(commandList []Command, name string) (int, error) {
-	for i, cmd := range commandList {
-		if name == cmd.Name {
-			return i, nil
-		}
-	}
-
-	return -1, fmt.Errorf("parrent command %s not found in command list", name)
-}
-
-func getNestingDepth(cmd Command, commands []Command) (Command, int) {
-	depth := 0
-	visited := make(map[string]bool)
-	topLevel := cmd
-
-	for {
-		found := false
-		for _, c := range commands {
-			if c.Name == cmd.Parrent && !visited[c.Name] {
-				visited[c.Name] = true
-				cmd = c
-				depth++
-				topLevel = cmd
-				found = true
-				break
-			}
-		}
-
-		if !found || cmd.Parrent == "" {
-			break
-		}
-	}
-
-	return topLevel, depth
-}
-
-func initParrent(parrentCmdIndex int, kpApp *kingpin.Application) *kingpin.CmdClause {
-	var pcmd *kingpin.CmdClause
-
-	if commandList[parrentCmdIndex].cmd == nil {
-		pcmd = kpApp.Command(commandList[parrentCmdIndex].Name, commandList[parrentCmdIndex].Help)
-		commandList[parrentCmdIndex].cmd = pcmd
-	} else {
-		pcmd = commandList[parrentCmdIndex].cmd
-	}
-	return pcmd
-}
-
-func registerCommands(kpApp *kingpin.Application) error {
-	for i, command := range commandList {
-		firstNode, depth := getNestingDepth(command, commandList)
-		if depth == 0 {
-			allowed, _ := checkCommand(command.Name, allowedCommands)
-			if allowed {
-				cmd := kpApp.Command(command.Name, command.Help)
-				commandList[i].cmd = cmd
-
-				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
-				}
-			}
-		} else {
-			parrentCmdIndex, err := getParrentIndex(commandList, command.Parrent)
-			if err != nil {
-				return err
-			}
-
-			allowed, subcommands := checkCommand(firstNode.Name, allowedCommands)
-
-			if allowed && checkSubcommand(command.Name, subcommands) {
-				pcmd := initParrent(parrentCmdIndex, kpApp)
-
-				cmd := pcmd.Command(command.Name, command.Help)
-				commandList[i].cmd = cmd
-
-				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
-				}
-			}
-		}
-	}
-
-	return nil
 }

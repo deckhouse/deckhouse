@@ -54,7 +54,7 @@ func TestExporterGetStatistic(t *testing.T) {
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		exporter.recordStatistic(exporter.getStatistic(context.Background()))
+		exporter.recordStatistic(exporter.getStatistic(context.Background(), func() {}))
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})
 		require.NoError(t, err)
