@@ -308,23 +308,36 @@ function prepare_environment() {
 
   "VCD")
     # shellcheck disable=SC2016
-    env VCD_PASSWORD="$LAYOUT_VCD_PASSWORD" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
-        CRI="$CRI" \
-        DEV_BRANCH="$DEV_BRANCH" \
-        PREFIX="$PREFIX" \
-        MASTERS_COUNT="$MASTERS_COUNT" \
-        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        VCD_SERVER="$LAYOUT_VCD_SERVER" \
-        VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
-        VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
-    [ -f "$cwd/resources.tpl.yaml" ] && \
-        env VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-
+    cwd=$(pwd)/testing/cloud_layouts/VCD/Standard
+    export VCD_USER="$LAYOUT_VCD_USERNAME"
+    export VCD_PASSWORD="$LAYOUT_VCD_PASSWORD"
+    export VCD_ORG="$LAYOUT_VCD_ORG"
+    export VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
+    export VCD_URL="$LAYOUT_VCD_SERVER/api"
+    export TF_VAR_PREFIX="$PREFIX" 
+    export TF_VAR_VCD_ORG="$LAYOUT_VCD_ORG" 
+    export TF_VAR_VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
     ssh_user="ubuntu"
+    ssh_bastion_ip="$LAYOUT_STATIC_BASTION_IP"
+    ssh_bastion="-J ${ssh_user}@${ssh_bastion_ip}"
+    cluster_template_id="a067fedf-e77d-4d8f-a6f0-e29b0fbcb439"
+    values="{
+    \"vcdUsername\": \"${LAYOUT_VCD_USERNAME}\",
+    \"vcdPassword\": \"${LAYOUT_VCD_PASSWORD}\",
+    \"vcdOrg\": \"${LAYOUT_VCD_ORG}\",
+    \"vcdServer\": \"${LAYOUT_VCD_SERVER}\",
+    \"branch\": \"${DEV_BRANCH}\",
+    \"prefix\": \"${PREFIX}\",
+    \"kubeVersion\": \"${KUBERNETES_VERSION}\",
+    \"defaultCRI\": \"${CRI}\",
+    \"masterCount\": \"${MASTERS_COUNT}\",
+    \"sshPrivateKey\": \"${SSH_KEY}\",
+    \"sshUser\": \"${ssh_user}\",
+    \"sshBastionHost\": \"${ssh_bastion_ip}\",
+    \"sshBastionUser\": \"${ssh_user}\",
+    \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+    \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+  }"
     ;;
 
   "Static")
@@ -351,8 +364,17 @@ function get_opentofu() {
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
   cp -r $cwd/plugins/registry.terraform.io/terraform-provider-openstack $cwd/plugins/registry.opentofu.org/terraform-provider-openstack
+  cp -r $cwd/plugins/registry.terraform.io/vmware $cwd/plugins/registry.opentofu.org/vmware
 }
+function bootstrap_vcd() {
+   >&2 echo "Run terraform to create vapp for vcd cluster ..."
+   cd $cwd
 
+  pwd
+   get_opentofu
+   $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+   $cwd/opentofu  apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+}
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
 
@@ -1128,7 +1150,9 @@ function run-test() {
             \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
           }"
   fi
-
+  if [[ ${PROVIDER} == "VCD" ]]; then
+      bootstrap_vcd || return $?
+  fi
   cluster_template_version_id=$(curl -s -X 'GET' \
     "https://${COMMANDER_HOST}/api/v1/cluster_templates/${TEMPLATE_ID}?without_archived=true" \
     -H 'accept: application/json' \
@@ -1303,8 +1327,8 @@ function cleanup() {
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
 
-  if [ -z "$cluster_id" ] && [[ "$PROVIDER" == "Static" ]]; then
-    echo "  Error getting cluster id, but provider is Static, continue"
+if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "STATIC" ] || [ "$PROVIDER" = "VCD" ]; }; then
+    echo "  Error getting cluster id, but provider is Static or VCD, continue"
   elif [ -z $cluster_id ]; then
     echo "  Error getting cluster id"
     return 1
@@ -1355,7 +1379,7 @@ function cleanup() {
   fi
 
 
-  if [[ ${PROVIDER} == "Static" ]]; then
+  if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
     get_opentofu
     cd $cwd
      $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
