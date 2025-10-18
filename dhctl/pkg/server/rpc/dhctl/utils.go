@@ -39,12 +39,7 @@ func logInformationAboutInstance(params ServiceParams, logger log.Logger) logAft
 		logger.LogInfoLn(warnAboutNs)
 	}
 
-	logger.LogInfoF(
-		"DHCTL logs: d8 k -n %s logs %s\n",
-		ns,
-		podName,
-		warnAboutNs,
-	)
+	logger.LogInfoF("DHCTL logs: d8 k -n %s logs %s\n", ns, podName)
 
 	return func() { logger.LogInfoF("Task done by DHCTL Server %s\n", podWithPrefix) }
 }
