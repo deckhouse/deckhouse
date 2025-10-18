@@ -29,13 +29,18 @@ func logInformationAboutInstance(params ServiceParams, logger log.Logger) logAft
 	ns := params.PodNamespace
 
 	if ns == "" {
-		warnAboutNs = "Warning! Use default namespace."
+		warnAboutNs = "Warning! Use default namespace\n"
 		ns = "d8-commander"
 	}
 
+	logger.LogInfoF("Task is running by DHCTL Server %s\n", podWithPrefix)
+
+	if warnAboutNs != "" {
+		logger.LogInfoLn(warnAboutNs)
+	}
+
 	logger.LogInfoF(
-		"Task is running by DHCTL Server '%s'. For get dhctl logs using next command: d8 k -n %s logs %s %s\n",
-		podWithPrefix,
+		"DHCTL logs: d8 k -n %s logs %s\n",
 		ns,
 		podName,
 		warnAboutNs,
