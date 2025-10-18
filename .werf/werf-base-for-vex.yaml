@@ -1,6 +1,6 @@
 ---
 image: base-for-vex
-fromImage: tools/coreutils
+fromImage: builder/alpine
 final: false
 import:
 - image: tools/cosign
@@ -11,11 +11,7 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install
-- image: tools/curl
-  add: /usr/bin/curl-static
-  to: /usr/bin/curl
-  before: install
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache curl
