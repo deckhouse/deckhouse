@@ -197,10 +197,8 @@ func (g *DeckhouseDestroyer) Cleanup(stopSSH bool) {
 		g.kubeCl = nil
 	}
 
-	if !stopSSH || govalue.IsNil(g.sshClient) {
-		return
+	if stopSSH && !govalue.IsNil(g.sshClient) {
+		g.sshClient.Stop()
+		g.sshClient = nil
 	}
-
-	g.sshClient.Stop()
-	g.sshClient = nil
 }
