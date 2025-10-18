@@ -38,7 +38,7 @@ git:
   to: /known_vulnerabilities.vex
   stageDependencies:
     install:
-    - known_vulnerabilities.vex
+    - "**/*"
 dependencies:
 - image: {{ $imageName }}
   before: install
