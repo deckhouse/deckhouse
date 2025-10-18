@@ -18,11 +18,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+	"golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -49,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -235,6 +238,23 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	log.DebugLn("MetaConfig was loaded")
+
+	// Check if static cluster without ssh-host
+	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
+		fd := int(os.Stdin.Fd())
+		isTerminal := term.IsTerminal(fd)
+
+		if isTerminal {
+			confirmation := input.NewConfirmation().
+				WithMessage("Do you really want to bootstrap the cluster on the current host?")
+			if !confirmation.Ask() {
+				return fmt.Errorf("Bootstrap cancelled by user")
+			}
+		} else {
+			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
+		}
+	}
+
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
