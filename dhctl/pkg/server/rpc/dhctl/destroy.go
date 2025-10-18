@@ -187,8 +187,8 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
