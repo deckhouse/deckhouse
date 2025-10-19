@@ -64,7 +64,9 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 		if err != nil {
 			return nil, cleanuper.AsFunc(), err
 		}
-		sshHosts = mastersIPs
+		if len(mastersIPs) > 0 {
+			sshHosts = mastersIPs
+		}
 	}
 
 	sess := session.NewSession(session.Input{

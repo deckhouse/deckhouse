@@ -15,7 +15,7 @@ lang: ru
 
 ### Через кастомный ресурс ModuleConfig/global
 
-1. Установите в `ModuleConfig/global` [параметр `settings.highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) в значение `true`:
+1. Установите в `ModuleConfig/global` [параметр `settings.highAvailability`](../../../reference/api/global.html#parameters-highavailability) в значение `true`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

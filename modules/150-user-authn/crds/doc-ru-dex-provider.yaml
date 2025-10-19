@@ -12,6 +12,9 @@ spec:
           properties:
             spec:
               properties:
+                enabled:
+                  description: |
+                    Если значение `false`, провайдер будет проигнорирован при формировании конфигурации Dex и не появится на странице логина.
                 type:
                   description: |
                     Тип внешнего провайдера.

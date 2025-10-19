@@ -101,6 +101,7 @@
   REPOSITORY: ${{ github.repository }}
 {!{- if not (has $commanderProviders $provider) }!}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+  STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
 {!{- if has $commanderProviders $provider }!}
@@ -176,6 +177,7 @@ run: |
 
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+  -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -197,6 +199,7 @@ run: |
   {!{- if eq $script_arg "run-test" }!}
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+  -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -219,6 +222,7 @@ run: |
 
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+  -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -251,6 +255,7 @@ run: |
 {!{- else if has $commanderProviders $provider }!}
 
   export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+  export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
   export PROVIDER=${PROVIDER:-not_provided}
   export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
   export LAYOUT=${LAYOUT:-not_provided}
@@ -308,6 +313,7 @@ run: |
 {!{- else }!}
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+    -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
     -e MASTERS_COUNT=${MASTERS_COUNT} \
     -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
@@ -381,7 +387,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   outputs:
 {!{ range $criName := $ctx.criNames }!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
@@ -463,6 +469,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -491,15 +501,16 @@ check_e2e_labels:
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 {!{- end }!}
 
     - name: Setup
       id: setup
       env:
-        DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
         CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
         CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
         CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -519,6 +530,7 @@ check_e2e_labels:
           KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
         fi
         DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
         if [[ "${MANUAL_RUN}" == "false" ]] ; then
           # for jobs which run multiple providers concurrency (daily e2e, for example)
           # add provider suffix to prevent "directory already exists" error
@@ -549,15 +561,20 @@ check_e2e_labels:
           REPO_SUFFIX=
         fi
 
-        # Use dev-registry for Git branches.
-        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         # Use rw-registry for Git tags.
         SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+        if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          # Use stage-registry for release branches.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+        else
+          # Use dev-registry for Git branches.
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+        fi
 
         if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
           # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
           # Use dev-regisry for branches and Github Container Registry for semver tags.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         fi
 
@@ -653,6 +670,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -727,6 +745,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -837,6 +856,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" "DOCKERCFG" "LAYOUT_STAGE_DECKHOUSE_DOCKERCFG" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- if or (eq $provider "aws") (eq $provider "eks") }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "access_key" "LAYOUT_AWS_ACCESS_KEY" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS" "secret_key" "LAYOUT_AWS_SECRET_ACCESS_KEY" ) $secrets -}!}
@@ -865,13 +888,15 @@ check_e2e_labels:
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 
     - name: Setup
       id: setup
       env:
-        DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
         INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
@@ -887,6 +912,11 @@ check_e2e_labels:
           mkdir -p "${TMP_DIR_PATH}"
         fi
 
+        if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+          # Use stage-registry for release branches.
+          DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
+        fi
+
         INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -900,7 +930,11 @@ check_e2e_labels:
         DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 {!{- if eq $provider "eks" }!}
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+        if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+        else
+          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+        fi
         TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 {!{- end }!}
 
@@ -945,6 +979,7 @@ check_e2e_labels:
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
