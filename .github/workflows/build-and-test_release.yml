@@ -462,11 +462,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -535,15 +535,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -845,11 +837,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -918,15 +910,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1228,11 +1212,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1301,15 +1285,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1599,11 +1575,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1672,15 +1648,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1970,11 +1938,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2043,15 +2011,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2341,11 +2301,11 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2414,15 +2374,7 @@ jobs:
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          # Set cosign auth values
-          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
-          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
-          ACTIONS_ID_TOKEN="null" #clear value
-          AUTH_ROLE="null" #clear value
-
           type werf && source $(werf ci-env github --verbose --as-file)
-
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
