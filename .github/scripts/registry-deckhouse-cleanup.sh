@@ -15,9 +15,8 @@
 # limitations under the License.
 
 echo "Preparing DOCKER_CONFIG"
-mkdir -p "${WORKDIR}/docker"
-
-cat > "${WORKDIR}/docker/config.json" << EOL
+mkdir -p "${PWD}/docker"
+cat > "${PWD}/docker/config.json" << EOL
 {
         "auths": {
                 "${DECKHOUSE_REGISTRY_STAGE_HOST}": {
@@ -27,7 +26,7 @@ cat > "${WORKDIR}/docker/config.json" << EOL
 }
 EOL
 
-export DOCKER_CONFIG="${WORKDIR}/docker"
+export DOCKER_CONFIG="${PWD}/docker"
 export WERF_PARALLEL_TASKS_LIMIT=21
 export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
 werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "${REGISTRY_URL}"
