@@ -14,10 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export WERF_DOCKER_CONFIG=/tmp/
-export DOCKER_CONFIG=/tmp/
+export WERF_DOCKER_CONFIG=${PWD}
+export DOCKER_CONFIG=${PWD}
 export WERF_PARALLEL_TASKS_LIMIT=21
-cd /tmp
-git clone https://github.com/deckhouse/deckhouse.git
-cd deckhouse
 werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "${REGISTRY_URL}"

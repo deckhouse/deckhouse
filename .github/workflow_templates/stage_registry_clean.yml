@@ -55,10 +55,10 @@ jobs:
       {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
 
     - name: RM Deckhouse image
-      env:
-        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
-      run: bash .github/scripts/registry-deckhouse-cleanup.sh
+      run: |
+        export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+        bash .github/scripts/registry-deckhouse-cleanup.sh
     - name: RM Crane image
-      env:
-        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
-      run: bash .github/scripts/registry-crane-cleanup.sh
+      run: |
+        export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+        bash .github/scripts/registry-crane-cleanup.sh
