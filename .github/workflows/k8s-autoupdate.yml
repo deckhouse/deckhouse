@@ -25,7 +25,7 @@ jobs:
   skip_tests_repos:
     name: Skip tests repos
     runs-on: "regular"
-    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
