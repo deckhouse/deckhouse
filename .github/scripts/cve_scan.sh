@@ -222,7 +222,6 @@ for d8_tag in "${d8_tags[@]}"; do
     dd_full_release_tag="image_release_tag:${d8_tag}"
     dd_release_or_dev_tag="release"
     dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
-    dd_branch="$(echo ${dd_short_release_tag} | sed 's/\:/\-/')"
     trivy_registry_user="${PROD_REGISTRY_USER}"
     trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
