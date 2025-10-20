@@ -59,15 +59,6 @@ func (g *DeckhouseDestroyer) UnlockConverge(fullUnlock bool) {
 	}
 }
 
-func (g *DeckhouseDestroyer) StopProxy() {
-	if govalue.IsNil(g.kubeCl) {
-		return
-	}
-
-	g.kubeCl.KubeProxy.Stop(0)
-	g.kubeCl = nil
-}
-
 func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
 	if g.kubeCl != nil {
 		return g.kubeCl, nil
@@ -86,15 +77,22 @@ func (g *DeckhouseDestroyer) GetKubeClient(ctx context.Context) (*client.Kuberne
 	}
 	g.kubeCl = kubeCl
 
-	if !g.CommanderMode {
-		unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
-		if err != nil {
-			return nil, err
-		}
-		g.convergeUnlocker = unlockConverge
+	return kubeCl, err
+}
+
+func (g *DeckhouseDestroyer) LockConverge(ctx context.Context) error {
+	kubeCl, err := g.GetKubeClient(ctx)
+	if err != nil {
+		return err
 	}
 
-	return kubeCl, err
+	unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
+	if err != nil {
+		return err
+	}
+	g.convergeUnlocker = unlockConverge
+
+	return nil
 }
 
 func (g *DeckhouseDestroyer) KubeClient() *client.KubernetesClient {
@@ -187,10 +185,20 @@ func (g *DeckhouseDestroyer) deleteEntities(ctx context.Context, kubeCl *client.
 	return nil
 }
 
-func (g *DeckhouseDestroyer) Cleanup() {
-	if govalue.IsNil(g.sshClient) {
-		return
+func (g *DeckhouseDestroyer) Cleanup(stopSSH bool) {
+	// why only unwatch lock without request unlock
+	// user may not delete resources and converge still working in cluster
+	// all node groups removing may still in long time run and
+	// we get race (destroyer destroy node group, auto applayer create nodes)
+	g.UnlockConverge(false)
+
+	if !govalue.IsNil(g.kubeCl) {
+		g.kubeCl.KubeProxy.StopAll()
+		g.kubeCl = nil
 	}
 
-	g.sshClient.Stop()
+	if stopSSH && !govalue.IsNil(g.sshClient) {
+		g.sshClient.Stop()
+		g.sshClient = nil
+	}
 }

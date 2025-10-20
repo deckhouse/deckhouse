@@ -34,12 +34,9 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 	destroyer := NewDeckhouseDestroyer(sshProvider, state, DeckhouseDestroyerOptions{CommanderMode: false})
 
 	cleanupTest := func() {
-		destroyer.Cleanup()
+		destroyer.Cleanup(true)
 	}
 	require.NotPanics(t, cleanupTest)
-
-	stopProxyTest := func() {
-		destroyer.StopProxy()
-	}
-	require.NotPanics(t, stopProxyTest)
+	// double call not panic
+	require.NotPanics(t, cleanupTest)
 }
