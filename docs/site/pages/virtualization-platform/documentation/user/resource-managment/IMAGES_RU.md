@@ -4,7 +4,11 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/ima
 lang: ru
 ---
 
-Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Данный ресурс доступен только в пространстве имён или проекте в котором он был создан.
+Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
+
+{% alert level="warning" %}
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
 
 При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
 

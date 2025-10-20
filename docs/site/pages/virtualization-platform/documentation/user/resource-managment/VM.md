@@ -632,6 +632,54 @@ Starting the agent service:
 sudo systemctl enable --now qemu-guest-agent
 ```
 
+You can automate the installation of the agent for Linux OS using a cloud-init initialization script. Below is an example snippet of such a script to install qemu-guest-agent:
+
+```yaml
+  #cloud-config
+  package_update: true
+  packages:
+    - qemu-guest-agent
+  run_cmd:
+    - systemctl enable --now qemu-guest-agent.service
+```
+
+### User Configuration for Cloud Images
+
+When using cloud images (with cloud-init support), you must specify an SSH key or a password for the pre-installed user, or create a new user with a password or SSH key via cloud-init. Otherwise, it will be impossible to log in to the virtual machine!
+
+Examples:
+
+1. Setting a password for an existing user (for example, `ubuntu` is often present in official cloud images):
+
+   In many cloud images, the default user is already predefined (e.g., `ubuntu` in Ubuntu Cloud Images), and its name cannot always be overridden via the `cloud-init` `users` block. In such cases, it is recommended to use dedicated cloud-init parameters for managing the default user.
+
+   In a cloud image, you can add a public SSH key for the default user using the `ssh_authorized_keys` parameter at the root level of cloud-init:
+
+   ```yaml
+   #cloud-config
+   ssh_authorized_keys:
+     - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+   ```
+
+1. Creating a new user with a password and SSH key:
+
+   ```yaml
+   #cloud-config
+   users:
+     - name: cloud
+       passwd: "$6$rounds=4096$QktreHgVzeZy70h3$C8c4gjzYMY75.C7IjN1.GgrjMSdeyG79W.hZgsTNnlrJIzuB48qzCui8KP1par.OvCEV3Xi8FzRiqqZ74LOK6."
+       lock_passwd: false
+       sudo: ALL=(ALL) NOPASSWD:ALL
+       shell: /bin/bash
+       ssh-authorized-keys:
+         - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
+   ssh_pwauth: True
+   ```
+
+{% alert level="info" %}
+The value of the `passwd` field is a hashed password (for example, you can generate it using `mkpasswd --method=SHA-512 --rounds=4096`).
+{% endalert %}
+
 ### Connecting to a virtual machine
 
 The following methods are available for connecting to the virtual machine:
@@ -684,7 +732,7 @@ The virtual machine startup policy is intended for automated virtual machine sta
 
 - `AlwaysOnUnlessStoppedManually` (default): After creation, the VM is always in a running state. In case of failures the VM operation is restored automatically. It is possible to stop the VM only by calling the `d8 v stop` command or creating a corresponding operation.
 - `AlwaysOn`: After creation the VM is always in a running state, even in case of its shutdown by OS means. In case of failures the VM operation is restored automatically.
-- `Manual`: After creation, the state of the VM is controlled manually by the user using commands or operations.
+- `Manual`: After creation, the state of the VM is controlled manually by the user using commands or operations. The VM is powered off immediately after creation. To power it on, the `d8 v start` command must be executed.
 - `AlwaysOff`: After creation the VM is always in the off state. There is no possibility to turn on the VM through commands/operations.
 
 How to select a VM startup policy in the web interface:
@@ -1136,9 +1184,9 @@ Block devices and their features are shown in the table below:
 | `ClusterVirtualImage` | connected in read-only mode, or as a cdrom for iso images |
 | `VirtualDisk`         | connects in read/write mode                               |
 
-#### Static block devices
+#### Boot Block Devices
 
-Static block devices are defined in the virtual machine specification in the `.spec.blockDeviceRefs` block as a list. The order of the devices in this list determines the sequence in which they are loaded. Thus, if a disk or image is specified first, the loader will first try to boot from it. If it fails, the system will go to the next device in the list and try to boot from it. And so on until the first boot loader is detected.
+Boot block devices are defined in the virtual machine specification in the `.spec.blockDeviceRefs` block as a list. The order of the devices in this list determines the sequence in which they are loaded. Thus, if a disk or image is specified first, the loader will first try to boot from it. If it fails, the system will go to the next device in the list and try to boot from it. And so on until the first boot loader is detected.
 
 Changing the composition and order of devices in the `.spec.blockDeviceRefs` block is possible only with a reboot of the virtual machine.
 
@@ -1153,19 +1201,19 @@ spec:
       name: <virtual-image-name>
 ```
 
-How to work with static block devices in the web interface:
+How to work with bootable block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, resize, and reorder static block devices in the "Boot Disks" section.
+- You can add, extract, delete, resize, and reorder bootable block devices in the "Boot Disks" section.
 
-#### Dynamic Block Devices
+#### Additional Block Devices
 
-Dynamic block devices can be connected and disconnected from a virtual machine that is in a running state without having to reboot it.
+Additional block devices can be connected and disconnected from a virtual machine that is in a running state without having to reboot it.
 
-The `VirtualMachineBlockDeviceAttachment` (`vmbda`) resource is used to connect dynamic block devices.
+The `VirtualMachineBlockDeviceAttachment` (`vmbda`) resource is used to connect additional block devices.
 
 As an example, create the following share that connects an empty blank-disk disk to a linux-vm virtual machine:
 
@@ -1244,13 +1292,13 @@ spec:
 EOF
 ```
 
-How to work with dynamic block devices in the web interface:
+How to work with additional block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, and resize dynamic block devices in the "Additional Disks" section.
+- You can add, extract, delete, and resize additional block devices in the "Additional Disks" section.
 
 ### Organizing interaction with virtual machines
 
@@ -1503,7 +1551,17 @@ The live migration process involves several steps:
 ![Migration](/images/virtualization-platform/migration.png)
 
 {% alert level="warning" %}
+For successful live migration, all disks attached to the VM must be accessible on the target nodes to which the migration is planned.
+
+If a disk uses storage with local disks, such storage must be available to create a new local volume on the target node.
+
+Otherwise, migration will not be possible.
+{% endalert %}
+
+{% alert level="warning" %}
 Network speed plays an important role. If bandwidth is low, there are more iterations and VM downtime can increase. In the worst case, the migration may not complete at all.
+
+To manage the migration process, configure the live migration policy using [`.spec.liveMigrationPolicy`](#configuring-migration-policy) in the VM settings.
 {% endalert %}
 
 #### AutoConverge mechanism
@@ -1548,12 +1606,13 @@ The trigger for live migration is the appearance of the `VirtualMachineOperation
 
 The table shows the `VirtualMachineOperations` resource name prefixes with the `Evict` type that are created for live migrations caused by system events:
 
-| Type of system event | Resource name prefix |
-|----------------------------------|------------------------|
-| Firmware-update-* | firmware-update-* |
-| Load shifting | evacuation-* |
-| Drain node | evacuation-* |
-| Modify placement parameters | nodeplacement-update-* |
+| Type of system event            | Resource name prefix   |
+|---------------------------------|------------------------|
+| Firmware update                 | firmware-update-*      |
+| Load shifting                   | evacuation-*           |
+| Drain node                      | evacuation-*           |
+| Modify placement parameters     | nodeplacement-update-* |
+| Disk storage migration          | volume-migration-*     |
 
 This resource can be in the following states:
 
