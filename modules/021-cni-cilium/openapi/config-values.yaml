@@ -48,6 +48,8 @@ properties:
       > Note! After changing the parameter, it is necessary to restart all nodes, otherwise, there may be problems with the availability of Pods!
 
       > Note! VXLAN mode is not compatible with following bpfLBMode modes: Hybrid, DSR. bpfLBMode will be overriden to SNAT if the tunnelMode is VXLAN.
+      
+      > Note! If the cluster is in Yandex Cloud and Disabled mode is selected, you must set the `bpfLBMode` parameter to `DSR` mode and create routes to the pod subnets through the nodes on which these subnets exist. You can view the node subnet using the command `kubectl get nodes NODE_NAME -o jsonpath='{.spec.podCIDRs}'`
   svcSourceRangeCheck:
     type: boolean
     default: false
