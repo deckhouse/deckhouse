@@ -1249,9 +1249,16 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    REGISTRY_URL=docker.io
-    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
-    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    REGISTRY1_URL=docker.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY1_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY1_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
+    REGISTRY2_URL=gcr.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY2_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY2_URL}/hosts.toml" - << EOF
     [host."https://registry.private.network/v2/dockerhub-proxy/"]
       capabilities = ["pull", "resolve"]
       override_path = true
