@@ -115,18 +115,21 @@ steps:
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
 {!{- if eq $buildType "dev" }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-      COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-      COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-      COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
-      REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-      REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
       COSIGN_VAULT_KEY: "dh-2025-aug-dev"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
       COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
-      REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-      REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+{!{- else }!}
+      COSIGN_VAULT_KEY: "dh-2025-aug"
+      COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+      COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -215,7 +218,7 @@ steps:
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       export WERF_DISABLE_META_TAGS=true
     {!{- else }!}
-    
+
       # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
       # Set cosign auth values
       export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
