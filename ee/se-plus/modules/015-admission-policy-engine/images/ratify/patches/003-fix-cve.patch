@@ -89,7 +89,7 @@ index 58a3329..5e7b5b6 100644
 -	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 +	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
  	github.com/go-ldap/ldap/v3 v3.4.8 // indirect
-+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
++	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
  	github.com/gobwas/glob v0.2.3 // indirect
 -	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 +	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
@@ -345,8 +345,8 @@ index 40c0311..23f05e1 100644
  github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572/go.mod h1:9Pwr4B2jHnOSGXyyzV8ROjYa2ojvAY6HCGYYfMoC3Ls=
  github.com/go-test/deep v1.1.1 h1:0r/53hagsehfO4bzD2Pgr/+RgHqhmf+k1Bpse2cTu1U=
  github.com/go-test/deep v1.1.1/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
-+github.com/go-viper/mapstructure/v2 v2.2.1 h1:ZAaOCxANMuZx5RCeg0mBdEZk7DZasvvZIxtHqx8aGss=
-+github.com/go-viper/mapstructure/v2 v2.2.1/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
++github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
++github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
  github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
  github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
  github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=

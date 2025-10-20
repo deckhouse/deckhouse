@@ -4,7 +4,7 @@ permalink: en/user/network/locality_failover_istio.html
 ---
 
 In Deckhouse Kubernetes Platform,
-you can implement the Locality failover mechanism using the [`istio`](/modules/istio/) module.
+you can implement the Locality failover mechanism using the [istio](/modules/istio/) module.
 Before configuring the mechanism, make sure the module is enabled in the cluster.
 
 The Locality failover mechanism manages traffic routing

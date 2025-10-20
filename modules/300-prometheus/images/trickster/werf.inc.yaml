@@ -12,8 +12,8 @@ import:
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
-git:  
-{{- include "image mount points" . }}  
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["entrypoint"]
@@ -51,7 +51,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster

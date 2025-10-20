@@ -26,7 +26,7 @@ env:
 jobs:
   create-release:
     permissions: write-all
-    runs-on: ubuntu-latest
+    runs-on: "regular"
 
     steps:
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}

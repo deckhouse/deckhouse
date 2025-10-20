@@ -142,6 +142,7 @@ func (k *KubeProxy) Stop(startID int) {
 		k.healthMonitorsByStartID[startID] <- struct{}{}
 		delete(k.healthMonitorsByStartID, startID)
 	}
+
 	if k.proxy != nil {
 		log.DebugF("[%d] Stop proxy command\n", startID)
 		k.proxy.Stop()

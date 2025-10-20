@@ -103,13 +103,16 @@ func Serve(network, address string) error {
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
+	podNamespace := os.Getenv("DHCTL_SERVER_NAMESPACE")
+
 	// init services
 	dhctlService := dhctl.New(dhctl.ServiceParams{
-		PodName:     podName,
-		CacheDir:    cacheDir,
-		SchemaStore: config.NewSchemaStore(),
-		TmpDir:      app.TmpDirName,
-		IsDebug:     false,
+		PodName:      podName,
+		PodNamespace: podNamespace,
+		CacheDir:     cacheDir,
+		SchemaStore:  config.NewSchemaStore(),
+		TmpDir:       app.TmpDirName,
+		IsDebug:      false,
 	})
 
 	// register services
