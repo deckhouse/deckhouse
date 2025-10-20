@@ -3,7 +3,6 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
-cacheVersion: "2025-10-03"
 shell:
   beforeInstall:
   - apt-get install -y ipset conntrack-tools
