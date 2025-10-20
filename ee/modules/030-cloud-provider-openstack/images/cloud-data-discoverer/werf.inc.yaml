@@ -1,4 +1,5 @@
 ---
+# stub
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
