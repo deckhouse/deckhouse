@@ -15,4 +15,5 @@
 # limitations under the License.
 
 export WERF_PARALLEL_TASKS_LIMIT=21
-werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "registry-stage.deckhouse.io/sys/deckhouse-oss"
+export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "${REGISTRY_URL}"

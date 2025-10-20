@@ -117,7 +117,6 @@ jobs:
 
     - name: RM Deckhouse image
       run: |
-        export REGISTRY_URL="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
         bash .github/scripts/registry-deckhouse-cleanup.sh
     - name: RM Crane image
       run: |
