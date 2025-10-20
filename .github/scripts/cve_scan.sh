@@ -86,7 +86,7 @@ function send_report() {
     -F "service=${dd_module_name} / ${dd_image_name}" \
     -F "group_by=component_name+component_version" \
     -F "deduplication_on_engagement=false" \
-    -F "tags=dkp,${dd_scan_type},module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag},${dd_release_or_dev_tag}" \
+    -F "tags=dkp,${dd_scan_type},module:${dd_module_name},image:${dd_image_name},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag},${dd_release_or_dev_tag}" \
     -F "test_title=[${dd_module_name}]: ${dd_image_name}:${dd_image_version}" \
     -F "version=${dd_image_version}" \
     -F "build_id=${IMAGE_HASH}" \
