@@ -55,18 +55,13 @@ featureSections:
           en: Centralized management of DVP clusters using <a target='_blank' href='/products/commander/'>Commander</a>
         editions:
           dvp_ce: partly
-          dvp_ee: partly
+          dvp_ee: supported
         restriction_message:
           dvp_ce:
             en: |
-              Licensed separately
+              A separate license is required
             ru: |
-              Лицензируется <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>отдельно</a>
-          dvp_ee:
-            en: |
-              For more information about Commander licensing, see <a target='_blank' href='/products/commander/'>here</a>
-            ru: |
-              Подробнее о лицензировании Commander см. <a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>здесь</a>
+              Требуется отдельная <a target='_blank' href='/products/commander/pricing/'>лицензия</a>
       - title:
           ru: Поддержка вложенной виртуализации
           en: Nested virtualization support
