@@ -23,12 +23,12 @@ spec:
             - apiVersion: deckhouse.io/v1
               kind: HuaweiCloudInstanceClass
               metadata:
-              name: worker
+                name: worker
               spec:
-              imageName: alt-p11
-              flavorName: s7n.xlarge.2
-              rootDiskSize: 50
-              rootDiskType: SSD
+                imageName: alt-p11
+                flavorName: s7n.xlarge.2
+                rootDiskSize: 50
+                rootDiskType: SSD
           required:
             - spec
           properties:
@@ -41,18 +41,16 @@ spec:
                   description: |
                     Flavor of Huawei Cloud servers.
 
-                    To get a list of all available flavors, run the following command: `huaweicloud flavor list`.
+                    To get a list of all available flavors, run the following command: `cloud ECS ListFlavors`.
 
                     For all non-master nodes, it's recommended that you use a flavor that includes a local disk. If the cloud provider supports local disks, they're usually faster and cheaper. The disadvantage of using such a flavor is the inability to migrate nodes between hypervisors.
-
-                    Example of the flavor creation command: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
                   x-doc-examples: ['m1.medium']
                   type: string
                 imageName:
                   description: |
                     Image to use while provisioning HuaweiCloud servers.
 
-                    Use this command to get a list of available images: `huaweicloud image list`.
+                    Use this command to get a list of available images: `cloud IMS ListImages`.
 
                     For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
 
