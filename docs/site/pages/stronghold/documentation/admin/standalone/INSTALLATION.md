@@ -243,16 +243,14 @@ For production use, it is strongly recommended to use certificates issued and si
    stronghold operator init -ca-cert /opt/stronghold/tls/stronghold-ca.pem
    ```
 
-   If necessary, you can specify parameters:
+   If necessary, you can specify the following parameters:
 
    - `-key-shares` — number of key shares (default: 5);
    - `-key-threshold` — minimum number of shares required to unseal the storage (default: 3).
 
-     {% alert level="warning" %}
-     After initialization, all key shares and the root token will be displayed in the terminal.
-     Be sure to save them in a secure place.
-     Without the required number of key shares, access to Stronghold data will be impossible.
-     {% endalert %}
+     > After initialization, all key shares and the root token will be displayed in the terminal.
+     > Be sure to save them in a secure place.
+     > Without the required number of key shares, access to Stronghold data will be impossible.
 
 1. Unseal the cluster. Run the command multiple times, entering the unseal keys:
 
