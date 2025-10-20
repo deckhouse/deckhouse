@@ -14,7 +14,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
-fromImage: base-for-vex
+fromImage: base/vex
 final: true
 secrets:
 - id: REGISTRY_USER

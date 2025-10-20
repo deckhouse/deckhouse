@@ -1,5 +1,5 @@
 ---
-image: base-for-vex
+image: base/vex
 fromImage: tools/coreutils
 final: false
 import:
