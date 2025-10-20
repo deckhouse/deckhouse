@@ -122,7 +122,7 @@ function fail_fast() {
         fi
 
         if [ "$err" == "kernel_cve_2025_37999" ]; then
-          bb-log-error "Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6 are affected by CVE-2025-37999 (EROFS)"
+          bb-log-error "Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6 have issues with EROFS functionality (CVE-2025-37999). Kernel upgrade required to proceed."
         fi
     done
     bb-log-error "containerd V2 is not supported"
