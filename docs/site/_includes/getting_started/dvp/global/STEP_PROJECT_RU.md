@@ -2,13 +2,25 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-Создайте проект и администратора проекта (в примере используется проект `test-project` и пользователь `test-user@deckhouse.io`, измените их, если необходимо):
+Создайте проект. Для создания проекта используйте команду (в примере используется проект `test-project`, измените его, если необходимо):
 
 {% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
 
+Дождитесь создания пространства имён. Чтобы убедиться в том, что оно создалось, используйте команду:
+
+```shell
+d8 k get ns test-project
+```
+
+Создайте администратора проекта и свяжите его с ролью `d8:use:role:admin` в созданном ранее пространстве имён.
+Для этого используйте команду (в примере используется пользователь `test-user@deckhouse.io`, измените его, если необходимо):
+
+{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac-user.yml.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+
 Откройте веб-интерфейс генерации файла kubeconfig, для удаленного доступа к API-серверу. Адрес веб-интерфейса формируется в соответствии с шаблоном DNS-имен, указанным в глобальном параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Например, если `publicDomainTemplate: %s.kube.my`, то веб-интерфейс будет доступен по адресу `kubeconfig.kube.my`.
- 
+
 Введите логин (в примере — `test-user@deckhouse.io`) и пароль созданного пользователя и получите конфигурационный файл для доступа к кластеру:
 
 На компьютере, имеющем сетевой доступ к развернутому кластеру, создайте файл `~/.kube/config` (для Linux/MacOS) или `%USERPROFILE%\.kube\config` (для Windows) и вставьте в него конфигурацию kubectl, приведенную на вкладке *Raw Config*.
@@ -24,9 +36,9 @@ mkpasswd --method=SHA-512 --rounds=4096
 Для добавления пользователя и ssh-ключа в виртуальную машину создайте файл `cloud-config`.
 В примере по желанию измените поля:
 
-- `name` содержит имя пользователя `test-user`, замените на своё.
-- `passwd` содержит в кавычках хэш пароля `test-user`, замените на свой хэш.
-- `ssh_authorized_keys` содержит публичный ssh-ключ, сгенерируйте свой и замените.
+- `name` — содержит имя пользователя `test-user`, замените на своё.
+- `passwd` — содержит в кавычках хэш пароля `test-user`, замените на свой хэш.
+- `ssh_authorized_keys` — содержит публичный ssh-ключ, сгенерируйте свой и замените.
 
 ```bash
 #cloud-config
@@ -46,10 +58,10 @@ runcmd:
   - chown -R cloud:cloud /home/cloud
 ```
 
-Создайте файл секрета содержайщий `cloud-config` в формате base64.
+Создайте файл секрета, содержащий `cloud-config` в формате base64.
+
 ```yaml
 d8 k create -f - <<EOF
----
 apiVersion: v1
 data:
   userData: |
@@ -125,8 +137,8 @@ d8 k get vm -o wide
 После успешного старта виртуальная машина должна перейти в статус `Running`.
 
 Пример вывода:
+
 ```console
-$ d8 k get vm -o wide
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
@@ -137,7 +149,7 @@ vm     Running   1       100%           1Gi      False          False   True    
 d8 v console -n test-project vm
 ```
 
-Для выхода из консоли нажмите `Ctrl+]`
+Для выхода из консоли нажмите `Ctrl+]`.
 
 Поздравляем! Вы создали виртуальную машину и подключились к ней.
 

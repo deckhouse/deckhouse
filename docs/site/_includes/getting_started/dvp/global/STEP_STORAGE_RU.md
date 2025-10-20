@@ -68,7 +68,7 @@ spec:
         operator: In
         values:
           # Замените на имена своих блочных устройств узла, для которого создаете группу томов.
-          *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
+          - *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
 EOF
