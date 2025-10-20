@@ -20,7 +20,7 @@ shell:
     - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -33,13 +33,15 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /src
-    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - go mod vendor
-    - go build -o mimir ./cmd/mimir
-    - chown -R 64535:64535 /src/mimir
-    - chmod 0700 /src/mimir
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go mod vendor
+  - go build -o mimir ./cmd/mimir
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -o mimir ./cmd/mimir`) | indent 6 }}
+  - chown -R 64535:64535 /src/mimir
+  - chmod 0700 /src/mimir
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
