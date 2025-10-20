@@ -36,7 +36,7 @@ properties:
 
       > Внимание! Режим VXLAN не совместим со следующими режимами bpfLBMode: Hybrid, DSR. Если tunnelMode настроен на VXLAN, то bpfLBMode будет переопределён на SNAT автоматически.
 
-      > Внимание! Если кластер находится в Yandex Cloud и выбран режим Disabled, то нужно выставить параметр `bpfLBMode` в режим `DSR` и создать маршруты в подсети подов через узлы, на которых эти подсети существуют. Посмотреть подсеть узла можно с помощью команды `kubectl get nodes NODE_NAME -o jsonpath='{.spec.podCIDRs}'`
+      > Внимание! При использовании режима Disabled в статическом кластере в Yandex Cloud нужно выставить параметр `bpfLBMode` в режим `DSR` и создать маршруты в подсети подов через узлы, на которых эти подсети существуют. Посмотреть подсеть узла можно с помощью команды `kubectl get nodes NODE_NAME -o jsonpath='{.spec.podCIDRs}'`
   svcSourceRangeCheck:
     description: |
       Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
