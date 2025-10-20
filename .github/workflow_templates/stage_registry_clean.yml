@@ -23,6 +23,9 @@ on:
   - cron: '0 2 * * *'
   workflow_dispatch:
 
+env:
+  {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
 jobs:
   skip_tests_repos:
     name: Skip tests repos

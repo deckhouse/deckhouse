@@ -22,6 +22,25 @@ on:
   - cron: '0 2 * * *'
   workflow_dispatch:
 
+env:
+
+  # <template: werf_envs>
+  WERF_VERSION: "v2.46.0"
+  WERF_ENV: "FE"
+  TEST_TIMEOUT: "15m"
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
+  REGISTRY_PATH: "sys/deckhouse-oss"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
+  WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
+  # </template: werf_envs>
+
 jobs:
   skip_tests_repos:
     name: Skip tests repos
