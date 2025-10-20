@@ -86,7 +86,8 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	}
 
 	if hasTombstone {
-		return nil, fmt.Errorf("Cache exchaused")
+		log.InfoF("Tombstone found in Kubernetes cache - cluster may have already been bootstrapped\n")
+		return nil, fmt.Errorf("Cache exhausted")
 	}
 
 	return k8sCache, nil

@@ -41,9 +41,10 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:  app.TmpDirName,
-			Logger:  logger,
-			IsDebug: app.IsDebug,
+			TmpDir:            app.TmpDirName,
+			Logger:            logger,
+			IsDebug:           app.IsDebug,
+			ResetInitialState: true,
 		})
 		return bootstraper.Bootstrap(context.Background())
 	})

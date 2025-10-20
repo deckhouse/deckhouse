@@ -16,12 +16,13 @@ package cache
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -229,4 +230,248 @@ func assertRemovedAll(t *testing.T, f testFunc, l []fileDirToCreate) {
 		require.Error(t, err, fullPath)
 		require.True(t, os.IsNotExist(err), fullPath)
 	}
+}
+
+func TestSortByDepthDescending(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name: "basic depth sorting",
+			input: []string{
+				"/tmp/a",
+				"/tmp/a/b",
+				"/tmp/a/b/c",
+				"/tmp/x",
+			},
+			expected: []string{
+				"/tmp/a/b/c",
+				"/tmp/a/b",
+				"/tmp/x",
+				"/tmp/a",
+			},
+		},
+		{
+			name: "paths with slashes in directory names",
+			input: []string{
+				"/tmp/dir",
+				"/tmp/dir/sub",
+				"/tmp/dir-with/slash",
+				"/tmp/dir-with/slash/deep",
+				"/tmp/dir-with",
+			},
+			expected: []string{
+				"/tmp/dir-with/slash/deep",
+				"/tmp/dir/sub",
+				"/tmp/dir-with/slash",
+				"/tmp/dir-with",
+				"/tmp/dir",
+			},
+		},
+		{
+			name: "same depth lexicographic order",
+			input: []string{
+				"/tmp/z",
+				"/tmp/a",
+				"/tmp/m",
+			},
+			expected: []string{
+				"/tmp/z",
+				"/tmp/m",
+				"/tmp/a",
+			},
+		},
+		{
+			name:     "empty slice",
+			input:    []string{},
+			expected: []string{},
+		},
+		{
+			name:     "single element",
+			input:    []string{"/tmp/single"},
+			expected: []string{"/tmp/single"},
+		},
+		{
+			name: "paths with different separators",
+			input: []string{
+				"tmp/a",
+				"tmp/a/b",
+				"tmp/a/b/c",
+				"tmp/x",
+			},
+			expected: []string{
+				"tmp/a/b/c",
+				"tmp/a/b",
+				"tmp/x",
+				"tmp/a",
+			},
+		},
+		{
+			name: "mixed depth with duplicates",
+			input: []string{
+				"/a/b/c",
+				"/a/b",
+				"/a/b/c",
+				"/a",
+			},
+			expected: []string{
+				"/a/b/c",
+				"/a/b/c",
+				"/a/b",
+				"/a",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			paths := make([]string, len(tt.input))
+			copy(paths, tt.input)
+
+			sortByDepthDescending(paths)
+
+			require.Equal(t, tt.expected, paths, "Paths should be sorted by depth descending")
+		})
+	}
+}
+
+func TestGetClearTemporaryDirsFunc(t *testing.T) {
+	tests := []struct {
+		name   string
+		params ClearTmpParams
+		setup  func(t *testing.T, tmpDir string)
+		verify func(t *testing.T, tmpDir string)
+	}{
+		{
+			name: "debug mode skips cleaning",
+			params: ClearTmpParams{
+				IsDebug:       true,
+				TmpDir:        "",
+				DefaultTmpDir: "",
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				testMkFile(t, filepath.Join(tmpDir, "test.txt"))
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				_, err := os.Stat(filepath.Join(tmpDir, "test.txt"))
+				require.NoError(t, err, "File should exist in debug mode")
+			},
+		},
+		{
+			name: "empty tmp dir path skips cleaning",
+			params: ClearTmpParams{
+				IsDebug:       false,
+				TmpDir:        "",
+				DefaultTmpDir: "",
+			},
+			setup:  func(t *testing.T, tmpDir string) {},
+			verify: func(t *testing.T, tmpDir string) {},
+		},
+		{
+			name: "root path skips cleaning",
+			params: ClearTmpParams{
+				IsDebug:       false,
+				TmpDir:        "/",
+				DefaultTmpDir: "/",
+			},
+			setup:  func(t *testing.T, tmpDir string) {},
+			verify: func(t *testing.T, tmpDir string) {},
+		},
+		{
+			name: "preserves log files",
+			params: ClearTmpParams{
+				IsDebug:         false,
+				RemoveTombStone: false,
+				TmpDir:          "",
+				DefaultTmpDir:   "",
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				testMkFile(t, filepath.Join(tmpDir, "test.log"))
+				testMkFile(t, filepath.Join(tmpDir, "other.txt"))
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				_, err := os.Stat(filepath.Join(tmpDir, "test.log"))
+				require.NoError(t, err, "Log file should be preserved")
+
+				_, err = os.Stat(filepath.Join(tmpDir, "other.txt"))
+				require.True(t, os.IsNotExist(err), "Non-log file should be removed")
+			},
+		},
+		{
+			name: "preserves tombstone when RemoveTombStone is false",
+			params: ClearTmpParams{
+				IsDebug:         false,
+				RemoveTombStone: false,
+				TmpDir:          "",
+				DefaultTmpDir:   "",
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				testMkFile(t, filepath.Join(tmpDir, ".tombstone"))
+				testMkFile(t, filepath.Join(tmpDir, "other.txt"))
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				_, err := os.Stat(filepath.Join(tmpDir, ".tombstone"))
+				require.NoError(t, err, "Tombstone file should be preserved")
+
+				_, err = os.Stat(filepath.Join(tmpDir, "other.txt"))
+				require.True(t, os.IsNotExist(err), "Other file should be removed")
+			},
+		},
+		{
+			name: "removes tombstone when RemoveTombStone is true",
+			params: ClearTmpParams{
+				IsDebug:         false,
+				RemoveTombStone: true,
+				TmpDir:          "",
+				DefaultTmpDir:   "",
+			},
+			setup: func(t *testing.T, tmpDir string) {
+				testMkFile(t, filepath.Join(tmpDir, ".tombstone"))
+				testMkFile(t, filepath.Join(tmpDir, "other.txt"))
+			},
+			verify: func(t *testing.T, tmpDir string) {
+				_, err := os.Stat(filepath.Join(tmpDir, ".tombstone"))
+				require.True(t, os.IsNotExist(err), "Tombstone file should be removed")
+
+				_, err = os.Stat(filepath.Join(tmpDir, "other.txt"))
+				require.True(t, os.IsNotExist(err), "Other file should be removed")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.params.TmpDir == "" || tt.params.TmpDir == "/" {
+				clearFunc := GetClearTemporaryDirsFunc(tt.params)
+				clearFunc()
+				return
+			}
+
+			id, err := uuid.NewRandom()
+			require.NoError(t, err)
+
+			tmpDir := filepath.Join(os.TempDir(), "dhctl-test-clear-"+id.String())
+			testMkDir(t, tmpDir)
+			defer os.RemoveAll(tmpDir)
+
+			tt.params.TmpDir = tmpDir
+			if tt.params.DefaultTmpDir == "" {
+				tt.params.DefaultTmpDir = tmpDir
+			}
+
+			tt.setup(t, tmpDir)
+
+			clearFunc := GetClearTemporaryDirsFunc(tt.params)
+			clearFunc()
+
+			tt.verify(t, tmpDir)
+		})
+	}
+}
+
+func TestDefaultLoggerProvider(t *testing.T) {
+	logger := defaultLoggerProvider()
+	require.NotNil(t, logger)
 }

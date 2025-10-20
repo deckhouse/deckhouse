@@ -57,6 +57,14 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
+	// Check for tombstone BEFORE cleaning the directory
+	tombstonePath := filepath.Join(dir, state.TombstoneKey)
+	log.InfoF("Checking for tombstone file before cleaning: %s\n", tombstonePath)
+	if _, err := os.Stat(tombstonePath); err == nil {
+		log.InfoF("Tombstone file found at %s - the cluster was already bootstrapped\n", tombstonePath)
+		return nil, fmt.Errorf("The cluster was already bootstrapped")
+	}
+
 	// prepare dir to be fresh for given initial state
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -114,6 +122,7 @@ func (s *StateCache) InCache(name string) (bool, error) {
 func (s *StateCache) Clean() {
 	_ = os.RemoveAll(s.dir)
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+		log.ErrorF("Failed to recreate cache directory %s: %v\n", s.dir, err)
 		return
 	}
 
@@ -154,9 +163,12 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 }
 
 func (s *StateCache) Delete(name string) {
+	path := s.GetPath(name)
 	ok, _ := s.InCache(name)
 	if ok {
-		_ = os.Remove(s.GetPath(name))
+		if err := os.Remove(path); err != nil {
+			log.ErrorF("Failed to delete cache file %s: %v\n", path, err)
+		}
 	}
 }
 

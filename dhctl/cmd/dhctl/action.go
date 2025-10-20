@@ -55,9 +55,10 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	}
 
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:       app.IsDebug,
-		DefaultTmpDir: app.GetDefaultTmpDir(),
-		TmpDir:        tmpDir,
+		IsDebug:          app.IsDebug,
+		PreserveStateDir: true,
+		DefaultTmpDir:    app.GetDefaultTmpDir(),
+		TmpDir:           tmpDir,
 		LoggerProvider: func() log.Logger {
 			return log.GetDefaultLogger()
 		},
@@ -69,6 +70,7 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	if c.SelectedCommand != nil && c.SelectedCommand.FullCommand() == "_server" {
 		log.DebugLn("Selected command: _server. Tombstone will be removed when temp directory remove")
 		clearTmpParams.RemoveTombStone = true
+		clearTmpParams.PreserveStateDir = false
 	}
 
 	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.GetClearTemporaryDirsFunc(clearTmpParams))

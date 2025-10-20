@@ -55,6 +55,9 @@ type StreamDirectorParams struct {
 }
 
 func (params *StreamDirectorParams) Validate() error {
+	if params.TmpDir == "" {
+		return fmt.Errorf("tmpdir is required")
+	}
 	return settings.ValidateTmpPath(params.TmpDir)
 }
 
