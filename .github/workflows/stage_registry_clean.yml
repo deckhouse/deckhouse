@@ -49,6 +49,16 @@ jobs:
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
+
+  clean:
+    name: Clean
+    runs-on: "regular"
+    needs:
+    - skip_tests_repos
+    permissions:
+      contents: read
+      id-token: write
+    steps:
     # <template: import_secrets>
     - name: Split repository name
       id: split

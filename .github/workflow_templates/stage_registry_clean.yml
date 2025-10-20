@@ -35,6 +35,15 @@ jobs:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
 
+  clean:
+    name: Clean
+    runs-on: "regular"
+    needs:
+    - skip_tests_repos
+    permissions:
+      contents: read
+      id-token: write
+    steps:
       {!{- $secrets := slice -}!}
       {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
       {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
