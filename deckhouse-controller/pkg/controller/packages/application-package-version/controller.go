@@ -81,6 +81,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.delete(ctx, packageVersion)
 	}
 
+	// skip handle for non drafted resources
+	if packageVersion.Labels["draft"] != "true" {
+		r.logger.Debug("package is not draft", slog.String("package_name", packageVersion.Name))
+		return ctrl.Result{}, nil
+	}
+
 	// handle create/update events
 	return r.handle(ctx, packageVersion)
 }
@@ -88,6 +94,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) handle(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	// TODO: implement application package version reconciliation logic
 	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", packageVersion.Name))
+
+	// - get registry creds from PackageRepository resource
+	// - create go registry client from creds from PackageRepository
+	// - get package.yaml from release image
+	// - fill subresource status with new data
+	// - delete label "draft"
+
 	return ctrl.Result{}, nil
 }
 
