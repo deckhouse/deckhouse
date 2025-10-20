@@ -102,7 +102,7 @@ govc role.create deckhouse \
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
-### Подготовка образа виртуальной машины
+### Требования к образу виртуальной машины
 
 Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
 
@@ -115,26 +115,33 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
 {% endalert %}
 
-#### Требования к образу виртуальной машины
+{% alert level="warning" %}
+Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{% endalert %}
 
-Deckhouse использует `cloud-init` для настройки виртуальной машины после запуска. Для этого в образе должны быть установлены следующие пакеты:
+#### Подготовка образа виртуальной машины
 
-* `open-vm-tools`
-* `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
-
-Для добавления SSH-ключа, в файле `/etc/cloud/cloud.cfg` должен быть указан параметр `default_user`.
-
-Пошаговая подготовка `cloud-init` на vSphere:
+DKP использует `cloud-init` для настройки виртуальной машины после запуска. Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
 
 1. Установите необходимые пакеты:
 
+   Если используется версия `cloud-init` ниже 21.3 (требуется поддержка VMware GuestInfo):
+
    ```shell
    sudo apt-get update
-   sudo apt-get install -y open-vm-tools cloud-init # Для cloud-init ниже 21.3 требуется поддержка VMware GuestInfo.
+   sudo apt-get install -y open-vm-tools cloud-init cloud-init-vmware-guestinfo
+   ```
+
+   Если используется версия `cloud-init` 21.3 и выше:
+
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init
    ```
 
 1. Проверьте, что в файле `/etc/cloud/cloud.cfg` установлен параметр `disable_vmware_customization: false`.
+
+1. Убедитесь, что в файле `/etc/cloud/cloud.cfg` указан параметр `default_user`. Он необходим для добавления SSH-ключа при запуске ВМ.
 
 1. Добавьте datasource VMware GuestInfo — создайте файл `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
 
@@ -156,19 +163,21 @@ Deckhouse использует `cloud-init` для настройки вирту
    cloud-init clean --logs --seed
    ```
 
-Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
+{% alert level="warning" %}
 
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
+После запуска виртуальной машины в ней должны быть запущены следующие службы, связанные с пакетами, установленными при подготовке `cloud-init`:
 
-Запустить службы можно с помощью команды:
+- `cloud-config.service`,
+- `cloud-final.service`,
+- `cloud-init.service`.
+
+Чтобы убедиться в том, что службы включены, используйте команду:
 
 ```shell
 systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
 ```
 
-Пример вывода:
+Пример ответа для включенных служб:
 
 ```console
 enabled
@@ -176,17 +185,15 @@ enabled
 enabled
 ```
 
-{% alert level="warning" %}
-Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
 {% alert %}
-Deckhouse создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
+DKP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
 Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
-Deckhouse использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
 ## Инфраструктура

@@ -100,33 +100,44 @@ Assign the role to a user on the `vCenter` object:
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
-### Preparing a virtual machine image
+### VM image requirements
 
-It is recommended to use a pre-built cloud image/OVA file provided by the OS vendor to create a `Template`:
+To create a VM template (`Template`), it is recommended to use a ready-made cloud image/OVA file provided by the OS vendor:
 
 * [**Ubuntu**](https://cloud-images.ubuntu.com/)
 * [**Debian**](https://cloud.debian.org/images/cloud/)
 * [**CentOS**](https://cloud.centos.org/)
-* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
+* [**Rocky Linux**](https://rockylinux.org/alternative-images/) (section *Generic Cloud / OpenStack*)
 
-#### Virtual machine image requirements
+{% alert %}
+If you plan to use a domestic OS distribution, contact the OS vendor to obtain the image/OVA file.
+{% endalert %}
 
-Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do this, the following packages must be installed in the image:
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
 
-* `open-vm-tools`
-* `cloud-init`
-* [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used)
-
-Preparing the image for `cloud-init` on vSphere:
+#### Preparing the virtual machine image
 
 1. Install the required packages:
 
+   If you use `cloud-init` version lower than 21.3 (VMware GuestInfo support is required):
+
    ```shell
    sudo apt-get update
-   sudo apt-get install -y open-vm-tools cloud-init # For cloud-init versions below 21.3, VMware GuestInfo support is required.
+   sudo apt-get install -y open-vm-tools cloud-init cloud-init-vmware-guestinfo
+   ```
+
+   If you use `cloud-init` version 21.3 or higher:
+
+   ```shell
+   sudo apt-get update
+   sudo apt-get install -y open-vm-tools cloud-init
    ```
 
 1. Verify that the `disable_vmware_customization: false` parameter is set in `/etc/cloud/cloud.cfg`.
+
+1. Make sure the `default_user` parameter is specified in `/etc/cloud/cloud.cfg`. It is required to add an SSH key when the VM starts.
 
 1. Add the VMware GuestInfo datasource — create `/etc/cloud/cloud.cfg.d/99-DataSourceVMwareGuestInfo.cfg`:
 
@@ -148,19 +159,21 @@ Preparing the image for `cloud-init` on vSphere:
    cloud-init clean --logs --seed
    ```
 
-Also, after the virtual machine is started, the following services associated with these packages must be started:
+{% alert level="warning" %}
 
-* `cloud-config.service`
-* `cloud-final.service`
-* `cloud-init.service`
+After the virtual machine starts, the following services related to the packages installed during `cloud-init` preparation must be running:
 
-You can start the services using the command:
+- `cloud-config.service`,
+- `cloud-final.service`,
+- `cloud-init.service`.
+
+To ensure that the services are enabled, use the command:
 
 ```shell
 systemctl is-enabled cloud-config.service cloud-init.service cloud-final.service
 ```
 
-Example output:
+Example output for enabled services:
 
 ```console
 enabled
@@ -168,19 +181,19 @@ enabled
 enabled
 ```
 
-To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
+{% endalert %}
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-{% alert level="warning" %}
-Deckhouse creates virtual machine disks of the `eagerZeroedThick` type, however, the disk type of the created VMs will be changed without any notice to match the `VM Storage Policy` as configured in vSphere.
-You can read more in the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
+{% alert %}
+DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
-Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 ## Infrastructure
