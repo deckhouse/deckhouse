@@ -44,6 +44,5 @@ function crain_rm {
 
 crain_rm "${REGISTRY_URL}/install"
 crain_rm "${REGISTRY_URL}/install-standalone"
-crain_rm "${REGISTRY_URL}/e2e-terraform"
 crain_rm "${REGISTRY_URL}/e2e-opentofu-eks"
 crain_rm "${REGISTRY_URL}"
