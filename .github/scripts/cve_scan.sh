@@ -86,7 +86,7 @@ function send_report() {
     -F "service=${dd_module_name} / ${dd_image_name}" \
     -F "group_by=component_name+component_version" \
     -F "deduplication_on_engagement=false" \
-    -F "tags=dkp,${dd_scan_type},module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag},${dd_release_or_dev_tag}" \
+    -F "tags=dkp,${dd_scan_type},module:${dd_module_name},image:${dd_image_name},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag},${dd_release_or_dev_tag}" \
     -F "test_title=[${dd_module_name}]: ${dd_image_name}:${dd_image_version}" \
     -F "version=${dd_image_version}" \
     -F "build_id=${IMAGE_HASH}" \
@@ -222,7 +222,6 @@ for d8_tag in "${d8_tags[@]}"; do
     dd_full_release_tag="image_release_tag:${d8_tag}"
     dd_release_or_dev_tag="release"
     dd_image_version="$(echo ${dd_short_release_tag} | sed 's/^release\://')"
-    dd_branch="$(echo ${dd_short_release_tag} | sed 's/\:/\-/')"
     trivy_registry_user="${PROD_REGISTRY_USER}"
     trivy_registry_pass="${PROD_REGISTRY_PASSWORD}"
   fi
@@ -238,7 +237,7 @@ for d8_tag in "${d8_tags[@]}"; do
     a_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
     # if it is deckhouse-oss - add it as deckhouse-controller module
     if [ "${a_image_name}" == "deckhouse-oss" ]; then
-      a_module_name="deckhouse-controller"
+      a_module_name="deckhouseController"
     elif [ "${a_image_name}" == "install" ]; then
       a_module_name="dhctl"
     fi
