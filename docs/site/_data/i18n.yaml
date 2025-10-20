@@ -22,7 +22,7 @@ kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
 dvp_ce: DKP CE
-dvp_ee: DVP EE / DKP EE / DKP SE+
+dvp_ee: DVP EE / DKP SE+ / DKP EE
 
 common:
   of:
