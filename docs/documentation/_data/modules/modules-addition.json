@@ -120,20 +120,49 @@
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-netapp/stable/"
   },
   "csi-hpe": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -210,8 +239,18 @@
   },
   "neuvector": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/neuvector/stable/"
   },
@@ -243,10 +282,27 @@
   },
   "operator-argo": {
     "editions": [
+      "ee",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
+    "external": "true",
+    "path": "/modules/operator-argo/stable/"
+  },
+  "payload-registry": {
+    "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/operator-argo/stable/"
+    "path": "/modules/payload-registry/stable/"
   },
   "pod-reloader": {
     "editions": [

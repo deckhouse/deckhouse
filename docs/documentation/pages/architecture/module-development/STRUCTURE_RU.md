@@ -126,9 +126,16 @@ lang: ru
 Статус [жизненного цикла](../versioning/#жизненный-цикл-модуля) модуля указывается в [module.yaml](#moduleyaml). Доступность модуля в редакциях Deckhouse Kubernetes Platform не определяется разработчиком модуля.
 {% endalert %}
 
-В папке `/docs` находится документация к модулю:
+В папке `/docs` находится документация к модулю. Следующие подпапки в папке docs игнорируются при сборке документации:
 
-* `README.md` — описание, для чего нужен модуль, какую проблему он решает и общие архитектурные принципы.
+- `internal`
+- `internals`
+- `development`
+- `dev`
+
+Следующие файлы обязательны:
+
+* `README.md` и `README.ru.md` — описание, для чего нужен модуль, какую проблему он решает и общие архитектурные принципы.
 
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` — **(рекомендуется)** Заголовок страницы описания модуля. Пример — "Веб-консоль администратора Deckhouse". Он же используется в навигации, если не указан параметр `linkTitle`.
@@ -150,7 +157,9 @@ lang: ru
   </details>
   </div>
 
-* `EXAMPLES.md` – примеры конфигурации модуля с описанием.
+Следующие файлы не обязательны, но имеют [предопределенное](https://github.com/deckhouse/deckhouse/blob/main/docs/site/backends/docs-builder-template/data/helpers.yaml#L1) название пункта в sidebar (меню слева) и заголовок страницы:
+
+* `EXAMPLES.md` и `EXAMPLES.ru.md` — примеры конфигурации модуля с описанием.
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы. Пример: "Примеры". Он же используется в навигации, если нет `linkTitle`.
@@ -170,7 +179,7 @@ lang: ru
   </details>
   </div>
 
-* `FAQ.md` – часто задаваемые вопросы, касающиеся эксплуатации модуля ("Какой сценарий выбрать: А или Б?").
+* `FAQ.md` и `FAQ.ru.md` — часто задаваемые вопросы, касающиеся эксплуатации модуля ("Какой сценарий выбрать: А или Б?").
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы.
@@ -190,7 +199,7 @@ lang: ru
   </details>
   </div>
   
-* `ADVANCED_USAGE.md` -- инструкция по отладке модуля.
+* `ADVANCED_USAGE.md` и `ADVANCED_USAGE.ru.md` — расширенные инструкции по использованию и отладке модуля.
   
   Метаданные файла ([front matter](https://gohugo.io/content-management/front-matter/)) в виде YAML-структуры должны быть во всех языковых версиях файла. Параметры, доступные для использования в метаданных:
   - `title` – **(рекомендуется)** Заголовок страницы.
@@ -210,7 +219,7 @@ lang: ru
   </details>
   </div>
   
-* `CR.md` и `CR.ru.md` – файл для генерации ресурсов из папки `/crds/` добавьте вручную.  
+* `CR.md` и `CR.ru.md` — файлы для генерации ресурсов из папки `/crds/`. Добавьте эти файлы, если необходима генерация ресурсов из папки `/crds` модуля.
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
@@ -224,7 +233,7 @@ lang: ru
   </details>
   </div>
 
-* `CONFIGURATION.md` – файл для создания ресурсов из `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml` добавьте вручную.  
+* `CONFIGURATION.md` и `CONFIGURATION.ru.md` — файлы для рендеринга OpenAPI-спецификаций из файлов `/openapi/config-values.yaml` и `/openapi/doc-<LANG>-config-values.yaml`. Добавьте эти файлы, если необходима генерация таких спецификаций.
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
@@ -545,7 +554,7 @@ dependencies:
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
 - `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
 Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
-- `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules) по шаблону `module.deckhouse.io/<TAG>=""`.
+- `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](../../../reference/api/global.html#parameters-modules) по шаблону `module.deckhouse.io/<TAG>=""`.
 
   Например, если указать `tags: ["test", "myTag"]`, то объект Module получит лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
 - `weight` — *Число.* Вес модуля. Влияет на порядок запуска модулей: модули с меньшим значением `weight` запускаются раньше. По умолчанию — `900`.

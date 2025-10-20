@@ -766,7 +766,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует [модуль `cert-manager`](/modules/cert-manager/). Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) или [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует [модуль `cert-manager`](/modules/cert-manager/). Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) или [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](../../../../reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
 
    Отобразить список модулей, которые не поддерживаются в DKP CSE и будут отключены, можно следующей командой:
 

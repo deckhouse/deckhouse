@@ -3,7 +3,7 @@ title: "Web interface for downloading Deckhouse utilities"
 permalink: en/user/web/deckhouse-tools.html
 ---
 
-Web interface for downloading Deckhouse utilities provides centralized access to CLI tools for popular operating systems (Linux, macOS, Windows). Using it, you can quickly locate and download executable binaries for the required architecture and version, as well as receive notifications about their updates. This functionality is implemented by the `deckhouse-tools` module.
+Web interface for downloading Deckhouse utilities provides centralized access to CLI tools for popular operating systems (Linux, macOS, Windows). Using it, you can quickly locate and download executable binaries for the required architecture and version, as well as receive notifications about their updates. This functionality is implemented by the [deckhouse-tools](/modules/deckhouse-tools/) module.
 
 ## Accessing the web interface
 
