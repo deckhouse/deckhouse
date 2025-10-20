@@ -194,40 +194,16 @@ steps:
       # Release tag build, set deckhouse registry as final
       export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-      # Set cosign auth values
-      export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-      export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-      export COSIGN_VAULT_KEY="dh-2025-aug"
-      export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-      AUTH_ROLE="dh-signer_dh-signer"
-
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
       IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
       export WERF_DISABLE_META_TAGS=true
     {!{- else if eq $buildType "pre-release" }!}
-      # Set cosign auth values
-      export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-      export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-      export COSIGN_VAULT_KEY="dh-2025-aug"
-      export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-      AUTH_ROLE="dh-signer_dh-signer"
-
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       export WERF_DISABLE_META_TAGS=true
     {!{- else }!}
-
-      # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-      # Set cosign auth values
-      export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-      export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-      export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-      export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-      export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-      export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
       # Determine image tag
       if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
       IMAGE_EDITION=${WERF_ENV,,}

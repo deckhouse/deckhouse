@@ -523,13 +523,6 @@ jobs:
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -897,13 +890,6 @@ jobs:
           fi
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1273,13 +1259,6 @@ jobs:
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -1635,13 +1614,6 @@ jobs:
           fi
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1999,13 +1971,6 @@ jobs:
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
@@ -2361,13 +2326,6 @@ jobs:
           fi
           # Release tag build, set deckhouse registry as final
           export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.

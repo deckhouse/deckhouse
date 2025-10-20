@@ -348,16 +348,6 @@ jobs:
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
           IMAGE_EDITION=${WERF_ENV,,}
@@ -653,16 +643,6 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -960,16 +940,6 @@ jobs:
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
           IMAGE_EDITION=${WERF_ENV,,}
@@ -1265,16 +1235,6 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1572,16 +1532,6 @@ jobs:
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
           IMAGE_EDITION=${WERF_ENV,,}
@@ -1877,16 +1827,6 @@ jobs:
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-
-          # REMOVE THIS SECTION BEFORE MERGE TO MAIN !!!!
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-          export COSIGN_VAULT_ADDRESS="https://seguro.flant.com"
-          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-          export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
           # Determine image tag
           if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then

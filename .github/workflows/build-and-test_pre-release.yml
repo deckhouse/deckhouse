@@ -348,13 +348,6 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -647,13 +640,6 @@ jobs:
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -948,13 +934,6 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1247,13 +1226,6 @@ jobs:
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1548,13 +1520,6 @@ jobs:
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
-
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
@@ -1847,13 +1812,6 @@ jobs:
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
-          export COSIGN_VAULT_KEY="dh-2025-aug"
-          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-          AUTH_ROLE="dh-signer_dh-signer"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.

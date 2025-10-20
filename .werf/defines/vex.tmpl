@@ -21,12 +21,12 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-#- id: COSIGN_VAULT_ADDRESS
-#  env: COSIGN_VAULT_ADDRESS
+- id: COSIGN_VAULT_ADDRESS
+  env: COSIGN_VAULT_ADDRESS
 - id: COSIGN_VAULT_KEY
   env: COSIGN_VAULT_KEY
-#- id: COSIGN_AUTH_ROLE
-#  env: COSIGN_AUTH_ROLE
+- id: COSIGN_AUTH_ROLE
+  env: COSIGN_AUTH_ROLE
 - id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
   env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
@@ -51,9 +51,9 @@ shell:
   install:
   - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
   - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
-  - export VAULT_ADDR="https://seguro.flant.com"
+  - export VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)"
   - export COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)"
-  - export COSIGN_AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+  - export COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
@@ -71,11 +71,3 @@ shell:
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
-#    REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)" \
-#    REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)" \
-#    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)" \
-#    COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)" \
-#    COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)" \
-#    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-#    ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" \
-#    ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)" \
