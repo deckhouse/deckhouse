@@ -217,7 +217,7 @@ generate: generate-kubernetes generate-tools
 
 .PHONY: generate-tools
 generate-tools:
-	cd tools; go generate -v; cd ..
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
