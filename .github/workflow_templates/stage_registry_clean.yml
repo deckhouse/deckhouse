@@ -13,7 +13,7 @@
 # limitations under the License.
 
   {!{- $workflowName              := "Stage registry clean" -}!}
-  {!{- $enableWorkflowOnTestRepos := true -}!}
+  {!{- $enableWorkflowOnTestRepos := false -}!}
 
   {!{- $ctx := . }!}
 
