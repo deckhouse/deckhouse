@@ -26,7 +26,7 @@ if [ ! -f /tmp/crane ]; then
   tar -zxvf /tmp/go-containerregistry.tar.gz -C /tmp/ crane
 fi
 
-function crain_rm {
+function crane_rm {
   local REPO=$1
 
   local THRESHOLD_EPOCH=$(( $(date +%s) - 14*24*60*60 ))
@@ -42,7 +42,7 @@ function crain_rm {
   fi
 }
 
-crain_rm "${REGISTRY_URL}/install"
-crain_rm "${REGISTRY_URL}/install-standalone"
-crain_rm "${REGISTRY_URL}/e2e-opentofu-eks"
-crain_rm "${REGISTRY_URL}"
+crane_rm "${REGISTRY_URL}/install"
+crane_rm "${REGISTRY_URL}/install-standalone"
+crane_rm "${REGISTRY_URL}/e2e-opentofu-eks"
+crane_rm "${REGISTRY_URL}"
