@@ -1,0 +1,52 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+  {!{- $workflowName              := "Stage registry clean" -}!}
+  {!{- $enableWorkflowOnTestRepos := true -}!}
+
+  {!{- $ctx := . }!}
+
+name: '{!{ $workflowName }!}'
+on:
+  schedule:
+  - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: "regular"
+    if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+      {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+
+      {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 4 }!}
+      {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 4 }!}
+      {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
+
+    - name: RM Deckhouse image
+      env:
+        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
+      run: bash .github/scripts/registry-deckhouse-cleanup.sh
+    - name: RM Crane image
+      env:
+        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
+      run: bash .github/scripts/registry-crane-cleanup.sh

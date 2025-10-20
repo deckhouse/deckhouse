@@ -1,0 +1,96 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'Stage registry clean'
+on:
+  schedule:
+  - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: "regular"
+    if: ${{ true || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+          projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+          projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+
+    # </template: import_secrets>
+
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+
+    # <template: werf_install_step>
+    - name: Install werf CLI
+      uses: werf/actions/install@v2
+      with:
+        version: ${{env.WERF_VERSION}}
+    # </template: werf_install_step>
+
+    # <template: login_stage_registry_step>
+    - name: Check stage registry credentials
+      id: check_stage_registry
+      env:
+        HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+      run: |
+        if [[ -n $HOST ]]; then
+          echo "has_credentials=true" >> $GITHUB_OUTPUT
+          echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+        fi
+    - name: Login to stage registry
+      uses: docker/login-action@v2.1.0
+      if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+      with:
+        registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+        password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        logout: false
+    # </template: login_stage_registry_step>
+
+    - name: RM Deckhouse image
+      env:
+        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
+      run: bash .github/scripts/registry-deckhouse-cleanup.sh
+    - name: RM Crane image
+      env:
+        REGISTRY_URL: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/${REGISTRY_PATH}"
+      run: bash .github/scripts/registry-crane-cleanup.sh
