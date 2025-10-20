@@ -23,6 +23,12 @@ import:
   add: /usr/bin/bash
   to: /bin/sh
   before: setup
+- image: tools/gawk
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
 - image: tools/coreutils
   add: /
   to: /
