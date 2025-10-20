@@ -14,6 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export WERF_DOCKER_CONFIG=${PWD}
 export WERF_PARALLEL_TASKS_LIMIT=21
 werf cleanup --config werf_cleanup.yaml --without-kube --disable-auto-host-cleanup=true --log-color-mode='off' --repo "registry-stage.deckhouse.io/sys/deckhouse-oss"
