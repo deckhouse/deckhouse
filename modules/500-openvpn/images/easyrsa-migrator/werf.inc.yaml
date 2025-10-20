@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-cacheVersion: "2025-10-02"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/easyrsa-migrator
