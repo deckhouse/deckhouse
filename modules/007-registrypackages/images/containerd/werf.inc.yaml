@@ -202,7 +202,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount/src
   to: /src
   stageDependencies:
     install:
