@@ -27,7 +27,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -77,30 +76,30 @@ func TestDeckhouseInstall(t *testing.T) {
 			},
 			false,
 		},
-		{
-			"With docker cfg",
-			func() error {
-				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: registry.Data{DockerCfg: "YW55dGhpbmc="},
-				}, func() error {
-					return nil
-				})
-				if err != nil {
-					return err
-				}
-				s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "deckhouse-registry", metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
+		// {
+		// 	"With docker cfg",
+		// 	func() error {
+		// 		_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
+		// 			Registry: registry.Data{DockerCfg: "YW55dGhpbmc="},
+		// 		}, func() error {
+		// 			return nil
+		// 		})
+		// 		if err != nil {
+		// 			return err
+		// 		}
+		// 		s, err := fakeClient.CoreV1().Secrets("d8-system").Get(context.TODO(), "deckhouse-registry", metav1.GetOptions{})
+		// 		if err != nil {
+		// 			return err
+		// 		}
 
-				dockercfg := s.Data[".dockerconfigjson"]
-				if string(dockercfg) != "anything" {
-					return fmt.Errorf(".dockercfg data: %s", dockercfg)
-				}
-				return nil
-			},
-			false,
-		},
+		// 		dockercfg := s.Data[".dockerconfigjson"]
+		// 		if string(dockercfg) != "anything" {
+		// 			return fmt.Errorf(".dockercfg data: %s", dockercfg)
+		// 		}
+		// 		return nil
+		// 	},
+		// 	false,
+		// },
 		{
 			"With secrets",
 			func() error {

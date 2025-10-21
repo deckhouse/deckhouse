@@ -35,7 +35,7 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry                 registry.Data
+	RegistryConfigBuilder    *registry.ConfigBuilder
 	LogLevel                 string
 	Bundle                   string
 	DevBranch                string
@@ -58,10 +58,9 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
-	registryNameTemplate := "%s%s:%s"
+func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+		return tag
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
@@ -74,12 +73,12 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	if tag == "" {
 		panic("You are probably using a development image. please use devBranch")
 	}
-
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	return tag
 }
 
-func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
+func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
+	tag := c.GetImageTag(forceVersionTag)
+	return fmt.Sprintf("%s:%s", c.RegistryConfigBuilder.InclusterImagesRepo(), tag)
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -173,7 +172,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
-		Registry:              metaConfig.Registry,
+		RegistryConfigBuilder: metaConfig.Registry.ConfigBuilder(),
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,

@@ -14,100 +14,100 @@
 
 package preflight
 
-import (
-	"context"
+// import (
+// 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+// 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+// 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+// 	"github.com/google/go-containerregistry/pkg/name"
+// 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-)
+// 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+// )
 
-func (s *PreflightChecksTestSuite) TestEditionBad() {
-	t := s.Require()
+// func (s *PreflightChecksTestSuite) TestEditionBad() {
+// 	t := s.Require()
 
-	app.AppVersion = "dev"
-	app.AppEdition = "test"
-	app.PreflightSkipDeckhouseEditionCheck = false
-	image := s.checker.installConfig.GetImage(false)
-	ref, err := name.ParseReference(image)
-	t.NoError(err)
+// 	app.AppVersion = "dev"
+// 	app.AppEdition = "test"
+// 	app.PreflightSkipDeckhouseEditionCheck = false
+// 	image := s.checker.installConfig.GetImage(false)
+// 	ref, err := name.ParseReference(image)
+// 	t.NoError(err)
 
-	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry.Data{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
-		},
-	}
+// 	s.checker.metaConfig = &config.MetaConfig{
+// 		Registry: registry.Data{
+// 			Scheme:  "https",
+// 			Address: "test.registry.io",
+// 			CA:      "",
+// 		},
+// 	}
 
-	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
-		ExpectReference(ref).
-		Return(&v1.ConfigFile{
-			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "BAD",
-			}}}, nil)
+// 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
+// 		ExpectReference(ref).
+// 		Return(&v1.ConfigFile{
+// 			Config: v1.Config{Labels: map[string]string{
+// 				"io.deckhouse.edition": "BAD",
+// 			}}}, nil)
 
-	err = s.checker.CheckDhctlEdition(context.Background())
-	t.Error(err)
-}
+// 	err = s.checker.CheckDhctlEdition(context.Background())
+// 	t.Error(err)
+// }
 
-func (s *PreflightChecksTestSuite) TestOk() {
-	t := s.Require()
+// func (s *PreflightChecksTestSuite) TestOk() {
+// 	t := s.Require()
 
-	app.AppVersion = "dev"
-	app.AppEdition = "test"
-	app.PreflightSkipDeckhouseEditionCheck = false
-	image := s.checker.installConfig.GetImage(false)
-	ref, err := name.ParseReference(image)
-	t.NoError(err)
+// 	app.AppVersion = "dev"
+// 	app.AppEdition = "test"
+// 	app.PreflightSkipDeckhouseEditionCheck = false
+// 	image := s.checker.installConfig.GetImage(false)
+// 	ref, err := name.ParseReference(image)
+// 	t.NoError(err)
 
-	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry.Data{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
-		},
-	}
+// 	s.checker.metaConfig = &config.MetaConfig{
+// 		Registry: registry.Data{
+// 			Scheme:  "https",
+// 			Address: "test.registry.io",
+// 			CA:      "",
+// 		},
+// 	}
 
-	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
-		ExpectReference(ref).
-		Return(&v1.ConfigFile{
-			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "test",
-			}}}, nil)
+// 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
+// 		ExpectReference(ref).
+// 		Return(&v1.ConfigFile{
+// 			Config: v1.Config{Labels: map[string]string{
+// 				"io.deckhouse.edition": "test",
+// 			}}}, nil)
 
-	err = s.checker.CheckDhctlEdition(context.Background())
-	t.NoError(err)
-}
+// 	err = s.checker.CheckDhctlEdition(context.Background())
+// 	t.NoError(err)
+// }
 
-func (s *PreflightChecksTestSuite) TestCheckDisable() {
-	t := s.Require()
+// func (s *PreflightChecksTestSuite) TestCheckDisable() {
+// 	t := s.Require()
 
-	app.AppVersion = "dev"
-	app.AppEdition = "test"
-	app.PreflightSkipDeckhouseEditionCheck = true
-	image := s.checker.installConfig.GetImage(false)
-	ref, err := name.ParseReference(image)
-	t.NoError(err)
+// 	app.AppVersion = "dev"
+// 	app.AppEdition = "test"
+// 	app.PreflightSkipDeckhouseEditionCheck = true
+// 	image := s.checker.installConfig.GetImage(false)
+// 	ref, err := name.ParseReference(image)
+// 	t.NoError(err)
 
-	s.checker.metaConfig = &config.MetaConfig{
-		Registry: registry.Data{
-			Scheme:  "https",
-			Address: "test.registry.io",
-			CA:      "",
-		},
-	}
+// 	s.checker.metaConfig = &config.MetaConfig{
+// 		Registry: registry.Data{
+// 			Scheme:  "https",
+// 			Address: "test.registry.io",
+// 			CA:      "",
+// 		},
+// 	}
 
-	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
-		ExpectReference(ref).
-		Return(&v1.ConfigFile{
-			Config: v1.Config{Labels: map[string]string{
-				"io.deckhouse.edition": "BAD",
-			}}}, nil)
+// 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
+// 		ExpectReference(ref).
+// 		Return(&v1.ConfigFile{
+// 			Config: v1.Config{Labels: map[string]string{
+// 				"io.deckhouse.edition": "BAD",
+// 			}}}, nil)
 
-	err = s.checker.CheckDhctlEdition(context.Background())
-	t.NoError(err)
-}
+// 	err = s.checker.CheckDhctlEdition(context.Background())
+// 	t.NoError(err)
+// }

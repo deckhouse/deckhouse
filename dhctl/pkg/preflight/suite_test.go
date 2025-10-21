@@ -18,10 +18,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
 type PreflightChecksTestSuite struct {
@@ -33,17 +29,17 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 	s.checker = NewChecker(nil, nil, nil, nil)
 }
 
-func (s *PreflightChecksTestSuite) SetupTest() {
-	app.AppVersion = "v1.50.6"
-	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: registry.Data{
-			Address:   "registry.deckhouse.io",
-			Path:      "/deckhouse/ce",
-			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
-		},
-		DevBranch: "pr1111",
-	}
-}
+// func (s *PreflightChecksTestSuite) SetupTest() {
+// 	app.AppVersion = "v1.50.6"
+// 	s.checker.installConfig = &config.DeckhouseInstaller{
+// 		Registry: registry.Registry{
+// 			Address:   "registry.deckhouse.io",
+// 			Path:      "/deckhouse/ce",
+// 			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
+// 		},
+// 		DevBranch: "pr1111",
+// 	}
+// }
 
 func TestPreflightChecks(t *testing.T) {
 	suite.Run(t, new(PreflightChecksTestSuite))

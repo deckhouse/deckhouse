@@ -52,7 +52,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  registry.Data          `json:"-"`
+	Registry                  registry.Registry      `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -89,20 +89,36 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
 	}
 
+	// TODO:
+	// - Init from initConfig
+	// - Fallback to defaults if mc/deckhouse and initConfig do not exist
+	// - Call InitWithGlobalCache after global cache init
 	if len(m.InitClusterConfig) > 0 {
-		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+		var err error
+		err = json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig)
+		if err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
+	}
+	{
+		var err error
+		var mcDeckhouse *ModuleConfig
+		for _, mc := range m.ModuleConfigs {
+			if mc.GetName() == "deckhouse" {
+				mcDeckhouse = mc
+			}
+		}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
+		if mcDeckhouse == nil {
+			return nil, fmt.Errorf("Failed to get mc deckhouse, is empty")
+		}
 
-		err := m.Registry.Process(registry.DeckhouseClusterConfig{
-			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
-			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
-			RegistryCA:        m.DeckhouseConfig.RegistryCA,
-			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
-		})
+		m.Registry, err = registry.New(mcDeckhouse.Spec.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get registry options from deckhouse moduleConfig %w", err)
+		}
+		err = m.Registry.InitWithGlobalCache()
 		if err != nil {
 			return nil, err
 		}
@@ -276,7 +292,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.KubeadmTemplatesCtx()
+	registryData, err := m.Registry.ConfigBuilder().KubeadmTplCtx()
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +345,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.BashibleBundleTemplateCtx()
+	registryData, err := m.Registry.ConfigBuilder().BashibleTplCtx()
 	if err != nil {
 		return nil, err
 	}

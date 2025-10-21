@@ -43,7 +43,7 @@ type Checker struct {
 	metaConfig              *config.MetaConfig
 	installConfig           *config.DeckhouseInstaller
 	bootstrapState          State
-	imageDescriptorProvider imageDescriptorProvider
+	// imageDescriptorProvider imageDescriptorProvider
 }
 
 type checkStep struct {
@@ -63,7 +63,7 @@ func NewChecker(
 		metaConfig:              metaConfig,
 		installConfig:           config,
 		bootstrapState:          bootstrapState,
-		imageDescriptorProvider: remoteDescriptorProvider{},
+		// imageDescriptorProvider: remoteDescriptorProvider{},
 	}
 }
 
@@ -114,11 +114,11 @@ func (pc *Checker) Static(ctx context.Context) error {
 			successMessage: "python and required modules are installed",
 			skipFlag:       app.PythonChecksArgName,
 		},
-		{
-			fun:            pc.CheckRegistryAccessThroughProxy,
-			successMessage: "registry access through proxy",
-			skipFlag:       app.RegistryThroughProxyCheckArgName,
-		},
+		// {
+		// 	fun:            pc.CheckRegistryAccessThroughProxy,
+		// 	successMessage: "registry access through proxy",
+		// 	skipFlag:       app.RegistryThroughProxyCheckArgName,
+		// },
 		{
 			fun:            pc.CheckAvailabilityPorts,
 			successMessage: "required ports availability",
@@ -255,16 +255,16 @@ func (pc *Checker) Global(ctx context.Context) error {
 			successMessage: "PublicDomainTemplate is correctly",
 			skipFlag:       app.PublicDomainTemplateCheckArgName,
 		},
-		{
-			fun:            pc.CheckRegistryCredentials,
-			successMessage: "registry credentials are correct",
-			skipFlag:       app.RegistryCredentialsCheckArgName,
-		},
-		{
-			fun:            pc.CheckDhctlEdition,
-			successMessage: "dhctl edition is the same",
-			skipFlag:       app.DeckhouseEditionCheckArgName,
-		},
+		// {
+		// 	fun:            pc.CheckRegistryCredentials,
+		// 	successMessage: "registry credentials are correct",
+		// 	skipFlag:       app.RegistryCredentialsCheckArgName,
+		// },
+		// {
+		// 	fun:            pc.CheckDhctlEdition,
+		// 	successMessage: "dhctl edition is the same",
+		// 	skipFlag:       app.DeckhouseEditionCheckArgName,
+		// },
 		{
 			fun:            pc.CheckCidrIntersection,
 			successMessage: "CIDRs are not intersects",

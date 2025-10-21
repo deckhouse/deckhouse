@@ -267,20 +267,38 @@ func CreateDeckhouseManifests(
 		},
 	}
 
-	if cfg.IsRegistryAccessRequired() {
-		tasks = append(tasks, actions.ManifestTask{
-			Name:     `Secret "deckhouse-registry"`,
-			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
-				return err
-			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
-				return err
-			},
-		})
+	deckhouseRegistrySecretData, err := cfg.RegistryConfigBuilder.DeckhouseRegistrySecretData()
+	if err != nil {
+		return nil, err
 	}
+	registryBootstrapSecretData, err := cfg.RegistryConfigBuilder.RegistryBootstrapSecretData()
+	if err != nil {
+		return nil, err
+	}
+	tasks = append(tasks, actions.ManifestTask{
+		Name:     `Secret "deckhouse-registry"`,
+		Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(deckhouseRegistrySecretData) },
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			return err
+		},
+	})
+	tasks = append(tasks, actions.ManifestTask{
+		Name:     `Secret "registry-bootstrap"`,
+		Manifest: func() interface{} { return manifests.RegistryBootstrapSecret(registryBootstrapSecretData) },
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			return err
+		},
+	})
 
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
@@ -427,7 +445,7 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	err := beforeDeckhouseTask()
+	err = beforeDeckhouseTask()
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +538,6 @@ func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.
 		Registry:           cfg.GetImage(true),
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
-		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
 	}

@@ -15,7 +15,6 @@
 package manifests
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -29,7 +28,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -37,6 +35,7 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
+	registryBootstrapSecretName = "registry-bootstrap"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
@@ -53,7 +52,6 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry   bool
 	MasterNodeSelector bool
 	KubeadmBootstrap   bool
 }
@@ -140,10 +138,8 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
-	if params.IsSecureRegistry {
-		deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
-			{Name: "deckhouse-registry"},
-		}
+	deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+		{Name: "deckhouse-registry"},
 	}
 
 	if params.KubeadmBootstrap && freshDeployment {
@@ -539,8 +535,7 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(registry registry.Data) *apiv1.Secret {
-	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
+func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
@@ -555,23 +550,24 @@ func DeckhouseRegistrySecret(registry registry.Data) *apiv1.Secret {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
-		Data: map[string][]byte{
-			apiv1.DockerConfigJsonKey: data,
-			"address":                 []byte(registry.Address),
-			"scheme":                  []byte(registry.Scheme),
-			"imagesRegistry":          []byte(registry.Address),
+		Data: data,
+	}
+	return ret
+}
+
+func RegistryBootstrapSecret(data map[string][]byte) *apiv1.Secret {
+	ret := &apiv1.Secret{
+		Type: apiv1.SecretTypeDockerConfigJson,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: registryBootstrapSecretName,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"app":      "registry",
+			},
+			Annotations: map[string]string{},
 		},
+		Data: data,
 	}
-
-	if registry.Path != "" {
-		ret.Data["path"] = []byte(registry.Path)
-		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
-	}
-
-	if registry.CA != "" {
-		ret.Data["ca"] = []byte(registry.CA)
-	}
-
 	return ret
 }
 
