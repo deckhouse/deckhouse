@@ -109,10 +109,6 @@ To create a VM template (`Template`), it is recommended to use a ready-made clou
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (section *Generic Cloud / OpenStack*)
 
-{% alert %}
-If you plan to use a domestic OS distribution, contact the OS vendor to obtain the image/OVA file.
-{% endalert %}
-
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
