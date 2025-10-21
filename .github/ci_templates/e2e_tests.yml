@@ -735,7 +735,7 @@ check_e2e_labels:
       if: {!{
             coll.Has $ctx "manualRun" |
             test.Ternary "inputs.autodelete||success()"
-            (has $commanderProviders $provider | test.Ternary "inputs.autodelete||success()" "always()")
+            (has $commanderProviders $provider | test.Ternary "success()" "always()")
           }!}
       id: cleanup_cluster
       timeout-minutes: 60

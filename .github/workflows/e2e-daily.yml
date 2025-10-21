@@ -459,7 +459,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: inputs.autodelete||success()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1391,7 +1391,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: inputs.autodelete||success()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1793,7 +1793,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: inputs.autodelete||success()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2195,7 +2195,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: inputs.autodelete||success()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2593,7 +2593,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2993,7 +2993,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3884,7 +3884,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
