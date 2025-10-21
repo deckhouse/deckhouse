@@ -229,5 +229,5 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - go mod download
-  - CGO_ENABLED=1 GOOS=linux go build -ldflags="-extldflags=-static" -tags netgo -installsuffix netgo -a -o /pidumount main.go
+  - CGO_ENABLED=1 GOOS=linux go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go
   - chmod 0700 /pidumount
