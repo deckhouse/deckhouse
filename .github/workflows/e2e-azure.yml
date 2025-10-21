@@ -563,6 +563,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -670,6 +671,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -1056,6 +1058,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -1163,6 +1166,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -1549,6 +1553,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -1656,6 +1661,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -2042,6 +2048,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -2149,6 +2156,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -2535,6 +2543,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -2642,6 +2651,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -3028,6 +3038,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -3135,6 +3146,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -3521,6 +3533,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -3628,6 +3641,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -4014,6 +4028,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -4121,6 +4136,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -4507,6 +4523,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -4614,6 +4631,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -5000,6 +5018,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -5107,6 +5126,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -5493,6 +5513,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -5600,6 +5621,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -5986,6 +6008,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -6093,6 +6116,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -6479,6 +6503,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -6586,6 +6611,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -6972,6 +6998,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
@@ -7079,6 +7106,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
           LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
           LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
           LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
