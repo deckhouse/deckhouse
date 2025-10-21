@@ -66,12 +66,7 @@ func main() {
     }
 
     targetPid := os.Getenv("TARGET_PID")
-    if targetPid == "" {
-        log.Fatal("TARGET_PID environment variable not set")
-    }
-
     mountPath := os.Args[1]
-
     if err := unix.Unmount(mountPath, 0); err != nil {
         log.Fatalf("Failed to unmount %s: %v", mountPath, err)
     }
