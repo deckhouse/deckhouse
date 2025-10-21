@@ -103,6 +103,10 @@ import:
   - install
   - uninstall
   - containerd.service
+  - pidumount
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+  add: /pidumount
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
@@ -193,3 +197,34 @@ shell:
   - chown -R 64535:64535 /out
   - chmod 755 /out/*
 {{- end }}
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-pidumount-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+  add: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - CGO_ENABLED=1 GOOS=linux go build -ldflags="-extldflags=-static" -tags netgo -installsuffix netgo -a -o /pidumount main.go
+  - chmod 0700 /pidumount
