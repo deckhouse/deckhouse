@@ -388,6 +388,9 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 check_e2e_labels:
   name: Check e2e labels
   runs-on: "regular"
+  permissions:
+    contents: read
+    issues: write
   outputs:
 {!{ range $criName := $ctx.criNames }!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}

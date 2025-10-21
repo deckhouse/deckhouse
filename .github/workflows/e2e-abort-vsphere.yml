@@ -83,6 +83,9 @@ jobs:
   check_e2e_labels:
     name: Check e2e labels
     runs-on: "regular"
+    permissions:
+      contents: read
+      issues: write
     outputs:
 
       run_containerd_1_29: ${{ steps.check.outputs.run_containerd_1_29 }}
