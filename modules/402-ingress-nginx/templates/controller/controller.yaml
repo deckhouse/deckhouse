@@ -1,3 +1,8 @@
+{{- define "init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- define "ingress-controller" }}
 {{- $context := index . 0 }}
 {{- $crd := index . 1 }}
@@ -131,6 +136,9 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        container.apparmor.security.beta.kubernetes.io/controller: unconfined
+{{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
@@ -165,9 +173,76 @@ spec:
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - image: {{ include "helm_lib_module_image" (list $context "init") }}
+        name: init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+          runAsNonRoot: true
+          runAsUser: 64535
+          runAsGroup: 64535
+          fsGroup: 64535
+        volumeMounts:
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
+        command:
+        - /bin/bash
+        - -ec
+        - |
+          mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
+            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
+            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
+            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/tmp/nginx
+          /usr/bin/touch /chroot/var/log/nginx/access.log
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          {{- if eq $controllerVersion "1.9" }}
+          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
+          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
+          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
+          {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "init_resources" $context | nindent 12 }}
+        {{- end }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add:
+            - SETGID
+            - SETUID
+            - CHOWN
+            - DAC_OVERRIDE
+            - SYS_ADMIN
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+        {{- else }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+        {{- end }}
+          readOnlyRootFilesystem: true
         env:
         - name: POD_NAME
           valueFrom:
@@ -181,6 +256,10 @@ spec:
           value: "127.0.0.1"
         {{- if $geoIP2.maxmindLicenseKey }}
         - name: LUA_USE_GEOIP2
+          value: "true"
+        {{- end }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        - name: NGINX_PROFILING_ENABLED
           value: "true"
         {{- end }}
         livenessProbe:
@@ -313,22 +392,26 @@ spec:
     {{- end }}
   {{- end }}
         volumeMounts:
-        - mountPath: /chroot/var/lib/nginx/body
-          name: client-body-temp-path
-        - mountPath: /chroot/var/lib/nginx/fastcgi
-          name: fastcgi-temp-path
-        - mountPath: /chroot/var/lib/nginx/proxy
-          name: proxy-temp-path
-        - mountPath: /chroot/var/lib/nginx/scgi
-          name: scgi-temp-path
-        - mountPath: /chroot/var/lib/nginx/uwsgi
-          name: uwsgi-temp-path
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp/nginx/
-          name: tmp-nginx
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        - name: valgrind
+          mountPath: /chroot/var/log/valgrind
+        - name: proc
+          mountPath: /chroot/proc
+{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+          readOnlyRootFilesystem: true
         resources:
           requests:
             memory: 20Mi
@@ -338,7 +421,10 @@ spec:
           - mountPath: /var/files
             name: telemetry-config-file
       - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
         - "--v=2"
@@ -393,17 +479,13 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
-      - name: tmp-nginx
+      - name: tmp
         emptyDir: {}
-      - name: client-body-temp-path
+      - name: etc-ingress-controller
         emptyDir: {}
-      - name: fastcgi-temp-path
+      - name: var-lib-nginx
         emptyDir: {}
-      - name: proxy-temp-path
-        emptyDir: {}
-      - name: scgi-temp-path
-        emptyDir: {}
-      - name: uwsgi-temp-path
+      - name: var-log-nginx
         emptyDir: {}
       - name: secret-nginx-auth-tls
         secret:
@@ -411,6 +493,14 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+      - name: valgrind
+        hostPath:
+          path: /var/log/valgrind
+          type: DirectoryOrCreate
+      - name: proc
+        emptyDir: {}
+{{- end }}
 {{- end }}
 
 {{- $context := . }}

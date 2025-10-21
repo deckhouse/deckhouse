@@ -52,7 +52,7 @@ type Args struct {
 
 	// if return value is false - hook will stop its execution
 	// if return value is true - hook will continue
-	BeforeHookCheck func(input *go_hook.HookInput) bool
+	BeforeHookCheck func(_ context.Context, input *go_hook.HookInput) bool
 }
 
 func RegisterHook(args Args) bool {
@@ -192,7 +192,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, currentStorageClass string) (string, error) {
 	var effectiveStorageClass string
 
-	defaultSCs, err := sdkobjectpatch.UnmarshalToStruct[DefaultStorageClass](input.NewSnapshots, "default_sc")
+	defaultSCs, err := sdkobjectpatch.UnmarshalToStruct[DefaultStorageClass](input.Snapshots, "default_sc")
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
 	}
@@ -256,12 +256,12 @@ func storageClassChangeWithArgs(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 
-	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.NewSnapshots, "pvcs")
+	pvcs, err := sdkobjectpatch.UnmarshalToStruct[PVC](input.Snapshots, "pvcs")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal pvcs snapshot: %w", err)
 	}
 
-	pods, err := sdkobjectpatch.UnmarshalToStruct[Pod](input.NewSnapshots, "pods")
+	pods, err := sdkobjectpatch.UnmarshalToStruct[Pod](input.Snapshots, "pods")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal pods snapshot: %w", err)
 	}
@@ -351,9 +351,9 @@ func isEmptyOrFalseStr(sc string) bool {
 	return sc == "" || sc == "false"
 }
 
-func storageClassChange(args Args) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		if args.BeforeHookCheck != nil && !args.BeforeHookCheck(input) {
+func storageClassChange(args Args) func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+		if args.BeforeHookCheck != nil && !args.BeforeHookCheck(ctx, input) {
 			return nil
 		}
 		err := storageClassChangeWithArgs(input, dc, args)

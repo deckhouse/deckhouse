@@ -18,6 +18,10 @@ description: "Подготовка окружения VMware Cloud Director дл
 
 Ресурсы Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Catalog должны быть предоставлены вашим поставщиком услуг VMware Cloud Director.
 
+{% alert level="warning" %}
+В каждом VDC (Virtual Data Center) должен быть настроен Edge Gateway, сеть кластера должна быть подключена к нему.
+{% endalert %}  
+
 Network (внутренняя сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. При выборе схемы размещения `WithNAT` сеть создается автоматически. Далее описан способ самостоятельной настройки внутренней сети.
 
 ### Права пользователя
@@ -35,31 +39,31 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Networking» и нажмите «NEW»:
 
-   ![Добавление сети, шаг 1](../../images/cloud-provider-vcd/network-setup/Screenshot.png)
+   ![Добавление сети, шаг 1](images/network-setup/Screenshot.png)
 
 1. Выберите необходимый Data Center:
 
-   ![Добавление сети, шаг 2](../../images/cloud-provider-vcd/network-setup/Screenshot2.png)
+   ![Добавление сети, шаг 2](images/network-setup/Screenshot2.png)
 
 1. На этапе «Network type» выберите «Routed»:
 
-   ![Добавление сети, шаг 3](../../images/cloud-provider-vcd/network-setup/Screenshot3.png)
+   ![Добавление сети, шаг 3](images/network-setup/Screenshot3.png)
 
 1. Присоедините `EdgeRouter` к сети:
 
-   ![Добавление сети, шаг 4](../../images/cloud-provider-vcd/network-setup/Screenshot4.png)
+   ![Добавление сети, шаг 4](images/network-setup/Screenshot4.png)
 
 1. Укажите имя сети и CIDR:
 
-   ![Добавление сети, шаг 5](../../images/cloud-provider-vcd/network-setup/Screenshot5.png)
+   ![Добавление сети, шаг 5](images/network-setup/Screenshot5.png)
 
 1. Не добавляйте «Static IP Pools», поскольку будет использоваться DHCP:
 
-   ![Добавление сети, шаг 6](../../images/cloud-provider-vcd/network-setup/Screenshot6.png)
+   ![Добавление сети, шаг 6](images/network-setup/Screenshot6.png)
 
 1. Укажите адреса DNS-серверов:
 
-   ![Добавление сети, шаг 7](../../images/cloud-provider-vcd/network-setup/Screenshot7.png)
+   ![Добавление сети, шаг 7](images/network-setup/Screenshot7.png)
 
 ### Настройка DHCP
 
@@ -75,23 +79,23 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Networking» и откройте созданную сеть:
 
-   ![DHCP, шаг 1](../../images/cloud-provider-vcd/dhcp-setup/Screenshot.png)
+   ![DHCP, шаг 1](images/dhcp-setup/Screenshot.png)
 
 1. В открывшемся окне выберите пункт «IP Management» → «DHCP» → «Activate»:
 
-   ![DHCP, шаг 2](../../images/cloud-provider-vcd/dhcp-setup/Screenshot2.png)
+   ![DHCP, шаг 2](images/dhcp-setup/Screenshot2.png)
 
 1. На вкладке «General settings» настройте параметры аналогично примеру:
 
-   ![DHCP, шаг 3](../../images/cloud-provider-vcd/dhcp-setup/Screenshot3.png)
+   ![DHCP, шаг 3](images/dhcp-setup/Screenshot3.png)
 
 1. Добавьте пул:
 
-   ![DHCP, шаг 3](../../images/cloud-provider-vcd/dhcp-setup/Screenshot4.png)
+   ![DHCP, шаг 3](images/dhcp-setup/Screenshot4.png)
 
 1. Укажите адреса DNS-серверов:
 
-   ![DHCP, шаг 3](../../images/cloud-provider-vcd/dhcp-setup/Screenshot5.png)
+   ![DHCP, шаг 3](images/dhcp-setup/Screenshot5.png)
 
 ### Добавление vApp
 
@@ -101,11 +105,11 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Data Centers» → «vApps» → «NEW» → «New vApp»:
 
-   ![Добавление vApp, шаг 1](../../images/cloud-provider-vcd/application-setup/Screenshot.png)
+   ![Добавление vApp, шаг 1](images/application-setup/Screenshot.png)
 
 1. Укажите имя и включите vApp:
 
-   ![Добавление vApp, шаг 2](../../images/cloud-provider-vcd/application-setup/Screenshot2.png)
+   ![Добавление vApp, шаг 2](images/application-setup/Screenshot2.png)
 
 ### Добавление сети к vApp
 
@@ -117,15 +121,15 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Data Centers» → «vApps» и откройте необходимый vApp:
 
-   ![Добавление сети к vApp, шаг 1](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
+   ![Добавление сети к vApp, шаг 1](images/network-in-vapp-setup/Screenshot.png)
 
 1. Перейдите на вкладку «Networks» и нажмите «NEW»:
 
-   ![Добавление сети к vApp, шаг 2](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
+   ![Добавление сети к vApp, шаг 2](images/network-in-vapp-setup/Screenshot2.png)
 
 1. В появившемся окне выберите тип «Direct» и выберите сеть:
 
-   ![Добавление сети к vApp, шаг 3](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
+   ![Добавление сети к vApp, шаг 3](images/network-in-vapp-setup/Screenshot3.png)
 
 ### Входящий трафик
 
@@ -140,21 +144,21 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Networking» → «Edge Gateways», откройте edge gateway:
 
-   ![Настройка правил DNAT на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
+   ![Настройка правил DNAT на edge gateway, шаг 1](images/edge-gateway-setup/Screenshot.png)
 
 1. Перейдите на вкладку «Services» → «NAT»:
 
-   ![Настройка правил DNAT на edge gateway, шаг 2](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
+   ![Настройка правил DNAT на edge gateway, шаг 2](images/edge-gateway-setup/Screenshot2.png)
 
 1. Добавьте следующие правила:
 
-   ![Настройка правил DNAT на edge gateway, шаг 3](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot3.png)
+   ![Настройка правил DNAT на edge gateway, шаг 3](images/edge-gateway-setup/Screenshot3.png)
 
    Первые два правила используются для входящего трафика, а третье — для доступа по SSH к узлу с control plane (без этого правила установка будет невозможна).
 
 1. Чтобы виртуальные машины могли выходить в интернет, настройте правила SNAT, следуя примеру:
 
-   ![Настройка правил SNAT на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
+   ![Настройка правил SNAT на edge gateway, шаг 1](images/edge-gateway-setup/Screenshot4.png)
 
    Данное правило позволит виртуальным машинам из подсети `192.168.199.0/24` выходить в интернет.
 
@@ -168,19 +172,19 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Перейдите на вкладку «Security» → «IP Sets»:
 
-   ![Настройка firewall на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot.png)
+   ![Настройка firewall на edge gateway, шаг 1](images/edge-firewall/Screenshot.png)
 
 1. Создайте следующий набор IP (подразумевается, что адрес MetalLB будет `.10` а адрес узла с control plane — `.2`):
 
-   ![Настройка firewall на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot2.png)
+   ![Настройка firewall на edge gateway, шаг 1](images/edge-firewall/Screenshot2.png)
 
-   ![Настройка firewall на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot3.png)
+   ![Настройка firewall на edge gateway, шаг 1](images/edge-firewall/Screenshot3.png)
 
-   ![Настройка firewall на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot4.png)
+   ![Настройка firewall на edge gateway, шаг 1](images/edge-firewall/Screenshot4.png)
 
 1. Добавьте следующие правила firewall:
 
-   ![Настройка firewall на edge gateway, шаг 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot5.png)
+   ![Настройка firewall на edge gateway, шаг 1](images/edge-firewall/Screenshot5.png)
 
 ## Шаблон виртуальной машины
 
@@ -201,31 +205,31 @@ Network (внутренняя сеть) может быть настроена �
 
 1. Скачайте [OVA-файл](https://cloud-images.ubuntu.com/jammy/):
 
-   ![Настройка шаблона, шаг 1](../../images/cloud-provider-vcd/template/Screenshot.png)
+   ![Настройка шаблона, шаг 1](images/template/Screenshot.png)
 
 1. Перейдите на вкладку «Libraries» → «Catalogs» → «Каталог организации»:
 
-   ![Настройка шаблона, шаг 2](../../images/cloud-provider-vcd/template/Screenshot2.png)
+   ![Настройка шаблона, шаг 2](images/template/Screenshot2.png)
 
 1. Выберите скачанный шаблон и загрузите его в каталог:
 
-   ![Настройка шаблона, шаг 3](../../images/cloud-provider-vcd/template/Screenshot3.png)
+   ![Настройка шаблона, шаг 3](images/template/Screenshot3.png)
 
-   ![Настройка шаблона, шаг 4](../../images/cloud-provider-vcd/template/Screenshot4.png)
+   ![Настройка шаблона, шаг 4](images/template/Screenshot4.png)
 
-   ![Настройка шаблона, шаг 5](../../images/cloud-provider-vcd/template/Screenshot5.png)
+   ![Настройка шаблона, шаг 5](images/template/Screenshot5.png)
 
 1. Создайте виртуальную машину из шаблона:
 
-   ![Настройка шаблона, шаг 6](../../images/cloud-provider-vcd/template/Screenshot6.png)
+   ![Настройка шаблона, шаг 6](images/template/Screenshot6.png)
 
-   ![Настройка шаблона, шаг 7](../../images/cloud-provider-vcd/template/Screenshot7.png)
+   ![Настройка шаблона, шаг 7](images/template/Screenshot7.png)
 
 {% alert level="warning" %}
 Укажите пароль по умолчанию и публичный ключ. Они понадобятся, чтобы войти в консоль виртуальной машины.
 {% endalert %}
 
-![Настройка шаблона, шаг 8](../../images/cloud-provider-vcd/template/Screenshot8.png)
+![Настройка шаблона, шаг 8](images/template/Screenshot8.png)
 
 Для подключения к виртуальной машине выполните следующие шаги:
 
@@ -233,7 +237,7 @@ Network (внутренняя сеть) может быть настроена �
 2. Дождитесь получение IP-адреса.
 3. _Пробросьте_ порт `22` до виртуальной машины:
 
-   ![Настройка шаблона, шаг 9](../../images/cloud-provider-vcd/template/Screenshot9.png)
+   ![Настройка шаблона, шаг 9](images/template/Screenshot9.png)
 
 Войдите на виртуальную машину по SSH и выполните следующие команды:
 
@@ -246,7 +250,7 @@ dpkg-reconfigure cloud-init
 
 В появившемся диалоговом окне оставьте галочку только у `OVF: Reads data from OVF transports`. Остальные пункты отключите:
 
-![Настройка шаблона, OVF](../../images/cloud-provider-vcd/template/OVF.png)
+![Настройка шаблона, OVF](images/template/OVF.png)
 
 Выполните оставшиеся команды:
 
@@ -267,15 +271,15 @@ shutdown -P now
 
 1. Выключите виртуальную машину и удалите все заполненные поля «Guest Properties»:
 
-   ![Настройка шаблона, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
+   ![Настройка шаблона, Guest Properties 1](images/template/GuestProperties1.png)
 
-   ![Настройка шаблона, Guest Properties 5](../../images/cloud-provider-vcd/template/GuestProperties5.png)
+   ![Настройка шаблона, Guest Properties 5](images/template/GuestProperties5.png)
 
 1. Cоздайте шаблон виртуальной машины:
 
-   ![Настройка шаблона, шаг 10](../../images/cloud-provider-vcd/template/Screenshot10.png)
+   ![Настройка шаблона, шаг 10](images/template/Screenshot10.png)
 
-   ![Настройка шаблона, шаг 11](../../images/cloud-provider-vcd/template/Screenshot11.png)
+   ![Настройка шаблона, шаг 11](images/template/Screenshot11.png)
 
 1. В созданном шаблоне перейдите на вкладку «Metadata» и добавьте шесть полей:
 
@@ -286,24 +290,34 @@ shutdown -P now
    * `disk.enableUUID`;
    * `guestinfo.hostname`.
 
-   ![Настройка шаблона, Guest Properties 2](../../images/cloud-provider-vcd/template/GuestProperties2.png)
+   ![Настройка шаблона, Guest Properties 2](images/template/GuestProperties2.png)
 
-   ![Настройка шаблона, Guest Properties 3](../../images/cloud-provider-vcd/template/GuestProperties3.png)
+   ![Настройка шаблона, Guest Properties 3](images/template/GuestProperties3.png)
 
 1. В панели управления vCenter для шаблона включите параметр `disk.EnableUUID`:
 
-   ![Настройка шаблона, vCenter 1](../../images/cloud-provider-vcd/template/vCenter1.png)
+   ![Настройка шаблона, vCenter 1](images/template/vCenter1.png)
 
-   ![Настройка шаблона, vCenter 2](../../images/cloud-provider-vcd/template/vCenter2.png)
+   ![Настройка шаблона, vCenter 2](images/template/vCenter2.png)
 
-   ![Настройка шаблона, vCenter 3](../../images/cloud-provider-vcd/template/vCenter3.png)
+   ![Настройка шаблона, vCenter 3](images/template/vCenter3.png)
 
-   ![Настройка шаблона, vCenter 4](../../images/cloud-provider-vcd/template/vCenter4.png)
+   ![Настройка шаблона, vCenter 4](images/template/vCenter4.png)
 
-   ![Настройка шаблона, vCenter 5](../../images/cloud-provider-vcd/template/vCenter5.png)
+   ![Настройка шаблона, vCenter 5](images/template/vCenter5.png)
 
 ## Использование хранилища
 
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
 * Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
 * Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
+
+## Использование балансировщика нагрузки
+
+* Компоненты DKP поддерживают ресурсов Service типа LoadBalancer при установке в VMware Cloud Director (VCD).
+* В качестве балансировщика используется VMware NSX Advanced Load Balancer (ALB или Avi Networks).
+* Поддержка доступна **только** при использовании платформы виртуализации сети `NSX-T`.
+* Балансировка должна быть включёна на Edge Gateway вашим провайдером VCD. Проверить, включёна ли балансировка, можно в разделе Edge Gateway → Load Balancer → General Settings — параметр `State` должен быть в статусе `Active`.
+* Если балансировщик был активирован после успешного создания кластера DKP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
+* Для каждого открытого порта создаётся связка Pool + Virtual Service.
+* При наличии межсетевого экрана необходимо создать разрешающее правило для внешнего IP-адреса балансировщика и соответствующих портов.

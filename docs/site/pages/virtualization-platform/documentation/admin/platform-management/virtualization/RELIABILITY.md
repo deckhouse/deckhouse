@@ -75,6 +75,14 @@ The following is an example of migrating a selected virtual machine.
 
 1. If you need to abort the migration, delete the corresponding `vmop` resource while it is in the `Pending` or `InProgress` phase.
 
+How to start VM migration in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the desired virtual machine from the list and click the ellipsis button.
+- Select `Migrate` from the pop-up menu.
+- Confirm or cancel the migration in the pop-up window.
+
 #### Maintenance mode
 
 When working on nodes with virtual machines running, there is a risk of disrupting their performance. To avoid this, you can put a node into the maintenance mode and migrate the virtual machines to other free nodes.
@@ -103,6 +111,12 @@ d8 k uncordon <nodename>
 
 ![A diagram showing the migration of virtual machines from one node to another](/../../../../../images/virtualization-platform/drain.png)
 
+How to perform the operation in the web interface:
+
+- Go to the "System" tab, then to the "Nodes" section→ "Nodes of all groups".
+- Select the desired node from the list and click the "Cordon + Drain" button.
+- To remove it from maintenance mode, click the "Uncordon" button.
+
 ### ColdStandby
 
 ColdStandby provides a mechanism to recover a virtual machine from a failure on a node it was running on.
@@ -110,7 +124,7 @@ ColdStandby provides a mechanism to recover a virtual machine from a failure on 
 The following requirements must be met for this mechanism to work:
 
 - The virtual machine startup policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- The [Fencing mechanism](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode) must be enabled on nodes running the virtual machines.
+- The [Fencing mechanism](/modules/node-manager/cr.html#nodegroup#nodegroup-v1-spec-fencing-mode) must be enabled on nodes running the virtual machines.
 
 Let's see how it works on the example:
 

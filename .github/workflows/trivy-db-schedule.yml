@@ -28,12 +28,16 @@ on:
 concurrency:
   group: trivy-db-download
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 
   # <template: skip_tests_repos>
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -51,6 +55,29 @@ jobs:
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -132,19 +159,19 @@ jobs:
       - name: Check dev registry credentials
         id: check_dev_registry
         env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
 
@@ -214,22 +241,22 @@ jobs:
           GHCR_IO_REGISTRY_PASSWORD: ${{secrets.GHCR_IO_REGISTRY_PASSWORD}}
         run: |
           rm -rf ./trivy-db
-          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{secrets.DECKHOUSE_PRIVATE_REPO}}:deckhouse/trivy-db.git trivy-db-patch
-          git clone --depth 1 --branch ${TRIVY_VERSION} ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git trivy-db-patch
+          git clone --depth 1 --branch ${TRIVY_VERSION} ${{ steps.secrets.outputs.SOURCE_REPO_GIT }}/aquasecurity/trivy-db.git
           cd trivy-db
           git apply --verbose --whitespace=fix ../trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
           cp ../.github/scripts/trivy-db-update-vulnerability-references.sh ./update-vulnerability-references.sh
           cp ../.github/scripts/trivy-db-update.sh ./update.sh
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee 
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe 
-          ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse 
-          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss 
-          ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse 
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1 
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 
-          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1 
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
+          ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
+          ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -240,5 +267,5 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>

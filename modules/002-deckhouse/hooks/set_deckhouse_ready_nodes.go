@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -123,13 +124,13 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
-	pods, err := sdkobjectpatch.UnmarshalToStruct[statusPod](input.NewSnapshots, "control-plane-pods")
+func setDeckhouseReadyNodes(_ context.Context, input *go_hook.HookInput) error {
+	pods, err := sdkobjectpatch.UnmarshalToStruct[statusPod](input.Snapshots, "control-plane-pods")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal control-plane-pods snapshot: %w", err)
 	}
 
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[statusNode](input.NewSnapshots, "control-plane-nodes")
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[statusNode](input.Snapshots, "control-plane-nodes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal control-plane-nodes snapshot: %w", err)
 	}

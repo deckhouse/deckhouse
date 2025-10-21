@@ -55,8 +55,8 @@ func RegisterEnsureCRDsHook(crdsGlob string) bool {
 	}, dependency.WithExternalDependencies(EnsureCRDsHandler(crdsGlob)))
 }
 
-func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
+func EnsureCRDsHandler(crdsGlob string) func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 		err := EnsureCRDs(crdsGlob, dc)
 
 		if err != nil {

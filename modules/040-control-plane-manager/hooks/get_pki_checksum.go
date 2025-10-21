@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"sort"
@@ -67,8 +68,8 @@ func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return secretData(sec.Data), nil
 }
 
-func handlePKIChecksum(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("pki_checksum")
+func handlePKIChecksum(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("pki_checksum")
 	if len(snaps) == 0 {
 		return fmt.Errorf(`there is no Secret named "d8-pki" in NS "kube-system"`)
 	}

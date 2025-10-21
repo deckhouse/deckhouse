@@ -20,5 +20,5 @@ The following metrics are collected for each node group:
 - `d8_node_group_min` — the minimum number of instances in the group;
 - `d8_node_group_max` — the maximum number of instances in the group;
 - `d8_node_group_up_to_date` — the number of nodes in the group in up-to-date state;
-- `d8_node_group_standby` — the number of standby nodes (see the [standby](../../../reference/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter) in the group;
+- `d8_node_group_standby` — the number of standby nodes (see the [`standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter in the group);
 - `d8_node_group_has_errors` — one if there are any errors in the node group.

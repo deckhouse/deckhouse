@@ -10,6 +10,8 @@ import:
     add: /src/local
     to: /local
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/operator-trivy" ]
@@ -42,7 +44,7 @@ shell:
   - mkdir ./local && tar zxvf /bundle.tar.gz -C ./local
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -59,6 +61,8 @@ shell:
   - cd /src
   - ln -s ./trivy-db ./original-trivy-db
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /operator-trivy ./cmd/trivy-operator/main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /operator-trivy ./cmd/trivy-operator/main.go`) | indent 6 }}
   - chown 64535:64535 /operator-trivy
   - chmod 0700 /operator-trivy

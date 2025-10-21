@@ -6,38 +6,38 @@ lang: ru
 
 ## Пользовательские настройки на узлах
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](../../../../reference/cr/nodegroup.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 
 - Установка и настройки дополнительных пакетов ОС.
 
   Пример:
-  - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
+  - [установка kubectl-плагина](./os.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
 
 - Обновление ядра ОС на конкретную версию.
 
   Примеры:
-  - [обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian).
-  - [обновление ядра CentOS](./configuration-os.html#для-дистрибутивов-основанных-на-centos).
+  - [обновление ядра Debian](./os.html#для-дистрибутивов-основанных-на-debian).
+  - [обновление ядра CentOS](./os.html#для-дистрибутивов-основанных-на-centos).
 
 - Изменение параметров ОС.
 
   Примеры:
-  - [настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl).
-  - [добавление корневого сертификата](./configuration-os.html#добавление-registry-с-авторизацией).
+  - [настройка параметра sysctl](./os.html#задание-параметра-sysctl).
+  - [добавление корневого сертификата](./os.html#добавление-корневого-сертификата).
 
 - Сбор информации на узле и выполнение других подобных действий.
 
 - Настройка containerd.
 
   Примеры:
-  - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd).
-  - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry).
+  - [настройка метрик](./containerd.html#дополнительные-настройки-containerd).
+  - [добавление приватного registry](./containerd.html#добавление-приватного-registry-с-авторизацией).
 
 ## Настройки NodeGroupConfiguration
 
-Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+Ресурс NodeGroupConfiguration позволяет указывать [приоритет](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
-Код скрипта указывается в параметре [content](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
+Код скрипта указывается в параметре [`content`](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
 
 Переменные, которые доступны для использования в шаблонизаторе:
 <ul>
@@ -74,7 +74,7 @@ cloudProvider:
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
-<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
+<li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
 ```yaml
 nodeUsers:
@@ -170,4 +170,4 @@ rm /var/lib/bashible/configuration_checksum
 При написании скриптов важно учитывать следующие особенности их использования в Deckhouse:
 
 1. Скрипты в deckhouse выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили проверку необходимости своих изменений в системе перед выполнением действий, а не производили изменения каждый раз при запуске.
-1. При выборе [приоритета](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.
+1. При выборе [приоритета](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.

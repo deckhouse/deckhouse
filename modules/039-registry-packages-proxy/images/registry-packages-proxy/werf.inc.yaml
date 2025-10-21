@@ -5,6 +5,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/registry-packages-proxy"]
@@ -36,6 +38,7 @@ git:
     - 'go.mod'
     - 'go.sum'
 ---
+{{ $rppSignCheck := ternary "true" "false" (eq .Env "CSE") -}}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 fromImage: builder/golang-alpine
@@ -58,7 +61,7 @@ shell:
   setup:
   - cd /src
   - go test ./... -v
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X registry-packages-proxy/internal/app.RppSignCheck={{ $rppSignCheck }}" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy
 mount:

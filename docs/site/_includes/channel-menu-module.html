@@ -1,0 +1,15 @@
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src="/assets/js/js-yaml.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/channel-menu-module.js?v={{ assetHash }}"></script>
+<a id="doc-current-version" data-proofer-ignore href="#" class="highlight">Loading...</a>
+<div class="submenu-container">
+    <ul class="submenu">
+            <li class="submenu-item">
+                <a data-proofer-ignore class="submenu-item-link" href="./">
+                    <span class="submenu-item-channel">{{ "local" | replace: "ea" "Early Access" | replace: "-" " " | capitalize }}</span>
+                    <span class="submenu-item-dot"></span>
+                    <span class="submenu-item-release">majMinVersion</span>
+                </a>
+            </li>
+    </ul>
+</div>

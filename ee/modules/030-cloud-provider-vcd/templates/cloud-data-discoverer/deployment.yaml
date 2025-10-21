@@ -69,7 +69,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/connection-info.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -81,7 +81,7 @@ spec:
       serviceAccountName: cloud-data-discoverer
       containers:
       - name: cloud-data-discoverer
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . $cddImageName) }}
         args:
         - --discovery-period=1h
@@ -91,22 +91,27 @@ spec:
           valueFrom:
             secretKeyRef:
               key: insecure
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_HREF
           valueFrom:
             secretKeyRef:
               key: host
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_VDC
           valueFrom:
             secretKeyRef:
               key: vdc
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_ORG
           valueFrom:
             secretKeyRef:
               key: org
-              name: cloud-data-discoverer
+              name: vcd-connection-info
+        - name: VCD_NETWORK
+          valueFrom:
+            secretKeyRef:
+              key: network
+              name: vcd-connection-info
         - name: VCD_USER
           valueFrom:
             secretKeyRef:
@@ -142,7 +147,7 @@ spec:
             {{- include "vcd_cloud_data_discoverer_resources" . | nindent 12 }}
           {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8080"

@@ -100,13 +100,13 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) error {
+func prometheusDiskMetrics(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	for pod, err := range sdkobjectpatch.SnapshotIter[PodFilter](input.NewSnapshots.Get("pods")) {
+	for pod, err := range sdkobjectpatch.SnapshotIter[PodFilter](input.Snapshots.Get("pods")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'pods' snapshot: %v", err)
 		}

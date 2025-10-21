@@ -15,7 +15,7 @@ See:
 {!{- $ctx := . }!}
 git_info:
   name: Get git info
-  runs-on: ubuntu-latest
+  runs-on: "regular"
 {!{- if coll.Has $ctx "dependJobs" -}!}
 {!{- if gt (len $ctx.dependJobs) 0 }!}
   needs:
@@ -103,7 +103,7 @@ git_info:
 {!{- $ctx := . }!}
 block-until-image-is-not-ready:
   name: Block until the docker image is not ready
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   steps:
     - uses: {!{ index (ds "actions") "actions/checkout" }!}
     - name: Block until the docker image is not ready
@@ -120,9 +120,8 @@ block-until-image-is-not-ready:
           if (context.eventName === 'pull_request') {
             branchName = context.payload.pull_request.head.ref;
             prNum = context.payload.pull_request.number;
-          } else if (context.eventName === 'workflow_dispatch') {
-            branchName = context.payload.inputs.ci_commit_ref_name;
-            prNum = context.payload.inputs.issue_number;
+          } else {
+            return true;
           }
 
           if (!branchName) {
@@ -166,7 +165,7 @@ block-until-image-is-not-ready:
 # <template: pull_request_info>
 pull_request_info:
   name: Get pull request reference
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   outputs:
     ref: ${{ steps.pr_props.outputs.ref }}
     ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
@@ -398,7 +397,7 @@ pull_request_info:
 # <template: skip_tests_repos>
 skip_tests_repos:
   name: Skip tests repos
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
   steps:
   - name: Do nothing

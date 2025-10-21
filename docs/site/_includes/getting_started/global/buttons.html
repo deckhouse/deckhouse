@@ -10,7 +10,12 @@
 <div class="gs-revision-tabs" style="margin-top: 50px;">
   <div class="button-group">
     {%- if step > 1 or site.data.getting_started.[page.gs_data_key].installTypes.size == 1 %}
-        <a class="button button_default" href="{% if step >2 %}step{{ prev_step }}.html{% else %}../{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+        {% if step > 1 and page.gs_data_key == 'dvp_data' %}
+        <a class="button button_default" href="{% if step >2 %}step{{ prev_step }}.html{% else %}{% if page.gs_data_key == 'dkp_data' %}.{% endif %}./{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+        {% endif %}
+        {% if page.gs_data_key == 'dkp_data' %}
+          <a class="button button_default" href="{% if step >2 %}step{{ prev_step }}.html{% else %}{% if page.gs_data_key == 'dkp_data' %}.{% endif %}./{% endif %}">{{ site.data['getting_started']['buttonCaption']['back'][page.lang] }}</a>
+        {% endif %}
         {%- if page.nextStepName %}
           <a class="button button_alt" href="step{{ next_step }}.html">{{ site.data['getting_started']['buttonCaption']['next'][page.lang] }}{{ page.nextStepName }}</a>
         {%- endif %}

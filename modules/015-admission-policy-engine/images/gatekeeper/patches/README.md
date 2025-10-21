@@ -1,4 +1,11 @@
 ## Patches
 
-### 001-go-mod.patch
-This patch updates dependencies' versions to meet security concerns.
+### 001-cve.patch
+
+Fixes:
+CVE-2025-46569
+CVE-2025-22869
+CVE-2025-22870
+CVE-2025-22872
+CVE-2025-22868
+GHSA-vrw8-fxc6-2r93

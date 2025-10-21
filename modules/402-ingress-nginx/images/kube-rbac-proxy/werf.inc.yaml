@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -14,7 +14,7 @@ git:
         - '**/*'
 ---
 image: {{ .ModuleName }}/controller-probe-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.24
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,7 +36,7 @@ shell:
     - chmod 0755 /controller-probe
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
 - image: common/kube-rbac-proxy-artifact
   add: /kube-rbac-proxy

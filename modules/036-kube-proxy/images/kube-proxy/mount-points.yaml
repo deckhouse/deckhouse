@@ -1,0 +1,5 @@
+files:
+- /run/xtables.lock
+dirs:
+- /var/lib/kube-proxy
+- /lib/modules

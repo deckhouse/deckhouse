@@ -9,7 +9,7 @@ image: {{ $.ModuleName }}/nvidia-mig-manager-{{ $image_version }}
 fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
-  add: /usr/bin/
+  add: /usr/bin
   includePaths:
     - nvidia-mig-parted
     - nvidia-mig-manager

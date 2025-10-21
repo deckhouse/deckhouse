@@ -26,7 +26,7 @@ Essentials
 <p>Explore Grafana dashboards bundled with Deckhouse.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>To access Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<a href="/products/kubernetes-platform/documentation/v1/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
+<a href="/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
 </div>
 </div>
 {% endif %}
@@ -88,7 +88,7 @@ Deploying your first application
 ⟳ <span class="cards-item__title-text">Setting up a CI/CD system</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
+[Create](/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
 a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
@@ -102,7 +102,7 @@ You can use the generated `kubeconfig` file in Kubernetes with any deployment sy
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
 
-[Learn more](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+[Learn more](/modules/ingress-nginx/) about the capabilities of the `ingress-nginx` module.
 </div>
 </div>
 
@@ -113,7 +113,7 @@ Create a `Service` and `Ingress` for your application.
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
-For more information, see the `monitoring-custom` module's [documentation](/products/kubernetes-platform/documentation/v1/modules/monitoring-custom/).
+For more information, see the `monitoring-custom` module's [documentation](/modules/monitoring-custom/).
 </div>
 </div>
 
@@ -134,13 +134,13 @@ Other features
 ⚖ <span class="cards-item__title-text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/products/kubernetes-platform/documentation/v1/modules/node-manager/).
+Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/modules/node-manager/).
 
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
-[InstanceClass](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
-[NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) referring to it to create new groups.
+[InstanceClass](/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
+[NodeGroup](/modules/node-manager/cr.html#nodegroup) referring to it to create new groups.
 </div>
 </div>
 

@@ -1,9 +1,17 @@
 # Changelog v1.71
 
+## [MALFORMED]
+
+
+ - #13874 unknown section "pod-reloader"
+ - #14160 unknown section "runtime-audit-engine"
+ - #14673 unknown section "runtime-audit-engine"
+
 ## Know before update
 
 
  - All Prometheuses pods will be restarted
+ - If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
  - Prometheus is replaced by the Deckhouse Prom++ by default in all editions of the Deckhouse Kubernetes Platform
  - Snapshot-controller module will be restarted while Deckhouse updating.
  - The minimum supported version of Kubernetes is now 1.29. All control plane components will restart.
@@ -50,6 +58,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix arg `encryption-provider-config ` for kubeadm configuration. [#15521](https://github.com/deckhouse/deckhouse/pull/15521)
+ - **[candi]** Disable immutable flag on erofs files in cleanup node stage. [#15520](https://github.com/deckhouse/deckhouse/pull/15520)
  - **[candi]** containerd migration fix [#14622](https://github.com/deckhouse/deckhouse/pull/14622)
  - **[candi]** Resolved the issue with downloading packages for external modules using ctr for bb-rp-fetch. [#14236](https://github.com/deckhouse/deckhouse/pull/14236)
  - **[candi]** Fixed double preview version in candi/version_map. [#13670](https://github.com/deckhouse/deckhouse/pull/13670)
@@ -61,6 +71,11 @@
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** ignore ept_rvi_mode and hv_mode [#14882](https://github.com/deckhouse/deckhouse/pull/14882)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** Fixed the infinite loop in the "cilium migration" bashible step and improved synchronization between bashible and safe-agent-updater. [#15262](https://github.com/deckhouse/deckhouse/pull/15262)
+ - **[cni-cilium]** Add a compatibility check for the Cilium version and the kernel version, if WireGuard is installed on the node [#15155](https://github.com/deckhouse/deckhouse/pull/15155)
+    If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
+ - **[cni-cilium]** Added a migration mechanism, which was implemented through the node group disruptive updates with approval. [#14977](https://github.com/deckhouse/deckhouse/pull/14977)
+ - **[cni-cilium]** fixed invalid annotation name for lb-algorithm in docs [#14947](https://github.com/deckhouse/deckhouse/pull/14947)
  - **[cni-cilium]** fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled. [#14766](https://github.com/deckhouse/deckhouse/pull/14766)
  - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
@@ -76,6 +91,9 @@
  - **[deckhouse-controller]** Prevented module configuration errors from blocking the entire Deckhouse queue. [#13730](https://github.com/deckhouse/deckhouse/pull/13730)
  - **[dhctl]** Fix false-positive staticinstance ip duplication preflight checks fails. [#14163](https://github.com/deckhouse/deckhouse/pull/14163)
  - **[dhctl]** Added local registry configuration check to installation process. [#13645](https://github.com/deckhouse/deckhouse/pull/13645)
+ - **[docs]** Added steps that patch secret and prevented the image pull fail. [#15166](https://github.com/deckhouse/deckhouse/pull/15166)
+ - **[docs]** Add containerv2 additional registry examples [#15100](https://github.com/deckhouse/deckhouse/pull/15100)
+ - **[docs]** Fix D8KubernetesStaleTokensDetected alert description. [#14913](https://github.com/deckhouse/deckhouse/pull/14913)
  - **[docs]** Correction of KeyCloak documentation in d8-user-authn [#14755](https://github.com/deckhouse/deckhouse/pull/14755)
     Users will know how to configure KeyCloak and dexProvider to get user rights in dashboard and console.
  - **[extended-monitoring]** Fixed CVEs vulnerabilities x509-certificate-exporter. [#13804](https://github.com/deckhouse/deckhouse/pull/13804)
@@ -102,7 +120,8 @@
  - **[openvpn]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[operator-prometheus]** Fixed CVEs vulnerabilities operator-prometheus. [#13792](https://github.com/deckhouse/deckhouse/pull/13792)
  - **[operator-trivy]** Added startup probe to trivy-server. [#13731](https://github.com/deckhouse/deckhouse/pull/13731)
- - **[pod-reloader]** Added probes for `kube-rbac-proxy` in pod-reloader components. [#13874](https://github.com/deckhouse/deckhouse/pull/13874)
+ - **[prometheus]** fix securityContext indentation in the Prometheus main and longterm resources [#15116](https://github.com/deckhouse/deckhouse/pull/15116)
+    main and longterm Prometheuses will be rollout-restarted
  - **[prometheus]** use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig [#14612](https://github.com/deckhouse/deckhouse/pull/14612)
     if there are several ModuleSources with the prompp module available, the "deckhouse" ModuleSource will be used.
  - **[prometheus]** Fixed CVEs vulnerabilities mimir. [#14287](https://github.com/deckhouse/deckhouse/pull/14287)
@@ -115,8 +134,6 @@
  - **[prometheus]** Fixed CVEs vulnerabilities  alerts receiver. [#13740](https://github.com/deckhouse/deckhouse/pull/13740)
  - **[prometheus]** Fixed CVEs vulnerabilities alertmanager. [#13739](https://github.com/deckhouse/deckhouse/pull/13739)
  - **[prometheus-metrics-adapter]** Fixed CVEs vulnerabilities prometheus-metrics-adapter. [#13794](https://github.com/deckhouse/deckhouse/pull/13794)
- - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14673](https://github.com/deckhouse/deckhouse/pull/14673)
- - **[runtime-audit-engine]** Added falco build fixes for CSE. [#14160](https://github.com/deckhouse/deckhouse/pull/14160)
  - **[service-with-healthchecks]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[service-with-healthchecks]** Fixed handling of pods without IP addresses and corrected initial readiness threshold evaluation. [#12390](https://github.com/deckhouse/deckhouse/pull/12390)
  - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14524](https://github.com/deckhouse/deckhouse/pull/14524)
@@ -155,6 +172,7 @@
     Snapshot-controller module will be restarted while Deckhouse updating.
  - **[deckhouse-controller]** The static-routing-manager module is deleted from the list of embedded modules in favor of downloadable module. [#13433](https://github.com/deckhouse/deckhouse/pull/13433)
     The static-routing-manager module is migrated to provisioning via the deckhouse module source (downloading from the registry).
+ - **[docs]** Add containerv2 additional registry examples. [#15081](https://github.com/deckhouse/deckhouse/pull/15081)
  - **[docs]** Added reference for Deckhouse CLI (d8) to the documentation. [#14309](https://github.com/deckhouse/deckhouse/pull/14309)
  - **[docs]** Actualize used port list. [#14271](https://github.com/deckhouse/deckhouse/pull/14271)
  - **[ingress-nginx]** A patch has been added that adds additional logs when downloading GeoIP databases. [#14326](https://github.com/deckhouse/deckhouse/pull/14326)

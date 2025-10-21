@@ -6,6 +6,8 @@ import:
     add: /gatekeeper
     to: /bin/gatekeeper
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/bin/gatekeeper" ]
@@ -24,14 +26,14 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v3.18.1 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
+  - git clone --depth 1 --branch v3.18.3 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf website
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -47,6 +49,8 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -mod vendor -ldflags="-s -w" -o /gatekeeper .`) | indent 6 }}
   - chown 64535:64535 /gatekeeper
   - chmod 0700 /gatekeeper

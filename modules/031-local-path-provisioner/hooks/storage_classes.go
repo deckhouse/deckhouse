@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -81,12 +82,12 @@ func applyModuleCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
-func storageClasses(input *go_hook.HookInput) error {
-	moduleStorageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
+func storageClasses(_ context.Context, input *go_hook.HookInput) error {
+	moduleStorageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.Snapshots, "module_storageclasses")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal module_storageclasses snapshot: %w", err)
 	}
-	moduleCRDs, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_crds")
+	moduleCRDs, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.Snapshots, "module_crds")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal module_crds snapshot: %w", err)
 	}

@@ -13,14 +13,13 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -32,8 +31,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "SDNInternalL2LBService",
 			FilterFunc: applyL2LBServiceFilter,
 		},
+		{
+			Name:       "services",
+			ApiVersion: "v1",
+			Kind:       "Service",
+			FilterFunc: applyServiceFilterForStatusUpdater,
+		},
 	},
-}, dependency.WithExternalDependencies(handleL2LBServices))
+}, handleL2LBServices)
+
+func applyServiceFilterForStatusUpdater(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var service v1.Service
+	err := sdk.FromUnstructured(obj, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
+		// we only need service of LoadBalancer type
+		return nil, nil
+	}
+
+	return ServiceUpdaterInfo{
+		Name:       service.GetName(),
+		Namespace:  service.GetNamespace(),
+		Conditions: service.Status.Conditions,
+	}, nil
+}
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var l2LBService SDNInternalL2LBService
@@ -55,8 +79,8 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error {
-	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
+func handleL2LBServices(_ context.Context, input *go_hook.HookInput) error {
+	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.Snapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
 		totalIPs := len(ips)
@@ -69,13 +93,18 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 			IPsForStatus = append(IPsForStatus, map[string]string{"ip": ip})
 		}
 
-		k8sClient, err := dc.GetK8sClient()
-		if err != nil {
-			return err
+		var service *ServiceUpdaterInfo
+		for svc, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.Snapshots.Get("services")) {
+			if err != nil {
+				continue
+			}
+			if namespacedName.Name == svc.Name && namespacedName.Namespace == svc.Namespace {
+				service = &svc
+				break
+			}
 		}
-		service, err := k8sClient.CoreV1().Services(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
+		if service == nil {
+			return nil
 		}
 
 		conditionStatus := metav1.ConditionFalse
@@ -84,7 +113,7 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
-		conditions := updateCondition(service.Status.Conditions, metav1.Condition{
+		conditions := updateCondition(service.Conditions, metav1.Condition{
 			Status:  conditionStatus,
 			Type:    "AllPublicIPsAssigned",
 			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -95,7 +96,7 @@ func capsConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return enable == "true", nil
 }
 
-func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
+func handleClusterAPIDeploymentRequired(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Starting hook that set flags for rendering CAPI and CAPS managers")
 	defer input.Logger.Info("Finish hook that set flags for rendering CAPI and CAPS managers")
 
@@ -115,7 +116,7 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 
 	var hasStaticInstancesField bool
 
-	nodeGroupSnapshots := input.NewSnapshots.Get("node_group")
+	nodeGroupSnapshots := input.Snapshots.Get("node_group")
 	for hasStaticInstancesFieldSnapshot, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
@@ -138,7 +139,7 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var capiEnabled bool
 	var capsEnabled bool
 
-	configMapSnapshots := input.NewSnapshots.Get("config_map")
+	configMapSnapshots := input.Snapshots.Get("config_map")
 
 	if len(configMapSnapshots) > 0 {
 		var capsFromStartSnap bool

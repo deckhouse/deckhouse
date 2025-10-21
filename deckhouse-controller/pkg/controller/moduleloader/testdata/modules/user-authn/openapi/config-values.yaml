@@ -1,0 +1,9 @@
+x-config-version: 2
+type: object
+properties:
+  publishAPI:
+    type: object
+    properties:
+      enabled:
+        type: boolean
+        default: false

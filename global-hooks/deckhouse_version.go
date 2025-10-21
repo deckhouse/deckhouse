@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -28,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, discoverDeckhouseVersion)
 
-func discoverDeckhouseVersion(input *go_hook.HookInput) error {
+func discoverDeckhouseVersion(_ context.Context, input *go_hook.HookInput) error {
 	versionFile := "/deckhouse/version"
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		versionFile = os.Getenv("D8_VERSION_TMP_FILE")

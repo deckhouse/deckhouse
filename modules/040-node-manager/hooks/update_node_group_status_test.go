@@ -59,6 +59,18 @@ spec:
 status:
   error: 'Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.'
 `
+		stateCloudNG3 = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: ng3-capi
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    maxPerZone: 5
+    minPerZone: 1
+`
 		stateNG1 = `
 ---
 apiVersion: deckhouse.io/v1
@@ -92,6 +104,50 @@ metadata:
     node-group: ng1
 spec:
   replicas: 2
+`
+		stateCAPIMDs = `
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: md-ng3-capi
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng3-capi
+spec:
+  replicas: 2
+`
+		stateCapiMachines = `
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Machine
+metadata:
+  name: machine-capi-ng3-aaa
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng3-capi
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/capi-ng3-aaa: ""
+        node.deckhouse.io/group: capi-ng3
+        node.deckhouse.io/type: CloudEphemeral
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Machine
+metadata:
+  name: machine-capi-ng3-bbb
+  namespace: d8-cloud-instance-manager
+  labels:
+    node-group: ng3-capi
+spec:
+  nodeTemplate:
+    metadata:
+      labels:
+        node-role.kubernetes.io/capi-ng3-bbb: ""
+        node.deckhouse.io/group: capi-ng3
+        node.deckhouse.io/type: CloudEphemeral
 `
 		stateMachines = `
 ---
@@ -172,6 +228,36 @@ status:
   - status: "True"
     type: Ready
 `
+		stateCapiNodes = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-ng3-capi-aaa
+  labels:
+    node.deckhouse.io/group: ng3-capi
+  annotations:
+    node.deckhouse.io/configuration-checksum: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
+status:
+  conditions:
+  - some: thing
+  - status: "True"
+    type: Ready
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node-ng3-capi-bbb
+  labels:
+    node.deckhouse.io/group: ng3-capi
+  annotations:
+    node.deckhouse.io/configuration-checksum: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3
+status:
+  conditions:
+  - some: thing
+  - status: "True"
+    type: Ready
+`
 		stateCloudProviderSecret = `
 ---
 apiVersion: v1
@@ -192,6 +278,7 @@ metadata:
 data:
   ng1: YTY2NWE0NTkyMDQyMmY5ZDQxN2U0ODY3ZWZkYzRmYjhhMDRhMWYzZmZmMWZhMDdlOTk4ZTg2ZjdmN2EyN2FlMw== # sha256sum 123
   ng-2: OGQyM2NmNmM4NmU4MzRhN2FhNmVkZWQ1NGMyNmNlMmJiMmU3NDkwMzUzOGM2MWJkZDVkMjE5Nzk5N2FiMmY3Mg== # sha256sum 321
+  ng3-capi: MWZjOTE3YzdhZDY2NDg3NDcwZTQ2NmMwYWQ0MGRkZDQ1YjlmNzczMGE0YjQzZTFiMjU0MjYyN2YwNTk2YmJkYyAgLQo= # sha256sum 111
 `
 
 		failedMachineDeployment = `
@@ -269,6 +356,7 @@ status:
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
 
 	const nowTime = "2023-03-03T16:49:52Z"
@@ -2014,6 +2102,23 @@ spec:
 
 				It("Sets to False", func() {
 					assertNoScalingCondition(f)
+				})
+			})
+
+			Context("CloudEphemeral ng with CAPI should contain correct status", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+						stateCloudProviderSecret+stateCloudNG3+stateCAPIMDs+stateCapiMachines+stateCapiNodes, 2))
+					f.RunHook()
+				})
+
+				It("NG's status.desired must be correct", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng3-capi").Field("status.max").String()).To(MatchJSON("5"))
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng3-capi").Field("status.min").String()).To(MatchJSON("1"))
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng3-capi").Field("status.desired").String()).To(MatchJSON("2"))
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng3-capi").Field("status.nodes").String()).To(MatchJSON("2"))
+					Expect(f.KubernetesGlobalResource("NodeGroup", "ng3-capi").Field("status.ready").String()).To(MatchJSON("2"))
 				})
 			})
 		})

@@ -18,7 +18,6 @@ monitoringPingEnabled: true
 multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
 operatorPrometheusEnabled: true
-podReloaderEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true

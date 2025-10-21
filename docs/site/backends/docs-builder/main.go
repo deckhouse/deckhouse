@@ -26,9 +26,11 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 
 	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
+	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/k8s"
 )
 
@@ -37,6 +39,7 @@ var (
 	listenAddress    string
 	src              string
 	dst              string
+	metricsAddress   string
 	highAvailability bool
 )
 
@@ -44,6 +47,7 @@ func init() {
 	flag.StringVar(&listenAddress, "address", ":8081", "Address to listen on")
 	flag.StringVar(&src, "src", "/app/hugo/", "Directory to load source files")
 	flag.StringVar(&dst, "dst", "/mount/", "Directory for site files")
+	flag.StringVar(&metricsAddress, "metrics-address", ":9090", "Address to listen on metrics")
 	flag.BoolVar(&highAvailability, "highAvailability", false, "high availability mod")
 }
 
@@ -58,16 +62,27 @@ func main() {
 		log.WithHandlerType(log.TextHandlerType),
 	)
 
+	mStorage := metricsstorage.NewMetricStorage("docs_builder")
+
+	if err := metrics.RegisterMetrics(mStorage); err != nil {
+		logger.Fatal("failed to register metrics", log.Err(err))
+	}
+
 	lManager, err := k8s.NewLeasesManager(logger)
 	if err != nil {
 		logger.Fatal("new leases manager", log.Err(err))
 	}
 
-	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger), logger.Named("v1"))
+	h := v1.NewHandler(docs.NewService(src, dst, highAvailability, logger, mStorage), logger.Named("v1"))
 
 	srv := &http.Server{
 		Addr:    listenAddress,
 		Handler: h,
+	}
+
+	metricsSrv := &http.Server{
+		Addr:    metricsAddress,
+		Handler: mStorage.Handler(),
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -75,6 +90,7 @@ func main() {
 	logger.Info("starting application")
 
 	eg.Go(srv.ListenAndServe)
+	eg.Go(metricsSrv.ListenAndServe)
 	eg.Go(lManager.Run(ctx))
 
 	logger.Info("application started")

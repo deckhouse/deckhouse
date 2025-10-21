@@ -8,16 +8,16 @@ force_searchable: true
 Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to enable the export of extended monitoring metrics. You can do it by:
 - adding the appropriate helm-chart to the project (recommended method);
 - adding it to `.gitlab-ci.yml` (kubectl patch/create);
-- attaching it manually (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
+- attaching it manually (`d8 k label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
 - configuring via [namespace-configurator](../namespace-configurator/) module.
 
 Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring is enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
-You can also add custom labels with the specified value to `threshold.extended-monitoring.deckhouse.io/something` Kubernetes objects, e.g., `kubectl label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
+You can also add custom labels with the specified value to `threshold.extended-monitoring.deckhouse.io/something` Kubernetes objects, e.g., `d8 k label pod test threshold.extended-monitoring.deckhouse.io/disk-inodes-warning=30`.
 In this case, the label value will replace the default one.
 
 If you want to override the default thresholds for all objects in a namespace, you can set the `threshold.extended-monitoring.deckhouse.io/` label at the namespace level. For example:
-`kubectl label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`
+`d8 k label namespace my-app-production threshold.extended-monitoring.deckhouse.io/5xx-warning=20`
 This will replace the default value for all objects in the namespace that do not already have this label set.
 
 You can disable monitoring on a per-object basis by adding the `extended-monitoring.deckhouse.io/enabled=false` label to it. Thus, the default labels will also be disabled (as well as label-based alerts).

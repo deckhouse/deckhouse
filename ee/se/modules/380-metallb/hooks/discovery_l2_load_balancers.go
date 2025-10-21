@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
@@ -172,7 +173,7 @@ func applyMetalLoadBalancerClassFilter(obj *unstructured.Unstructured) (go_hook.
 	}, nil
 }
 
-func handleL2LoadBalancers(input *go_hook.HookInput) error {
+func handleL2LoadBalancers(_ context.Context, input *go_hook.HookInput) error {
 	if value, ok := input.Values.GetOk("metallb.internal.migrationOfOldFashionedLBsAdoptionComplete"); ok {
 		if !value.Bool() {
 			return nil
@@ -180,9 +181,9 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 	}
 
 	l2LBServices := make([]L2LBServiceConfig, 0, 4)
-	mlbcMap, mlbcDefaultName := makeMLBCMapFromSnapshot(input.NewSnapshots.Get("mlbc"))
+	mlbcMap, mlbcDefaultName := makeMLBCMapFromSnapshot(input.Snapshots.Get("mlbc"))
 
-	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfo](input.NewSnapshots.Get("services")) {
+	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfo](input.Snapshots.Get("services")) {
 		if err != nil {
 			continue
 		}
@@ -215,7 +216,7 @@ func handleL2LoadBalancers(input *go_hook.HookInput) error {
 			continue
 		}
 
-		nodes := getNodesByMLBC(mlbcForUse, input.NewSnapshots.Get("nodes"))
+		nodes := getNodesByMLBC(mlbcForUse, input.Snapshots.Get("nodes"))
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue

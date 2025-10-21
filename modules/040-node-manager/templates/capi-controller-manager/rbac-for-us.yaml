@@ -229,6 +229,15 @@ rules:
     - update
     - patch
     - delete
+  ## storage
+  - apiGroups:
+      - "storage.k8s.io"
+    resources:
+      - volumeattachments
+    verbs:
+      - get
+      - list
+      - watch
   ## custom
   - apiGroups:
     - bootstrap.cluster.x-k8s.io
@@ -297,6 +306,12 @@ rules:
       - pods/eviction
     verbs:
       - create
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+    verbs:
+      - get
   - nonResourceURLs:
     - /
     verbs:

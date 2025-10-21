@@ -56,9 +56,9 @@
       {%- if module[1].external == "true"  %}
         {%- assign modulePath = module[1].path | prepend: site.urls[page.lang] %}
       {%- elsif moduleDoesntBelongToEdition %}
-        {%- assign modulePath = module[1].path | prepend: '/products/kubernetes-platform/documentation/v1/' | prepend: site.urls[page.lang] %}
+        {%- assign modulePath = module[1].path | prepend: '/' | prepend: site.urls[page.lang] %}
       {%- else %}
-        {%- assign modulePath = module[1].path %}
+        {%- assign modulePath = module[1].path | prepend: '/' %}
       {%- endif %}
     {%- endif %}
 

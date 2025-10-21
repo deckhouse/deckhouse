@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -102,8 +103,17 @@ func Serve(network, address string) error {
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
+	podNamespace := os.Getenv("DHCTL_SERVER_NAMESPACE")
+
 	// init services
-	dhctlService := dhctl.New(podName, cacheDir, config.NewSchemaStore())
+	dhctlService := dhctl.New(dhctl.ServiceParams{
+		PodName:      podName,
+		PodNamespace: podNamespace,
+		CacheDir:     cacheDir,
+		SchemaStore:  config.NewSchemaStore(),
+		TmpDir:       app.TmpDirName,
+		IsDebug:      false,
+	})
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)

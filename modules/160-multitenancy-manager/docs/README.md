@@ -22,7 +22,7 @@ The configuration capabilities of `Namespace` do not fully meet modern developme
 The functionality of projects allows addressing these issues.
 
 {% alert level="warning" %}
-The `secret-copier` module [cannot be used together](../secret-copier/) with `multitenancy-manager` module.
+The [`secret-copier`](../secret-copier/) module cannot be used together with `multitenancy-manager` module.
 {% endalert %}
 
 ## Advantages of the module
@@ -36,18 +36,26 @@ For platform users:
 * **Quick Start**: Developers can request projects created from ready-made templates from administrators, allowing for a quick start to developing a new application.
 * **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 
+## Limitations
+
+The module works only within the limits below:
+
+- Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
+- Template resources are applied only to a single namespace whose name matches the project name.
+
 ## Internal Logic
 
 ### Creating a project
 
 To create projects, the following [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
-* [ProjectTemplate](cr.html#projecttemplate) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
-* [Project](cr.html#project) — a resource that describes a specific project.
+* [ProjectTemplate](./cr.html#projecttemplate) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
+* [Project](./cr.html#project) — a resource that describes a specific project.
 
-When creating a [Project](cr.html#project) resource from a specific [ProjectTemplate](cr.html#projecttemplate), the following happens:
-1. The [parameters](cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) field of [ProjectTemplate](cr.html#projecttemplate));
-1. Rendering of the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [parameters](cr.html#projecttemplate-v1alpha1-spec-parametersschema) field of the [Project](cr.html#project) resource;
-1. A `Namespace` is created with a name matching the name of [Project](cr.html#project);
+When creating a [Project](./cr.html#project) resource from a specific [ProjectTemplate](./cr.html#projecttemplate), the following happens:
+1. The [parameters](./cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [`parametersSchema.openAPIV3Schema`
+](./cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) field of [ProjectTemplate](./cr.html#projecttemplate));
+1. Rendering of the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [`parameters`](./cr.html#project-v1alpha2-spec-parameters) field of the [Project](./cr.html#project) resource;
+1. A `Namespace` is created with a name matching the name of [Project](./cr.html#project);
 1. All resources described in the template are created in sequence.
 
 > **Attention!** When changing the project template, all created projects will be updated according to the new template.

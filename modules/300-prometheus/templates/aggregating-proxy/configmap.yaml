@@ -7,6 +7,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "aggregating-proxy")) | nindent 2 }}
 data:
   mimir.yaml: |
+    memberlist:
+      advertise_addr: ${POD_IP}
     multitenancy_enabled: false
     activity_tracker:
       filepath: ""

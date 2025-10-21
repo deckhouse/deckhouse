@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -220,7 +221,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, deleteMachines)
 
-func deleteMachines(input *go_hook.HookInput) error {
+func deleteMachines(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		timeNow                        = time.Now().UTC()
 		machines                       = make([]*Machine, 0)
@@ -229,7 +230,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 		nodeGroupNameToNodeGroupStatus = make(map[string]*NodeGroupStatus)
 	)
 
-	for mc, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("mcs")) {
+	for mc, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("mcs")) {
 		if err != nil {
 			return fmt.Errorf("failed to assert to string: failed to iterate over 'mcs' snapshot: %w", err)
 		}
@@ -241,7 +242,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.NewSnapshots.Get("nodes")) {
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.Snapshots.Get("nodes")) {
 		if err != nil {
 			return fmt.Errorf("failed to assert to Node: failed to iterate over 'nodes' snapshot: %w", err)
 		}
@@ -249,7 +250,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 		nodeNameToNodeMap[node.Name] = &node
 	}
 
-	for ngStatus, err := range sdkobjectpatch.SnapshotIter[NodeGroupStatus](input.NewSnapshots.Get("nodegroupstatuses")) {
+	for ngStatus, err := range sdkobjectpatch.SnapshotIter[NodeGroupStatus](input.Snapshots.Get("nodegroupstatuses")) {
 		if err != nil {
 			return fmt.Errorf("failed to assert to NodeGroupStatus: failed to iterate over 'nodegroupstatuses' snapshot: %w", err)
 		}
@@ -257,7 +258,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = &ngStatus
 	}
 
-	for machine, err := range sdkobjectpatch.SnapshotIter[Machine](input.NewSnapshots.Get("machines")) {
+	for machine, err := range sdkobjectpatch.SnapshotIter[Machine](input.Snapshots.Get("machines")) {
 		if err != nil {
 			return fmt.Errorf("failed to assert to Machine: failed to iterate over 'machines' snapshot: %w", err)
 		}

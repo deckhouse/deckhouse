@@ -1,0 +1,68 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.49.0
+spec:
+  version: v1.49.0
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  transitionTime: "2019-10-17T15:32:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.50.0
+spec:
+  version: v1.50.0
+  requirements:
+    migratedModules: "disabled-module"
+status:
+  approved: false
+  message: ""
+  phase: Pending
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modulesCount: 0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: disabled-module
+spec:
+  enabled: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+    spec:
+      containers:
+      - name: deckhouse
+        image: dev-registry.deckhouse.io/deckhouse/deckhouse:v1.49.0
+status:
+  replicas: 1
+  readyReplicas: 1
+
+

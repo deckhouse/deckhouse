@@ -22,11 +22,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		svc.metrics.CounterAdd(metrics.DocsBuilderUploadTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderUploadDurationSeconds, dur, map[string]string{"status": status}, nil)
+	}()
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
+		status = "fail"
+
 		return fmt.Errorf("clean module files: %w", err)
 	}
 

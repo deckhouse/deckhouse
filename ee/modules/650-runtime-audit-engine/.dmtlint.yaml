@@ -1,8 +1,0 @@
-linters-settings:
-  container:
-    exclude-rules:
-      liveness-probe:
-        - kind: DaemonSet
-          name: runtime-audit-engine
-          container: rules-loader
-

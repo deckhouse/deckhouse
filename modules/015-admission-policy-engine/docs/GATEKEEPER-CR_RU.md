@@ -19,7 +19,11 @@ title: "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
 Позволяет изменять секцию `Metadata` ресурса.  
 На данный момент сервисом Gatekeeper разрешено только **добавление** объектов `lables` и `annotations`. Изменение существующих объектов не предусмотрено.
 
-Пример добавления label `owner` со значением `admin` во всех пространствах имен:
+{% alert level="info" %}
+В `spec.match.kinds` запрещено использовать `*`. При указании `*` мутация не применяется. Вместо этого необходимо явно перечислять целевые ресурсы (`kinds`) и их `apiGroups`.
+{% endalert %}
+
+Пример 1. Добавление лейбла `owner` со значением `admin` во всех пространствах имён:
   
 ```yaml
 apiVersion: mutations.gatekeeper.sh/v1
@@ -33,6 +37,26 @@ spec:
   parameters:
     assign:
       value: "admin"
+```
+
+Пример 2. Добавление лейбла в конкретном пространстве имён и только на выбранные ресурсы:
+
+```yaml
+apiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+  name: set-labels-<your_namespace>
+spec:
+  match:
+    scope: Namespaced
+    namespaces: ["<your_namespace>"]
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"] # Запрещено использовать "*" .
+  location: "metadata.labels.<your_label_name>"
+  parameters:
+    assign:
+      value: <your_label_value>
 ```
 
 ### Assign

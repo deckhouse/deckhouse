@@ -44,7 +44,7 @@ different paths. Each instance of the KV secrets engine is isolated and unique.
 
 An existing version 1 kv store can be upgraded to a version 2 kv store via the CLI or API, as shown below. This will start an upgrade process to upgrade the existing key/value data to a versioned format. The mount will be inaccessible during this process. This process could take a long time, so plan accordingly.
 
-Once upgraded to version 2, the former paths at which the data was accessible will no longer suffice. You will need to adjust user policies to add access to the version 2 paths as detailed in the [ACL Rules section below](/docs/secrets/kv/kv-v2#acl-rules). Similarly, users/applications will need to update the paths at which they interact with the kv data once it has been upgraded to version 2.
+Once upgraded to version 2, the former paths at which the data was accessible will no longer suffice. You will need to adjust user policies to add access to the version 2 paths as detailed in the [ACL Rules section below](#acl-rules). Similarly, users/applications will need to update the paths at which they interact with the kv data once it has been upgraded to version 2.
 
 An existing version 1 kv can be upgraded to a version 2 KV store with the CLI command:
 
@@ -154,11 +154,8 @@ path "secret/metadata/dev/team-1/*" {
 ```
 
 The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are
-not supported for policies used with the version 2 kv store. See the [Policies Concepts](/docs/concepts/policies)
+not supported for policies used with the version 2 kv store. See the [Policies Concepts](../../concepts/policy.html)
 for a description of these parameters.
-
-See the [API Specification](/api-docs/secret/kv/kv-v2) for more
-information.
 
 ## Usage
 
@@ -340,7 +337,7 @@ real path).
    bar         b
    ```
 
-You can also use [Stronghold's password policy](/docs/concepts/password-policies) feature to generate arbitrary values.
+You can also use Stronghold's password policy feature to generate arbitrary values.
 
 1. Write a password policy:
 
@@ -611,9 +608,3 @@ See the commands below for more information:
    $ d8 stronghold kv metadata delete -mount=secret my-secret
    Success! Data deleted (if it existed) at: secret/metadata/my-secret
    ```
-
-## API
-
-The KV secrets engine has a full HTTP API. Please see the
-[KV secrets engine API](/api-docs/secret/kv/kv-v2) for more
-details.

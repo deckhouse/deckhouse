@@ -1,0 +1,59 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - opt/deckhouse
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "cryptsetup": "2.7.5" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/alpine
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: tools/cryptsetup
+  add: /
+  to: /src
+  includePaths:
+  - usr/lib
+  - usr/sbin
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache patchelf file findutils
+  setup:
+  - mkdir -p /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/* /opt/deckhouse/bin
+  - cp -pr /src/usr/lib /opt/deckhouse
+  - cd /opt/deckhouse/bin
+  - |
+    for i in $(find . -type f); do
+      if file $i | grep -q "ELF"; then
+        patchelf --set-interpreter /opt/deckhouse/lib/libc.so $i
+        patchelf --set-rpath /opt/deckhouse/lib $i
+      fi
+    done
+  - cd /opt/deckhouse/lib
+  - find . -type f -name "*.la" -exec rm -f \{} \;
+  - find . -type f -name "*.a" -exec rm -f \{} \;
+  - find . -type f -name "*.pc" -exec rm -f \{} \;
+  - chown -R 64535:64535 /opt/deckhouse

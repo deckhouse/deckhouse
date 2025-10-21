@@ -30,10 +30,14 @@ env:
 concurrency:
   group: e2e-daily
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -74,7 +78,7 @@ jobs:
 
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
     if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:

@@ -1,12 +1,9 @@
 ---
 title: "Модуль registry: настройка"
-description: ""
 ---
 
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
 
-Модуль не имеет настроек.
-
-Режим работы registry Deckhouse Kubernetes Platform, адрес для подключения и другие параметры указываются в секции [registry](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
+Для управления работой с container registry используйте секцию [`registry`](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`, в которой можно указывать параметры подключения к registry и управлять режимом работы с ним.

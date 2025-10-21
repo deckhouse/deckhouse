@@ -56,7 +56,7 @@ spec:
 или выполните команду:
 
 ```shell
-d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+d8 p module enable stronghold
 ```
 
 По умолчанию, модуль запускается в режиме `Automatic` с инлетом `Ingress`. В текущей версии, другие режимы и инлеты не предусмотрены.
@@ -69,7 +69,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 
 Рисунок - 1. Интерфейс администратора Deckhouse Kubernetes Platform.
 
-Доступ к Deckhouse Stronghold осуществляется через инлеты. В данный момент доступен один инлет - `Ingress.` Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [publicDomainTemplate](https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+Доступ к Deckhouse Stronghold осуществляется через инлеты. В данный момент доступен один инлет - `Ingress.` Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
 
 Например, если `publicDomainTemplate` установлен как `%s-kube.company.my`, веб-интерфейс Stronghold будет доступен по адресу `stronghold-kube.company.my`.
 
@@ -80,17 +80,17 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 - Root-токен из секрета `stronghold-keys` пространства имен `kubernetes d8-stronghold`. Пример команды получения root-токена:
 
   ```shell
-  d8 kubectl -n d8-stronghold get secret stronghold-keys -o json | jq -r .data.rootToken | base64 -d
+  d8 k -n d8-stronghold get secret stronghold-keys -o json | jq -r .data.rootToken | base64 -d
   ```
 
 - Токен доступа с полными правами через UI Deckhouse Admin.
 
-  - Создайте [статического пользователя](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user) и [группу](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь в веб-интерфейсе и получите токен. Для этого в навигационном меню нажмите [Кнопку авторизации](images/image1.ru.png) и в открывшемся меню нажмите на *Копировать токен*.
 
 - Токен доступа с полными правами через CLI.
-  - Создайте [статического пользователя](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user) и [группу](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) (OIDC-провайдеров).
+  - Создайте [статического пользователя](/modules/user-authn/cr.html#user) и [группу](/modules/user-authn/cr.html#group) в Deckhouse Kubernetes Platform, или настройте аутентификацию через [внешние системы](/modules/user-authn/) (OIDC-провайдеров).
   - Добавьте пользователя в список администраторов Deckhouse Stronghold, используя параметр [management.administrators](configuration.html#parameters-management-administrators).
   - Авторизуйтесь с помощью `d8 stronghold login`, выполнив следующие команды (укажите актуальный адрес в `VAULT_ADDR`):
 
@@ -138,7 +138,7 @@ export STRONGHOLD_ADDR=https://stronghold.demo.mydomain.tld/
 
 ## Настройка параметров высокой доступности
 
-Если используется одна мастер нода (не рекомендуется для продуктивных сред), то Deckhouse Stronghold работает в неотказоустойчивом режиме.
-Распечаткой кластера занимается stronghold-automatic, используя ключи, сохраненные в кубернетес-секрете приинициализации кластера.
+Если используется один master-узел (не рекомендуется для продуктивных сред), то Deckhouse Stronghold работает не в отказоустойчивом режиме.
+Распечаткой кластера занимается stronghold-automatic, используя ключи, сохраненные в секрете Kubernetes при инициализации кластера.
 Высокая доступность обеспечивается автоматически, если количество мастер-узлов кластера Deckhouse Kubernetes Platform составляет три и более.
-В этом режиме распечаткой кластера занимаются соседние ноды stronghold.
+В этом режиме распечаткой кластера занимаются соседние узлы Stronghold.

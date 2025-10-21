@@ -53,7 +53,7 @@ spec:
       - key: node.kubernetes.io/unschedulable
         operator: "Exists"
         effect: "NoSchedule"
-      {{- include "nvidia_node_selector" (tuple . "mig-manager") | nindent 6 }}
+      {{- include "nvidia_node_selector" (tuple . "mig-manager" "") | nindent 6 }}
       terminationGracePeriodSeconds: 60
       serviceAccountName: nvidia-mig-manager
       automountServiceAccountToken: true

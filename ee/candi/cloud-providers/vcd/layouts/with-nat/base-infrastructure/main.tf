@@ -6,8 +6,14 @@ locals {
   external_network_name                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
   external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
+  metadata                                 = contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}
+  bastion_ip_address                       = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "mainNetworkIPAddress") ? var.providerClusterConfiguration.bastion.instanceClass.mainNetworkIPAddress : null
   bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
-  dnat_bastion_external_port               = contains(keys(var.providerClusterConfiguration.edgeGateway), "externalPort") ? var.providerClusterConfiguration.edgeGateway.externalPort : 22
+  bastion_metadata = merge(
+    (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),
+    (contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "additionalMetadata") ? var.providerClusterConfiguration.bastion.instanceClass.additionalMetadata : {}),
+  )
+  dnat_bastion_external_port = contains(keys(var.providerClusterConfiguration.edgeGateway), "externalPort") ? var.providerClusterConfiguration.edgeGateway.externalPort : 22
 }
 
 module "network" {
@@ -19,6 +25,7 @@ module "network" {
   internal_network_cidr                    = var.providerClusterConfiguration.internalNetworkCIDR
   internal_network_dhcp_pool_start_address = local.internal_network_dhcp_pool_start_address
   internal_network_dns_servers             = var.providerClusterConfiguration.internalNetworkDNSServers
+  metadata                                 = local.metadata
 }
 
 module "vapp" {
@@ -42,13 +49,14 @@ module "bastion" {
   prefix            = var.clusterConfiguration.cloud.prefix
   vapp_name         = module.vapp.name
   network_name      = vcd_vapp_org_network.vapp_network.org_network_name
-  ip_address        = var.providerClusterConfiguration.bastion.instanceClass.mainNetworkIPAddress
+  ip_address        = local.bastion_ip_address
   template          = var.providerClusterConfiguration.bastion.instanceClass.template
   ssh_public_key    = var.providerClusterConfiguration.sshPublicKey
   placement_policy  = local.bastion_placement_policy
   storage_profile   = var.providerClusterConfiguration.bastion.instanceClass.storageProfile
   sizing_policy     = var.providerClusterConfiguration.bastion.instanceClass.sizingPolicy
   root_disk_size_gb = var.providerClusterConfiguration.bastion.instanceClass.rootDiskSizeGb
+  metadata          = local.bastion_metadata
 }
 
 module "snat" {

@@ -1,0 +1,75 @@
+###
+### controller
+###
+{{- define "csi_controller_legacy_envs" }}
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+- name: X_CSI_MODE
+  value: "controller"
+- name: X_CSI_SPEC_REQ_VALIDATION
+  value: "false"
+- name: X_CSI_VSPHERE_CLOUD_CONFIG
+  value: "/etc/cloud/cloud-config"
+{{- end }}
+
+{{- define "csi_controller_legacy_volumes" }}
+- name: vsphere-csi-config-volume
+  secret:
+    secretName: csi-controller
+{{- end }}
+
+{{- define "csi_controller_legacy_volume_mounts" }}
+- mountPath: /etc/cloud
+  name: vsphere-csi-config-volume
+  readOnly: true
+{{- end }}
+
+{{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPluginLegacy" "cloudProviderVsphere") }}
+
+{{- $csiControllerConfig := dict }}
+{{- $_ := set $csiControllerConfig "fullname" "csi-controller-legacy" }}
+{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+{{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_legacy_envs" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_legacy_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_legacy_volume_mounts" . | fromYamlArray) }}
+
+{{- if ne .Values.csiVsphere.internal.compatibilityFlag "none" }}
+{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+{{- end }}
+
+###
+### node
+###
+{{- define "csi_node_legacy_envs" }}
+- name: CSI_ENDPOINT
+  value: "unix:///csi/csi.sock"
+- name: X_CSI_MODE
+  value: "node"
+- name: X_CSI_SPEC_REQ_VALIDATION
+  value: "false"
+{{- include "helm_lib_envs_for_proxy" . }}
+{{- end }}
+
+{{- define "csi_node_legacy_volumes" }}
+- name: tmp
+  emptyDir: {}
+{{- end }}
+
+{{- define "csi_node_legacy_volume_mounts" }}
+- mountPath: /tmp
+  name: tmp
+{{- end }}
+
+{{- $csiNodeConfig := dict }}
+{{- $_ := set $csiNodeConfig "fullname" "csi-node-legacy" }}
+{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+{{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_legacy_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_legacy_volumes" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_legacy_volume_mounts" . | fromYamlArray) }}
+
+{{- if ne .Values.csiVsphere.internal.compatibilityFlag "none" }}
+{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}

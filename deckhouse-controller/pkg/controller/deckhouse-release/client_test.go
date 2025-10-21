@@ -26,7 +26,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -44,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var testDeckhouseVersion = "v1.15.0"
@@ -97,7 +97,7 @@ func setupControllerSettings(
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
-	metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
+	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 	rec := &deckhouseReleaseReconciler{
 		client:           cl,
 		deckhouseVersion: testDeckhouseVersion,
@@ -106,7 +106,7 @@ func setupControllerSettings(
 		moduleManager:    stubModulesManager{},
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
 		metricStorage:    metricStorage,
-		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
+		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())), releaseUpdater.D8ReleaseBlockedMetricName),
 		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
@@ -142,6 +142,10 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 		res = unmarshalRelease[corev1.ConfigMap](obj, t)
 	case "ModuleSource":
 		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
+	case "Module":
+		res = unmarshalRelease[v1alpha1.Module](obj, t)
+	case "ModuleConfig":
+		res = unmarshalRelease[v1alpha1.ModuleConfig](obj, t)
 
 	default:
 		require.Fail(t, "unknown Kind:"+typ.Kind)

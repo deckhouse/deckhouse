@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -62,14 +64,14 @@ func daemonsetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return obj.GetName(), nil
 }
 
-func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
-	istioCniDaemonSets := input.NewSnapshots.Get("istio-cni-daemonset")
-	sdnCniDaemonSets := input.NewSnapshots.Get("sdn-cni-daemonset")
+func discoveryIsExclusiveCNIPluginEnabled(_ context.Context, input *go_hook.HookInput) error {
+	istioCniDaemonSets := input.Snapshots.Get("istio-cni-daemonset")
+	sdnCniDaemonSets := input.Snapshots.Get("sdn-cni-daemonset")
 	if len(istioCniDaemonSets) != 0 || len(sdnCniDaemonSets) != 0 {
 		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", false)
 	} else {
 		eCNIP := input.Values.Get("cniCilium.exclusiveCNIPlugin")
-		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", eCNIP)
+		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", eCNIP.Bool())
 	}
 	return nil
 }

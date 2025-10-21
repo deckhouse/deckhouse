@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -94,9 +95,9 @@ type removeCSINode struct {
 	NeedPatch bool
 }
 
-func handleRemoveCSI(input *go_hook.HookInput) error {
+func handleRemoveCSI(_ context.Context, input *go_hook.HookInput) error {
 	nodes := make(map[string]bool)
-	snaps := input.NewSnapshots.Get("nodes")
+	snaps := input.Snapshots.Get("nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[removeCSINode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
@@ -105,7 +106,7 @@ func handleRemoveCSI(input *go_hook.HookInput) error {
 		nodes[node.Name] = node.NeedPatch
 	}
 
-	snaps = input.NewSnapshots.Get("csinodes")
+	snaps = input.Snapshots.Get("csinodes")
 	for csiName, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)

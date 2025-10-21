@@ -11,17 +11,19 @@ To install the platform, you need to prepare a YAML configuration file for insta
 
 The YAML installation configuration file includes parameters for several resources (manifests):
 
-- [InitConfiguration](/products/stronghold/reference/cr/initconfiguration.html) — initial parameters for the platform configuration. The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to function or operate correctly, such as [module placement parameters](/products/stronghold/reference/mc.html#global-parameters-modules-placement-customtolerationkeys), the used [storageClass](../deckhouse-configure-global.html#global-parameters-storageclass), access settings for [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), the [template for DNS names](../deckhouse-configure-global.html#global-parameters-modules-publicdomaintemplate), and others.
+- [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — initial parameters for the platform configuration.
+  The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to start and operate correctly, such as [component placement parameters](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), the used [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass), [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg) access settings, the [template for DNS names](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), and others.
 
-- [ClusterConfiguration](/products/stronghold/reference/cr/clusterconfiguration.html) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
 
   > You need to use the `ClusterConfiguration` resource only if you need to pre-deploy a Kubernetes cluster during the platform installation. `ClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](/products/stronghold/reference/cr/staticclusterconfiguration.html) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
   > Similar to `ClusterConfiguration`, `StaticClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
-- ModuleConfig — a set of resources containing configuration parameters for [built-in platform modules](../).
-  If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](/products/stronghold/reference/mc.html#prometheus-parameters-nodeselector) parameter).
+- ModuleConfig — a set of resources containing configuration parameters for built-in platform modules.
+
+  If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter).
 
 <!-- TODO: fix the manifests -->
 
@@ -117,12 +119,18 @@ spec:
 
 An optional YAML file of installation resources contains Kubernetes resource manifests that the installer will apply after the successful installation of the platform. This file can be useful for additional configuration of the cluster post-installation: deploying an Ingress controller, creating additional node groups, configuring resources, setting permissions, users, etc.
 
-**Attention!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resources file. Use the configuration file for configuring built-in modules.
+**Attention!** You cannot use ModuleConfig for **built-in** modules in the installation resources file. Use the [configuration file](#installation-configuration-file) for configuring built-in modules.
 
 {% offtopic title="Example Installation Resources File..." %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main
@@ -132,27 +140,6 @@ spec:
   inlet: "LoadBalancer"
   nodeSelector:
     node.deckhouse.io/group: worker
----
-apiVersion: deckhouse.io/v1
-kind: AzureInstanceClass
-metadata:
-  name: worker
-spec:
-  machineSize: Standard_F4
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AzureInstanceClass
-      name: worker
-    maxPerZone: 3
-    minPerZone: 1
-    zones: ["1"]
-  nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -179,6 +166,92 @@ metadata:
   name: deckhouse-admin
 spec:
   enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          clusterIssuerName: selfsigned
+        mode: CertManager
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: secrets-store-integration
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  inlet: HostPort
+  enableIstioSidecar: true
+  ingressClass: nginx
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  accessLevel: SuperAdmin
+  portForwarding: true
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@deckhouse.io
+  password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
 ```
 
 {% endofftopic %}
@@ -252,12 +325,12 @@ where:
   - SSH access keys;
   - configuration file;
   - resources file, etc.
-- `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
-  - `alpha` — for the *Alpha* update channel;
-  - `beta` — for the *Beta* update channel;
-  - `early-access` — for the *Early Access* update channel;
-  - `stable` — for the *Stable* update channel;
-  - `rock-solid` — for the *Rock Solid* update channel.
+- `<RELEASE_CHANNEL>` — [release channel](../../../about/release-channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
+  - `alpha` — for the *Alpha* release channel;
+  - `beta` — for the *Beta* release channel;
+  - `early-access` — for the *Early Access* release channel;
+  - `stable` — for the *Stable* release channel;
+  - `rock-solid` — for the *Rock Solid* release channel.
 
 Example of running the installer container for the CE edition:
 
@@ -340,12 +413,3 @@ Balancer IP is '1.2.3.4'.
 moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
-
-## Storage Systems Installation
-
-To ensure the proper functioning of the platform, one or more storage systems need to be installed for:
-
-- The permanent storage of platform system data (metrics, logs, images)
-- The storage of virtual machine disks
-
-The list of supported storage systems is described in the ["Storage Configuration"](../platform-management/storage/) section.

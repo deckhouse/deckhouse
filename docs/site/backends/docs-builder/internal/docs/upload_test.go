@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func TestLoadHandlerGetLocalPath(t *testing.T) {
@@ -105,7 +106,7 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.fileName, func(t *testing.T) {
-			var svc = NewService("/app/hugo/", "", false, log.NewNop())
+			var svc = NewService("/app/hugo/", "", false, log.NewNop(), metricsstorage.NewMetricStorage(""))
 
 			got, ok := svc.getLocalPath("moduleName", "stable", tt.fileName)
 			if got != tt.want || ok != tt.wantOK {

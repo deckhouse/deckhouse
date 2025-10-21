@@ -39,9 +39,12 @@ spec:
       - name: cilium-agent
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
-        - cilium-agent
-        args:
-        - --config-dir=/tmp/cilium/config-map
+        - /bin/sh
+        - -ec
+        - |
+          cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/;
+          exec cilium-agent --config-dir=/tmp/cilium/config-map \
+                            --prometheus-serve-addr=127.0.0.1:9092
         startupProbe:
           httpGet:
             host: "127.0.0.1"
@@ -110,6 +113,8 @@ spec:
               - /cni-uninstall.sh
         securityContext:
           privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -168,6 +173,8 @@ spec:
           mountPath: /host/opt/cni/bin
         - name: etc-cni-netd
           mountPath: /host/etc/cni/net.d
+        - name: var-lib-cilium-include-bpf
+          mountPath: /var/lib/cilium/bpf
         {{- if has "virtualization" $context.Values.global.enabledModules }}
         - mountPath: /etc/config
           name: ip-masq-agent
@@ -184,10 +191,12 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+        - name: root-config
+          mountPath: /root/.config
         resources:
         {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4241"
@@ -235,27 +244,47 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
+      - name: check-wg-kernel-compat
+        image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW" "SYS_MODULE")) | nindent 8 }}
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: WG_KERNEL_CONSTRAINT
+          value: ">= 6.8"
+        command:
+          - "/check-wg-kernel-compat"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: cni-path
+          mountPath: /hostbin
+      - name: check-linux-kernel
+        image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        env:
+        - name: KERNEL_CONSTRAINT
+          value: "{{ $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint }}"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW" "SYS_MODULE")) | nindent 8 }}
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
         imagePullPolicy: IfNotPresent
         command:
           - "/check-n-cleaning-iptables.sh"
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-        securityContext:
-          seLinuxOptions:
-            level: 's0'
-            type: 'spc_t'
-          capabilities:
-            add:
-              - NET_ADMIN
-              - NET_RAW
-              - SYS_MODULE
-            drop:
-              - ALL
-          privileged: false
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
         - name: lib-modules
@@ -266,6 +295,7 @@ spec:
       {{- if eq $context.Values.cniCilium.internal.mode "VXLAN" }}
       - name: handle-vxlan-offload
         image: {{ include "helm_lib_module_common_image" (list $context "vxlanOffloadingFixer") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN")) | nindent 8 }}
         imagePullPolicy: IfNotPresent
         env:
         - name: NODE_IP
@@ -276,22 +306,16 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-        securityContext:
-          capabilities:
-            add:
-              - NET_ADMIN
-            drop:
-              - ALL
-          privileged: false
         terminationMessagePolicy: FallbackToLogsOnError
       {{- end }}
       - name: config
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         imagePullPolicy: IfNotPresent
         command:
         - cilium-dbg
         - build-config
-        - --allow-config-keys=debug,single-cluster-route
+        - --allow-config-keys=debug,single-cluster-route,mtu
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -310,8 +334,6 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
-        securityContext:
-          privileged: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
@@ -349,11 +371,17 @@ spec:
               # Used for nsenter
               - SYS_CHROOT
               - SYS_PTRACE
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: apply-sysctl-overwrites
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "SYS_CHROOT" "SYS_ADMIN" "SYS_PTRACE")) | nindent 8 }}
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
         env:
         - name: BIN_PATH
           value: /opt/cni/bin
@@ -365,18 +393,6 @@ spec:
           nsenter --mount=/hostproc/1/ns/mnt "${BIN_PATH}/cilium-sysctlfix";
           rm /hostbin/cilium-sysctlfix
         terminationMessagePolicy: FallbackToLogsOnError
-        securityContext:
-          privileged: false
-          seLinuxOptions:
-            level: s0
-            type: spc_t
-          capabilities:
-            add:
-              - SYS_ADMIN
-              - SYS_CHROOT
-              - SYS_PTRACE
-            drop:
-              - ALL
         volumeMounts:
           - name: hostproc
             mountPath: /hostproc
@@ -387,6 +403,13 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: mount-bpf-fs
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        securityContext:
+          privileged: true
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: true
+          capabilities:
+            drop:
+            - ALL
         args:
         - 'mount | grep "/sys/fs/bpf type bpf" || mount -t bpf bpf /sys/fs/bpf'
         command:
@@ -394,8 +417,6 @@ spec:
         - -c
         - --
         terminationMessagePolicy: FallbackToLogsOnError
-        securityContext:
-          privileged: true
         volumeMounts:
         - name: bpf-maps
           mountPath: /sys/fs/bpf
@@ -432,6 +453,8 @@ spec:
           value: "6445"
         securityContext:
           privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -472,6 +495,10 @@ spec:
       # Install the CNI binaries in an InitContainer so we don't have a writable host mount in the agent
       - name: install-cni-binaries
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
         command:
           - "/install-plugin.sh"
         resources:
@@ -479,13 +506,6 @@ spec:
             cpu: 100m
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-        securityContext:
-          seLinuxOptions:
-            level: 's0'
-            type: 'spc_t'
-          capabilities:
-            drop:
-              - ALL
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
           - name: cni-path
@@ -562,4 +582,8 @@ spec:
                 path: server.crt
               - key: tls.key
                 path: server.key
+      - name: root-config
+        emptyDir: {}
+      - name: var-lib-cilium-include-bpf
+        emptyDir: {}
 {{- end  }}

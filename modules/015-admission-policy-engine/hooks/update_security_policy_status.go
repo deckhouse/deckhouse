@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/clarketm/json"
@@ -33,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, updateSpStatus)
 
-func updateSpStatus(input *go_hook.HookInput) error {
+func updateSpStatus(_ context.Context, input *go_hook.HookInput) error {
 	securityPolicies := make([]securityPolicy, 0)
 
 	// get SPs' names

@@ -12,6 +12,8 @@ import:
     add: /usr/sbin/setcap
     to: /tools/setcap
     before: setup
+git:
+{{- include "image mount points" . }}
 shell:
   setup:
   - /tools/setcap cap_net_raw=+eip /monitoring-ping # Need for run icmp ping from non root user
@@ -23,8 +25,7 @@ imageSpec:
     
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine-1.23
-fromCacheVersion: "2025-05-26"
+fromImage: builder/golang-alpine
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

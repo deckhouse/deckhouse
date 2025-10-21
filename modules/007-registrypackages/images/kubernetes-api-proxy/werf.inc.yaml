@@ -19,7 +19,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
   stageDependencies:
     setup:
@@ -29,6 +29,9 @@ import:
   add: /crane
   to: /crane
   before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  before: setup
 dependencies:
 - image: control-plane-manager/kubernetes-api-proxy
   before: setup
@@ -37,18 +40,17 @@ dependencies:
     targetEnv: IMAGE_DIGEST
   - type: ImageRepo
     targetEnv: IMAGE_REPO
-mount:
-- fromPath: ~/.docker
-  to: /root/.docker
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
 shell:
   setup:
-  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST /kubernetes-api-proxy.tar
-  - mkdir /tmp/kubernetes-api-proxy
-  - tar -xf /kubernetes-api-proxy.tar -C /tmp/kubernetes-api-proxy
-  - cd /tmp/kubernetes-api-proxy
-  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
-  - rm /kubernetes-api-proxy.tar
-  - tar -cvf /kubernetes-api-proxy.tar ./
-  - rm -rf /tmp/kubernetes-api-proxy
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
+  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - rm -f ~/.docker/config.json
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:kubernetes-api-proxy"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /kubernetes-api-proxy.tar .
+  - rm -rf /tmp/image

@@ -11,7 +11,7 @@
         To identify orphaned pods, run the following command:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        d8 k -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -51,10 +51,10 @@
         ### Namespace-wide configuration
         # `istio.io/rev=vXYZ`: Use a specific revision.
         # `istio-injection=enabled`: Use the global revision.
-        kubectl get ns {{$labels.namespace}} --show-labels
+        d8 k get ns {{$labels.namespace}} --show-labels
 
         ### Pod-wide configuration
-        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
         ```
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -89,7 +89,7 @@
         To identify the affected pods, run the following command:
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        d8 k -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
         ```
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -113,7 +113,7 @@
         To identify the affected pods, run the following command:
 
         ```bash
-        kubectl -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
+        d8 k -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
         ```
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -142,10 +142,10 @@
         ### Namespace-wide configuration
         # `istio.io/rev=vXYZ`: Use a specific revision.
         # `istio-injection=enabled`: Use the global revision.
-        kubectl get ns {{$labels.namespace}} --show-labels
+        d8 k get ns {{$labels.namespace}} --show-labels
 
         ### Pod-wide configuration
-        kubectl -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
         ```
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
@@ -171,11 +171,11 @@
 
         1. Restart affected pods and use the following PromQL query to get a full list:
 
-           ```promql
+           ```prometheus
            max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
            ```
 
-        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/examples.html#upgrading-istio).
+        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
       plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
       plk_markup_format: markdown

@@ -6,6 +6,8 @@ import:
   add: /src/prometheus-reverse-proxy
   to: /prometheus-reverse-proxy
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: [ "/prometheus-reverse-proxy" ]

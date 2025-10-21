@@ -8,6 +8,8 @@ import:
     add: /terraform-provider-huaweicloud
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

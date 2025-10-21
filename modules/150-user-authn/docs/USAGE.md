@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company Github
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -153,7 +155,7 @@ After selecting a `realm` to configure, adding a user in the [Users](https://www
 
 * Create a `scope` named `groups` in the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section and assign it the predefined mapping `groups`. ("Client scopes" → "Client scope details" → "Mappers" → "Add predefined mappers")
 * In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
-* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate_) in the `global` module config.
+* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module config.
 
 The example shows the provider's settings for integration with Keycloak.
 
@@ -225,7 +227,7 @@ spec:
 
 #### Blitz Identity Provider
 
-Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 The example below shows the provider settings for integration with Blitz Identity Provider.
 
@@ -367,9 +369,14 @@ data:
 
 {% endraw %}
 
-## An example of creating a static user
+## Local Authentication
 
-Create a password and enter its hash encoded in base64 in the `password` field.
+Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
+The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+
+### Creating a user
+
+Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 
@@ -405,7 +412,9 @@ spec:
 
 {% endraw %}
 
-## Example of adding a static user to a group
+### Adding a user to a group
+
+Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -422,6 +431,76 @@ spec:
 ```
 
 {% endraw %}
+
+Where `members` is a list of users belonging to the group.
+
+### Password policy
+
+Password policy settings allow controlling password complexity, rotation, and user lockout:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Fair
+      passwordHistoryLimit: 10
+      lockout:
+        lockDuration: 15m
+        maxAttempts: 3
+      rotation:
+        interval: "30d"
+```
+
+{% endraw %}
+
+Field description:
+
+* `complexityLevel`: Password complexity level.
+* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
+* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
+  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
+  * `lockout.lockDuration`: User lockout duration.
+* `rotation`: Password rotation settings:
+  * `rotation.interval`: Period for mandatory password change.
+
+### Two-factor authentication (2FA)
+
+2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    staticUsers2FA:
+      enabled: true
+      issuerName: "awesome-app"
+```
+
+{% endraw %}
+
+Field description:
+
+* `enabled`: Enables or disables 2FA for all static users.
+* `issuerName`: Name displayed in the authenticator application when adding an account.
+
+{% alert level="info" %}
+After enabling 2FA, each user must register in the authenticator application during their first login.
+{% endalert %}
 
 ## How to set permissions for a user or group
 

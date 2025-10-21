@@ -39,7 +39,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -168,11 +167,24 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 		slog.String("module_version", moduleVersion),
 	)
 
-	def, err := md.fetchModuleDefinitionFromImage(moduleName, releaseImageInfo.Image)
+	// fetch module image
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+
+	def, err := md.fetchModuleDefinitionFromModuleImage(moduleName, img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
+
 	res.ModuleDefinition = def
+
+	md.logger.Info("module definition extracted from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+		slog.Any("def", def),
+	)
 
 	return res, nil
 }
@@ -205,12 +217,6 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) 
 	ds, err := md.copyModuleToFS(moduleStorePath, img)
 	if err != nil {
 		return nil, fmt.Errorf("copy module error: %v", err)
-	}
-
-	// inject registry to values
-	err = reginjector.InjectRegistryToModuleValues(moduleStorePath, md.ms)
-	if err != nil {
-		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
 
 	return ds, nil
@@ -415,10 +421,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 
 	defPath := filepath.Join(path, moduletypes.DefinitionFile)
 
-	if _, err := os.Stat(defPath); err != nil {
-		return def
-	}
-
+	// do not add os.Stat check, because os.Open will return error if file does not exist
 	f, err := os.Open(defPath)
 	if err != nil {
 		return def
@@ -432,7 +435,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
+func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
 	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
@@ -440,22 +443,23 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
-	buf := bytes.NewBuffer(nil)
-
-	if err = untarModuleDefinition(rc, buf); err != nil {
-		return def, err
+	rr := &moduleReader{
+		moduleReader: bytes.NewBuffer(nil),
 	}
 
-	if buf.Len() == 0 {
-		return def, nil
+	if err = rr.untarMetadata(rc); err != nil {
+		return def, fmt.Errorf("untar metadata: %w", err)
 	}
 
-	if err = yaml.NewDecoder(buf).Decode(def); err != nil {
-		return def, err
+	if rr.moduleReader.Len() > 0 {
+		err = yaml.NewDecoder(rr.moduleReader).Decode(def)
+		if err != nil {
+			return nil, fmt.Errorf("yaml decode: %w", err)
+		}
 	}
 
 	return def, nil
@@ -490,31 +494,34 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			meta.Changelog = make(map[string]any)
-			return meta, nil
-		}
-		meta.Changelog = changelog
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var ModuleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
 		if err != nil {
-			meta.ModuleDefinition = nil
-			return meta, nil
+			return meta, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
 	}
 
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			changelog = make(map[string]any)
+		}
+
+		meta.Changelog = changelog
+	}
+
 	return meta, err
 }
 
-func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
+type moduleReader struct {
+	moduleReader *bytes.Buffer
+}
+
+func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -522,22 +529,25 @@ func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
 			// end of archive
 			return nil
 		}
+
 		if err != nil {
 			return err
 		}
+
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
 
-		switch hdr.Name {
+		switch strings.ToLower(hdr.Name) {
 		case "module.yaml":
-			_, err = io.Copy(rw, tr)
+			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
 				return err
 			}
-			return nil
 
+			return nil
 		default:
+
 			continue
 		}
 	}

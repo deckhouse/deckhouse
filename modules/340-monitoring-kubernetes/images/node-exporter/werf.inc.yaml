@@ -6,6 +6,8 @@ import:
   add: /src/node_exporter
   to: /bin/node_exporter
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/node_exporter"]
@@ -25,7 +27,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v1.8.2 $(cat /run/secrets/SOURCE_REPO)/prometheus/node_exporter.git .
+  - git clone --depth 1 --branch v1.9.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/node_exporter.git .
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

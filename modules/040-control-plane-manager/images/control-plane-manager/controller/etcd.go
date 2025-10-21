@@ -30,14 +30,13 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
-	etcdPromoteTimeout                   = 3 * time.Second
+	etcdTimeOut                          = 3 * time.Second
 	apiCallRetryInterval                 = 2 * time.Second
 	apiCallTimeout                       = 30 * time.Second
 	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
@@ -66,22 +65,41 @@ func EtcdJoinConverge() error {
 }
 
 func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	var (
+		learnerIDs []uint64
+		lastErr    error
+		attempts   int
+	)
 
-	resp, err := c.client.MemberList(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", err)
-	}
+	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
+		attempts++
 
-	var learnerIDs []uint64
-	for _, m := range resp.Members {
-		if m.IsLearner {
-			log.Infof("[d8][etcd] Found learner member: ID=%d Name=%q PeerURLs=%v", m.ID, m.Name, m.PeerURLs)
-			learnerIDs = append(learnerIDs, m.ID)
+		ctx, cancel := context.WithTimeout(context.Background(), etcdTimeOut)
+		defer cancel()
+
+		resp, err := c.client.MemberList(ctx)
+		if err != nil {
+			log.Infof("[d8][etcd] memberList failed on attempt %d: %v", attempts, err)
+			lastErr = err
+			return false, nil
 		}
+
+		var ids []uint64
+		for _, m := range resp.Members {
+			if m.IsLearner {
+				log.Infof("[d8][etcd] Found learner member: ID=%d Name=%q PeerURLs=%v", m.ID, m.Name, m.PeerURLs)
+				ids = append(ids, m.ID)
+			}
+		}
+		learnerIDs = ids
+		return true, nil
+	})
+
+	if err == wait.ErrWaitTimeout {
+		log.Errorf("[d8][etcd] failed to list members after %d attempts: %v", attempts, lastErr)
+		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", lastErr)
 	}
-	return learnerIDs, nil
+	return learnerIDs, err
 }
 
 func (c *Etcd) PromoteLearnersIfNeeded() error {
@@ -121,10 +139,6 @@ func NewEtcd() (*Etcd, error) {
 		Jitter:   0,
 	}
 	return c, nil
-}
-
-func noOpUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
 func (c *Etcd) newEtcdCli() (*clientv3.Client, error) {
@@ -185,7 +199,7 @@ func (c *Etcd) MemberPromote(learnerID uint64) error {
 	attempts := 0
 	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
 		attempts++
-		ctx, cancel := context.WithTimeout(context.Background(), etcdPromoteTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), etcdTimeOut)
 		defer cancel()
 
 		_, err := c.client.MemberPromote(ctx, learnerID)

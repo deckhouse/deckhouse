@@ -1,6 +1,6 @@
 ---
 title: "Описание и установка Deckhouse CLI"
-permalink: ru/deckhouse-cli/
+permalink: ru/cli/d8/
 description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
 lang: ru
 ---
@@ -21,11 +21,15 @@ Deckhouse CLI — это интерфейс командной строки дл
 * `d8 mirror` — команды, которые позволяют скопировать образы дистрибутива DKP в частный container registry (ранее для этого использовалась утилита `dhctl mirror`).
   Например, можно выполнить `d8 mirror pull -l <LICENSE> <TAR-BUNDLE-PATH>` вместо `dhctl mirror --license <LICENSE> --images-bundle-path <TAR-BUNDLE-PATH>`.
 
-  Сценарий использования:
+  Флаг `--only-extra-images` позволяет загружать только дополнительные образы для модулей (например, базы данных уязвимостей) без загрузки основных образов модулей.
 
-  - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry).
+  Сценарии использования:
 
-* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
+  - [ручная загрузка образов в изолированный приватный registry](../../installing/#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-dkp-в-приватный-registry);
+  - обновление дополнительных образов модулей (например, баз данных уязвимостей): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`;
+  - [обновление платформы, модулей и баз данных уязвимостей в закрытом окружении](/products/kubernetes-platform/guides/airgapped-update.html#пример-сценария-обновления-платформы-модулей-и-баз-данных-уязвимостей).
+
+* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
     <div markdown="0">

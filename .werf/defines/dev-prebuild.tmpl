@@ -28,16 +28,27 @@
 {{- $context := . -}}
 
 - image: deckhouse-controller-artifact
-  add: /out/deckhouse-controller
-  to: /usr/bin/deckhouse-controller
+  add: /out
+  to: /usr/bin
   after: install
-- image: deckhouse-controller-artifact
-  add: /out/caps-deckhouse-controller
-  to: /usr/bin/caps-deckhouse-controller
-  after: install
+  includePaths:
+  - deckhouse-controller
+  - caps-deckhouse-controller
+- image: libs/ncurses
+  add: /usr/share/terminfo/
+  to: /usr/share/terminfo/
+  before: install
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
+  after: setup
+- image: tools/erofs-utils
+  add: /usr/bin/mkfs.erofs
+  to: /usr/bin/mkfs.erofs
+  after: setup
+- image: tools/cryptsetup
+  add: /usr/sbin/veritysetup
+  to: /usr/sbin/veritysetup
   after: setup
 - image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
@@ -94,4 +105,26 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+git:
+- add: /tools/mounts/mountdir
+  to: /.kube
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+- add: /tools/mounts/mountdir
+  to: /certs
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+- add: /tools/mounts/mountdir
+  to: /deckhouse/downloaded
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
 {{- end }}

@@ -18,5 +18,5 @@
         To resolve the issue, review the container logs:
         
         ```bash
-        kubectl -n kube-system logs {{$labels.pod}}
+        d8 k -n kube-system logs {{$labels.pod}}
         ```

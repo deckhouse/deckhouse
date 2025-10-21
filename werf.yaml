@@ -85,19 +85,18 @@ build:
 
 {{- $_ := set . "SVACE_ANALYZE_SSH_USER" (env "SVACE_ANALYZE_SSH_USER" "user") }}
 
-# goproxy  settings
+# goproxy settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
+
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
 {{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
-{{ include "base_for_go_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
----
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---
-{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion ) }}
+{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env ) }}
 ---
 # render images and artifact from .werf
 # WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml

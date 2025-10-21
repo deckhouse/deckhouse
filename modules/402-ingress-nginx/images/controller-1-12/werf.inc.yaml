@@ -1,8 +1,36 @@
-{{- $controllerBranch := "controller-v1.12.1" }}
-
+{{ $controllerBranch := "controller-v1.12.1" }}
+{{ $nginxVersion := "1.25.5" }}
+{{ $nlohmannJsonBranch := "v3.11.3" }}
+{{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
+{{ $modSecurityBranch := "v3.0.14" }}
+{{ $opentelemetryCppContribCommit := "8933841f0a7f8737f61404cf0a64acf6b079c8a5" }}
+{{ $coreRulesetBranch := "v4.10.0" }}
+---
+{{ $luaProtobufVersion := "0.5.1" }}
+{{ $luaIconvVersion := "7-3" }}
+{{ $protobufVersion := "v29.4" }}
+{{ $abseilCppVersion := "20240722.1" }}
+{{ $grpcVersion := "v1.62.1" }}
+{{ $re2Version := "2024-07-02" }}
+{{ $icuVersion := "release-77-1" }}
+{{ $pcreVersion := "8.45" }}
+{{ $libmaxminddbVersion := "1.12.2" }}
+{{ $curlVersion := "curl-8_12_1" }}
+{{ $zlibVersion := "v1.3.1" }}
+{{ $cAresVersion := "v1.34.5" }}
+{{ $opensslVersion := "3.5.1" }}
+{{ $brotliVersion := "v1.1.0" }}
+{{ $libidn2Version := "v2.3.8" }}
+{{ $zstdVersion := "v1.5.7" }}
+{{ $libpslVersion := "0.21.5" }}
+{{ $nghttp2Version := "v1.66.0" }}
+{{ $xzVersion := "v5.8.1" }}
+{{ $libxml2Version := "v2.14.3" }}
+{{ $yajlVersion := "2.1.0" }}
+{{ $gccVersion := "releases/gcc-14.2.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -25,66 +53,84 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
-  setup:
+  install:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
-  # pass env for build
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
-  - rm -rf /src/dumb-init/.git
-  - rm -rf /src/lua-protobuf/.git
-  - rm -rf /src/lua-iconv/.git
+  #
+  - mkdir -p /src/nginx-deps
+  - git clone -b {{ $controllerBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
+    # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
+  - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
+  - git clone -b {{ $nlohmannJsonBranch }} $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
+  # Remove directory for fix CVE
+  - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/docs/
+  #
+  - cd /src/nginx-deps
+  - git clone --depth=100 $(cat /run/secrets/SOURCE_REPO)/google/ngx_brotli.git
+  - cd ngx_brotli
+  - git reset --hard {{ $ngxBrotliCommit }}
+  - git submodule init
+  - git submodule set-url deps/brotli "$(cat /run/secrets/SOURCE_REPO)/google/brotli.git"
+  - git submodule update
+  #
+  - cd /src/nginx-deps
+  - git clone --depth=1 $(cat /run/secrets/SOURCE_REPO)/ssdeep-project/ssdeep
+  #
+  - cd /src/nginx-deps
+  - git clone -b {{ $modSecurityBranch }} $(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity
+  - cd ModSecurity/
+  - git submodule init
+  - git submodule set-url test/test-cases/secrules-language-tests "$(cat /run/secrets/SOURCE_REPO)/SpiderLabs/secrules-language-tests"
+  - git submodule set-url others/libinjection "$(cat /run/secrets/SOURCE_REPO)/libinjection/libinjection.git"
+  - git submodule set-url bindings/python "$(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity-Python-bindings.git"
+  - git submodule set-url others/mbedtls "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls.git"
+  - git submodule update others/mbedtls
+  - cd others/mbedtls
+  # Remove directory for fix CVE
+  - rm -rf /src/nginx-deps/ModSecurity/others/mbedtls/docs/
+  - git submodule init
+  - git submodule set-url framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
+  - cd ../..
+  - git submodule update --recursive
+  #
+  - cd /src/nginx-deps
+  - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
+  - cd /src/nginx-deps/opentelemetry-cpp-contrib
+  # Remove directory for fix CVE
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
+  - git reset --hard {{ $opentelemetryCppContribCommit }}
+  #
+  - cd /src/nginx-deps
+  - git clone -b {{ $coreRulesetBranch }} $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset
+  - mv coreruleset owasp-modsecurity-crs
+  #
   - rm -rf /src/ingress-nginx/.git
-
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-fromImage: common/alt-p11-artifact
-final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/dumb-init
-  to: /src
-  before: install
-shell:
-  beforeInstall:
-  - apt-get install -y gcc glibc-core glibc-devel-static
-  setup:
-  - cd /src/
-  - cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-fromImage: common/alt-p11-artifact
-final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/lua-protobuf
-  to: /src/lua-protobuf
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/lua-iconv
-  to: /src/lua-iconv
-  before: install
-shell:
-  install:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y gcc lua5.1-devel lua5.1 lua5.1-luarocks
-  - apt-get install -y liblua5.1-devel --download-only
-  setup:
-  - cd /src/lua-protobuf
-  - luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
-  - cd /src/lua-iconv
-  - luarocks-5.1 install lua-iconv-7-3.src.rock
+  - rm -rf /src/nginx-deps/.git
+  - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/.git
+  - rm -rf /src/ngx_brotli/.git
+  - rm -rf /src/ngx_brotli/deps/brotli/.git
+  - rm -rf /src/ssdeep/.git
+  - rm -rf /src/ModSecurity/.git
+  - rm -rf /src/ModSecurity/test/test-cases/secrules-language-tests/.git
+  - rm -rf /src/ModSecurity/others/libinjection/.git
+  - rm -rf /src/ModSecurity/bindings/python/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/framework/.git
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
+  - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.24
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -92,27 +138,26 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  # git needs for getting tag and commit sha for build purposes
-  - apk --no-cache add make bash git
+  - apk --no-cache add make bash
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
   - export PKG="k8s.io/ingress-nginx"
   - cd /src/
-  - go mod edit -go=1.23.6
-  - go mod tidy
   - |
     source /src/.env_pass && \
     echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
     make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: common/alt-p11-artifact
+fromImage: builder/alpine-3.21
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -123,74 +168,459 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/nginx-deps
+  to: /src/nginx-deps
+  before: install
+- image: libs/protobuf-{{ $protobufVersion }}
+  add: /usr
+  to: /base_images/protobuf
+  before: install
+- image: libs/abseil-cpp-{{ $abseilCppVersion }}
+  add: /usr
+  to: /base_images/abseil-cpp
+  before: install
+- image: libs/grpc-{{ $grpcVersion }}
+  add: /usr
+  to: /base_images/grpc
+  before: install
+- image: libs/re2-{{ $re2Version }}
+  add: /usr
+  to: /base_images/re2
+  before: install
+- image: libs/icu-{{ $icuVersion }}
+  add: /usr
+  to: /base_images/icu
+  before: install
+- image: libs/pcre-{{ $pcreVersion  }}
+  add: /usr
+  to: /base_images/pcre
+  before: install
+- image: libs/libmaxminddb-{{ $libmaxminddbVersion }}
+  add: /usr
+  to: /base_images/libmaxminddb
+  before: install
+- image: tools/curl-{{ $curlVersion }}
+  add: /usr
+  to: /base_images/curl
+  before: install
+- image: libs/zlib-{{ $zlibVersion }}
+  add: /usr
+  to: /base_images/zlib
+  before: install
+- image: libs/c-ares-{{ $cAresVersion }}
+  add: /usr
+  to: /base_images/c-ares
+  before: install
+- image: tools/openssl-{{ $opensslVersion }}
+  add: /usr
+  to: /base_images/openssl
+  before: install
+- image: libs/brotli-{{ $brotliVersion }}
+  add: /usr
+  to: /base_images/brotli
+  before: install
+- image: libs/libidn2-{{ $libidn2Version }}
+  add: /usr
+  to: /base_images/libidn2
+  before: install
+- image: libs/zstd-{{ $zstdVersion }}
+  add: /usr
+  to: /base_images/libzstd
+  before: install
+- image: libs/libpsl-{{ $libpslVersion }}
+  add: /usr
+  to: /base_images/libpsl
+  before: install
+- image: libs/nghttp2-{{ $nghttp2Version }}
+  add: /usr
+  to: /base_images/libnghttp2
+  before: install
+- image: libs/xz-{{ $xzVersion }}
+  add: /usr
+  to: /base_images/xz
+  before: install
+- image: libs/libxml2-{{ $libxml2Version }}
+  add: /usr
+  to: /base_images/libxml2
+  before: install
+- image: libs/yajl-{{ $yajlVersion }}
+  add: /usr
+  to: /base_images/yajl
+  before: install
+- image: tools/gcc-gnu-{{ $gccVersion }}
+  add: /usr
+  to: /base_images/gcc
+  includePaths:
+  - lib/libgcc_s.so*
+  - lib/libstdc++.so*
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache patch make linux-headers autoconf automake libtool bash pkgconfig ninja musl-dev cmake binutils g++
   install:
-  # git needs for getting dependencies from our repo
-  - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
-  - apt-get install -y liblua5.1-devel --download-only
-  setup:
-  - export SOURCE_REPO={{ $.SOURCE_REPO }}
-  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - cp -a /base_images/protobuf/* /usr
+  - cp -a /base_images/grpc/* /usr
+  - cp -a /base_images/abseil-cpp/* /usr
+  - cp -a /base_images/re2/* /usr
+  - cp -a /base_images/icu/* /usr
+  - cp -a /base_images/pcre/* /usr
+  - cp -a /base_images/libmaxminddb/* /usr
+  - cp -a /base_images/curl/* /usr
+  - cp -a /base_images/libidn2/* /usr
+  - cp -a /base_images/libzstd/* /usr
+  - cp -a /base_images/libpsl/* /usr
+  - cp -a /base_images/libnghttp2/* /usr
+  - cp -a /base_images/brotli/* /usr
+  - cp -a /base_images/zlib/* /usr
+  - cp -a /base_images/c-ares/* /usr
+  - cp -a /base_images/xz/* /usr
+  - cp -a /base_images/libxml2/* /usr
+  - cp -a /base_images/yajl/* /usr
+  - cp -a /base_images/openssl/* /usr
+  - cp -a /base_images/gcc/* /usr
+  - mkdir -p /usr/lib64
+  - ln -sf /usr/lib/libssl.so /usr/lib64/libssl.so
+  - ln -sf /usr/lib/libcrypto.so /usr/lib64/libcrypto.so
+  beforeSetup:
+  # Add deckhouse user
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
+  - echo "deckhouse:x:64535:" >> /etc/group
+  - echo "deckhouse:!::0:::::" >> /etc/shadow
+  #
   - cp -R /src/etc/* /etc/
-  - rm -rf /src/etc
-  - /build.sh
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: common/alt-p11-artifact
-final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /usr/local
-  to: /usr/local
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /opt
-  to: /opt
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /etc/nginx
-  to: /etc/nginx
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /usr/lib
-  to: /chroot/usr/lib64
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
-  to: /usr/bin/dumb-init
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/lib64/lua/5.1/iconv.so
-  to: /usr/local/lib/lua/5.1/iconv.so
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/lib64/lua/5.1/pb.so
-  to: /usr/local/lib/lua/5.1/pb.so
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
-  add: /usr/share/lua/5.1/protoc.lua
-  to: /usr/local/share/lua/5.1/protoc.lua
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/etc
-  to: /src/rootfs/etc
-  before: install
-shell:
-  install:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
+  - cp -R /src/nginx-deps/owasp-modsecurity-crs /etc/nginx/
+
+  # BUILD NGINX and components (source: images/nginx/rootfs/build.sh)
+  - export NGINX_VERSION={{ $nginxVersion }}
+  - export BUILD_PATH=/src/nginx-deps
+  - mkdir -p /etc/nginx
+  - cd "$BUILD_PATH"
+
+  # Improve compilation times
+  - CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
+  - export MAKEFLAGS=-j${CORES}
+  - export CTEST_BUILD_FLAGS=${MAKEFLAGS}
+
+  # Install luajit from openresty fork
+  - export LUAJIT_LIB=/usr/local/lib
+  - export LUA_LIB_DIR="$LUAJIT_LIB/lua"
+  - export LUAJIT_INC=/usr/local/include/luajit-2.1
+
+  - cd "$BUILD_PATH/luajit2"
+  - make CCDEBUG=-g
+  - make install
+
+  - ln -s /usr/local/bin/luajit /usr/local/bin/lua
+  - ln -s "$LUAJIT_INC" /usr/local/include/lua
+
+  - cd "$BUILD_PATH/opentelemetry-cpp"
+  - export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
+
+  - mkdir .git # A hack to trick the builder
+  - cmake -B build -G Ninja -Wno-dev
+    -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/"
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DBUILD_SHARED_LIBS=ON
+    -DBUILD_TESTING="OFF"
+    -DBUILD_W3CTRACECONTEXT_TEST="OFF"
+    -DCMAKE_BUILD_TYPE=None
+    -DWITH_ABSEIL=ON
+    -DWITH_STL=ON
+    -DWITH_EXAMPLES=OFF
+    -DWITH_ZPAGES=OFF
+    -DWITH_OTLP_GRPC=ON
+    -DWITH_OTLP_HTTP=ON
+    -DWITH_ZIPKIN=ON
+    -DWITH_PROMETHEUS=OFF
+    -DWITH_ASYNC_EXPORT_PREVIEW=OFF
+    -DWITH_METRICS_EXEMPLAR_PREVIEW=OFF
+  - cmake --build build
+  - cmake --install build
+
+  # Build ssdeep
+  - cd "$BUILD_PATH"
+  - cd ssdeep/
+  - ./bootstrap
+  - ./configure
+  - make
+  - make install
+
+  # Build modsecurity library
+  - cd "$BUILD_PATH"
+  - cd ModSecurity/
+  - sh build.sh
+
+  # https://github.com/SpiderLabs/ModSecurity/issues/1909#issuecomment-465926762
+  - sed -i '115i LUA_CFLAGS="${LUA_CFLAGS} -DWITH_LUA_JIT_2_1"' build/lua.m4
+  - sed -i '117i AC_SUBST(LUA_CFLAGS)' build/lua.m4
+
+  - ./configure
+    --disable-doxygen-doc
+    --disable-doxygen-html
+    --disable-examples
+  - make
+  - make install
+
+  - mkdir -p /etc/nginx/modsecurity
+  - cp modsecurity.conf-recommended /etc/nginx/modsecurity/modsecurity.conf
+  - cp unicode.mapping /etc/nginx/modsecurity/unicode.mapping
+
+  # Replace serial logging with concurrent
+  - sed -i 's|SecAuditLogType Serial|SecAuditLogType Concurrent|g' /etc/nginx/modsecurity/modsecurity.conf
+
+  # Concurrent logging implies the log is stored in several files
+  - echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecurity.conf
+
+  # Prepare owasp modsecurity crs
+  - cd /etc/nginx/owasp-modsecurity-crs
+  - mv crs-setup.conf.example crs-setup.conf
+  - mv rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+  - mv rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+  - cd ..
+
+  # OWASP CRS v4 rules
+  - |
+    echo "
+    Include /etc/nginx/owasp-modsecurity-crs/crs-setup.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-901-INITIALIZATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-905-COMMON-EXCEPTIONS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-911-METHOD-ENFORCEMENT.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-913-SCANNER-DETECTION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-920-PROTOCOL-ENFORCEMENT.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-921-PROTOCOL-ATTACK.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-922-MULTIPART-ATTACK.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-930-APPLICATION-ATTACK-LFI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-931-APPLICATION-ATTACK-RFI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-932-APPLICATION-ATTACK-RCE.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-933-APPLICATION-ATTACK-PHP.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-934-APPLICATION-ATTACK-GENERIC.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-943-APPLICATION-ATTACK-SESSION-FIXATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-944-APPLICATION-ATTACK-JAVA.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/REQUEST-949-BLOCKING-EVALUATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-950-DATA-LEAKAGES.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-951-DATA-LEAKAGES-SQL.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-952-DATA-LEAKAGES-JAVA.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-953-DATA-LEAKAGES-PHP.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-954-DATA-LEAKAGES-IIS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-955-WEB-SHELLS.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-959-BLOCKING-EVALUATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-980-CORRELATION.conf
+    Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
+    " > /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
+
+  - sed -i "s/ngx_feature_test='printf(\"hello\");'/ngx_feature_test='msc_init();'/" $BUILD_PATH/ModSecurity-nginx/config
+
+  # build nginx
+  - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
+
+  # apply nginx patches
+  - |
+    for PATCH in `ls /patches`;do
+      echo "Patch: $PATCH"
+      if [[ "$PATCH" == *.txt ]]; then
+        patch -p0 < /patches/$PATCH
+      else
+        patch -p1 < /patches/$PATCH
+      fi
+    done
+
+  - WITH_FLAGS="--with-debug
+    --with-compat
+    --with-pcre-jit
+    --with-http_ssl_module
+    --with-http_stub_status_module
+    --with-http_realip_module
+    --with-http_auth_request_module
+    --with-http_addition_module
+    --with-http_gzip_static_module
+    --with-http_sub_module
+    --with-http_v2_module
+    --with-http_v3_module
+    --with-stream
+    --with-stream_ssl_module
+    --with-stream_realip_module
+    --with-stream_ssl_preread_module
+    --with-threads
+    --with-http_secure_link_module
+    --with-http_gunzip_module"
+
+  # "Combining -flto with -g is currently experimental and expected to produce unexpected results."
+  # https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+  - CC_OPT="-g -O2 -fPIE -fstack-protector-strong
+    -Wformat
+    -Werror=format-security
+    -Wno-deprecated-declarations
+    -fno-strict-aliasing
+    -D_FORTIFY_SOURCE=2
+    --param=ssp-buffer-size=4
+    -DTCP_FASTOPEN=23
+    -fPIC
+    -Wno-cast-function-type"
+
+  - LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now"
+  - CC_OPT+=' -m64 -mtune=generic'
+
+  - WITH_MODULES="
+    --add-module=$BUILD_PATH/ngx_devel_kit
+    --add-module=$BUILD_PATH/set-misc-nginx-module
+    --add-module=$BUILD_PATH/headers-more-nginx-module
+    --add-module=$BUILD_PATH/ngx_http_substitutions_filter_module
+    --add-module=$BUILD_PATH/lua-nginx-module
+    --add-module=$BUILD_PATH/stream-lua-nginx-module
+    --add-module=$BUILD_PATH/lua-upstream-nginx-module
+    --add-dynamic-module=$BUILD_PATH/nginx-http-auth-digest
+    --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx
+    --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module
+    --add-dynamic-module=$BUILD_PATH/ngx_brotli"
+
+  - ./configure
+    --prefix=/usr/local/nginx
+    --conf-path=/etc/nginx/nginx.conf
+    --modules-path=/etc/nginx/modules
+    --http-log-path=/var/log/nginx/access.log
+    --error-log-path=/var/log/nginx/error.log
+    --lock-path=/var/lock/nginx.lock
+    --pid-path=/run/nginx.pid
+    --http-client-body-temp-path=/var/lib/nginx/body
+    --http-fastcgi-temp-path=/var/lib/nginx/fastcgi
+    --http-proxy-temp-path=/var/lib/nginx/proxy
+    --http-scgi-temp-path=/var/lib/nginx/scgi
+    --http-uwsgi-temp-path=/var/lib/nginx/uwsgi
+    ${WITH_FLAGS}
+    --without-mail_pop3_module
+    --without-mail_smtp_module
+    --without-mail_imap_module
+    --without-http_uwsgi_module
+    --without-http_scgi_module
+    --with-cc-opt="${CC_OPT}"
+    --with-ld-opt="${LD_OPT}"
+    --user=deckhouse
+    --group=deckhouse
+    ${WITH_MODULES}
+
+  - make
+  - make modules
+  - make install
+
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib
+
+  - export OTEL_TEMP_INSTALL=/tmp/otel
+  - mkdir -p ${OTEL_TEMP_INSTALL}
+
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib/instrumentation/nginx
+  # remove downloading nginx from cmake and clone it manually
+  # by default cmake download nginx from internet
+  # and change cmake NGINX_DIR
+  - sed -e "35d" nginx.cmake | sed -e "35i set(NGINX_DIR \"${BUILD_PATH}/opentelemetry-cpp-contrib/instrumentation/nginx/build/nginx/\")" | sed -e "27d" | sed -e "27i \ \ SOURCE_DIR nginx" > nginx.cmake.tmp
+  - rm -f nginx.cmake
+  - mv nginx.cmake.tmp nginx.cmake
+  - cat nginx.cmake
+  - mkdir -p build
+  - cp -R "${BUILD_PATH}/nginx-$NGINX_VERSION" build/nginx
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release
+    -G Ninja
+    -DCMAKE_CXX_STANDARD=17
+    -DCMAKE_INSTALL_PREFIX=${OTEL_TEMP_INSTALL}
+    -DBUILD_SHARED_LIBS=ON
+    -DNGINX_VERSION=${NGINX_VERSION}
+    ..
+
+  - cmake --build . -j ${CORES} --target install
+
+  - mkdir -p /etc/nginx/modules
+  - cp ${OTEL_TEMP_INSTALL}/otel_ngx_module.so /etc/nginx/modules/otel_ngx_module.so
+
+  - cd "$BUILD_PATH/lua-resty-core"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-balancer"
+  - make all
+  - make install
+
+  - export LUA_INCLUDE_DIR=/usr/local/include/luajit-2.1
+  - ln -s $LUA_INCLUDE_DIR /usr/include/lua5.1
+
+  - cd "$BUILD_PATH/lua-cjson"
+  - make all
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-cookie"
+  - make all
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-lrucache"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-dns"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-lock"
+  - make install
+
+  # required for OCSP verification
+  - cd "$BUILD_PATH/lua-resty-http"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-upload"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-string"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-memcached"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-redis"
+  - make install
+
+  - cd "$BUILD_PATH/lua-resty-ipmatcher"
+  - INST_LUADIR=/usr/local/lib/lua make install
+
+  - cd "$BUILD_PATH/mimalloc"
+  - mkdir -p out/release
+  - cd out/release
+
+  - cmake ../..
+
+  - make
+  - make install
+
+  # update image permissions
+  - |
+    writeDirs=( \
+      /etc/nginx \
+      /usr/local/nginx \
+      /opt/modsecurity/var/log \
+      /opt/modsecurity/var/upload \
+      /opt/modsecurity/var/audit \
+      /var/log/audit \
+      /var/log/nginx \
+    );
+    for dir in "${writeDirs[@]}"; do
+      mkdir -p ${dir};
+      chown -R deckhouse:deckhouse ${dir};
+    done
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/.git
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/tests
+
+  # remove .a files
+  - find /usr/local -name "*.a" -print | xargs /bin/rm
   setup:
-  - cp -R /usr/lib64/* /chroot/usr/lib64/
-  - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+  # Source: rootfs/chroot.sh
   - |
     bash -eu -c '
     writeDirs=(
       /chroot/etc/nginx
-      /chroot/usr/local/nginx
-      /chroot/usr/share
-      /chroot/usr/bin
-      /chroot/usr/lib/locale
+      /chroot/usr/local
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
       /chroot/etc/ingress-controller/auth
@@ -211,116 +641,229 @@ shell:
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
-      chown -R www-data:www-data ${dir};
+      chown -R deckhouse:deckhouse ${dir};
     done'
-  - mkdir -p /chroot/lib /chroot/lib64 /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/usr/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
-  - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   # Create opentelemetry.toml file as it doesn't present in controller_image
-  - touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-  - chown -R www-data:www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-  - cp -a /etc/pki /chroot/etc/pki
-  - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
-  - cp -a /usr/bin/curl /chroot/usr/bin/curl
-  - cp -a /lib64/* /chroot/lib64/
-  - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
-  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/gconv /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
+  - mkdir -p /etc/nginx && touch /etc/nginx/opentelemetry.toml
+  - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
+  - chown -R deckhouse:deckhouse /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
+  #
+  - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
+  - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
-  - cp -a /usr/local/bin /chroot/usr/local/
-  - cp -a /usr/local/lib /chroot/usr/local/
-  - cp -a /usr/local/share/lua* /chroot/usr/local/share/
-  - cp -a /usr/local/lib64 /chroot/usr/local/
-  # override old opentelemtry libs with new ones
-  - cp -a /usr/local/lib64/libopentelemetry* /chroot/lib64/
-  - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
-  - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
-  - cp -a /usr/local/nginx /chroot/usr/local/
-  - chown www-data:www-data /chroot/etc
-  - cp -R /src/rootfs/etc/* /chroot/etc
-  - rm -rf /src/rootfs/etc
+  - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/alt-p11-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+fromImage: builder/alpine-3.21
+fromCacheVersion: "2025-09-22"
+final: false
+mount:
+- from: build_dir
+  to: /apps
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-  add: /chroot
-  to: /chroot
-  before: setup
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
+- image: tools/curl
+  add: /usr/bin/curl-static
+  to: /chroot/usr/bin/curl
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
+  add: /
+  to: /
+  includePaths:
+  - chroot
+  before: install
+- image: libs/lua-iconv-{{ $luaIconvVersion }}
+  add: /
+  to: /chroot/usr/local
+  owner: "0"
+  group: "0"
+  includePaths:
+  - lib/lua/5.1/iconv.so
+  before: install
+- image: libs/lua-protobuf-{{ $luaProtobufVersion }}
+  add: /
+  to: /chroot/usr/local
+  owner: "0"
+  group: "0"
+  includePaths:
+  - lib/lua/5.1/pb.so
+  - share/lua/5.1/protoc.lua
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/dbg
-  to: /dbg
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/nginx-ingress-controller
-  to: /nginx-ingress-controller
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
-  add: /src/rootfs/bin/amd64/wait-shutdown
-  to: /wait-shutdown
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/nginx-chroot-wrapper.sh
-  to: /usr/bin/nginx
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
-  add: /src/dumb-init
-  to: /usr/bin/dumb-init
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/rootfs/etc
   to: /src/rootfs/etc
-  before: setup
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
+  add: /
+  to: /chroot
+  owner: "0"
+  group: "0"
+  includePaths:
+  - etc/nginx
+  - opt/modsecurity
+  - usr/local/bin
+  - usr/local/lib/lua
+  - usr/local/modsecurity
+  - usr/local/nginx
+  - usr/local/share/lua
+  - usr/local/share/luajit-2.1
+  - var/log/*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
+  add: /
+  to: /chroot
+  owner: "0"
+  group: "0"
+  includePaths:
+  - usr/lib/libc.so
+  - lib/ld-musl-x86_64.so.1
+  - usr/lib/libabsl_base.so*
+  - usr/lib/libabsl_city.so*
+  - usr/lib/libabsl_cord_internal.so*
+  - usr/lib/libabsl_cord.so*
+  - usr/lib/libabsl_cordz_functions.so*
+  - usr/lib/libabsl_cordz_handle.so*
+  - usr/lib/libabsl_cordz_info.so*
+  - usr/lib/libabsl_crc_cord_state.so*
+  - usr/lib/libabsl_crc_internal.so*
+  - usr/lib/libabsl_crc32c.so*
+  - usr/lib/libabsl_debugging_internal.so*
+  - usr/lib/libabsl_die_if_null.so*
+  - usr/lib/libabsl_examine_stack.so*
+  - usr/lib/libabsl_exponential_biased.so*
+  - usr/lib/libabsl_flags_commandlineflag_internal.so*
+  - usr/lib/libabsl_flags_commandlineflag.so*
+  - usr/lib/libabsl_flags_config.so*
+  - usr/lib/libabsl_flags_internal.so*
+  - usr/lib/libabsl_flags_marshalling.so*
+  - usr/lib/libabsl_flags_private_handle_accessor.so*
+  - usr/lib/libabsl_flags_program_name.so*
+  - usr/lib/libabsl_flags_reflection.so*
+  - usr/lib/libabsl_hash.so*
+  - usr/lib/libabsl_int128.so*
+  - usr/lib/libabsl_kernel_timeout_internal.so*
+  - usr/lib/libabsl_log_globals.so*
+  - usr/lib/libabsl_log_internal_check_op.so*
+  - usr/lib/libabsl_log_internal_conditions.so*
+  - usr/lib/libabsl_log_internal_format.so*
+  - usr/lib/libabsl_log_internal_globals.so*
+  - usr/lib/libabsl_log_internal_log_sink_set.so*
+  - usr/lib/libabsl_log_internal_message.so*
+  - usr/lib/libabsl_log_internal_nullguard.so*
+  - usr/lib/libabsl_log_internal_proto.so*
+  - usr/lib/libabsl_log_sink.so*
+  - usr/lib/libabsl_low_level_hash.so*
+  - usr/lib/libabsl_malloc_internal.so*
+  - usr/lib/libabsl_random_internal_platform.so*
+  - usr/lib/libabsl_random_internal_pool_urbg.so*
+  - usr/lib/libabsl_random_internal_randen_hwaes_impl.so*
+  - usr/lib/libabsl_random_internal_randen_hwaes.so*
+  - usr/lib/libabsl_random_internal_randen_slow.so*
+  - usr/lib/libabsl_random_internal_randen.so*
+  - usr/lib/libabsl_random_internal_seed_material.so*
+  - usr/lib/libabsl_random_seed_gen_exception.so*
+  - usr/lib/libabsl_raw_hash_set.so*
+  - usr/lib/libabsl_raw_logging_internal.so*
+  - usr/lib/libabsl_spinlock_wait.so*
+  - usr/lib/libabsl_stacktrace.so*
+  - usr/lib/libabsl_status.so*
+  - usr/lib/libabsl_statusor.so*
+  - usr/lib/libabsl_str_format_internal.so*
+  - usr/lib/libabsl_strerror.so*
+  - usr/lib/libabsl_strings_internal.so*
+  - usr/lib/libabsl_strings.so*
+  - usr/lib/libabsl_symbolize.so*
+  - usr/lib/libabsl_synchronization.so*
+  - usr/lib/libabsl_throw_delegate.so*
+  - usr/lib/libabsl_time_zone.so*
+  - usr/lib/libabsl_time.so*
+  - usr/lib/libaddress_sorting.so*
+  - usr/lib/libbrotlicommon.so*
+  - usr/lib/libbrotlidec.so*
+  - usr/lib/libbrotlienc.so*
+  - usr/lib/libcares.so*
+  - usr/lib/libcrypto.so*
+  - usr/lib/libcurl.so*
+  - usr/lib/libgcc_s.so*
+  - usr/lib/libgpr.so*
+  - usr/lib/libgrpc.so*
+  - usr/lib/libgrpc++.so*
+  - usr/lib/libicudata.so*
+  - usr/lib/libicuuc.so*
+  - usr/lib/liblzma.so*
+  - usr/lib/libmaxminddb.so*
+  - usr/lib/libopentelemetry_common.so*
+  - usr/lib/libopentelemetry_exporter_otlp_grpc_client.so*
+  - usr/lib/libopentelemetry_exporter_otlp_grpc.so*
+  - usr/lib/libopentelemetry_logs.so*
+  - usr/lib/libopentelemetry_otlp_recordable.so*
+  - usr/lib/libopentelemetry_proto_grpc.so*
+  - usr/lib/libopentelemetry_proto.so*
+  - usr/lib/libopentelemetry_resources.so*
+  - usr/lib/libopentelemetry_trace.so*
+  - usr/lib/libprotobuf.so*
+  - usr/lib/libpsl.so*
+  - usr/lib/libre2.so*
+  - usr/lib/libssl.so*
+  - usr/lib/libstdc++.so*
+  - usr/lib/libupb_base_lib.so*
+  - usr/lib/libupb_json_lib.so*
+  - usr/lib/libupb_mem_lib.so*
+  - usr/lib/libupb_message_lib.so*
+  - usr/lib/libupb_textformat_lib.so*
+  - usr/lib/libutf8_range_lib.so*
+  - usr/lib/libutf8_validity.so*
+  - usr/lib/libxml2.so*
+  - usr/lib/libyajl.so*
+  - usr/lib/libz.so*
+  - usr/lib/libzstd.so*
+  - usr/local/lib/libfuzzy.so*
+  - usr/local/lib/libluajit-5.1.so*
+  - usr/local/modsecurity/lib/libmodsecurity.so*
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   setup:
-  - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"
-  - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
-  - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
-  - cp -R /src/rootfs/etc/* /chroot/etc
-  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
-  - rm -rf /src/rootfs/etc/
+  # Add deckhouse user
+  - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
+  - echo "deckhouse:x:64535:" >> /etc/group
+  - echo "deckhouse:!::0:::::" >> /etc/shadow
+
+  # Source: rootfs/Dockerfile-chroot
+  - cp -a /src/rootfs/etc/* /chroot/etc
+  - chown -R deckhouse:deckhouse /chroot/etc
+  - chown root:root /chroot/etc/passwd /chroot/etc/group
+
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - chown www-data:www-data /usr/bin/nginx
-  - chown www-data:www-data /usr/bin/curl
-  - chown www-data:www-data /chroot/etc
-  - chmod 1777 /tmp
-  - setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - rm -rf /etc/pki
-  - ln -sf /chroot/etc/pki /etc/pki
-  - ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates
+
+  - mkdir -p /var/log
+  - chown -R deckhouse:deckhouse /var/log
+
+  # LD_LIBRARY_PATH does not work so below is needed for  opentelemetry/other modules
+  # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
+  # Could get complicated arch specific paths become a need
+  - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
+  #
   - ln -sf /chroot/etc/nginx /etc/nginx
-  - ln -sf /chroot/tmp/nginx /tmp/nginx
+  - rm -rf /tmp
+  - ln -sf /chroot/tmp /tmp
   - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  # a hack to let the controller update files via symlinks on a read-only file system
+  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
+  - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json
+  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
+  - ln -sf /etc/ingress-controller/resolv/resolv.conf /chroot/etc/resolv.conf
+  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
+  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/etc/nginx/nginx.conf
   - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - touch /chroot/var/log/nginx/access.log
-  - chown www-data:www-data /chroot/var/log/nginx/access.log
-  - echo "" > /chroot/etc/resolv.conf
-  - chown -R www-data:www-data /var/log /chroot/var/log /chroot/etc/resolv.conf
+  - chown -R deckhouse:deckhouse /chroot/var/log/nginx
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
@@ -328,22 +871,132 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
-  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
-  - ldconfig
-# Create ld.so.cache inside chroot
-  - cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
-# remove ruby from libs because it has cve's but not using in image
-# ruby install with grpc-plugins packet it needs for building nginx
-  - rm -rf /chroot/usr/lib64/ruby
-# remove owasp-modsecurity-crs/util because of bash scripts cve
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
-  # takes ~1GB
-  - rm -rf /chroot/usr/lib64/locale
+
+  - mkdir -p /chroot/modules_mount
+  - mkdir -p modules_mount
+  - ln -s /modules_mount /chroot/modules_mount
+
+  # Utils for final image
+  - cp -a /tools/setcap /apps
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+fromCacheVersion: "2025-09-18"
+mount:
+- from: build_dir
+  to: /apps
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
+  add: /
+  to: /
+  includePaths:
+  - chroot
+  - modules_mount
+  - var/log
+  - etc/nginx
+  - tmp/nginx
+  - etc/ingress-controller
+  - var/log/nginx
+  - sbin/nginx
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/dbg
+  to: /dbg
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/nginx-ingress-controller
+  to: /nginx-ingress-controller
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
+  add: /src/rootfs/bin/amd64/wait-shutdown
+  to: /wait-shutdown
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/curl-chroot-wrapper.sh
+  to: /usr/bin/curl
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/nginx-chroot-wrapper.sh
+  to: /usr/bin/nginx
+  owner: "64535"
+  group: "64535"
+  before: install
+- image: tools/dumb-init
+  add: /dumb-init
+  to: /usr/bin/dumb-init
+  before: install
+- image: tools/bash
+  add: /usr
+  to: /
+  owner: "0"
+  group: "0"
+  includePaths:
+  - bin/bash
+  - bin/sh
+  before: install
+- image: tools/procps
+  add: /
+  to: /
+  owner: "0"
+  group: "0"
+  includePaths:
+  - bin/pkill
+  - bin/pgrep
+  before: install
+- image: tools/diffutils
+  add: /usr/bin/diff
+  to: /usr/bin/diff
+  owner: "0"
+  group: "0"
+  before: install
+- image: tools/util-linux
+  add: /usr/bin/unshare
+  to: /usr/bin/unshare
+  owner: "0"
+  group: "0"
+  before: install
+- image: tools/coreutils
+  add: /
+  to: /
+  owner: "0"
+  group: "0"
+  includePaths:
+  - usr/bin/coreutils
+  - usr/bin/test
+  - usr/bin/chroot
+  - usr/bin/cat
+  - usr/bin/cp
+  - usr/bin/tail
+  before: install
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
+git:
+{{- include "image mount points" $ }}
+shell:
+  install:
+  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
-    workingDir: /
-    user: "www-data"
+    workingDir: /chroot/etc/nginx
+    user: "64535"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
-    env: { "PATH": "$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin", "LUA_PATH": "/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }
+    env: { "PATH": "$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin", "LUA_PATH": "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;", "LUA_CPATH": "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;" }

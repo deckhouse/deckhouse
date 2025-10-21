@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -68,7 +70,7 @@ func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) 
 	return o, nil
 }
 
-func createMasterNodeGroup(input *go_hook.HookInput) error {
+func createMasterNodeGroup(_ context.Context, input *go_hook.HookInput) error {
 	clusterType := input.Values.Get("global.clusterConfiguration.clusterType").String()
 
 	ng, err := getDefaultMasterNg(clusterType)

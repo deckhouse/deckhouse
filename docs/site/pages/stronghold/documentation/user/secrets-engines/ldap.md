@@ -6,13 +6,6 @@ description: >-
   The LDAP secret engine manages LDAP entry passwords.
 ---
 
-{% alert level="warning" %}
-This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-{% endalert %}
 {% raw %}
 
 The LDAP secrets engine provides management of LDAP credentials as well as dynamic
@@ -83,7 +76,7 @@ For managing IBM's Resource Access Control Facility (RACF) security system, the 
 engine must be configured to use the schema `racf`.
 
 Generated passwords must be 8 characters or less to support RACF. The length of the
-password can be configured using a [password policy](/docs/concepts/password-policies):
+password can be configured using a password policy:
 
 ```bash
 $ d8 stronghold write ldap/config \
@@ -235,7 +228,7 @@ password and enable the account.
 Windows NT systems and has a limit of 20 characters. Keep this in mind when defining your `username_template`.
 See [here](https://docs.microsoft.com/en-us/windows/win32/adschema/a-samaccountname) for additional details.
 
-Since the default `username_template` is longer than 20 characters which follows the template of `v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}`, we recommend customising the `username_template` on the role configuration to generate accounts with names less than 20 characters. Please refer to the [username templating document](/docs/concepts/username-templating) for more information.
+Since the default `username_template` is longer than 20 characters which follows the template of `v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}`, we recommend customising the `username_template` on the role configuration to generate accounts with names less than 20 characters.
 
 With regard to adding dynamic users to groups, AD doesn't let you directly modify a user's `memberOf` attribute.
 The `member` attribute of a group and `memberOf` attribute of a user are
@@ -282,7 +275,7 @@ by a person or by machines. Stronghold will automatically rotate the password ea
 service account is checked in. Service accounts can be voluntarily checked in, or Stronghold
 will check them in when their lending period (or, "ttl", in Stronghold's language) ends.
 
-The service account check-out functionality works with various [schemas](/api-docs/secret/ldap#schema),
+The service account check-out functionality works with various [schemas](#schemas),
 including OpenLDAP, Active Directory, and RACF. In the following usage example, the secrets
 engine is configured to manage a library of service accounts in an Active Directory instance.
 
@@ -314,7 +307,7 @@ In this example, the service account names of `fizz@example.com` and `buzz@examp
 already been created on the remote AD server. They've been set aside solely for Stronghold to handle.
 The `ttl` is how long each check-out will last before Stronghold checks in a service account,
 rotating its password during check-in. The `max_ttl` is the maximum amount of time it can live
-if it's renewed. These default to `24h`, and both use [duration format strings](/docs/concepts/duration-format).
+if it's renewed. Both parameters are set to `24h` by default.
 Also by default, a service account must be checked in by the same Stronghold entity or client token that
 checked it out. However, if this behavior causes problems, set `disable_check_in_enforcement=true`.
 
@@ -457,8 +450,4 @@ olcPPolicyHashCleartext: TRUE
 olcPPolicyUseLockout: TRUE
 ```
 
-## API
-
-The LDAP secrets engine has a full HTTP API. Please see the [LDAP secrets engine API docs](/api-docs/secret/ldap)
-for more details.
 {% endraw %}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -201,7 +202,7 @@ func ekvFilterSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	return versions, nil
 }
 
-func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container) error {
+func handleEffectiveK8sVersion(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	prevEffectiveVersion := input.Values.Get("controlPlaneManager.internal.effectiveKubernetesVersion").String()
 
 	configVersionRaw, ok := input.Values.GetOk("global.clusterConfiguration.kubernetesVersion")
@@ -215,13 +216,13 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	}
 
 	// process pods snapshot
-	minControlPlaneVersion, maxControlPlaneVersion, err := ekvProcessPodsSnapshot(input, dc)
+	minControlPlaneVersion, maxControlPlaneVersion, err := ekvProcessPodsSnapshot(ctx, input, dc)
 	if err != nil {
 		return err
 	}
 
 	// process nodes snapshot
-	minNodeVersion, maxNodeVersion, err := ekvProcessNodeSnapshot(input)
+	minNodeVersion, maxNodeVersion, err := ekvProcessNodeSnapshot(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -229,7 +230,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	requirements.SaveValue(minK8sVersionRequirementKey, minNodeVersion.String())
 
 	// process secret snapshot
-	versionsInSecret, err := ekvProcessSecretSnapshot(input)
+	versionsInSecret, err := ekvProcessSecretSnapshot(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -312,8 +313,8 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 
 // process control plane pods snapshot with annotation, gettings minimum and maximum from control-plane-pods
 // returns minControlPlaneVersion, maxControlPlaneVersion and error
-func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
-	controlPlaneVersions, err := sdkobjectpatch.UnmarshalToStruct[controlPlanePod](input.NewSnapshots, "control_plane_versions")
+func ekvProcessPodsSnapshot(_ context.Context, input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
+	controlPlaneVersions, err := sdkobjectpatch.UnmarshalToStruct[controlPlanePod](input.Snapshots, "control_plane_versions")
 	if err != nil {
 		return nil, nil, fmt.Errorf("unmarshal control_plane_versions: %w", err)
 	}
@@ -360,9 +361,9 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 }
 
 // determine minimum and maximum node versions
-func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
-	nodeVersions := make([]*semver.Version, 0, len(input.NewSnapshots.Get("node_versions")))
-	for nodeVersionsSnap, err := range sdkobjectpatch.SnapshotIter[semver.Version](input.NewSnapshots.Get("node_versions")) {
+func ekvProcessNodeSnapshot(_ context.Context, input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
+	nodeVersions := make([]*semver.Version, 0, len(input.Snapshots.Get("node_versions")))
+	for nodeVersionsSnap, err := range sdkobjectpatch.SnapshotIter[semver.Version](input.Snapshots.Get("node_versions")) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("unmarshal node_versions: %w", err)
 		}
@@ -380,8 +381,8 @@ func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNode
 }
 
 // get semver from secret
-func ekvProcessSecretSnapshot(input *go_hook.HookInput) (kubernetesVersionsInSecret, error) {
-	versions, err := sdkobjectpatch.UnmarshalToStruct[kubernetesVersionsInSecret](input.NewSnapshots, "max_used_control_plane_version")
+func ekvProcessSecretSnapshot(_ context.Context, input *go_hook.HookInput) (kubernetesVersionsInSecret, error) {
+	versions, err := sdkobjectpatch.UnmarshalToStruct[kubernetesVersionsInSecret](input.Snapshots, "max_used_control_plane_version")
 	if err != nil {
 		return kubernetesVersionsInSecret{}, fmt.Errorf("cannot unmarshal max_used_control_plane_version: %w", err)
 	}

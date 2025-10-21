@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func NewClientFromFlags() *Client {
+func NewClientFromFlags() (*Client, error) {
 	settings := session.NewSession(session.Input{
 		AvailableHosts: app.SSHHosts,
 		User:           app.SSHUser,
@@ -36,11 +36,14 @@ func NewClientFromFlags() *Client {
 
 	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
 	for _, key := range app.SSHPrivateKeys {
-		k, _ := genssh.GetPrivateKeys(key)
+		k, err := genssh.GetPrivateKeys(key)
+		if err != nil {
+			return nil, err
+		}
 		keys = append(keys, *k)
 	}
 
-	return NewClient(settings, keys)
+	return NewClient(settings, keys), nil
 }
 
 func NewClientFromFlagsWithHosts() (*Client, error) {
@@ -48,7 +51,8 @@ func NewClientFromFlagsWithHosts() (*Client, error) {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
-	return NewClientFromFlags(), nil
+	sshCl, err := NewClientFromFlags()
+	return sshCl, err
 }
 
 func NewInitClientFromFlagsWithHosts(askPassword bool) (*Client, error) {
@@ -67,7 +71,11 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	var sshClient *Client
 	var err error
 
-	sshClient = NewClientFromFlags()
+	sshClient, err = NewClientFromFlags()
+	if err != nil {
+		return nil, err
+	}
+
 	err = sshClient.Start()
 	if err != nil {
 		return nil, err

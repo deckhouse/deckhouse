@@ -51,7 +51,7 @@ If you want to install Deckhouse into a **new** cluster, we recommend going back
 
 Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse in such clusters is to install the minimal Deckhouse configuration first, and then enable the necessary modules.
 
-This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/products/kubernetes-platform/documentation/v1/modules/documentation/) (for a sample web application) and [cert-manager](/products/kubernetes-platform/documentation/v1/modules/cert-manager/) module enabled.
+This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/modules/documentation/) (for a sample web application) and [cert-manager](/modules/cert-manager/) module enabled.
 
 After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/products/kubernetes-platform/documentation/v1/) to learn more or reach out to the Deckhouse [community](/community/about.html).
 
@@ -76,6 +76,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% offtopic title="Requirements..." %}
    - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 18.04+, Fedora 35+);
    - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+     - on computers with Apple Silicon processors, enable the option "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" in Docker Desktop settings to avoid possible issues running `ssh-agent` during the installation;
 {% if page.platform_code == "bm-private" %}
    - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
@@ -149,7 +150,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - access to the default package repositories for the operating system you are using;
    {%- endif %}
    - SSH key access from the **personal computer** (section 1)
-   - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
+   - network access from the **personal computer** (section 1) via port <code>22/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
    {% endofftopic %}
 {%- endif %}
@@ -166,7 +167,7 @@ Scheme of Deckhouse installation in a private environment:<br />
 {% alert level="warning" %}
 The recommendations above provide the minimum {% if page.platform_type == "cloud" %}summary{% endif %} resources required for the initial deployment of a cluster with one master node and one worker node.
 This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read [the recommendations for preparing
-for production](../../guides/production.html) and [the instructions](../../guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
+for production](../../guides/production.html) and [the instructions](/products/kubernetes-platform/guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
 for the operation of the future cluster.
 {% endalert %}
 {%- endif %}

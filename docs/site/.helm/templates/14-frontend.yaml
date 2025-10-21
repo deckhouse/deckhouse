@@ -6,8 +6,10 @@ metadata:
   name: frontend
   annotations:
     "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
   labels:
     service: frontend
+    app.kubernetes.io/part-of: deckhouse-docs
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
@@ -23,9 +25,28 @@ spec:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       serviceAccountName: docs-builder
+      initContainers:
+        - name: init
+          image: {{ index .Values.werf.image "web-frontend-init" }}
+          command: ["sh"]
+          args: ["/scripts/channels-convert.sh"]
+          env:
+            - name: CHANNELS_CONF_PATH
+              value: "/app/channels-data/channels.conf"
+            - name: CHANNELS_YAML_PATH
+              value: "/app/channels.yaml"
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 65534
+            runAsUser: 65534
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/channels.yaml
+              subPath: channels.yaml
+            - name: channels-data
+              mountPath: /app/channels-data
       containers:
-        - name: frontend
-          command: ["nginx", "-g", "daemon off;"]
+        - name: web
           image: {{ index .Values.werf.image "web-frontend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
@@ -52,64 +73,16 @@ spec:
               port: 8080
             {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
-            - mountPath: /app/en/modules
-              name: modules-docs-en
-            - mountPath: /app/ru/modules
-              name: modules-docs-ru
-            - mountPath: /cache
-              name: download-cache
-        - name: builder
-          command:
-            - "/app/server"
-            - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
-          image: {{ index .Values.werf.image "docs/builder" }}
-          {{- include "resources" . | nindent 10 }}
-          env:
-            - name: HUGO_ENVIRONMENT
-              value: production
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: metadata.namespace
-            - name: CLUSTER_DOMAIN
-              value: "cluster.local"
-          ports:
-          - containerPort: 8081
-            name: http
-            protocol: TCP
-          startupProbe:
-            httpGet:
-              path: /healthz
-              port: 8081
-            {{- include "startup_probe" . | indent 12 }}
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8081
-            {{- include "liveness_probe" . | indent 12 }}
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8081
-            {{- include "readiness_probe" . | indent 12 }}
-          volumeMounts:
-            - mountPath: "/mount/public/en/modules"
-              name: modules-docs-en
-            - mountPath: "/mount/public/ru/modules"
-              name: modules-docs-ru
-        - name: backend
+            - name: nginx-config
+              mountPath: /usr/conf/nginx.conf
+              subPath: nginx.conf
+            - mountPath: /tmp
+              name: web-tmp
+            - name: channels-data
+              mountPath: /app/channels-data
+        - name: router
           command: ["/app/server"]
-          image: {{ index .Values.werf.image "web-backend" }}
+          image: {{ index .Values.werf.image "web-router" }}
           {{- include "resources" . | nindent 10 }}
           ports:
             - containerPort: 8082
@@ -135,23 +108,28 @@ spec:
               port: 8082
             {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
-            - name: release-channels
-              mountPath: /app/release-channels
+            - name: channels-yaml
+              mountPath: /app/root/en/includes/release-channels
+            - name: channels-yaml
+              mountPath: /app/root/ru/includes/release-channels
       volumes:
-        - name: modules-docs-en
-          emptyDir: {}
-        - name: modules-docs-ru
-          emptyDir: {}
-        - name: download-cache
-          emptyDir: {}
-        - name: release-channels
+        - name: nginx-config
+          configMap:
+            name: doc-nginx-config
+        - name: channels-yaml
           configMap:
             name: release-channels-data
+        - name: web-tmp
+          emptyDir: {}
+        - name: channels-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
+  labels:
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
 spec:
   clusterIP: None
   selector:
@@ -165,7 +143,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: router
 spec:
   clusterIP: None
   selector:

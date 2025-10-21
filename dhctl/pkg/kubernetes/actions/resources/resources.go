@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were creatated")
+var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
 
 // apiResourceListGetter discovery and cache APIResources list for group version kind
 type apiResourceListGetter struct {
@@ -135,7 +135,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 			if discoveredResource.Kind != resource.GVK.Kind {
 				continue
 			}
-			if err := c.createSingleResource(ctx, resource); err != nil {
+			if err := c.createSingleResource(ctx, resource, discoveredResource); err != nil {
 				return err
 			}
 
@@ -249,19 +249,16 @@ func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, 
 	return isNamespaced(c.kubeCl, gvk, name)
 }
 
-func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
+func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
 	doc := resource.Object
-	gvk := resource.GVK
 
-	gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
-	if err != nil {
-		return nil, nil, fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
+	gvr := &schema.GroupVersionResource{
+		Group:    resource.GVK.Group,
+		Version:  resource.GVK.Version,
+		Resource: apires.Name,
 	}
 
-	namespaced, err := isNamespaced(kubeCl, gvk, gvr.Resource)
-	if err != nil {
-		return nil, nil, fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
-	}
+	namespaced := isNamespacedByAPIRes(apires)
 
 	docCopy := doc.DeepCopy()
 	namespace := docCopy.GetNamespace()
@@ -271,13 +268,13 @@ func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource)
 
 	docCopy.SetNamespace(namespace)
 
-	return &gvr, docCopy, nil
+	return gvr, docCopy, nil
 }
 
-func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource) error {
+func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
-		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
+		gvr, docCopy, err := resourceToGVR(resource, apires)
 		if err != nil {
 			return err
 		}
@@ -304,7 +301,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		return manifestTask.CreateOrUpdate()
+		err = manifestTask.CreateOrUpdate()
+		if err != nil {
+			if strings.Contains(err.Error(), "the server could not find the requested resource") {
+				c.kubeCl.InvalidateDiscoveryCache()
+			}
+		}
+		return err
 	})
 }
 
@@ -341,7 +344,16 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 
 		select {
 		case <-endChannel:
-			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
+			if len(resources) > 0 {
+				return fmt.Errorf(
+					"Creating resources timed out after %s: resources cannot become ready. "+
+						"This could be due to lack of worker nodes in the cluster. "+
+						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
+					app.ResourcesTimeout,
+				)
+			}
+
+			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
 		case <-ticker.C:
 		}
 	}
@@ -410,4 +422,11 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 		}
 	}
 	return false, nil
+}
+
+func isNamespacedByAPIRes(res metav1.APIResource) bool {
+	if len(res.Verbs) == 0 {
+		return false
+	}
+	return res.Namespaced
 }

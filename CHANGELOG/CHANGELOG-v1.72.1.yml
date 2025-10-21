@@ -1,0 +1,15 @@
+deckhouse:
+  fixes:
+    - summary: add check for user-authn in enabled script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15428
+    - summary: fix editions list in check deckhouse edition hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15403
+dhctl:
+  fixes:
+    - summary: Fix ssh client initialising in Commander Attach and Commander Detach operations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15380
+node-manager:
+  fixes:
+    - summary: Some minor fixes for nvidia gpu templates to improve security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15327
+

@@ -17,75 +17,60 @@ package tofu
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
-	fullArgs := args
-	if workingDir != "" {
-		fullArgs = append([]string{fmt.Sprintf("-chdir=%s", workingDir)}, args...)
-	}
-	log.DebugF("Tofu Command:\n opentofu %s\n", strings.Join(fullArgs, " "))
+type ExecutorParams struct {
+	RunExecutorParams
 
-	cmd := exec.CommandContext(ctx, "opentofu", fullArgs...)
-
-	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
-	}
-
-	cmd.Env = append(
-		os.Environ(),
-		"TF_IN_AUTOMATION=yes",
-		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
-		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-	)
-
-	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
-
-	cmd.Env = append(
-		cmd.Env,
-		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
-		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
-		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
-	)
-
-	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
-
-	return cmd
+	WorkingDir     string
+	PluginsDir     string
+	Step           infrastructure.Step
+	VMChangeTester plan.VMChangeTester
 }
 
 type Executor struct {
-	workingDir string
-	logger     log.Logger
-	cmd        *exec.Cmd
+	params ExecutorParams
+
+	logger log.Logger
+	cmd    *exec.Cmd
 }
 
-func NewExecutor(workingDir string, looger log.Logger) *Executor {
+func NewExecutor(params ExecutorParams, logger log.Logger) *Executor {
 	return &Executor{
-		workingDir: workingDir,
-		logger:     looger,
+		params: params,
+		logger: logger,
 	}
 }
 
-func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
+func (e *Executor) IsVMChange(rc plan.ResourceChange) bool {
+	return e.params.VMChangeTester(rc)
+}
+
+func (e *Executor) GetStatesDir() string {
+	return e.params.RootDir
+}
+
+func (e *Executor) Step() infrastructure.Step {
+	return e.params.Step
+}
+
+func (e *Executor) Init(ctx context.Context) error {
 	args := []string{
 		"init",
-		fmt.Sprintf("-plugin-dir=%s", pluginsDir),
+		fmt.Sprintf("-plugin-dir=%s", e.params.PluginsDir),
 		"-no-color",
 		"-input=false",
 	}
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -106,13 +91,13 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	} else {
 		args = append(args,
 			fmt.Sprintf("-var-file=%s", opts.VariablesPath),
-			e.workingDir,
+			e.params.WorkingDir,
 		)
 	}
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -138,25 +123,15 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 		args = append(args, "-destroy")
 	}
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 
-	return infrastructure.Exec(ctx, e.cmd, e.logger)
+	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
 func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
-	args := []string{
-		"output",
-		"-no-color",
-		"-json",
-		fmt.Sprintf("-state=%s", statePath),
-	}
-	if len(outFielda) > 0 {
-		args = append(args, outFielda...)
-	}
-
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
-
-	return e.cmd.Output()
+	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+	e.cmd = cmd
+	return out, err
 }
 
 func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts) error {
@@ -168,9 +143,9 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 		fmt.Sprintf("-state=%s", opts.StatePath),
 	}
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
 
 	return err
 }
@@ -182,7 +157,7 @@ func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, er
 		planPath,
 	}
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 
 	return e.cmd.Output()
 }

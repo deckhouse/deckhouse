@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.13.2",
+  "version": "v0.20.7",
   "aliases": null,
   "flags": {
     "help": {
@@ -185,10 +185,110 @@
       ]
     },
     {
-      "name": "dk",
+      "name": "data",
+      "description": "Provides volume resources data from kubernetes cluster",
+      "aliases": [
+        "de",
+        "dataexport"
+      ],
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "create [flags] data_export_name volume_type/volume_name",
+          "description": "Create dataexport kubernetes resource",
+          "aliases": null,
+          "flags": {
+            "namespace": {
+              "description": "data volume namespace",
+              "shorthand": "n",
+              "global": false
+            },
+            "publish": {
+              "description": "Provide access outside of cluster",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "Time to live",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "delete [flags] data_export_name",
+          "description": "Delete dataexport kubernetes resource",
+          "aliases": null,
+          "flags": {
+            "namespace": {
+              "description": "data volume namespace",
+              "shorthand": "n",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "download [flags] [KIND/]data_export_name [path/file.ext]",
+          "description": "Download exported data",
+          "aliases": null,
+          "flags": {
+            "namespace": {
+              "description": "data volume namespace",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "file to save data (default: same as resource)",
+              "shorthand": "o",
+              "global": false
+            },
+            "publish": {
+              "description": "Provide access outside of cluster",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "Time to live for auto-created DataExport",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "list [flags] data_export_name [/path/]",
+          "description": "List DataExported content information",
+          "aliases": [
+            "ls"
+          ],
+          "flags": {
+            "namespace": {
+              "description": "data volume namespace",
+              "shorthand": "n",
+              "global": false
+            },
+            "publish": {
+              "description": "Provide access outside of cluster",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "Time to live for auto-created DataExport",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
+      "name": "delivery-kit",
       "description": "A set of tools for building, distributing, and deploying containerized applications",
       "aliases": [
-        "delivery-kit"
+        "dk"
       ],
       "flags": {},
       "subcommands": [
@@ -13600,6 +13700,99 @@
                   "description": "if set, will wait until all the resources are deleted before returning. It will wait for as long as --timeout",
                   "shorthand": "",
                   "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "unittest",
+              "description": "unittest for helm charts",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "hooks-status-progress-period": {
+                  "description": "Hooks status progress period in seconds. Set 0 to stop showing hooks status progress. Defaults to $WERF_HOOKS_STATUS_PROGRESS_PERIOD_SECONDS or status progress period value",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config": {
+                  "description": "Kubernetes config file path (default $WERF_KUBE_CONFIG, or $WERF_KUBECONFIG, or $KUBECONFIG)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-config-base64": {
+                  "description": "Kubernetes config data as base64 string (default $WERF_KUBE_CONFIG_BASE64 or $WERF_KUBECONFIG_BASE64 or $KUBECONFIG_BASE64)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kube-context": {
+                  "description": "Kubernetes config context (default $WERF_KUBE_CONTEXT)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "namespace scope for this request",
+                  "shorthand": "n",
+                  "global": true
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": true
+                },
+                "status-progress-period": {
+                  "description": "Status progress period in seconds. Set -1 to stop showing status progress. Defaults to $WERF_STATUS_PROGRESS_PERIOD_SECONDS or 5 seconds",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": true
                 }
               },
               "subcommands": null
@@ -28842,7 +29035,7 @@
               "global": false
             },
             "image": {
-              "description": "Container image to use for debug container.",
+              "description": "Container image to use for debug container. If not specified, the platform's recommended image will be used.",
               "shorthand": "",
               "global": false
             },
@@ -37726,7 +37919,7 @@
               "global": false
             },
             "include-module": {
-              "description": "Whitelist specific modules for downloading. Format is \"module-name[@version]\". Use one flag per each module. Disables blacklisting by --exclude-module.\"",
+              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): include v1.3.0, v1.3.3, v1.4.1. In addition pulls current versions from release channels\n\nmodule-name@~1.3.0 →  semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): include only v1.3.0, v1.3.3. In addition pulls current versions from release channels\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
               "shorthand": "i",
               "global": false
             },
@@ -37762,6 +37955,11 @@
             },
             "no-security-db": {
               "description": "Do not pull security databases into bundle.",
+              "shorthand": "",
+              "global": false
+            },
+            "only-extra-images": {
+              "description": "Pull only extra images for modules (additional images like security databases, scanners, etc.) without pulling main module images.",
               "shorthand": "",
               "global": false
             },
@@ -37839,6 +38037,24 @@
       ]
     },
     {
+      "name": "status",
+      "description": "Get cluster status information",
+      "aliases": null,
+      "flags": {
+        "context": {
+          "description": "The name of the kubeconfig context to use",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "shorthand": "k",
+          "global": false
+        }
+      },
+      "subcommands": null
+    },
+    {
       "name": "stronghold",
       "description": "Deckhouse Stronghold commands",
       "aliases": null,
@@ -37882,6 +38098,13 @@
         {
           "name": "login",
           "description": "Authenticate locally",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "namespace",
+          "description": "Interact with namespaces",
           "aliases": null,
           "flags": {},
           "subcommands": null
@@ -37988,7 +38211,7 @@
     },
     {
       "name": "system",
-      "description": "Operate system options.",
+      "description": "Operate system options. Aliases: s, p, platform",
       "aliases": [
         "s",
         "p",
@@ -38311,6 +38534,11 @@
                   "description": "Show empty queues.",
                   "shorthand": "e",
                   "global": false
+                },
+                "watch": {
+                  "description": "Watch for changes to the queue list.",
+                  "shorthand": "w",
+                  "global": false
                 }
               },
               "subcommands": null
@@ -38339,6 +38567,36 @@
               "subcommands": null
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "tools",
+      "description": "Various useful tools for operating in The Deckhouse Ecosystem.",
+      "aliases": [
+        "t"
+      ],
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "far-convert",
+          "description": "Converts files with Falco rules to FalcoAuditRules CRD format",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "gostsum",
+          "description": "Calculate Streebog checksum of the data according to the RFC 6986 (GOST R 34.11-2012) specifications",
+          "aliases": null,
+          "flags": {
+            "hash-length": {
+              "description": "Bit-length variant of the algorithm to use. Only 256 (default) and 512 bit lengths are supported.",
+              "shorthand": "l",
+              "global": false
+            }
+          },
+          "subcommands": null
         }
       ]
     },
@@ -39154,7 +39412,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=kar: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
@@ -39307,7 +39565,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=kar: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },

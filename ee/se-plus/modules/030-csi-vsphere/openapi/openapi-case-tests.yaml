@@ -1,0 +1,66 @@
+positive:
+  configValues:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
+        compatibilityFlag: Legacy
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
+        compatibilityFlag: Migration
+  values:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      internal: {}
+negative:
+  configValues:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
+        compatibilityFlag: legacy
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
+        compatibilityFlag: migration
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
+        compatibilityFlag: qwerty
+  values:
+    - { somethingInConfig: yes }

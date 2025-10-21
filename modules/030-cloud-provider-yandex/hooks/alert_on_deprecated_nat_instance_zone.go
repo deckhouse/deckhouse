@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -31,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 21},
 }, alertOnDeprecatedNatInstanceZone)
 
-func alertOnDeprecatedNatInstanceZone(input *go_hook.HookInput) error {
+func alertOnDeprecatedNatInstanceZone(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricName)
 
 	layout, ok := input.Values.GetOk("cloudProviderYandex.internal.providerClusterConfiguration.layout")

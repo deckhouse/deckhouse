@@ -42,20 +42,24 @@ env:
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  REGISTRY_PATH: "sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
   DEPLOY_CHANNEL: beta
 
 # Note: no concurrency section for suspend workflows.
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
 
@@ -63,7 +67,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -139,7 +143,7 @@ jobs:
 
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
@@ -212,26 +216,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -267,7 +251,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: CE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -295,10 +279,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -342,7 +322,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: EE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -370,10 +350,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -417,7 +393,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: FE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -445,10 +421,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -492,7 +464,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: BE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -520,10 +492,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -567,7 +535,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -595,10 +563,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes
@@ -642,7 +606,7 @@ jobs:
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE-plus
-          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+          SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -670,10 +634,6 @@ jobs:
 
           # Some precautions.
           shouldExit1=
-          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
-            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
-            shouldExit1=yes
-          fi
           if [[ -z ${WERF_ENV} ]] ; then
             echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
             shouldExit1=yes

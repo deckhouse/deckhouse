@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -138,11 +139,11 @@ type bootstrapTokenSecret struct {
 	CreationTS     time.Time
 }
 
-func handleOrderBootstrapToken(input *go_hook.HookInput) error {
+func handleOrderBootstrapToken(_ context.Context, input *go_hook.HookInput) error {
 	tokensByNg := make(map[string]bootstrapTokenSecret)
 	expiredTokens := make([]bootstrapTokenSecret, 0)
 
-	snaps := input.NewSnapshots.Get("bootstrap_tokens")
+	snaps := input.Snapshots.Get("bootstrap_tokens")
 	for token, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenSecret](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'bootstrap_tokens' snapshots: %w", err)
@@ -171,7 +172,7 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 	// we don't want to keep tokens for deleted NodeGroups
 	input.Values.Set("nodeManager.internal.bootstrapTokens", json.RawMessage("{}"))
 
-	snaps = input.NewSnapshots.Get("ngs")
+	snaps = input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenNG](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)

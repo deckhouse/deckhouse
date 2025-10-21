@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -23,7 +25,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 11},
 }, discoverDeckhouseVersionMetrics)
 
-func discoverDeckhouseVersionMetrics(input *go_hook.HookInput) error {
+func discoverDeckhouseVersionMetrics(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Set("deckhouse_build_info", 1, map[string]string{
 		"version": input.Values.Get("global.deckhouseVersion").String(),
 		"edition": input.Values.Get("global.deckhouseEdition").String(),

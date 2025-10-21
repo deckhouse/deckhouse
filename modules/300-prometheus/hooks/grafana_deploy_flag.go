@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -27,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, setGrafanaDeployFlag)
 
-func setGrafanaDeployFlag(input *go_hook.HookInput) error {
+func setGrafanaDeployFlag(_ context.Context, input *go_hook.HookInput) error {
 	// Stub logic for future use
 	if grafanaEnabled, ok := input.ConfigValues.GetOk("prometheus.grafana.enabled"); ok {
 		input.Values.Set("prometheus.internal.grafana.enabled", grafanaEnabled.Bool())

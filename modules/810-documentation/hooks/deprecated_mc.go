@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -47,10 +49,10 @@ func filterMC(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
 }
 
-func setAlertMetrics(input *go_hook.HookInput) error {
+func setAlertMetrics(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_mc")
 
-	if len(input.NewSnapshots.Get("mc")) > 0 {
+	if len(input.Snapshots.Get("mc")) > 0 {
 		input.MetricsCollector.Set("d8_mc_deprecated", 1, map[string]string{"module": "documentation"}, metrics.WithGroup("d8_mc"))
 	}
 

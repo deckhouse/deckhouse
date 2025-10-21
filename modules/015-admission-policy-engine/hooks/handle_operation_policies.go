@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/clarketm/json"
@@ -41,8 +42,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleOP)
 
-func handleOP(input *go_hook.HookInput) error {
-	ops, err := sdkobjectpatch.UnmarshalToStruct[operationPolicy](input.NewSnapshots, "operation-policies")
+func handleOP(_ context.Context, input *go_hook.HookInput) error {
+	ops, err := sdkobjectpatch.UnmarshalToStruct[operationPolicy](input.Snapshots, "operation-policies")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal operation-policies snapshot: %w", err)
 	}

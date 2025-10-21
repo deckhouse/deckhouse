@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -87,10 +88,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, customRulesHandler)
 
-func customRulesHandler(input *go_hook.HookInput) error {
+func customRulesHandler(_ context.Context, input *go_hook.HookInput) error {
 	tmpMap := make(map[string]bool)
 
-	rulesSnap := input.NewSnapshots.Get("rules")
+	rulesSnap := input.Snapshots.Get("rules")
 
 	for rule, err := range sdkobjectpatch.SnapshotIter[CustomRule](rulesSnap) {
 		if err != nil {
@@ -103,7 +104,7 @@ func customRulesHandler(input *go_hook.HookInput) error {
 		tmpMap[internalRule.GetName()] = true
 	}
 
-	internalRulesSnap := input.NewSnapshots.Get("internal_rules")
+	internalRulesSnap := input.Snapshots.Get("internal_rules")
 
 	// delete absent prometheus rules
 	for internalRuleName, err := range sdkobjectpatch.SnapshotIter[string](internalRulesSnap) {

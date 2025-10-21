@@ -10,13 +10,14 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Масштабирование до 1000 узлов и 50 000 ВМ
-          en: Scaling up to 1000 nodes and 50000 VMs
+          ru: Высокая доступность ВМ при отказе узла гипервизора
+          en: High availability of VMs in case of hypervisor failure
         editions:
           ce: supported
           ee: supported
       - title:
-          ru: Поддержка российских ОС на гипервизоре
+          ru: Распределение ВМ для сбалансированного использования ресурсов гипервизора
+          en: Virtual machine allocation for balanced hypervisor resource usage
         editions:
           ce: supported
           ee: supported
@@ -27,8 +28,25 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Высокая доступность ВМ при отказе узла гипервизора
-          en: High availability of VMs in case of hypervisor failure
+          ru: Поддержка российских ОС на гипервизоре
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Масштабирование до 1000 узлов и 50 000 ВМ
+          en: Scaling up to 1000 nodes and 50000 VMs
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Провайдер для развертывания DKP на DVP в режиме полной интеграции
+          en: Provider for deploying DKP on DVP in full integration mode
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Поддержка вложенной виртуализации
+          en: Nested virtualization support
         editions:
           ce: supported
           ee: supported
@@ -49,7 +67,7 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Унификация CPU-инструкций на гипервизорах (VirtualMachineClass)
+          ru: Унификация процессорных инструкций на гипервизорах (VirtualMachineClass)
           en: Unification of CPU instructions on hypervisors (VirtualMachineClass)
         editions:
           ce: supported
@@ -93,43 +111,67 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Живая миграция виртуальных машин без простоя
-          en: Live VM migration without downtime
+          ru: Добавление и изменение размеров дисков ВМ без перезагрузки
+          en: Add and resize VM disks without reboot
         editions:
           ce: supported
           ee: supported
       - title:
-          ru: Консистентные снимки дисков
-          en: Consistent disk snapshots
+          ru: Консистентные снимки дисков и конфигурации ВМ
+          en: Consistent snapshots of VM disks and configuration
         editions:
           ce: partly
           ee: partly
         restriction_message:
           ce:
             en: |
-              Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
+              Available with <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/pricing/'>restrictions</a>
             ru: |
               Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
           ee:
             en: |
-              The storage must <a terget='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
+              The storage must <a target='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
             ru: |
-              Хранилище должно <a terget='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
+              Хранилище должно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
       - title:
-          ru: Добавление и изменение размеров дисков ВМ без перезагрузки
-          en: Adding and changing VM disk sizes without rebooting
+          ru: Восстановление дисков и конфигурации ВМ из снимка
+          en: Restore VM disks and configuration from snapshot
         editions:
           ce: supported
           ee: supported
       - title:
-          ru: Политики запуска ВМ
-          en: VM launch policies
+          ru: Экспорт дисков и снимков
+          en: Disk and snapshot export
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Экспорт ВМ
+          en: VM export
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Живая миграция виртуальных машин без простоя
+          en: Live VM migration without downtime
         editions:
           ce: supported
           ee: supported
       - title:
-          ru: Правила размещения ВМ (affinity/antiaffinity)
-          en: VM placement management (affinity/antiaffinity)
+          ru: Политики для оптимизации живой миграции ВМ
+          en: Live migration optimization policies
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Политики запуска ВМ (Always On/Always Off/Manual)
+          en: VM launch policies (Always On/Always Off/Manual)
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Правила размещения ВМ (Affinity/Antiaffinity)
+          en: VM placement management (Affinity/Antiaffinity)
         editions:
           ce: supported
           ee: supported
@@ -144,16 +186,10 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE)
-          en: Support for hardware storage systems using API (Yadro, Huawei, HPE)
+          ru: Поддержка сторонних SDS (Ceph)
+          en: Support for third-party SDS (Ceph)
         editions:
-          ce: not_supported
-          ee: supported
-      - title:
-          ru: Универсальная поддержка аппаратных СХД (SCSI-generic)
-          en: Universal support for hardware storage systems (SCSI-generic)
-        editions:
-          ce: not_supported
+          ce: supported
           ee: supported
       - title:
           ru: Поддержка NFS
@@ -162,15 +198,57 @@ featureSections:
           ce: supported
           ee: supported
       - title:
-          ru: Поддержка сторонних SDS (Ceph)
-          en: Support for third-party SDS (Ceph)
+          ru: Универсальная поддержка аппаратных СХД (SCSI-generic)
+          en: Universal support for hardware storage systems (SCSI-generic)
         editions:
-          ce: supported
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE)
+          en: Support for hardware storage systems using API (Yadro, Huawei, HPE)
+        editions:
+          ce: not_supported
           ee: supported
   - title:
       ru: Сетевые возможности (SDN)
       en: Network capabilities (SDN)
     features:
+      - title:
+          ru: Подключение ВМ к физическим VLAN
+          en: VM connectivity to physical VLANs
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Несколько сетевых интерфейсов для ВМ
+          en: Multiple network interfaces for VMs
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Общие VLAN-сети для ВМ в кластере
+          en: Shared VLAN networks for VMs in a cluster
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Изолированные VLAN-сети для ВМ в рамках проекта
+          en: Isolated VLAN networks for VMs within a project
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Агрегирование сетевых интерфейсов узлов гипервизора (Bonding)
+          en: Hypervisor node network interface aggregation (Bonding)
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Автоматическое назначение IP-адресов для ВМ
+          en: Automatic IP address assignment for VMs
+        editions:
+          ce: supported
+          ee: supported
       - title:
           ru: Микросегментация на основе сетевых политик
           en: Network policies (micro-segmentation)
@@ -190,7 +268,7 @@ featureSections:
           ce: not_supported
           ee: supported
       - title:
-          ru: Балансировщик нагрузки с активными healthcheck
+          ru: Балансировщик нагрузки с активными health check
           en: Active health check load balancer
         editions:
           ce: not_supported
@@ -208,46 +286,6 @@ featureSections:
           ce: not_supported
           ee: supported
   - title:
-      ru: Безопасность
-      en: Security
-    features:
-      - title:
-          ru: Мультиарендность на базе проектов
-          en: Multitenancy (projects)
-        editions:
-          ce: supported
-          ee: supported
-      - title:
-          ru: Гибкая ролевая модель доступа
-          en: Flexible role-based access model
-        editions:
-          ce: supported
-          ee: supported
-      - title:
-          ru: Интеграция с внешними провайдерами аутентификации (LDAP, OIDC)
-          en: Integration with external authentication providers (LDAP, OIDC)
-        editions:
-          ce: supported
-          ee: supported
-      - title:
-          ru: Миграция ВМ с шифрованием (Data in Transit encryption)
-          en: Data in Transit encryption
-        editions:
-          ce: supported
-          ee: supported
-      - title:
-          ru: Управление сертификатами
-          en: Certificate management
-        editions:
-          ce: supported
-          ee: supported
-      - title:
-          ru: Развёртывание в закрытом контуре
-          en: Deploying to an air-gapped environment
-        editions:
-          ce: not_supported
-          ee: supported
-  - title:
       ru: Мониторинг
       en: Monitoring
     features:
@@ -260,6 +298,52 @@ featureSections:
       - title:
           ru: Отправка метрик и логов во внешние источники
           en: Sending metrics and logs to external collectors
+        editions:
+          ce: supported
+          ee: supported
+  - title:
+      ru: Безопасность
+      en: Security
+    features:
+      - title:
+          ru: Мультитенантность на базе проектов
+          en: Multitenancy (projects)
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Гибкая ролевая модель доступа (RBAC)
+          en: Flexible role-based access model (RBAC)
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Развёртывание в изолированном контуре
+          en: Deployment in an isolated environment
+        editions:
+          ce: not_supported
+          ee: supported
+      - title:
+          ru: Интеграция с внешними провайдерами аутентификации (LDAP, OIDC)
+          en: Integration with external authentication providers (LDAP, OIDC)
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Управление сертификатами Ingress
+          en: Ingress certificate management
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Миграция ВМ с шифрованием (Data in Transit encryption)
+          en: Data in Transit encryption
+        editions:
+          ce: supported
+          ee: supported
+      - title:
+          ru: Аудит событий безопасности для виртуализации
+          en: Security event auditing for virtualization
         editions:
           ce: supported
           ee: supported

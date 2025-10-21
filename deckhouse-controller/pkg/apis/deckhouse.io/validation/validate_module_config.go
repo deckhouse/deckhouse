@@ -25,7 +25,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -33,11 +32,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type AnnotationsOnly struct {
@@ -59,10 +61,11 @@ const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhous
 func moduleConfigValidationHandler(
 	cli client.Client,
 	moduleStorage moduleStorage,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
+	exts *extenders.ExtendersStack,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
@@ -103,7 +106,7 @@ func moduleConfigValidationHandler(
 					return rejectResult("delete the ModulePullOverride before deleting the module config")
 				}
 
-				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
+				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{"module": cfg.GetName()})
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -124,6 +127,10 @@ func moduleConfigValidationHandler(
 					if definition.IsExperimental() && !allowExperimentalModules {
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
+				}
+
+				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+					return rejectResult(err.Error())
 				}
 			}
 		case kwhmodel.OperationUpdate:
@@ -155,6 +162,10 @@ func moduleConfigValidationHandler(
 					if definition.IsExperimental() && !allowExperimentalModules {
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
+				}
+
+				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+					return rejectResult(err.Error())
 				}
 			}
 
@@ -227,7 +238,7 @@ func moduleConfigValidationHandler(
 			warnings = append(warnings, res.Warning)
 		}
 
-		metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
 
 		module, err := moduleStorage.GetModuleByName(cfg.Name)
 		if err != nil {

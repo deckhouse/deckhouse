@@ -19,10 +19,10 @@
         1. Check the current release channel used in the cluster:
 
            ```bash
-           kubectl -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
+           d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
     expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
@@ -43,7 +43,7 @@
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
@@ -65,7 +65,7 @@
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
@@ -87,7 +87,7 @@
         To approve the release, run the following command:
 
         ```bash
-        kubectl patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
         ```
 
   - alert: DeckhouseReleaseIsBlocked
@@ -108,7 +108,7 @@
         To check the details, run the following command:
 
         ```bash
-        kubectl describe DeckhouseRelease {{ $labels.name }}
+        d8 k describe DeckhouseRelease {{ $labels.name }}
         ```
 
   - alert: DeckhouseReleaseDisruptionApprovalRequired
@@ -129,13 +129,13 @@
         To check the details, run the following command:
 
         ```bash
-        kubectl describe DeckhouseRelease {{ $labels.name }}
+        d8 k describe DeckhouseRelease {{ $labels.name }}
         ```
 
         To approve the disruptive update, run the following command:
 
         ```bash
-        kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
+        d8 k annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
@@ -154,7 +154,7 @@
         To approve the module release, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
 
   - alert: ModuleReleaseIsOutdated
@@ -177,7 +177,7 @@
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
 
   - alert: ModuleReleaseIsOutdated
@@ -200,7 +200,7 @@
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
 
   - alert: ModuleReleaseIsOutdated
@@ -225,7 +225,7 @@
         To approve the module release update, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```
 
   - alert: ModuleIsInMaintenanceMode
@@ -244,7 +244,7 @@
         To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
 
         ```bash
-        kubectl patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
 
   - alert: DeckhouseReleaseNotificationNotSent
@@ -265,7 +265,7 @@
         To check the notification webhook address, run the following command:
 
         ```bash
-        kubectl get mc deckhouse -o yaml
+        d8 k get mc deckhouse -o yaml
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
@@ -284,7 +284,7 @@
         To check the requirements, run the following command:
 
         ```bash
-        kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements
+        d8 k  get mr {{ $labels.name }} -o json | jq .spec.requirements
         ```
 
   - alert: D8HasModuleConfigAllowedToDisable
@@ -310,7 +310,7 @@
         To resolve this issue and stop the alert, run the following command:
 
         ```bash
-        kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
+        d8 k annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
         ```
 
   - alert: ModuleAtConflict
@@ -356,18 +356,18 @@
         To specify the update policy in the module configuration, run the following command:
 
         ```bash
-        kubectl patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
         ```
 
         After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
 
         ```bash
-        kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
         ```
 
   - alert: DeckhouseHighMemoryUsage
-    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.9)
-    for: 1m
+    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.85)
+    for: 30s
     labels:
       severity_level: "3"
     annotations:
@@ -379,11 +379,64 @@
         Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
 
         ```bash
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
-        curl -s "http://$(kubectl -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
         ```
 
         and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
       summary: |
         Deckhouse memory usage is too high.
+
+  - alert: D8ModuleOutdatedByMajorVersion
+    expr: sum by (name, moduleName, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name,majorReleaseName,fromToName"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind.
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To check the module releases status, run the following command:
+
+        ```bash
+        kubectl get mr -l module={{ $labels.moduleName }}
+        ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
+
+        To approve the module major release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```{{ end }}
+
+  - alert: ModuleIsDeprecated
+    expr: d8_telemetry_is_deprecated_module_enabled >= 1
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Module `{{ $labels.module }}` is deprecated.
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.

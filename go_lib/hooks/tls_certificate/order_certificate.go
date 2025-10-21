@@ -151,13 +151,13 @@ func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
 	}, dependency.WithExternalDependencies(certificateHandler(requests)))
 }
 
-func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		return certificateHandlerWithRequests(input, dc, requests)
+func certificateHandler(requests []OrderCertificateRequest) func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+		return certificateHandlerWithRequests(ctx, input, dc, requests)
 	}
 }
 
-func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Container, requests []OrderCertificateRequest) error {
+func certificateHandlerWithRequests(_ context.Context, input *go_hook.HookInput, dc dependency.Container, requests []OrderCertificateRequest) error {
 	publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
@@ -176,7 +176,7 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		}
 
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.NewSnapshots, "certificateSecrets")
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.Snapshots, "certificateSecrets")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal certificateSecrets snapshot: %w", err)
 		}

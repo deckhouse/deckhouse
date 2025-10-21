@@ -1,4 +1,4 @@
-{{- $LokiVersion := "v2.9.10" }}
+{{- $LokiVersion := "v2.9.15" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -20,7 +20,7 @@ shell:
     - rm -r .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,7 +36,8 @@ shell:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-    - go build -o loki ./cmd/loki
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -o loki ./cmd/loki`) | indent 6 }}
     - chown -R 64535:64535 /src/loki
     - chmod 0700 /src/loki
     - rm -rf vendor
@@ -48,6 +49,8 @@ import:
     add: /src/loki
     to: /usr/bin/loki
     after: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/loki"]

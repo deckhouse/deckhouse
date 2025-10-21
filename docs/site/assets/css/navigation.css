@@ -1,0 +1,166 @@
+/* Page Navigation Styles - Deckhouse Documentation */
+.page-navigation {
+  margin: 2rem 0;
+  padding: 1.5rem 0;
+  border-top: 1px solid #e1e5e9;
+  border-bottom: 1px solid #e1e5e9;
+  background: transparent;
+}
+
+.page-navigation__container {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1.5rem;
+  max-width: 100%;
+}
+
+.page-navigation__container > * {
+  flex: 0 0 auto;
+}
+
+.page-navigation__prev,
+.page-navigation__next {
+  flex: 1 1 0;
+  max-width: 45%;
+  display: flex;
+}
+
+.page-navigation__empty {
+  /* Empty state for when there's no prev/next page */
+}
+
+.page-navigation__link {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  color: #0064ff;
+  background: transparent;
+  border: 1px solid #0064ff;
+  border-radius: 0;
+  transition: all 0.15s ease-in-out;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  min-height: 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.page-navigation__link:hover {
+  background: transparent;
+  border-color: #002cca;
+  color: #002cca;
+  text-decoration: none !important;
+}
+
+.page-navigation__link--prev {
+  text-align: left;
+}
+
+.page-navigation__link--next {
+  text-align: right;
+  margin-left: auto;
+}
+
+.page-navigation__arrow {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0.5rem;
+  color: #0064ff;
+  transition: color 0.15s ease-in-out;
+  line-height: 1;
+}
+
+.page-navigation__link:hover .page-navigation__arrow {
+  color: #002cca;
+}
+
+.page-navigation__content {
+  flex: 1;
+  min-width: 0; /* Allow text to wrap */
+}
+
+.page-navigation__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #0064ff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
+}
+
+.page-navigation__link:hover .page-navigation__title {
+  color: #002cca;
+}
+
+/* Integration with existing docs styles */
+.docs .page-navigation {
+  margin: 2rem -1rem 0 -1rem;
+  padding: 1.5rem 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .page-navigation {
+    margin: 1.5rem 0;
+    padding: 1rem 0;
+  }
+
+  .page-navigation__container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .page-navigation__prev,
+  .page-navigation__next {
+    max-width: 100%;
+  }
+
+  .page-navigation__link {
+    min-height: 35px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .page-navigation__arrow {
+    font-size: 1.125rem;
+    margin: 0 0.375rem;
+  }
+
+  .page-navigation__title {
+    font-size: 0.8rem;
+  }
+
+  .docs .page-navigation {
+    margin: 1.5rem -0.5rem 0 -0.5rem;
+    padding: 1rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-navigation {
+    margin: 1rem 0;
+    padding: 0.75rem 0;
+  }
+
+  .page-navigation__link {
+    padding: 0.5rem;
+    min-height: 30px;
+  }
+
+  .page-navigation__arrow {
+    font-size: 1rem;
+    margin: 0 0.25rem;
+  }
+
+  .page-navigation__title {
+    font-size: 0.75rem;
+  }
+
+  .docs .page-navigation {
+    margin: 1rem -0.25rem 0 -0.25rem;
+    padding: 0.75rem 0.25rem;
+  }
+}

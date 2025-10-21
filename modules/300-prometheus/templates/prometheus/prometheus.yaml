@@ -39,13 +39,6 @@ memory: 25Mi
 {{- sub ($now | unixEpoch) ($now |  date_modify (printf "-%s" $duration) | unixEpoch) }}
 {{- end }}
 
-{{- define "prompp-context" -}}
-{{- $values := deepCopy .Values | merge dict }}
-{{- $_ := set $values.global.modulesImages.registry "base" (printf "%s/modules/prompp" .Values.global.modulesImages.registry.base) }}
-{{- $ctx := dict "Chart" (dict "Name" "prompp") "Values" $values }}
-{{- $ctx | toYaml }}
-{{- end }}
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -89,7 +82,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
-  image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
   version: v2.53.2
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
@@ -108,33 +101,7 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-{{- if hasKey .Values.global.modulesImages.digests "prompp" }}
-  initContainers:
-  - name: prompptool
-    image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompptool") }}
-    command:
-    - /bin/prompptool
-    - "--working-dir=/prometheus"
-    - "--verbose"
-    {{- if (.Values.global.enabledModules | has "prompp") }}
-    - "walvanilla"
-    {{- else }}
-    - "walpp"
-    {{- end }}
-    volumeMounts:
-    - name: prometheus-main-db
-      mountPath: /prometheus
-      subPath: prometheus-db
-      securityContext:
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-          - ALL
-        readOnlyRootFilesystem: true
-    resources:
-      requests:
-        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- end }}
+  {{- include "prometheus_init_containers" (list . "prometheus-main-db") | nindent 2 }}
   containers:
   - name: prometheus
     startupProbe:
@@ -145,7 +112,7 @@ spec:
           name: prometheus-pp-envs
 {{- end }}
   - name: kube-rbac-proxy
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
+    {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
@@ -342,9 +309,12 @@ spec:
     {{- $alertmanagers_internal = true }}
   {{- end }}
 {{- end }}
-{{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
     alertmanagers:
+    - name: alerts-receiver
+      namespace: d8-monitoring
+      pathPrefix: /
+      port: http
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}
@@ -365,7 +335,6 @@ spec:
         insecureSkipVerify: true
     {{- end }}
   {{- end }}
-{{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
@@ -389,9 +358,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
       {{- include "prometheus_resources" . | nindent 6 }}
-{{- end }}
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:

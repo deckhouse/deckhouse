@@ -21,20 +21,20 @@
         1. Check if the chrony pod is running on the node by executing the following command:
 
            ```bash
-           kubectl -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
+           d8 k -n d8-chrony --field-selector spec.nodeName="{{$labels.node}}" get pods
            ```
 
         2. Verify the chrony daemon's status by executing the following command:
 
            ```bash
-           kubectl -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
+           d8 k -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
            ```
 
         3. Resolve the time synchronization issues:
            - Fix network errors:
-             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+             - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
              - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+           - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
 
   - alert: NodeTimeOutOfSync
     expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
@@ -52,6 +52,6 @@
         To resolve the time synchronization issues:
 
         - Fix network errors:
-          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html) are available.
+          - Ensure the upstream time synchronization servers defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html) are available.
           - Eliminate large packet loss and excessive latency to upstream time synchronization servers.
-        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/chrony/configuration.html).
+        - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).

@@ -39,19 +39,19 @@
         1. Print the job details:
 
            ```bash
-           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
            ```
 
         1. Check the job status:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
            ```
 
         1. Check the status of pods created by the job:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
            ```
 
   - alert: CronJobPodsNotCreated
@@ -89,19 +89,19 @@
         1. Print the job details:
 
            ```bash
-           kubectl -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
            ```
 
         1. Check the job status:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get job {{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
            ```
 
         1. Check the status of pods created by the job:
 
            ```bash
-           kubectl -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
            ```
 
   - alert: CronJobSchedulingError

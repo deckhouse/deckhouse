@@ -2,23 +2,10 @@
 {{- $opensslVersion := "3.3.2" }}
 {{- $libcapNgVersion := "0.8.5" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
@@ -31,6 +18,8 @@ import:
   add: /relocate
   to: /
   before: setup
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -133,19 +122,3 @@ shell:
   - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-  - mkdir -p /relocate/sbin
-  - |
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-    done
-    # broken symlinks are not imported from the artifact
-    touch /iptables-wrapper
-  - |
-    for mode in legacy nft; do
-      for basecmd in iptables ip6tables; do
-        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-        done
-      done
-    done
-

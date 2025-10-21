@@ -8,6 +8,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"sort"
 
@@ -71,16 +72,16 @@ func applyMetalLoadBalancerClassLabelFilter(obj *unstructured.Unstructured) (go_
 	}, nil
 }
 
-func handleLabelsUpdate(input *go_hook.HookInput) error {
-	actualLabeledNodes := getLabeledNodes(input.NewSnapshots.Get("nodes"))
+func handleLabelsUpdate(_ context.Context, input *go_hook.HookInput) error {
+	actualLabeledNodes := getLabeledNodes(input.Snapshots.Get("nodes"))
 	desiredLabeledNodes := make([]NodeInfo, 0, 4)
 
-	for mlbcInfo, err := range sdkobjectpatch.SnapshotIter[MetalLoadBalancerClassInfo](input.NewSnapshots.Get("mlbc")) {
+	for mlbcInfo, err := range sdkobjectpatch.SnapshotIter[MetalLoadBalancerClassInfo](input.Snapshots.Get("mlbc")) {
 		if err != nil {
 			continue
 		}
 
-		nodes := getNodesByMLBC(mlbcInfo, input.NewSnapshots.Get("nodes"))
+		nodes := getNodesByMLBC(mlbcInfo, input.Snapshots.Get("nodes"))
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue

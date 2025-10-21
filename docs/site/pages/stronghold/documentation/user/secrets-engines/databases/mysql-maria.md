@@ -10,19 +10,10 @@ description: |-
 
 ## MySQL/MariaDB database secrets engine
 
-{% alert level="warning" %}
-
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
 MySQL is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
-the MySQL database, and also supports [Static
-Roles](/docs/secrets/databases#static-roles).
+the MySQL database, and also supports Static
+Roles.
 
 This plugin has a few different instances built into Stronghold, each instance is for
 a slightly different MySQL driver. The only difference between these plugins is
@@ -34,14 +25,11 @@ accept different lengths. The available plugins are:
 - mysql-rds-database-plugin
 - mysql-legacy-database-plugin
 
-See the [database secrets engine](/docs/secrets/databases) docs for
-more information about setting up the database secrets engine.
-
 ## Capabilities
 
 | Plugin Name                                                    | Root Credential Rotation | Dynamic Roles | Static Roles | Username Customization |
 | -------------------------------------------------------------- | ------------------------ | ------------- | ------------ | ---------------------- |
-| Depends (see: [above](#mysql-mariadb-database-secrets-engine)) | Yes                      | Yes           | Yes          | Yes (1.7+)             |
+| Can vary | Yes                      | Yes           | Yes          | Yes             |
 
 ## Setup
 
@@ -150,8 +138,7 @@ $ d8 stronghold write database/roles/my-role \
 ### Rotating root credentials in MySQL 5.6
 
 The default root rotation setup for MySQL uses the `ALTER USER` syntax present
-in MySQL 5.7 and up. For MySQL 5.6, the [root rotation
-statements](/api-docs/secret/databases#root_rotation_statements)
+in MySQL 5.7 and up. For MySQL 5.6, `root_rotation_statements`
 must be configured to use the old `SET PASSWORD` syntax. For example:
 
 ```shell-session
@@ -163,11 +150,3 @@ $ d8 stronghold write database/config/my-mysql-database \
     username="root" \
     password="mysql"
 ```
-
-## API
-
-The full list of configurable options can be seen in the [MySQL database plugin
-API](/api-docs/secret/databases/mysql-maria) page.
-
-For more information on the database secrets engine's HTTP API please see the
-[Database secrets engine API](/api-docs/secret/databases) page.

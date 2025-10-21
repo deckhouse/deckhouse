@@ -38,10 +38,17 @@ declare -A allowed_components=(
 declare -A skip_components=(
   ["registrypackages"]="skip"
 )
+declare -A skip_components_images=(
+  ["d8ShutdownInhibitor"]="skip"
+)
 # Function to get skip components
 function get_skip_components() {
   local component=$1
   echo "${skip_components[$component]:-"none"}"
+}
+function get_skip_components_images() {
+  local image=$1
+  echo "${skip_components_images[$image]:-"none"}"
 }
 
 # Function to check allowed components
@@ -99,7 +106,7 @@ function __main__() {
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
     if [[ $(get_skip_components "$MODULE_NAME") == "skip" ]]; then
           echo "=============================================="
-          echo "🛰 Module: $MODULE_NAME skip"
+          echo "🛰 Module: $MODULE_NAME skipped due to validation exclude"
           continue
     fi
     echo "=============================================="
@@ -109,6 +116,11 @@ function __main__() {
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
       if [[ "$IMAGE_NAME" == "trivy" ]]; then
         continue
+      fi
+      if [[ $(get_skip_components_images "$IMAGE_NAME") == "skip" ]]; then
+            echo "----------------------------------------------"
+            echo "🛰 Image: $IMAGE_NAME skipped due to validation exclude"
+            continue
       fi
       echo "----------------------------------------------"
       echo "👾 Image: $IMAGE_NAME"

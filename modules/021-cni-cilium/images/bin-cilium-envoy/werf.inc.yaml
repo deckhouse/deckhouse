@@ -38,12 +38,13 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
   - git checkout {{ $ciliumProxyRev }}
-  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - ls /patches/proxy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/proxy/*.patch
   - rm -rf /src/proxy/.git
   #
   - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
   - cd /src/envoy
   - git checkout {{ $envoySHA }}
+  - ls /patches/envoy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/envoy/*.patch
   # original cilium patches
   - git apply --verbose /src/proxy/patches/*.patch
   - rm -rf /src/envoy/.git
@@ -55,6 +56,18 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
   before: install
 mount:
 {{ include "mount points for golang builds" . }}

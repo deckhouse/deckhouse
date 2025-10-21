@@ -35,12 +35,25 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
   securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
+    fsGroup: 64535
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+        add:
+        - DAC_OVERRIDE
+        - SETGID
+        - SETUID
+      readOnlyRootFilesystem: true
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+      seccompProfile:
+        type: RuntimeDefault
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
@@ -50,12 +63,28 @@ spec:
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
+      readOnly: true
     - mountPath: /tmp
       name: tmp
   - name: kubernetes-api-proxy-reloader
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
     command: ["/kubernetes-api-proxy-reloader"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+        add:
+        - DAC_OVERRIDE
+        - SETGID
+        - SETUID
+      readOnlyRootFilesystem: true
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+      seccompProfile:
+        type: RuntimeDefault
     env:
     - name: PATH
       value: /opt/nginx-static/sbin

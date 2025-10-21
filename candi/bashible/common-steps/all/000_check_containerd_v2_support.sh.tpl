@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 MIN_KERNEL="5.8"
 MIN_SYSTEMD="244"
 MAX_RETRIES=10
@@ -27,6 +23,19 @@ has_cgroup2(){ [ "$(stat -f -c %T /sys/fs/cgroup 2>/dev/null)" = "cgroup2fs" ]; 
 can_load_erofs() {
   grep -qwe erofs /proc/filesystems && return 0
   modprobe -qn erofs 2>/dev/null
+}
+
+
+# CVE-2025-37999 impacts Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6
+is_kernel_erofs_cve_vulnerable() {
+  local kv=$(uname -r | cut -d- -f1)
+  if version_ge "$kv" "6.12.0" && ! version_ge "$kv" "6.12.29"; then
+    return 0
+  fi
+  if version_ge "$kv" "6.14.0" && ! version_ge "$kv" "6.14.7"; then
+    return 0
+  fi
+  return 1
 }
 
 function check_containerd_v2_support() {
@@ -44,6 +53,10 @@ function check_containerd_v2_support() {
   has_cgroup2 || errors+=("cgroupv2")
   can_load_erofs || errors+=("erofs")
 
+  if is_kernel_erofs_cve_vulnerable; then
+    errors+=("kernel_cve_2025_37999")
+  fi
+
   if ((${#errors[@]})); then
     errs=$(printf '%s\n' "${errors[@]}" | jq -R . | jq -cs .)
     printf "%s" "$errs"
@@ -57,16 +70,16 @@ function set_labels() {
 
   while true; do
     if (( unsupported )); then
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
     else
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
     fi
     local label_status=$?
 
     if [[ -n $errs ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
     else
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
     local annotate_status=$?
 
@@ -87,7 +100,31 @@ function set_labels() {
 
 function fail_fast() {
   local unsupported=$1
+  local errs=$2
+
   if (( unsupported )); then
+    echo "$errs" | jq -c '.[]' | while read err; do
+        err=$(echo $err | sed 's/"//g')
+        if [ "$err" == "systemd" ]; then
+          bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+        fi
+
+        if [ "$err" == "kernel" ]; then
+          bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+        fi
+
+        if [ "$err" == "cgroupv2" ]; then
+          bb-log-error "required cgroupv2 support"
+        fi
+
+        if [ "$err" == "erofs" ]; then
+          bb-log-error "required erofs kernel module"
+        fi
+
+        if [ "$err" == "kernel_cve_2025_37999" ]; then
+          bb-log-error "Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6 have issues with EROFS functionality (CVE-2025-37999). Kernel upgrade required to proceed."
+        fi
+    done
     bb-log-error "containerd V2 is not supported"
     exit 1
   fi
@@ -104,10 +141,11 @@ function main() {
   fi
 
   if [ -f /etc/kubernetes/kubelet.conf ] ; then
-    set_labels "$unsupported" "$errs"
+    set_labels "$unsupported" "$errs" || exit 1
   fi
+
   {{- if eq .cri "ContainerdV2" }}
-  fail_fast "$unsupported"
+  fail_fast "$unsupported" "$errs"
   {{ end }}
 }
 

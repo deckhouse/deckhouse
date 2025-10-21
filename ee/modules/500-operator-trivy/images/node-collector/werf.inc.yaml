@@ -1,35 +1,41 @@
+{{ $requiredCoreUtilsBinaries := list "base64" "basename" "cat" "cut" "coreutils" "echo" "env" "expand" "expr" "head" "ls" "md5sum" "numfmt" "paste" "printf" "readlink" "sha1sum" "sha256sum" "sort" "split" "stat" "tail" "tee" "test" "uname" "uniq" "wc"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /node-collector
-    to: /usr/local/bin/node-collector
-    before: setup
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
-    before: setup
-    includePaths:
-    - 'ps'
-    - 'pgrep'
-  - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-    add: /usr/lib64
-    to: /usr/lib64
-    before: setup
-    includePaths:
-    - 'libproc2.so.0*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /node-collector
+  to: /usr/local/bin/node-collector
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
+  before: setup
+- image: tools/procps
+  add: /bin/ps
+  to: /usr/bin/ps
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+- image: tools/bash
+  add: /usr/bin/bash
+  to: /bin/sh
+  before: setup
+- image: tools/coreutils
+  add: /
+  to: /
+  before: setup
+  includePaths:
+{{- range $binary := $requiredCoreUtilsBinaries }}
+  - usr/bin/{{ $binary }}
+{{ end }}
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/alt-p11-artifact
-final: false
-shell:
-  setup:
-  - apt-get update
-  - apt-get install procps -y
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -51,7 +57,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -67,6 +73,8 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go`) | indent 6 }}
   - chown root:root /node-collector
   - chmod 0700 /node-collector

@@ -55,22 +55,51 @@ search: DNS, domain, домен, clusterdomain
          - <новый clusterDomain>
    ```
 
-1. Дождитесь перезапуска `kube-apiserver`.
+1. Дождитесь перезапуска `kube-apiserver`:
+
+   ```bash
+   d8 k -n kube-system get pods -l component=kube-apiserver
+   ```
+
 1. Поменяйте `clusterDomain` на новый. Для этого выполните команду:
 
    ```bash
    d8 platform edit cluster-configuration
    ```
 
-**Важно!** Если версия вашего Kubernetes 1.20 и выше, контроллеры для работы с API-server гарантированно используют [расширенные токены для ServiceAccount'ов](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection). Это означает, что каждый такой токен содержит дополнительные поля `iss:` и `aud:`, которые включают в себя старый `clusterDomain` (например, `"iss": "https://kubernetes.default.svc.cluster.local"`).
-При смене `clusterDomain` API-server начнет выдавать токены с новым `service-account-issuer`, но благодаря произведенной конфигурации `additionalAPIAudiences` и `additionalAPIIssuers` по-прежнему будет принимать старые токены. По истечении 48 минут (80% от 3607 секунд) Kubernetes начнет обновлять выпущенные токены, при обновлении будет использован новый `service-account-issuer`. Через 90 минут (3607 секунд и немного больше) после перезагрузки kube-apiserver можете удалить конфигурацию `serviceAccount` из конфигурации `control-plane-manager`.
+1. Перезапустите поды deckhouse:
 
-**Важно!** Если вы используете модуль [istio](../../modules/istio/), после смены `clusterDomain` обязательно потребуется рестарт всех прикладных подов под управлением Istio.
+   ```bash
+   d8 k -n d8-system rollout restart deployment deckhouse
+   ```
+
+{% alert level="warning" %}
+
+**Важно.** В Kubernetes, контроллеры используют [расширенные токены для ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) для работы с API-server. Это означает, что каждый такой токен содержит дополнительные поля `iss:` и `aud:`, которые включают в себя старый `clusterDomain` (например, `"iss": "https://kubernetes.default.svc.cluster.local"`).
+При смене `clusterDomain` API-server начнет выдавать токены с новым `service-account-issuer`, но благодаря произведенной конфигурации `additionalAPIAudiences` и `additionalAPIIssuers` по-прежнему будет принимать старые токены. По истечении 48 минут (80% от 3607 секунд) Kubernetes начнет обновлять выпущенные токены, при обновлении будет использован новый `service-account-issuer`. Через 90 минут (3607 секунд плюс дополнительный буфер) после перезагрузки kube-apiserver можете удалить конфигурацию `serviceAccount` из конфигурации `control-plane-manager`.
+
+{% endalert %}
+
+{% alert level="warning" %}
+
+**Важно.** Если необходимо убрать старый домен из `clusterDomainAliases` в конфигурации kube-dns, необходимо пересоздать все поды в кластере, чтобы они запустились с новым search domain в `/etc/resolv.conf`. Это приведет к недоступности сервисов кластера, пока поды не перезапустятся.
+
+```bash
+d8 k delete pods --all-namespaces --all
+```
+
+{% endalert %}
+
+{% alert level="warning" %}
+
+**Важно.** Если вы используете модуль [istio](../../modules/istio/), после смены `clusterDomain` обязательно потребуется рестарт всех прикладных подов под управлением Istio.
+
+{% endalert %}
 
 ## Как увеличить количество подов kube-dns?
 
-Deckhouse распределяет поды kube-dns по следующему принципу: выполняется поиск узлов с метками node-role.deckhouse.io/ и node-role.kubernetes.io/, затем применяются следующие правила:
+Deckhouse распределяет поды kube-dns по следующему принципу: выполняется поиск узлов с метками `node-role.deckhouse.io/` и `node-role.kubernetes.io/`, затем применяются следующие правила:
 
-* Если в кластере есть узлы с ролью kube-dns, количество реплик вычисляется как сумма таких узлов и мастеров.
-* Если узлы kube-dns отсутствуют, производится поиск узлов с ролью system, и тогда количество реплик определяется как сумма system-узлов и мастеров.
+* Если в кластере есть узлы с ролью `kube-dns`, количество реплик вычисляется как сумма таких узлов и master-узлов, но не больше чем количество master-узлов + 2.
+* Если узлы kube-dns отсутствуют, производится поиск узлов с ролью `system`, и тогда количество реплик определяется как сумма system-узлов и master-узлов, но не больше чем количество master-узлов + 2.
 * Если в кластере присутствуют только мастер-узлы, количество реплик kube-dns будет равно числу мастеров.

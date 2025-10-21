@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -33,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type deckhouseReleaseModuleManager interface {
@@ -42,7 +42,7 @@ type deckhouseReleaseModuleManager interface {
 // DeckhouseReleaseValidationHandler creates a webhook handler for DeckhouseRelease validation
 func DeckhouseReleaseValidationHandler(
 	client client.Client,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
 ) http.Handler {
@@ -68,7 +68,7 @@ func validateDeckhouseReleaseApproval(
 	review *model.AdmissionReview,
 	obj metav1.Object,
 	client client.Client,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	moduleManager deckhouseReleaseModuleManager,
 	exts *extenders.ExtendersStack,
 ) (*kwhvalidating.ValidatorResult, error) {
@@ -78,7 +78,7 @@ func validateDeckhouseReleaseApproval(
 	}
 
 	// If the DeckhouseRelease is not approved, allow it
-	if !dr.Approved {
+	if !dr.GetManuallyApproved() {
 		return allowResult(nil)
 	}
 

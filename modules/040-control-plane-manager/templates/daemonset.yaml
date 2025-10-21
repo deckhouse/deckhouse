@@ -273,19 +273,16 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "control_plane_manager_resources" . | nindent 12 }}
-{{- end }}
 {{- range $name, $imageDigest := $images }}
       - name: {{ index $imageHolders $name }}
+        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}
-  {{- end }}
 {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

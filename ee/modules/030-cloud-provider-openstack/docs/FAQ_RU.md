@@ -60,12 +60,16 @@ spec:
 
 ## Как поднять гибридный кластер?
 
-Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера
-необходимо наличие L2-сети между всеми узлами кластера.
+Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
+
+{% alert level="info" %}
+В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
+Для этого используйте параметр [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
+{% endalert %}
 
 Чтобы поднять гибридный кластер, выполните следующие шаги:
 
-1. Удалите flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Удалите flannel из kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Включите и [настройте](configuration.html#параметры) модуль.
 3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 4. Создайте один или несколько custom resource [NodeManager](../../modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
@@ -225,7 +229,7 @@ username = {{ nova_service_user_name }}
 | **`rootDiskSize` не указан** | ❗️*Необходимо задать размер*. Без указания размера будет ошибка создания ВМ. | Локальный диск с размером из flavor               |
 | **`rootDiskSize` указан**    | Сетевой диск размером `rootDiskSize`                                         | ❗ Сетевой (rootDiskSize) и локальный (из flavor). Избегайте использования этого варианта, так как cloud-провайдер будет взимать плату за оба диска. |
 
-> Обратите внимание, что при создании узлов с типом `CloudEphemeral` в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [rootDiskSize](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+> Обратите внимание, что при создании узлов с типом `CloudEphemeral` в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
 
 #### Рекомендация для master-узлов и бастиона — сетевой диск
 

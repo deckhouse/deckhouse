@@ -27,4 +27,33 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
+{{- if .Values.userAuthn.passwordPolicy }}
+{{- $passwordPolicyName := "user-password-immutable.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $passwordPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["users"]
+  validations:
+    - expression: "oldObject == null || object.spec.password == oldObject.spec.password"
+      message: "password policy is enabled, user password field cannot be changed manually"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $passwordPolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $passwordPolicyName }}
+  validationActions: [Deny]
+{{- end }}
 {{- end }}

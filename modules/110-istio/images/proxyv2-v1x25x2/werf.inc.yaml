@@ -58,10 +58,12 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
+git:
+{{- include "image mount points" . }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install -y ca-certificates
+  - apt-get install -y ca-certificates
   - update-ca-trust
   - apt-get clean
   - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
@@ -202,9 +204,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update -y
   - |
     apt-get install -y \
     clang-14 lld-14 \

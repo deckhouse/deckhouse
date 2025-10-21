@@ -45,9 +45,24 @@
           AdditionalScrapeConfigs from Secrets will be deprecated soon.
         description: |-
           Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
-  
-          Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md) instead.
 
+          Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/implemented/202212-scrape-config.md) instead.
+    - alert: PrometheusDirectAccessDeprecated
+      expr: d8_monitoring_ingress_with_client_cert == 1
+      labels:
+        tier: application
+        severity_level: "6"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_prometheus_deprecations: "PrometheusDeprecations,tier=application,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_prometheus_deprecations: "PrometheusDeprecations,tier=application,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Deprecated Ingress with direct Prometheus access found in cluster.
+        description: |
+          The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
+          This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
+
+          To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
 - name: d8.grafana.interval_deprecation
   rules:
     - alert: GrafanaDashboardPanelIntervalDeprecated
@@ -67,7 +82,7 @@
 
           To list all deprecated panel intervals, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
           ```
 
@@ -92,7 +107,7 @@
 
           To list all deprecated alert rules, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
           ```
 
@@ -117,7 +132,7 @@
 
           To list all potentially outdated plugins, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
           ```
 

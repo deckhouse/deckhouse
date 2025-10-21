@@ -276,7 +276,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -386,7 +388,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -489,7 +493,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.15",
+      "pluginVersion": "10.4.19",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -620,7 +624,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -736,7 +742,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -842,7 +850,7 @@
           "unit": "s"
         }
       },
-      "pluginVersion": "10.4.15",
+      "pluginVersion": "10.4.19",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -1088,7 +1096,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1188,7 +1198,9 @@
           ],
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Mean",
+          "sortDesc": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1533,7 +1545,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 50
           },
           "id": 12,
           "options": {
@@ -1545,7 +1557,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -1633,7 +1647,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 50
           },
           "id": 5,
           "options": {
@@ -1645,7 +1659,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -1754,7 +1770,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 57
           },
           "id": 47,
           "options": {
@@ -1766,7 +1782,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -1890,7 +1908,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 57
           },
           "id": 49,
           "options": {
@@ -1902,7 +1920,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2026,7 +2046,7 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 60
+            "y": 64
           },
           "id": 204,
           "options": {
@@ -2142,7 +2162,7 @@
             "h": 3,
             "w": 24,
             "x": 0,
-            "y": 63
+            "y": 67
           },
           "id": 135,
           "options": {
@@ -2252,7 +2272,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 66
+            "y": 70
           },
           "id": 80,
           "options": {
@@ -2372,7 +2392,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 66
+            "y": 70
           },
           "id": 81,
           "options": {
@@ -2384,7 +2404,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2494,6 +2516,30 @@
                     }
                   }
                 ]
+              },
+              {
+                "__systemRef": "hideSeriesFrom",
+                "matcher": {
+                  "id": "byNames",
+                  "options": {
+                    "mode": "exclude",
+                    "names": [
+                      "Total"
+                    ],
+                    "prefix": "All except:",
+                    "readOnly": true
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": true
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -2501,7 +2547,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 73
+            "y": 77
           },
           "id": 2,
           "options": {
@@ -2513,7 +2559,9 @@
               ],
               "displayMode": "table",
               "placement": "bottom",
-              "showLegend": true
+              "showLegend": true,
+              "sortBy": "Mean",
+              "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2580,7 +2628,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 80
+            "y": 84
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -2627,7 +2675,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.15",
+          "pluginVersion": "10.4.19",
           "reverseYBuckets": false,
           "targets": [
             {
@@ -2690,7 +2738,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 87
+            "y": 91
           },
           "heatmap": {},
           "hideZeroBuckets": false,
@@ -2737,7 +2785,7 @@
               "unit": "s"
             }
           },
-          "pluginVersion": "10.4.15",
+          "pluginVersion": "10.4.19",
           "reverseYBuckets": false,
           "targets": [
             {

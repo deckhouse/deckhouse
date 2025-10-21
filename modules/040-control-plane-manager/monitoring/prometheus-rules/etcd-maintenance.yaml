@@ -21,7 +21,7 @@
           - Defragment the etcd database by running the following command:
 
             ```bash
-            kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+            d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
               --cacert /etc/kubernetes/pki/etcd/ca.crt \
               --cert /etc/kubernetes/pki/etcd/ca.crt \
               --key /etc/kubernetes/pki/etcd/ca.key \
@@ -61,8 +61,8 @@
           To modify `quota-backend-bytes`, set the `controlPlaneManager.etcd.maxDbSize` parameter. Before setting a new value, check the current database usage on every control plane node by running:
 
           ```
-          for pod in $(kubectl get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
-            kubectl -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
+          for pod in $(d8 k get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+            d8 k -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
               --cacert /etc/kubernetes/pki/etcd/ca.crt \
               --cert /etc/kubernetes/pki/etcd/ca.crt \
               --key /etc/kubernetes/pki/etcd/ca.key \
@@ -124,7 +124,7 @@
           To resolve this issue, defragment the etcd database by running the following command:
 
           ```bash
-          kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+          d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
             --cacert /etc/kubernetes/pki/etcd/ca.crt \
             --cert /etc/kubernetes/pki/etcd/ca.crt \
             --key /etc/kubernetes/pki/etcd/ca.key \

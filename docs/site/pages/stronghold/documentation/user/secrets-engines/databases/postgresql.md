@@ -12,15 +12,8 @@ description: |-
 
 PostgreSQL is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
-the PostgreSQL database, and also supports [Static
-Roles](/docs/secrets/databases#static-roles).
-
-See the [database secrets engine](/docs/secrets/databases) docs for
-more information about setting up the database secrets engine.
-
-The PostgreSQL secrets engine uses [pgx][pgxlib]. Connection string
-options, including SSL options, can be found in the [pgx][pgxlib] and
-[PostgreSQL connection string][pg_conn_docs] documentation.
+the PostgreSQL database, and also supports Static
+Roles.
 
 ## Capabilities
 
@@ -83,14 +76,3 @@ the proper permission, it can generate credentials.
     password           SsnoaA-8Tv4t34f41baD
     username           v-strongholduse-my-role-x
     ```
-
-## API
-
-The full list of configurable options can be seen in the [PostgreSQL database
-plugin API](/api-docs/secret/databases/postgresql) page.
-
-For more information on the database secrets engine's HTTP API please see the
-[Database secrets engine API](/api-docs/secret/databases) page.
-
-[pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
-[pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING

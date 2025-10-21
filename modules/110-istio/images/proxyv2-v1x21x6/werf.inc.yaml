@@ -76,6 +76,8 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     user: "1337:1337"
@@ -265,9 +267,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update -y
   - |
     apt-get install -y \
     apt-https curl jq tzdata \

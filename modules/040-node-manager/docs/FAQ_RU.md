@@ -87,13 +87,13 @@ search: добавить ноду в кластер, добавить узел �
 1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер:
 
    ```shell
-   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
    Проверьте версию K8s. Если версия >= 1.25, создайте токен `node-group`:
 
    ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
    Сохраните полученный токен, и добавьте в поле `token:` playbook'а Ansible на дальнейших шагах.
@@ -101,7 +101,7 @@ search: добавить ноду в кластер, добавить узел �
 1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount'а, которым управляет Deckhouse:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+   d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
@@ -183,13 +183,34 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Можно ли удалить StaticInstance?
 
-`StaticInstance`, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
+StaticInstance, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
 
-Чтобы удалить `StaticInstance` находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 
-1. Добавьте метку `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
-1. Дождитесь, пока `StaticInstance` перейдет в статус `Pending`.
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+
+   Пример команды для добавления лейбла:
+
+   ```shell
+   d8 k label staticinstance d8cluster-worker node.deckhouse.io/allow-bootstrap=false
+   ```
+
+1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+
+   Для проверки статуса StaticInstance используйте команду:
+
+   ```shell
+   d8 k get staticinstances
+   ```
+
 1. Удалите `StaticInstance`.
+
+   Пример команды для удаления StaticInstance:
+
+   ```shell
+   d8 k delete staticinstance d8cluster-worker
+   ```
+
 1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
 
 ### Как изменить IP-адрес StaticInstance?
@@ -209,8 +230,8 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Применение изменений потребует некоторого времени.
@@ -226,8 +247,8 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Запустите на узле скрипт очистки:
@@ -240,7 +261,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Как понять, что что-то пошло не так?
 
-Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
+Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `d8 k get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
 Чтобы проверить логи сервиса `bashible`, выполните на узле следующую команду:
 
@@ -263,26 +284,26 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 1. Найдите узел, который находится в стадии бутстрапа:
 
    ```shell
-   kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
 1. Получите информацию о параметрах подключения для просмотра логов:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -417,7 +438,7 @@ spec:
 
 При изменении конфигурации Deckhouse (как в модуле `node-manager`, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Пересоздание происходит только после изменения ресурсов `InstanceClass` или `NodeGroup`.
 
-Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `d8 k annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
 ## Как выделить узлы под специфические нагрузки?
 
@@ -433,7 +454,7 @@ spec:
 {% alert level="info" %}
 Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
-Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
+Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в массив [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
@@ -519,7 +540,7 @@ capiEmergencyBrake: true
 Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением Deckhouse выполнить команду:
 
 ```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
+d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
@@ -562,13 +583,13 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -576,6 +597,51 @@ spec:
 {% endalert %}
 
 После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
+
+## Почему изменение CRI могло не примениться?
+
+При попытке сменить CRI изменения могут не вступить в силу. Наиболее частая причина — наличие на узлах специальных меток (лейблов) `node.deckhouse.io/containerd-v2-unsupported` и `node.deckhouse.io/containerd-config=custom`.
+
+Метка `node.deckhouse.io/containerd-v2-unsupported` выставляется, если узел не соответствует хотя бы одному из следующих требований:
+
+- Версия ядра — не ниже 5.8;
+- Версия systemd — не ниже 244;
+- Активирован cgroup v2;
+- Доступна файловая система EROFS.
+
+Метка `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `conf.d` или `conf2.d`. В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+
+Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
+
+Если нет возможности удалить ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), вносящий изменения в конфигурацию containerd и несовместимый с версией containerd v2, используйте универсальный шаблон:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Скрипт для изменения конфигурации для ContainerdV2>
+    {{- else }}
+  # <Скрипт для изменения конфигурации для ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Кроме того, для смены CRI может понадобиться снять пользовательскую метку `node.deckhouse.io/containerd-config=custom`. Сделать это можно с помощью команды:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGroup, где меняется CRI>=); do d8 k label $node node.deckhouse.io/containerd-config-; done
+```
 
 ## Как изменить CRI для всего кластера?
 
@@ -585,20 +651,20 @@ spec:
 
 Для изменения CRI для всего кластера, необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфигурационном файле `cluster-configuration`.
 
-Также возможно выполнить эту операцию с помощью `kubectl patch`.
+Также возможно выполнить эту операцию с помощью `d8 k patch`.
 
 * Для `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 Если необходимо, чтобы отдельные NodeGroup использовали другой CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
@@ -615,13 +681,13 @@ spec:
 1. Чтобы определить, какой узел в текущий момент обновляется в master NodeGroup, используйте следующую команду:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Подтвердите остановку (disruption) для master-узла, полученного на предыдущем шаге:
 
    ```shell
-   kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Дождитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
@@ -703,9 +769,9 @@ spec:
 
 ### Как добавить конфигурацию для дополнительного registry?
 
-В containerd существует два способа описания конфигурации registry: **старый** и **новый**.
+В containerd существует два способа описания конфигурации registry: **устаревший** и **актуальный**.
 
-Для проверки наличия **старого** способа конфигурации выполните на узлах кластера следующие команды:
+Для проверки наличия **устаревшего** способа конфигурации выполните на узлах кластера следующие команды:
 
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
@@ -718,7 +784,7 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 #   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
-Для проверки наличия **нового** способа конфигурации выполните на узлах кластера следующую команду:
+Для проверки наличия **актуального** способа конфигурации выполните на узлах кластера следующую команду:
 
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
@@ -727,14 +793,14 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 # config_path = "/etc/containerd/registry.d"
 ```
 
-#### Старый способ
+#### Устаревший способ
 
 {% alert level="warning" %}
 Этот формат конфигурации containerd устарел (deprecated).
 {% endalert %}
 
 {% alert level="info" %}
-Используется в containerd v1, если Deckhouse не управляется модулем Registry (режим [`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если Deckhouse не управляется с помощью модуля [registry](/modules/registry/).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
@@ -764,9 +830,9 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса containerd.
 {% endalert %}
 
-##### Как добавить авторизацию в дополнительный registry (старый способ)?
+##### Как добавить авторизацию в дополнительный registry (устаревший способ)?
 
-Пример добавления авторизации в дополнительный registry при использовании **старого** способа конфигурации:
+Пример добавления авторизации в дополнительный registry при использовании **устаревшего** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -814,9 +880,9 @@ spec:
     EOF
 ```
 
-##### Как настроить сертификат для дополнительного registry (старый способ)?
+##### Как настроить сертификат для дополнительного registry (устаревший способ)?
 
-Пример настройки сертификата для дополнительного registry при использовании **старого** способа конфигурации:
+Пример настройки сертификата для дополнительного registry при использовании **устаревшего** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -869,12 +935,12 @@ spec:
 ```
 
 {% alert level="info" %}
-Помимо сontainerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
+Помимо containerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
 {% endalert %}
 
-##### Как добавить TLS skip verify (старый способ)?
+##### Как добавить TLS skip verify (устаревший способ)?
 
-Пример добавления TLS skip verify при использовании **старого** способа конфигурации:
+Пример добавления TLS skip verify при использовании **устаревшего** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -928,7 +994,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль Registry (например, в режиме [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -947,7 +1013,7 @@ crictl pull private.registry.example/image/repo:tag
 
 ```toml
 [host]
-  # Mirror 1
+  # Mirror 1.
   [host."https://${REGISTRY_URL_1}"]
     capabilities = ["pull", "resolve"]
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
@@ -956,7 +1022,7 @@ crictl pull private.registry.example/image/repo:tag
       username = "${USERNAME}"
       password = "${PASSWORD}"
 
-  # Mirror 2
+  # Mirror 2.
   [host."http://${REGISTRY_URL_2}"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
@@ -966,9 +1032,9 @@ crictl pull private.registry.example/image/repo:tag
 Изменения конфигураций не приводят к перезапуску сервиса containerd.
 {% endalert %}
 
-##### Как добавить авторизацию в дополнительный registry (новый способ)?
+##### Как добавить авторизацию в дополнительный registry (актуальный способ)?
 
-Пример добавления авторизации в дополнительный registry при использовании **нового** способа конфигурации:
+Пример добавления авторизации в дополнительный registry при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -976,7 +1042,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1010,9 +1076,9 @@ spec:
     EOF
 ```
 
-##### Как настроить сертификат для дополнительного registry (новый способ)?
+##### Как настроить сертификат для дополнительного registry (актуальный способ)?
 
-Пример настройки сертификата для дополнительного registry? при использовании **нового** способа конфигурации:
+Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1020,7 +1086,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1063,9 +1129,9 @@ spec:
 Помимо containerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
 {% endalert %}
 
-##### Как добавить TLS skip verify (новый способ)?
+##### Как добавить TLS skip verify (актуальный способ)?
 
-Пример добавления TLS skip verify при использовании **нового** способа конфигурации:
+Пример добавления TLS skip verify при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1073,7 +1139,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1108,13 +1174,13 @@ spec:
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
 
 ```bash
-# Через cri интерфейс
+# Через cri интерфейс.
 crictl pull private.registry.example/image/repo:tag
 
-# Через ctr с указанием директории с конфигурациями
+# Через ctr с указанием директории с конфигурациями.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
 
-# Через ctr для http репозитория
+# Через ctr для http репозитория.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
@@ -1310,7 +1376,7 @@ metadata:
 Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
 {% endalert %}
 
-Чтобы добавить GPU-узел в кластер, выполните следюущие действия:
+Чтобы добавить GPU-узел в кластер, выполните следующие действия:
 
 1. Создайте NodeGroup для GPU-узлов.
 
@@ -1322,7 +1388,7 @@ metadata:
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре
+     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1336,7 +1402,7 @@ metadata:
          effect: NoSchedule
    ```
 
-   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.   customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
    Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
@@ -1454,7 +1520,7 @@ metadata:
    Поды NVIDIA в `d8-nvidia-gpu`:
 
    ```bash
-   kubectl -n d8-nvidia-gpu get pod
+   d8 k -n d8-nvidia-gpu get pod
    ```
 
    **Ожидаемый корректный вывод (пример):**
@@ -1470,7 +1536,7 @@ metadata:
    Поды NFD в `d8-cloud-instance-manager`:
 
    ```bash
-   kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
    ```
 
    **Ожидаемый корректный вывод (пример):**
@@ -1485,7 +1551,7 @@ metadata:
    Публикация ресурсов на узле:
 
    ```bash
-   kubectl describe node <имя-ноды>
+   d8 k describe node <имя-узла>
    ```
 
    **Фрагмент вывода (пример):**
@@ -1531,7 +1597,7 @@ metadata:
    Проверьте логи командой:
 
    ```bash
-   kubectl logs job/nvidia-cuda-test
+   d8 k logs job/nvidia-cuda-test
    ```
 
    Пример вывода:
@@ -1585,7 +1651,7 @@ metadata:
    Проверьте логи командой:
 
    ```shell
-   kubectl logs job/gpu-operator-test
+   d8 k logs job/gpu-operator-test
    ```
 
    Пример вывода:
@@ -1605,13 +1671,13 @@ Deckhouse Kubernetes Platform автоматически устанавлива�
 
 ## Какие режимы работы GPU поддерживаются?
 
-Поддерживаются следюущие режимы работы GPU:
+Поддерживаются следующие режимы работы GPU:
 
 - **Exclusive** — узел публикует ресурс `nvidia.com/gpu`; каждому поду выделяется целый GPU.
 - **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`.
 
-Примеры см. в разделе [Примеры → GPU-узлы](../node-manager/examples.html#пример-gpu-nodegroup).
+Примеры приведены в разделе [Управление узлами: примеры](../node-manager/examples.html#пример-gpu-nodegroup).
 
 ## Как посмотреть доступные MIG-профили в кластере?
 
@@ -1620,7 +1686,7 @@ Deckhouse Kubernetes Platform автоматически устанавлива�
 Предустановленные профили находятся в ConfigMap `mig-parted-config` в пространстве имен `d8-nvidia-gpu`. Для их просмотра используйте команду:
 
 ```bash
-kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
 ```
 
 В разделе mig-configs вы увидите конкретные модели ускорителей (по PCI-ID) и список совместимых MIG-профилей для каждой из них.
@@ -1652,7 +1718,7 @@ kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config
 1. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
 
    ```bash
-   kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
+   d8 k -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
    nvidia-smi -L
    ```
 

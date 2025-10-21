@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
@@ -41,7 +43,7 @@ import (
 )
 
 const (
-	kubeEndpointsSnap         = "endpoinds"
+	kubeEndpointsSliceSnap    = "endpoints-slice"
 	kubeServiceSnap           = "service"
 	kubeAPIServK8sLabeledSnap = "apiserver-k8s-app"
 	kubeAPIServCPLabeledSnap  = "apiserver-cp"
@@ -104,9 +106,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 
 		{
-			Name:       kubeEndpointsSnap,
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			Name:       kubeEndpointsSliceSnap,
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes"},
 			},
@@ -142,30 +144,31 @@ func applyAPIServerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var endpoints v1core.Endpoints
+	var endpointSlices discoveryv1.EndpointSlice
 
-	err := sdk.FromUnstructured(obj, &endpoints)
+	err := sdk.FromUnstructured(obj, &endpointSlices)
 	if err != nil {
 		return nil, err
 	}
 
 	addresses := make([]string, 0)
+	ports := make([]int32, 0)
 
-	for _, s := range endpoints.Subsets {
-		ports := make([]int32, 0)
-		for _, port := range s.Ports {
-			if port.Name == "https" {
-				ports = append(ports, port.Port)
-			}
+	for _, port := range endpointSlices.Ports {
+		if port.Name != nil && *port.Name == "https" {
+			ports = append(ports, *port.Port)
 		}
+	}
 
-		for _, addrObj := range s.Addresses {
+	for _, endpoints := range endpointSlices.Endpoints {
+		for _, addr := range endpoints.Addresses {
 			for _, port := range ports {
-				addr := fmt.Sprintf("%s:%d", addrObj.IP, port)
-				addresses = append(addresses, addr)
+				addrWithPort := fmt.Sprintf("%s:%d", addr, port)
+				addresses = append(addresses, addrWithPort)
 			}
 		}
 	}
+
 	return addresses, nil
 }
 
@@ -228,7 +231,7 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 		return nil, err
 	}
 
-	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, kubeServiceSnap)
+	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, kubeServiceSnap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeServiceSnap, err)
 	}
@@ -247,9 +250,9 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 	return nil, err
 }
 
-func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
-	serverK8sLabeledSnap := input.NewSnapshots.Get(kubeAPIServK8sLabeledSnap)
-	serverCPLabeledSnap := input.NewSnapshots.Get(kubeAPIServCPLabeledSnap)
+func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, error) {
+	serverK8sLabeledSnap := input.Snapshots.Get(kubeAPIServK8sLabeledSnap)
+	serverCPLabeledSnap := input.Snapshots.Get(kubeAPIServCPLabeledSnap)
 
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
@@ -260,9 +263,9 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		input.Logger.Info("k8s version. Pods snapshots is empty")
 	}
 
-	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, kubeEndpointsSnap)
+	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.Snapshots, kubeEndpointsSliceSnap)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSnap, err)
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSliceSnap, err)
 	}
 
 	var endpoints []string
@@ -303,14 +306,11 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 	return endpoints, nil
 }
 
-func k8sVersions(input *go_hook.HookInput) error {
+func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("k8s version. Start discovery")
-	endpoints, err := apiServerEndpoints(input)
+	endpoints, err := apiServerEndpoints(ctx, input)
 	if err != nil {
 		return err
-	}
-	if endpoints == nil {
-		return nil
 	}
 
 	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
@@ -349,8 +349,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	}
 
 	if len(versions) == 0 {
-		input.Logger.Info("k8s version. Versions is empty. Skip")
-		return nil
+		return fmt.Errorf("k8s versions not found")
 	}
 
 	minVerStr := fmt.Sprintf("%d.%d.%d", minVer.Major(), minVer.Minor(), minVer.Patch())

@@ -24,7 +24,7 @@ description: "Установка и управление системой мон
 
 В целом, сервер Prometheus делает две ключевых вещи — **собирает метрики** и **выполняет правила**:
 
-* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
+* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
 * Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
   * или шлет алерты
   * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)
@@ -48,7 +48,7 @@ description: "Установка и управление системой мон
 
 * В целом Prometheus работает следующим образом:
 
-  ![Работа Prometheus](../../images/operator-prometheus/targets.png)
+  ![Работа Prometheus](images/targets.png)
 
   * **(1)** Prometheus читает секцию конфигурации `scrape_configs`, согласно которой настраивает свой внутренний механизм Service Discovery
   * **(2)** Механизм Service Discovery взаимодействует с API Kubernetes (в основном — получает endpoint`ы)
@@ -134,7 +134,7 @@ description: "Установка и управление системой мон
 
 ### Что в Pod'е с Prometheus'ом?
 
-![Что в Pod Prometheus](../../images/operator-prometheus/pod.png)
+![Что в Pod Prometheus](images/pod.png)
 
 * Три контейнера:
   * `prometheus` — сам Prometheus
@@ -149,7 +149,7 @@ description: "Установка и управление системой мон
 
 ### Как обрабатываются Service Monitor'ы?
 
-![Как обрабатываются Service Monitor'ы](../../images/operator-prometheus/servicemonitors.png)
+![Как обрабатываются Service Monitor'ы](images/servicemonitors.png)
 
 1. Prometheus Operator читает (а также следит за добавлением/удалением/изменением) Service Monitor'ы (какие именно Service Monitor'ы — указано в самом ресурсе `prometheus`, см. подробней [официальную документацию](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusspec)).
 1. Для каждого Service Monitor'а, если в нем НЕ указан конкретный список namespace'ов (указано `any: true`), Prometheus Operator вычисляет (обращаясь к API Kubernetes) список namespace'ов, в которых есть Service'ы (подходящие под указанные в Service Monitor'е label'ы).
@@ -160,7 +160,7 @@ description: "Установка и управление системой мон
 
 ### Как обрабатываются кастомные ресурсы с *rule'ами*?
 
-![Как обрабатываются кастомные ресурсы с rule'ами](../../images/operator-prometheus/rules.png)
+![Как обрабатываются кастомные ресурсы с rule'ами](images/rules.png)
 
 1. Prometheus Operator следит за PrometheusRule'ами (подходящими под указанный в ресурсе `prometheus` `ruleSelector`).
 1. Если появился новый (или был удален существующий) PrometheusRule — Prometheus Operator обновляет `prometheus.yaml` (а дальше срабатывает логика в точности соответствующая обработке Service Monitor'ов, которая описана выше).

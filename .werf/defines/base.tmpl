@@ -257,6 +257,14 @@ import:
   add: /usr/bin/rev
   to: /usr/bin/rev
   before: install
+- image: tools/diffutils
+  add: /usr/bin/diff
+  to: /usr/bin/diff
+  before: install
+- image: tools/procps
+  add: /bin/ps
+  to: /bin/ps
+  before: install
 shell:
   install:
   {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
@@ -271,26 +279,6 @@ imageSpec:
     env: { "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
 {{- end }}
 
-
-# base-for-go image
-# . is dict have keys:
-#   Files - .Files.Get
-#   prefix - Files.Get prefix
-#   k8sVersions - list of dict versions k8s
-#   CandiVersionMap - dict CandiVersionMap from werf.yaml
-{{- define "base_for_go_image" }}
-{{- $context := . -}}
-
-image: base-for-go
-fromImage: builder/golang-alpine
-import:
-{{ include "base components imports" (dict "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap) }}
-shell:
-  beforeInstall:
-  - apk add --no-cache findutils sed make git coreutils libcap-setcap bash
-  {{- include "base components" (dict "Files" $context.Files "prefix" $context.prefix "k8sVersions" $context.k8sVersions) | nindent 2 }}
-
-{{- end }}
 
 # base-k8s-versions
 # In base_k8s_versions the list of versions from .CandiVersionMap.k8s is traversed and

@@ -8,8 +8,8 @@ CandI subsystem consists of the following components:
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
-  * [**control-plane-manager**](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) — `control-plane` maintaining.
-  * [**node-manager**](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) — swiss knife to create and update cloud and bare metal nodes.
+  * [**control-plane-manager**](https://deckhouse.io/modules/control-plane-manager/) — `control-plane` maintaining.
+  * [**node-manager**](https://deckhouse.io/modules/node-manager/) — swiss knife to create and update cloud and bare metal nodes.
   * **cloud-provider-** — modules to integrate different cloud with Deckhouse.
 * Installer or **dhctl** — tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 

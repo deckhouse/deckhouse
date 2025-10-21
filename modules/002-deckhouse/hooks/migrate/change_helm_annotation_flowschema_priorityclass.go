@@ -99,7 +99,7 @@ func changeAnnotationUnstructured(
 	return nil
 }
 
-func changeAnnotation(input *go_hook.HookInput, dc dependency.Container) error {
+func changeAnnotation(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	ctx := context.Background()
 	val := input.Values.Get("global.discovery.kubernetesVersion").String()
 	ver, err := semver.NewVersion(val)

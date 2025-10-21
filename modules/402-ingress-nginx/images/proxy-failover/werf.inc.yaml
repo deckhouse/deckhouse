@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -45,7 +45,7 @@ git:
     - '**/*.tpl'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
 - image: {{ .ModuleName }}/build-proxy-failover-artifact
   add: /src/proxy-failover-controller
@@ -54,6 +54,17 @@ import:
 - image: {{ .ModuleName }}/nginx-static-artifact
   add: /opt/nginx-static
   before: setup
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: setup
+git:
+{{- include "image mount points" $ }}
+shell:
+  setup:
+    - /tools/setcap cap_net_raw,cap_net_admin,cap_net_bind_service=+eip /proxy-failover-controller  # Need for run from deckhouse user
 imageSpec:
   config:
+    workingDir: /tools
+    clearWorkingDir: true # a hack to delete the setcap binary from final image
     entrypoint: ["/proxy-failover-controller"]

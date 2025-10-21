@@ -22,7 +22,7 @@ spec:
 EOF
 ```
 
-For detailed description of kube-dns settings, refer to the [corresponding article](todo,mc).
+For detailed description of kube-dns settings, refer to the [corresponding article](/modules/kube-dns/configuration.html).
 
 ## DNS configuration example
 
@@ -61,7 +61,7 @@ spec:
 EOF
 ```
 
-For detailed description of kube-dns settings, refer to the [corresponding article](todo,mc).
+For detailed description of kube-dns settings, refer to the [corresponding article](/modules/kube-dns/configuration.html).
 
 ## Replace a cluster domain
 

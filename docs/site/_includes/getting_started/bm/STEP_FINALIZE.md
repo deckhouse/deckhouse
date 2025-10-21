@@ -31,7 +31,7 @@ sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/
 </div>
   </li>
   <li>
-<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+<p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -59,14 +59,14 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
   <li>
     Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
+  Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -91,7 +91,58 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
+    
+<div class="tabs">
+        <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');">
+        CAPS
+        </a>
+        <a id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');">
+        Bootstrap script
+        </a>
+</div>
+
+  <div id="block_bootstrap" class="tabs__bootstrap" style="display: none;">
+  <ul>
+  <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
+<div markdown="1">
+```bash
+sudo -i d8 k create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+```
+</div>
+  </li>
+  <li><p>Get the script code for adding and configuring a node in Base64 encoding.</p>
+  <p>To do so, run the following command on the <strong>master node</strong>:</p>
+<div markdown="1">
+```shell
+export NODE_GROUP=worker
+sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+```
+</div>
+  </li>
+  <li><p>On the <strong>prepared virtual machine</strong>, run the following command, inserting the Base64-encoded script code obtained in the previous step:</p>
+<div markdown="1">
+```shell
+echo <Base64-CODE> | base64 -d | bash
+```
+  </div>
+  </li>
+  </ul>
+  </div>
+  <div id="block_caps" class="tabs__caps">
+  <ul>
+<li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - << EOF
@@ -109,7 +160,7 @@ spec:
 EOF
 ```
 </div>
-  </li>
+</li>
   <li>
     <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -119,7 +170,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
@@ -144,6 +195,24 @@ cat /dev/shm/caps-id.pub
   </li>
   <li>
     <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
+{% offtopic title="If you are using CentOS or Rocky Linux…" %}
+In RHEL-based (Red Hat Enterprise Linux) operating systems, the caps user must be added to the wheel group. To do this, run the following command, specifying the public part of the SSH key obtained in the previous step:
+<div markdown="1">
+```bash
+# Specify the public part of the user SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+</div>
+Next, go to the next step, **you do not need to run the command below**.
+{% endofftopic %}
 <div markdown="1">
 ```bash
 # Specify the public part of the user SSH key.
@@ -160,7 +229,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 <div markdown="1">
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
@@ -180,6 +249,9 @@ spec:
 EOF
 ```
 </div>
+  </li>
+  </ul>
+  </div>
   </li>
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>

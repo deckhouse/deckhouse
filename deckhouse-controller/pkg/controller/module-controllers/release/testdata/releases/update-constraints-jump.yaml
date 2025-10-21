@@ -1,0 +1,126 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.67.5
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: demo
+  version: 1.67.5
+  weight: 900
+status:
+  approved: true
+  phase: Deployed
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.68.4
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: demo
+  version: 1.68.4
+  weight: 900
+status:
+  approved: true
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.69.10
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: demo
+  version: 1.69.10
+  weight: 900
+status:
+  approved: true
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.70.11
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: demo
+  version: 1.70.11
+  weight: 900
+status:
+  approved: true
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.75.2
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: demo
+  version: 1.75.2
+  weight: 900
+  update:
+    versions:
+      - from: 1.67
+        to: 1.75
+status:
+  approved: true
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: foxtrot-suitable
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/team/foxtrot/modules
+    scheme: HTTPS
+status:
+  message: ""
+  moduleErrors: []
+  modules:
+    - name: demo
+      policy: foxtrot-alpha-suitable
+  modulesCount: 1
+  syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: demo
+status:
+  phase: Ready
+
+

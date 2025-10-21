@@ -17,6 +17,7 @@ limitations under the License.
 package checker
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -68,7 +69,7 @@ var _ = sdk.RegisterFunc(
 			},
 		},
 	},
-	func(input *go_hook.HookInput) error {
+	func(_ context.Context, input *go_hook.HookInput) error {
 		if input.Values.Get(valuesInitializedPath).Bool() {
 			return nil
 		}

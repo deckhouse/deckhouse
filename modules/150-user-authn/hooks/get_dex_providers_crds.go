@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -53,14 +54,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexProviders)
 
-func getDexProviders(input *go_hook.HookInput) error {
-	providers, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.NewSnapshots, "providers")
+func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
+	providers, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "providers")
 
 	if err != nil {
 		input.Values.Set("userAuthn.internal.providers", []interface{}{})
 		return nil
 	}
 
-	input.Values.Set("userAuthn.internal.providers", providers)
+	// Filter out providers with spec.enabled == false. Absence of the field is treated as enabled=true.
+	filtered := make([]map[string]interface{}, 0, len(providers))
+	for _, p := range providers {
+		// p corresponds to the .spec map with injected "id"
+		if enabledRaw, ok := p["enabled"]; ok {
+			if enabledBool, ok := enabledRaw.(bool); ok && !enabledBool {
+				// skip disabled provider
+				continue
+			}
+		}
+		// Keep 'enabled' field in internal values for transparency and debugging
+		filtered = append(filtered, p)
+	}
+
+	input.Values.Set("userAuthn.internal.providers", filtered)
 	return nil
 }

@@ -1,22 +1,45 @@
 ---
 title: "Модуль registry"
-description: ""
+description: "Управление конфигурацией registry компонентов DKP и организация внутреннего хранилища образов контейнеров (container registry, registry)."
 ---
 
 ## Описание
 
-Модуль реализует внутреннее хранилище образов контейнеров (container registry, registry).
+Модуль отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров (container registry, registry).
 
-Внутренний registry позволяет оптимизировать загрузку и хранение образов, а также помогает обеспечивать высокую доступность и отказоустойчивость Deckhouse Kubernetes Platform.
+Внутренний registry оптимизирует загрузку и хранение образов, а также повышает высокую доступность и отказоустойчивость Deckhouse Kubernetes Platform.
 
 Модуль работает в следующих режимах:
 
-- `Direct` — работа с использованием внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
-- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется по адресу, который можно [задать при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или [изменить в развернутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+- `Direct` — использование внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
+- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется напрямую к внешнему registry.
+  Существует 2 вида режима `Unmanaged`:
+  - Конфигурируемый - режим, управляемый с помощью модуля `registry`. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
+  - Неконфигурируемый (deprecated) - режим используемый по умолчанию. Параметры конфигурации задаются [при установке кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развёрнутом кластере](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) с помощью утилиты `helper change registry` (deprecated).
 
-{% alert level="info" %}
-Для работы в режиме `Direct` необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration)
-{% endalert %}
+## Ограничения и особенности использования модуля
+
+Модуль `registry` имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
+
+### Ограничения при установке кластера
+
+Bootstrap кластера DKP поддерживается только в неконфигурируемом `Unmanaged` режиме. Настройки registry во время bootstrap задаются через [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
+
+Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
+
+### Ограничения по условиям работы
+
+Модуль работает при соблюдении следующих условий:
+
+- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+- Кластер полностью управляется DKP. В Managed Kubernetes кластерах он работать не будет.
+
+### Ограничения по переключению режимов
+
+Ограничения по переключению режимов следующие:
+
+- При первом переключении необходимо выполнить миграцию пользовательских конфигураций реестра. Подробнее — в разделе [«Модуль registry: FAQ»](./faq.html).
+- Переключение в неконфигурируемый `Unmanaged` режим доступно только из `Unmanaged` режима. Подробнее — в разделе [«Модуль registry: FAQ»](./faq.html).
 
 ## Архитектура режима Direct
 
@@ -27,7 +50,7 @@ description: ""
 В случае таких компонентов, как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к registry напрямую, запросы будут идти через in-cluster proxy, расположенный на master-узлах.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![direct](../../images/registry-module/direct-ru.png)
+![direct](images/direct-ru.png)
 
 <!-- ### Proxy режим
 Данный режим позволяет registry выступать в качестве промежуточного прокси-сервера между клиентом и удалённым реестром, оптимизируя доступ к часто используемым образам и уменьшая нагрузку на сеть.

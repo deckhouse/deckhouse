@@ -37,7 +37,7 @@ spec:
 EOF
 ```
 
-For configuration details on the `IngressNginxController` resource, refer to the [corresponding article](../../../../reference/cr/ingressnginxcontroller.html).
+For configuration details on the `IngressNginxController` resource, refer to the [corresponding article](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
 ### HTTPS termination
 

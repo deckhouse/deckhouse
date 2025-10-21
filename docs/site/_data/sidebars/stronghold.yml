@@ -13,9 +13,9 @@ entries:
             ru: Редакции
           url: /stronghold/documentation/about/editions.html
         - title:
-            en: Update channels
+            en: Release channels
             ru: Каналы обновлений
-          url: /stronghold/documentation/about/update-channels.html
+          url: /stronghold/documentation/about/release-channels.html
         - title:
             en: Requirements
             ru: Требования
@@ -86,7 +86,7 @@ entries:
                         ru: Добавление узла
                       url: /stronghold/documentation/admin/platform-management/node-management/adding-node.html
                     - title:
-                        en: Node сonfiguration
+                        en: Node configuration
                         ru: Настройка узлов
                       folders:
                         - title:
@@ -129,10 +129,6 @@ entries:
                         en: Master nodes
                         ru: Мастер узлы
                       url: /stronghold/documentation/admin/platform-management/control-plane-settings/masters.html
-                    - title:
-                        en: Components placement
-                        ru: Размещение компонентов
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/placement-management.html
                 - title:
                     en: Network management
                     ru: Управление сетью
@@ -218,21 +214,25 @@ entries:
             ru: Основные понятия
           folders:
             - title:
-                en: Authentication
-                ru: Аутентификация
-              url: /stronghold/documentation/user/concepts/auth.html
-            - title:
-                en: Identity
-                ru: Сущности
-              url: /stronghold/documentation/user/concepts/identity.html
-            - title:
                 en: Leases
                 ru: Аренда
               url: /stronghold/documentation/user/concepts/lease.html
             - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /stronghold/documentation/user/concepts/auth.html
+            - title:
+                en: Response wrapping
+                ru: Обёртывание ответа
+              url: /stronghold/documentation/user/concepts/response-wrapping.html
+            - title:
                 en: Policy
                 ru: Политики
               url: /stronghold/documentation/user/concepts/policy.html
+            - title:
+                en: Identity
+                ru: Сущности
+              url: /stronghold/documentation/user/concepts/identity.html
             - title:
                 en: Token
                 ru: Токен
@@ -381,6 +381,10 @@ entries:
                     en: MySQL
                     ru: MySQL
                   url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
+        - title:
+            en: Automatic backup API guide
+            ru: Руководство по API автоматического резервного копирования
+          url: /stronghold/documentation/user/auto-snapshot.html
     - title:
         en: Reference
         ru: Справка
@@ -392,4 +396,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/cli/d8/
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/

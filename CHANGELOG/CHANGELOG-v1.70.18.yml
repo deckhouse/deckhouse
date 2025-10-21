@@ -1,0 +1,7 @@
+istio:
+  fixes:
+    - summary: >-
+        The metrics-exporter's template is fixed, it blocked the main queue if 
+        `controlPlane.nodeSelector` setting was configured.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15146
+

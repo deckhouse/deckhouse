@@ -25,6 +25,8 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}
+  # CSE
+  - rm -rf /src/linux/drivers/gpu/drm/ci
   - rm -rf /src/linux/.git
 ---
 image: {{ .ModuleName }}/bpftool-artifact
@@ -35,6 +37,15 @@ import:
   add: /src
   to: /src
   before: install
+- image: libs/libcap-v1.2.69
+  add: /usr/lib
+  to: /usr/lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.69
 shell:
   install:
   - export GCC_VERSION=11

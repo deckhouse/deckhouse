@@ -20,6 +20,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -55,8 +56,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, patchClusterConfiguration)
 
-func patchClusterConfiguration(input *go_hook.HookInput) error {
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "provider_cluster_configuration")
+func patchClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.Snapshots, "provider_cluster_configuration")
 	if err != nil {
 		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
 	}

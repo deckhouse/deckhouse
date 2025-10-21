@@ -88,4 +88,16 @@ resource "vcd_vapp_vm" "node" {
     "user-data"       = var.cloudConfig
     "disk.EnableUUID" = "1"
   }
+
+  dynamic "metadata_entry" {
+    for_each = local.metadata
+
+    content {
+      type        = "MetadataStringValue"
+      is_system   = false
+      user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
+    }
+  }
 }

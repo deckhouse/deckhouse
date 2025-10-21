@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -206,9 +207,9 @@ type StandbyNodeGroupForValues struct {
 	Taints        []v1.Taint `json:"taints"`
 }
 
-func discoverStandbyNGHandler(input *go_hook.HookInput) error {
+func discoverStandbyNGHandler(_ context.Context, input *go_hook.HookInput) error {
 	standbyNodeGroups := make([]StandbyNodeGroupForValues, 0)
-	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[StandbyNodeGroupInfo](input.NewSnapshots.Get("node_groups")) {
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[StandbyNodeGroupInfo](input.Snapshots.Get("node_groups")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'node_groups' snapshot: %w", err)
 		}
@@ -219,7 +220,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		}
 
 		actualStandby := 0
-		for standbyPod, err := range sdkobjectpatch.SnapshotIter[StandbyPodInfo](input.NewSnapshots.Get("standby_pods")) {
+		for standbyPod, err := range sdkobjectpatch.SnapshotIter[StandbyPodInfo](input.Snapshots.Get("standby_pods")) {
 			if err != nil {
 				return fmt.Errorf("cannot iterate over 'standby_pods' snapshot: %w", err)
 			}
@@ -236,7 +237,7 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			nodeAllocatableCPU    = resource.MustParse("4000m")
 			nodeAllocatableMemory = resource.MustParse("8Gi")
 		)
-		for standbyNode, err := range sdkobjectpatch.SnapshotIter[StandbyNodeInfo](input.NewSnapshots.Get("nodes")) {
+		for standbyNode, err := range sdkobjectpatch.SnapshotIter[StandbyNodeInfo](input.Snapshots.Get("nodes")) {
 			if err != nil {
 				return fmt.Errorf("cannot iterate over 'nodes' snapshot: %w", err)
 			}

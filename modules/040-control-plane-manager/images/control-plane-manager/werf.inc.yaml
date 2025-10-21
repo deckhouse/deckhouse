@@ -17,6 +17,8 @@ import:
   add: /src/controller
   to: /controller
   before: install
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/controller"]

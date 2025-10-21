@@ -1,4 +1,4 @@
-{{- $version := "1.10.4" }}
+{{- $version := "1.10.6" }}
 ---
 image: {{ .ModuleName }}/capi-controller-manager
 fromImage: common/distroless
@@ -7,6 +7,8 @@ import:
   add: /capi-controller-manager
   to: /capi-controller-manager
   before: setup
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

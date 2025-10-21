@@ -31,11 +31,11 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.24" "builder/golang-alpine-svace-1.24" }}
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
-fromImage: common/alt-p11-artifact
+fromImage: builder/alt
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -46,6 +46,15 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
+{{- if eq $.SVACE_ENABLED "true" }}
+- image: {{ .ModuleName }}/golang-artifact
+  add: /
+  to: /
+  includePaths:
+  - opt/svace
+  - usr/local/bin/svace
+  before: install
+{{- end }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -53,9 +62,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update -y
   # apt install
   - |
     apt-get install -y \

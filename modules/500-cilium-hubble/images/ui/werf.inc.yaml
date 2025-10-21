@@ -25,6 +25,8 @@ shell:
   - cd /src/hubble-ui
   - git apply /patches/*.patch --verbose
   - rm -r /src/hubble-ui/.git
+  # CSE
+  - find /src/hubble-ui -mindepth 1 -maxdepth 1 ! -name 'backend' -exec rm -rf {} +
   # also, there is README.md in repo ;)
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
   - rm -r /src/frontend_prebuilt/.git
@@ -59,15 +61,17 @@ shell:
 ############################################################################
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
-fromImage: common/nginx-static
+fromImage: base/nginx
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/server/public
   to: /app
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 fromImage: common/distroless
@@ -76,6 +80,8 @@ import:
   add: /src/hubble-ui/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/hubble-ui-backend"]

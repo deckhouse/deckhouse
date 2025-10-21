@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -61,7 +62,7 @@ func applyIstioCAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}, nil
 }
 
-func generateCA(input *go_hook.HookInput) error {
+func generateCA(_ context.Context, input *go_hook.HookInput) error {
 	var istioCA lib.IstioCA
 
 	if input.Values.Exists("istio.ca.cert") {
@@ -78,7 +79,7 @@ func generateCA(input *go_hook.HookInput) error {
 			istioCA.Root = istioCA.Cert
 		}
 	} else {
-		certs := input.NewSnapshots.Get("secret_ca")
+		certs := input.Snapshots.Get("secret_ca")
 		if len(certs) == 1 {
 			if err := certs[0].UnmarshalTo(&istioCA); err != nil {
 				return fmt.Errorf("cannot convert certificate to certificate authority: failed to unmarshal 'secret_ca' snapshot: %w", err)

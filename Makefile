@@ -38,6 +38,12 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	TRDL_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), aarch64)
+	YQ_ARCH = amd64
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
@@ -201,13 +207,17 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
 lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
-	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
+	@bin/werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
 
 ##@ Generate
 
+## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate -v
+generate: generate-kubernetes generate-tools
+
+.PHONY: generate-tools
+generate-tools:
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -217,7 +227,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl ${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
@@ -237,24 +247,20 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 .PHONY: docs
-docs: ## Run containers with the documentation.
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+docs: bin/werf ## Run containers with the documentation.
+	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
-docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+	docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -300,26 +306,24 @@ bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	@if ! command -v werf >/dev/null 2>&1; then \
+	@if ! command -v bin/trdl >/dev/null 2>&1; then \
 		curl -sSfL https://tuf.trdl.dev/targets/releases/0.7.0/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
 		chmod +x bin/trdl; \
 	fi
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	@if ! command -v werf >/dev/null 2>&1; then \
-		bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'; \
-		if command -v bin/werf >/dev/null 2>&1; then \
-			trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
+		@bash -c 'bin/trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2';
+		@if command -v bin/werf >/dev/null 2>&1; then \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
 		else \
-			trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
 			ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 2 alpha | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
-		fi; \
-	fi
+		fi;
 
 bin/gh: bin ## Install gh cli.
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
-	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
-	rm bin/gh.zip
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
+	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
+	rm bin/gh.tar.gz
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
@@ -389,9 +393,9 @@ set-build-envs:
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
-build: set-build-envs ## Build Deckhouse images.
+build: bin/werf set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	bin/werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.
@@ -451,6 +455,108 @@ all-mod: go-check
 		echo "Running go mod tidy in $${dir}"; \
 		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
 	done
+
+##@ Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CLIENT_GEN ?= $(LOCALBIN)/client-gen
+INFORMER_GEN ?= $(LOCALBIN)/informer-gen
+LISTER_GEN ?= $(LOCALBIN)/lister-gen
+
+## Tool Versions
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.7
+CONTROLLER_TOOLS_VERSION ?= v0.18.0
+CODE_GENERATOR_VERSION ?= v0.30.11
+
+## Generate codebase for deckhouse-controllers kubernetes entities
+.PHONY: generate-kubernetes
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+
+## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: controller-gen-generate
+controller-gen-generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+
+## Generate clientset
+.PHONY: client-gen-generate
+client-gen-generate: client-gen
+	$(CLIENT_GEN) \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
+		--output-dir "./deckhouse-controller/pkg/client/clientset" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
+
+## Generate listers (required for informers)
+.PHONY: lister-gen-generate
+lister-gen-generate: lister-gen
+	$(LISTER_GEN) \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-dir "./deckhouse-controller/pkg/client/listers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Generate informers
+.PHONY: informer-gen-generate
+informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
+	$(INFORMER_GEN) \
+		--versioned-clientset-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned" \
+		--listers-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers" \
+		--output-dir "./deckhouse-controller/pkg/client/informers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Tool installations
+
+## Download client-gen locally if necessary.
+.PHONY: client-gen
+client-gen: $(CLIENT_GEN)
+$(CLIENT_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen,$(CODE_GENERATOR_VERSION))
+
+## Download lister-gen locally if necessary.
+.PHONY: lister-gen
+lister-gen: $(LISTER_GEN)
+$(LISTER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(LISTER_GEN),k8s.io/code-generator/cmd/lister-gen,$(CODE_GENERATOR_VERSION))
+
+## Download informer-gen locally if necessary.
+.PHONY: informer-gen
+informer-gen: $(INFORMER_GEN)
+$(INFORMER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(INFORMER_GEN),k8s.io/code-generator/cmd/informer-gen,$(CODE_GENERATOR_VERSION))
+
+## Download controller-gen locally if necessary.
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary
+# $2 - package url which can be installed
+# $3 - specific version of package
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+rm -f $(1) || true ;\
+GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
+mv $(1) $(1)-$(3) ;\
+} ;\
+ln -sf $(1)-$(3) $(1)
+endef
 
 define error-if-empty
 @if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi

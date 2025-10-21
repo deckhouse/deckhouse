@@ -56,25 +56,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: nvidia.com/gpu.deploy.device-plugin
-                    operator: In
-                    values:
-                    - "true"
-              - matchExpressions:
-                  - key: nvidia.com/gpu.count
-                    operator: Gt
-                    values:
-                    - "0"
-              - matchExpressions:
-                  - key: node.deckhouse.io/group
-                    operator: In
-                    values:
-                    - {{ $ng.name | quote }}
+      {{- include "nvidia_node_selector" (tuple $ "gfd" $ng.name) | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       serviceAccountName: nvidia-device-plugin

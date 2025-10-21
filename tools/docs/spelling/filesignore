@@ -27,3 +27,4 @@ werf-giterminism.yaml
 /pkg/
 /images/
 /templates/
+/template_tests/

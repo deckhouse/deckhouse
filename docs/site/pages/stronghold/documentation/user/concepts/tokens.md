@@ -12,17 +12,16 @@ description: Tokens are a core auth method in Stronghold. Concepts and important
 
 {% endalert %}
 Tokens are the core method for _authentication_ within Stronghold. Tokens
-can be used directly or [auth methods](/docs/concepts/auth)
+can be used directly or [auth methods](auth.html)
 can be used to dynamically generate tokens based on external identities.
 
-As stated in the [authentication concepts](/docs/concepts/auth),
-all external authentication mechanisms, such as GitHub, map down to dynamically
+All external authentication mechanisms, such as GitHub, map down to dynamically
 created tokens. These tokens have all the same properties as a normal manually
 created token.
 
 Within Stronghold, tokens map to information. The most important information mapped
 to a token is a set of one or more attached
-[policies](/docs/concepts/policies). These policies control what the token
+[policies](policy.html). These policies control what the token
 holder is allowed to do within Stronghold. Other mapped information includes
 metadata that can be viewed and is added to the audit log, such as creation
 time, last renewal time, and more.
@@ -64,7 +63,7 @@ applicability to batch tokens is discussed later.
 
 Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
-backend](/docs/auth/token). This is a special
+backend](../auth/token.html). This is a special
 backend in that it is responsible for creating and storing tokens, and cannot
 be disabled. It is also the only auth method that has no login
 capability -- all actions require existing authenticated tokens.
@@ -90,7 +89,7 @@ used for just enough initial setup (usually, setting up auth methods
 and policies necessary to allow administrators to acquire more limited tokens)
 or in emergencies, and are revoked immediately after they are no longer needed.
 If a new root token is needed, the `operator generate-root` command and associated
-[API endpoint](/api-docs/system/generate-root) can be used to generate one on-the-fly.
+API endpoint can be used to generate one on-the-fly.
 
 It is also good security practice for there to be multiple eyes on a terminal
 whenever a root token is live. This way multiple people can verify as to the
@@ -178,8 +177,8 @@ token's information is looked up. It is based on a combination of factors:
 
 1. The system max TTL, which is 32 days but can be changed in Stronghold's
    configuration file.
-1. The max TTL set on a mount using [mount
-   tuning](/api-docs/system/mounts). This value
+1. The max TTL set on a mount using `mount
+   tuning`. This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
 1. A value suggested by the auth method that issued the token. This

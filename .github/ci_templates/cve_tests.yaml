@@ -1,9 +1,9 @@
 {!{ define "set_security_scan_requirement_status" }!}
 
 # <template: set_security_scan_requirement_status>
-set_security_scan_requirement_status: 
+set_security_scan_requirement_status:
   name: Set commit status after security scan run
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   needs: test_cve_report_main
   if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   steps:
@@ -30,7 +30,7 @@ set_security_scan_requirement_status:
 # <template: remove_labels_job>
 remove_labels:
   name: Remove labels
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -50,13 +50,20 @@ remove_labels:
 
 {!{ define "exctract_pr_number" }!}
 # <template: exctract_pr_number>
-- name: Extract PR number from ref
+- name: Extract PR number and form TAG
   id: extract_pr
   run: |
     echo "REF=${{ github.event.inputs.pull_request_ref }}"
     PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
     echo "PR_NUMBER=$PR_NUMBER"
-    echo "TAG=pr$PR_NUMBER" >> $GITHUB_ENV
+    REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+    if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+      TAG="pr${PR_NUMBER}"
+    else
+      TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+    fi
+    echo "TAG=$TAG" >> $GITHUB_ENV
+
 # </template: exctract_pr_number>
 {!{- end -}!}
 {!{ define "cve_scan_deckhouse_images" }!}

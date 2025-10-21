@@ -17,6 +17,15 @@ config:
       - SVACE_ANALYZE_SSH_USER
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
+    allowEnvVariables:
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
+      - COSIGN_VAULT_ADDRESS
+      - COSIGN_VAULT_KEY
+      - COSIGN_AUTH_ROLE
+      - COSIGN_TRANSIT_SECRET_ENGINE_PATH
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
+      - ACTIONS_ID_TOKEN_REQUEST_URL
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
@@ -28,4 +37,3 @@ config:
       allowBuildDir: true
       allowFromPaths:
         - ~/go-pkg-cache
-        - ~/.docker

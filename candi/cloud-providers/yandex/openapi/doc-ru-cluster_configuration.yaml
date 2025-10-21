@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -35,7 +35,7 @@ apiVersions:
               Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -143,7 +143,7 @@ apiVersions:
                     > Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:
@@ -169,7 +169,7 @@ apiVersions:
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
-          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+          [Возможные проблемы](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
             description: |
@@ -181,10 +181,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
       withNATInstance:
         description: |
-          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance).
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           exporterAPIKey:
             description: |
@@ -196,7 +196,7 @@ apiVersions:
                 Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
-              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
@@ -213,7 +213,7 @@ apiVersions:
             description: |
               Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию.
 
-              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
+              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
             type: object
             properties:
               cores:
@@ -227,7 +227,7 @@ apiVersions:
                   Тип платформы процессора у создаваемого NAT-инстанса.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

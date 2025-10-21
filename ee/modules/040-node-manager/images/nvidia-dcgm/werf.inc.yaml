@@ -8,7 +8,7 @@ git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
-    setup:
+    install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -69,8 +69,8 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross/
-  to: /opt/cross/
+  add: /opt/cross
+  to: /opt/cross
   before: install
 shell:
   beforeInstall:
@@ -149,7 +149,7 @@ import:
   before: install
 - image: libs/glibc
   add: /
-  to: /tmp/glibc/
+  to: /tmp/glibc
   includePaths:
   - usr/*
   - lib64/*

@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -31,7 +31,7 @@ apiVersions:
             description: Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -107,7 +107,7 @@ apiVersions:
                     > Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -148,7 +148,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
 
           > Схема размещения `Standard` считается **устаревшей**, не используйте ее.
       standard:
@@ -164,7 +164,7 @@ apiVersions:
                   По умолчанию будет использоваться первая доступная зона в регионе или первая из списка глобального параметра `zones`.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                  Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -218,7 +218,7 @@ apiVersions:
           Публичный ключ для доступа на узлы.
       disableDefaultSecurityGroup:
         description: |
-          Если установлено значение `true`, то security group по умолчанию создаваться не будут. 
+          Если установлено значение `true`, то security group по умолчанию создаваться не будут.
 
           **Важно.** При использовании `disableDefaultSecurityGroup: true` вы обязаны самостоятельно создать все необходимые security group для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
 
@@ -239,7 +239,7 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html) к API AWS.
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-aws/environment.html) к API AWS.
         properties:
           providerAccessKeyId:
             description: |

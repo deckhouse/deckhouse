@@ -8,9 +8,12 @@ import:
   add: /terraform-provider-kubernetes
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
   before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
+fromCacheVersion: "2025-10-13.0"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -23,7 +26,7 @@ shell:
   - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
-  - rm -rf .git
+  - rm -rf .git manifest/test/
 ---
 image: terraform-provider-kubernetes
 fromImage: builder/golang-alpine

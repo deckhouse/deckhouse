@@ -19,7 +19,11 @@ Provide a configurable set of policies for modifying Kubernetes resources at the
 Allows you to modify the `Metadata` section of a resource.
 At the moment, Gatekeeper only allows **adding** `labels` and `annotations` objects. Modification of existing objects is not provided.
 
-An example of adding the label `owner` with the value `admin` in all namespaces:
+{% alert level="info" %}
+Using `*` in `spec.match.kinds` is not allowed. If `*` is specified, the mutation will not be applied. Instead, you must explicitly list the target resources (`kinds`) along with their corresponding `apiGroups`.
+{% endalert %}
+
+Example 1. Adding the `owner` label with the value `admin` to all namespaces:
 
 ```yaml
 apiVersion: mutations.gatekeeper.sh/v1
@@ -33,6 +37,26 @@ spec:
   parameters:
     assign:
       value: "admin"
+```
+
+Example 2. Adding a label in a specific namespace and only to selected resources:
+
+```yaml
+apiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+  name: set-labels-<your_namespace>
+spec:
+  match:
+    scope: Namespaced
+    namespaces: ["<your_namespace>"]
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"] # The use of "*" is not allowed.
+  location: "metadata.labels.<your_label_name>"
+  parameters:
+    assign:
+      value: <your_label_value>
 ```
 
 ### Assign

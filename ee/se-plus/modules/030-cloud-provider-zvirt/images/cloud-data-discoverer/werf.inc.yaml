@@ -24,7 +24,7 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
-- add: /go_lib/cloud-data
+- add: {{ .gitPrefix }}/go_lib/cloud-data
   to: /src/go_lib/cloud-data
   excludePaths:
     - "**/*.md"
@@ -34,7 +34,7 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
-- add: /pkg/log
+- add: {{ .gitPrefix }}/pkg/log
   to: /src/pkg/log
   excludePaths:
     - "**/*.md"

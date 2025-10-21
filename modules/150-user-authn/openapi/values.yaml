@@ -132,6 +132,10 @@ properties:
                   type: string
                 appDexSecret:
                   type: string
+      dexAuthenticatorNames:
+        type: object
+        default: {}
+        additionalProperties: true
       dexClientCRDs:
         type: array
         default: []
@@ -187,6 +191,21 @@ properties:
               properties:
                 expireAt:
                   type: string
+                lock:
+                  type: object
+                  required:
+                    - state
+                  properties:
+                    state:
+                      type: boolean
+                    reason:
+                      type: string
+                      enum:
+                        - PasswordPolicyLockout
+                    message:
+                      type: string
+                    until:
+                      type: string
       providers:
         type: array
         default: []
@@ -311,7 +330,9 @@ properties:
               type: string
             id:
               type: string
-            # providers spec is copied from custom resources as is and validated by its spec
+            enabled:
+              type: boolean
+              default: true
             crowd:
               type: object
               additionalProperties: true

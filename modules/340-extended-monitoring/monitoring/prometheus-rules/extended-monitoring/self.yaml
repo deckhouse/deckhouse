@@ -20,18 +20,18 @@
         * CPU overloads and container throttling.
         * `500` errors on Ingress.
         * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
-        * [Other alerts](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/extended-monitoring/) associated with this exporter.
+        * [Other alerts](https://deckhouse.io/modules/extended-monitoring/) associated with this exporter.
 
         To resolve this issue, investigate its possible causes:
 
         1. Print detailed information about the `extended-monitoring-exporter` deployment:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy extended-monitoring-exporter
+           d8 k -n d8-monitoring describe deploy extended-monitoring-exporter
            ```
 
         2. Print detailed information about the pods associated with the `extended-monitoring-exporter`:
 
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter
+           d8 k -n d8-monitoring describe pod -l app=extended-monitoring-exporter
            ```

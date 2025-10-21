@@ -28,7 +28,7 @@ title: "The log-shipper module: FAQ"
 - Получите токен `log-shipper-token` из пространства имен `d8-log-shipper`:
 
   ```bash
-  kubectl -n d8-log-shipper get secret log-shipper-token -o jsonpath='{.data.token}' | base64 -d
+  d8 k -n d8-log-shipper get secret log-shipper-token -o jsonpath='{.data.token}' | base64 -d
   ```
 
 - Ресурс _ClusterLogDestination_ с авторизацией:

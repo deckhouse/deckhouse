@@ -161,10 +161,13 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - discover
       - pull_request_info
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: {!{ index (ds "actions") "actions/checkout" }!}
       - uses: {!{ index (ds "actions") "actions/setup-node" }!}
@@ -210,6 +213,21 @@ jobs:
               `);
               throw(error);
             }
+
+  gitleaks_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: "diff"
+          checkout_repo: ${{ github.event.pull_request.head.repo.full_name }}
+          checkout_ref: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
 
 
 {!{/* Template for validation jobs. */}!}
@@ -270,8 +288,16 @@ needs:
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
 runs-on: ubuntu-24.04
+permissions:
+  contents: read
+  id-token: write
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
 
   - name: Restore diff artifact
@@ -280,9 +306,6 @@ steps:
       name: pr_diff
 
    # <template: spellcheck_template>
-  - name: Install werf
-    uses: werf/actions/install@v1.2
-
   - name: Spell check
     run: |
       make lint-doc-spellcheck-pr
@@ -291,6 +314,9 @@ steps:
 
 {!{ define "workflow_render_template" }!}
 # <template: workflow_render_template>
+needs:
+  - discover
+  - pull_request_info
 runs-on: [self-hosted, regular]
 steps:
   {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}

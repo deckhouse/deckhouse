@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Каждой виртуальной машине выделяется адрес из диапазонов, заданных в настройках `ModuleConfig` [virtualization](../../../../reference/mc.html#virtualization) в блоке `.spec.settings.virtualMachineCIDRs`.
+Каждой виртуальной машине выделяется адрес из диапазонов, заданных в настройках `ModuleConfig` [virtualization](/modules/virtualization/configuration.html) в блоке `.spec.settings.virtualMachineCIDRs`.
 
 Для просмотра текущей конфигурации выполните команду:
 
@@ -43,6 +43,6 @@ d8 k edit mc virtualization
 
 Адреса назначаются последовательно из каждого указанного диапазона, исключаются только первый (адрес сети) и последний (широковещательный адрес).
 
-При назначении IP-адреса виртуальной машине создается соответствующий кластерный ресурс [VirtualMachineIPAddressLease](../../../../reference/cr/virtualmachineipaddresslease.html), который связывается с проектным ресурсом [VirtualMachineIPAddress](../../../../reference/cr/virtualmachineipaddress.html), а тот, в свою очередь, — с виртуальной машиной.
+При назначении IP-адреса виртуальной машине создается соответствующий кластерный ресурс [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease), который связывается с проектным ресурсом [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress), а тот, в свою очередь, — с виртуальной машиной.
 
 После удаления ресурса VirtualMachineIPAddress, IP-адрес отвязывается, но остается зарезервированным за проектом в течение 10 минут после его удаления.

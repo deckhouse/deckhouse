@@ -4,8 +4,8 @@ go 1.23.8
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250731141939-1dbece3b86eb
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250731143441-6b32db54ac74
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250814114239-c4ff4e7470c2
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
 	github.com/google/go-containerregistry v0.20.2

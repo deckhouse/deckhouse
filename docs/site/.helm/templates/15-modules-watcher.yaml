@@ -17,6 +17,7 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
+        app.kubernetes.io/part-of: deckhouse-docs
       annotations:
         checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
     spec:
@@ -71,6 +72,9 @@ metadata:
   labels:
     # need to prometheus scrape "podMonitor/d8-monitoring/custom-pod"
     prometheus.deckhouse.io/custom-target: registry-modules-watcher
+    app.kubernetes.io/part-of: deckhouse-docs
+  annotations:
+    prometheus.deckhouse.io/sample-limit: "10000"
 spec:
   clusterIP: None
   selector:
@@ -107,3 +111,35 @@ spec:
     name: registry-modules-watcher
   updatePolicy:
     updateMode: "Auto"
+---
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  labels:
+    prometheus.deckhouse.io/grafana-dashboard: ""
+{{- if eq $.Values.web.env "web-production" }}
+  name: registry-modules-watcher
+{{- else }}
+  name: registry-modules-watcher-{{ .Release.Namespace }} 
+{{- end }}
+spec:
+  folder: Custom
+  definition: |
+{{ tpl (.Files.Get "dashboards/registry-modules-watcher-stats.yaml") . | indent 4 }}
+{{- end }}
+---
+{{- if eq $.Values.web.env "web-production" }}
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  labels:
+    prometheus.deckhouse.io/grafana-dashboard: ""
+  name: modules-validation
+spec:
+  folder: Custom
+  definition: |
+{{ tpl (.Files.Get "dashboards/modules-validation.yaml") . | indent 4 }}
+{{- end }}
+{{- end }} 

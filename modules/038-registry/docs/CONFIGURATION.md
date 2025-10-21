@@ -1,6 +1,5 @@
 ---
 title: "Module registry: configuration"
-description: ""
 ---
 
 {% alert level="warning" %}
@@ -10,6 +9,4 @@ description: ""
 
 {% include module-bundle.liquid %}
 
-The module does not have any settings.
-
-The operation mode of the registry for the Deckhouse Kubernetes Platform, connection address, and other parameters are specified in the [registry](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.
+To manage working with the container registry, use the [`registry`](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration, where you can specify connection parameters to the registry and manage its operating mode.

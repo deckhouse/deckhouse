@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -55,8 +56,8 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return mc.Spec.Settings["virtualMachineCIDRs"], nil
 }
 
-func applyVMCIDRs(input *go_hook.HookInput) error {
-	snaps, err := sdkobjectpatch.UnmarshalToStruct[[]any](input.NewSnapshots, "vm-cidrs")
+func applyVMCIDRs(_ context.Context, input *go_hook.HookInput) error {
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[[]any](input.Snapshots, "vm-cidrs")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal vm-cidrs snapshot: %w", err)
 	}

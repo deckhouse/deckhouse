@@ -1,13 +1,11 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-  - erofs
-  - ld-musl-x86_64.so.1
   - dump.erofs
   - fsck.erofs
   - mkfs.erofs
@@ -16,7 +14,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "erofs": "1.8.5" }
+    labels: {"distro": "all", "version": "all", "erofs": "1.8.10" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -34,20 +32,11 @@ git:
     - '**/*'
 import:
 - image: tools/erofs-utils
-  add: /usr/lib/libc.so
-  to: /ld-musl-x86_64.so.1
-  before: setup
-- image: tools/erofs-utils
-  add: /
+  add: /usr/bin
+  to: /
   includePaths:
-  - usr/bin/*.erofs
+  - '*.erofs'
   before: setup
 shell:
-  install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patchelf
-  - mkdir -p /opt/deckhouse
   setup:
-  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
-  - mv /usr/bin/*.erofs /
-  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /ld-musl-x86_64.so.1 /install /uninstall
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall

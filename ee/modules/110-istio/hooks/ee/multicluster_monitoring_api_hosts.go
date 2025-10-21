@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -47,7 +48,7 @@ func setAPIHostMetric(mc sdkpkg.MetricsCollector, name, apiHost string, isError 
 	mc.Set(multiclusterMonitoringMetricName, isError, labels, metrics.WithGroup(multiclusterMonitoringMetricsGroup))
 }
 
-func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error {
+func monitoringAPIHosts(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	if !input.Values.Get("istio.multicluster.enabled").Bool() {
 		return nil
 	}

@@ -1,4 +1,5 @@
 ---
+{{- $prometheusVersion := "v2.55.1" }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
@@ -21,16 +22,14 @@ import:
   add: /src/documentation/examples/prometheus.yml
   to: /etc/prometheus/prometheus.yml
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /empty
-  to: /prometheus
-  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: install
   includePaths:
   - '**/*'
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/prometheus"]
@@ -54,8 +53,8 @@ secrets:
 shell:
   install:
   - git clone --depth 1 --branch v0.17.0 $(cat /run/secrets/SOURCE_REPO)/prometheus/promu.git /src/promu
-  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus-deps.git /src/prometheus-deps
-  - git clone --depth 1 --branch v2.55.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
+  - git clone --depth 1 --branch {{ $prometheusVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus-deps.git /src/prometheus-deps
+  - git clone --depth 1 --branch {{ $prometheusVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
   - git apply /patches/*.patch --verbose
   - rm -rf web/ui/*
@@ -83,7 +82,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -102,9 +101,26 @@ secrets:
 shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - |
+    while IFS=':' read -r key value; do
+    if [[ -n $key && -n $value ]]; then
+        key_clean=$(echo "$key" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+        value_clean=$(echo "$value" | sed 's/^ *//g')
+        export "PROMETHEUS_${key_clean}=${value_clean}"
+    fi
+    done < <(/bin/promu info)
+    export LDFLAGS="-X github.com/prometheus/common/version.Version=${PROMETHEUS_VERSION} \
+    -X github.com/prometheus/common/version.Revision=${PROMETHEUS_REVISION} \
+    -X github.com/prometheus/common/version.Branch=HEAD \
+    -X github.com/prometheus/common/version.BuildUser=root@unknown \
+    -X github.com/prometheus/common/version.BuildDate=$(date +%Y%m%d-%H:%M:%S) \
+    -extldflags '-static'"
+    export PROMETHEUS_TAGS="netgo,builtinassets,stringlabels"
   - cd /src
   - go generate -tags plugins ./plugins
-  - /bin/promu build --prefix /src
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -tags "${PROMETHEUS_TAGS}" -ldflags="${LDFLAGS}" -o prometheus ./cmd/prometheus`) | indent 6 }}
+  - go build -tags "${PROMETHEUS_TAGS}" -ldflags="${LDFLAGS}" -o promtool ./cmd/promtool
   - mkdir -p /empty
   - chown 64535:64535 /src/prometheus /src/promtool
   - chmod 0700 /src/prometheus /src/promtool

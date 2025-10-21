@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -43,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:         "secret",
 			ApiVersion:   "v1",
 			Kind:         "Secret",
-			NameSelector: &types.NameSelector{MatchNames: []string{"ingress-tls-v10"}},
+			NameSelector: &types.NameSelector{MatchNames: []string{"ingress-tls-v10", "prometheus-scraper-tls", "prometheus-api-client-tls"}},
 			FilterFunc:   applySecretFilter,
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -52,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 	},
-}, removeSecretGrfana)
+}, removeDeprecatedCertificateSecrets)
 
 func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret corev1.Secret
@@ -69,8 +70,8 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func removeSecretGrfana(input *go_hook.HookInput) error {
-	if secretSnapshot := input.NewSnapshots.Get("secret"); len(secretSnapshot) > 0 {
+func removeDeprecatedCertificateSecrets(_ context.Context, input *go_hook.HookInput) error {
+	if secretSnapshot := input.Snapshots.Get("secret"); len(secretSnapshot) > 0 {
 		for secret, err := range sdkobjectpatch.SnapshotIter[Secret](secretSnapshot) {
 			if err != nil {
 				return fmt.Errorf("cannot iterate over secret snapshot: %v", err)

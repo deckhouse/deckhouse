@@ -82,6 +82,7 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 				strings.TrimPrefix(path, workDir),
 			),
 		)
+
 		files[moduleName] = struct{}{}
 		return nil
 	})

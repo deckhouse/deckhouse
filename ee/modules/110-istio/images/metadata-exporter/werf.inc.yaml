@@ -1,14 +1,18 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/metadata-exporter
   to: /metadata-exporter
+  owner: "64535"
+  group: "64535"
   after: setup
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
+- image: tools/curl-curl-8_12_1
+  add: /usr/bin/curl-static
   to: /usr/bin/curl
+  owner: "64535"
+  group: "64535"
   before: setup
 imageSpec:
   config:
@@ -24,6 +28,9 @@ import:
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -36,6 +43,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go build -ldflags="-s -w" -o /src/metadata-exporter main.go exporter.go models.go
   - chmod 0500 /src/metadata-exporter
+  - chown -R 64535:64535 /src/metadata-exporter
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

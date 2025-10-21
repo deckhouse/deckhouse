@@ -72,6 +72,44 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+  dvp-provider:
+    iconPath: images/icons/platforms/dvp.png
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
+      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
+    type: cloud
+    name:
+      en: DVP
+      ru: DVP
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   gcp:
     iconPath: images/icons/platforms/google_cloude_engine.png
     layout:
@@ -84,6 +122,45 @@ installTypes:
     name:
       en: Google Cloud
       ru: Google Cloud
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  huaweicloud:
+    iconPath: images/icons/platforms/huaweicloud.png
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Huawei Cloud"
+      ru: "Deckhouse Kubernetes Platform на Huawei Cloud"
+    type: cloud
+    name:
+      en: Huawei Cloud
+      ru: Huawei Cloud
     steps:
       step2:
         name:
@@ -161,45 +238,6 @@ installTypes:
     name:
       en: OpenStack
       ru: OpenStack
-    steps:
-      step2:
-        name:
-          en: Installation information
-          ru: Информация об установке
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing environment
-          ru: Подготовка окружения
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
-        name:
-          en: Installation
-          ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
-        name:
-          en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step6:
-        name:
-          en: What can I do next?
-          ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md
-  openstack_vk:
-    iconPath: images/icons/platforms/vk_logo.svg
-    ee_only: true
-    layout:
-      code: standard
-      name: Standard
-    pages_title:
-      en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
-      ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
-    type: cloud
-    name:
-      en: VK Cloud
-      ru: VK Cloud
     steps:
       step2:
         name:
@@ -304,20 +342,19 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
-  vsphere:
-    iconPath: images/icons/platforms/corp_cloud_vmware.png
+  openstack_vk:
+    iconPath: images/icons/platforms/vk_logo.svg
     ee_only: true
-    se_support: true
-    type: cloud
-    name:
-      en: VMware vSphere
-      ru: VMware vSphere
-    pages_title:
-      en: "Deckhouse Kubernetes Platform on VMware vSphere"
-      ru: "Deckhouse Kubernetes Platform на VMware vSphere"
     layout:
       code: standard
       name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
+      ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
+    type: cloud
+    name:
+      en: VK Cloud
+      ru: VK Cloud
     steps:
       step2:
         name:
@@ -354,6 +391,46 @@ installTypes:
     pages_title:
       en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
       ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
+    layout:
+      code: with_nat
+      name: WithNAT
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  vsphere:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
+    ee_only: true
+    se_support: true
+    type: cloud
+    name:
+      en: VMware vSphere
+      ru: VMware vSphere
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on VMware vSphere"
+      ru: "Deckhouse Kubernetes Platform на VMware vSphere"
     layout:
       code: standard
       name: Standard
@@ -395,6 +472,86 @@ installTypes:
     name:
       en: "Yandex Cloud"
       ru: "Yandex Cloud"
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  zvirt:
+    iconPath: images/icons/platforms/zvirt.png
+    ee_only: true
+    se_support: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Kubernetes Platform on Zvirt"
+      ru: "Deckhouse Kubernetes Platform на Zvirt"
+    type: cloud
+    # Например, это надписи на плитке
+    name:
+      en: zVirt
+      ru: zVirt
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+  dynamix:
+    languages: ["ru"]
+    iconPath: images/icons/platforms/dynamix.png
+    ee_only: true
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
+    type: cloud
+    name:
+      en: "Базис.DynamiX"
+      ru: "Базис.DynamiX"
     steps:
       step2:
         name:
@@ -542,86 +699,6 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
-  zvirt:
-    iconPath: images/icons/platforms/zvirt.png
-    ee_only: true
-    se_support: true
-    layout:
-      code: standard
-      name: Standard
-    pages_title:
-      en: "Deckhouse Kubernetes Platform on Zvirt"
-      ru: "Deckhouse Kubernetes Platform на Zvirt"
-    type: cloud
-    # Например, это надписи на плитке
-    name:
-      en: zVirt
-      ru: zVirt
-    steps:
-      step2:
-        name:
-          en: Installation information
-          ru: Информация об установке
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing environment
-          ru: Подготовка окружения
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
-        name:
-          en: Installation
-          ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
-        name:
-          en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step6:
-        name:
-          en: What can I do next?
-          ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md
-  dynamix:
-    languages: ["ru"]
-    iconPath: images/icons/platforms/dynamix.png
-    ee_only: true
-    layout:
-      code: standard
-      name: Standard
-    pages_title:
-      ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
-    type: cloud
-    name:
-      en: "Базис.DynamiX"
-      ru: "Базис.DynamiX"
-    steps:
-      step2:
-        name:
-          en: Installation information
-          ru: Информация об установке
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing environment
-          ru: Подготовка окружения
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
-        name:
-          en: Installation
-          ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
-        name:
-          en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step6:
-        name:
-          en: What can I do next?
-          ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md
   red:
     languages: ["ru"]
     iconPath: images/icons/platforms/red.png
@@ -695,83 +772,6 @@ installTypes:
           en: Finishing installation
           ru: Завершение установки
         template: getting_started/bm/STEP_FINALIZE.md
-      step6:
-        name:
-          en: What can I do next?
-          ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md
-  huaweicloud:
-    iconPath: images/icons/platforms/huaweicloud.png
-    ee_only: true
-    layout:
-      code: standard
-      name: Standard
-    pages_title:
-      en: "Deckhouse Kubernetes Platform on Huawei Cloud"
-      ru: "Deckhouse Kubernetes Platform на Huawei Cloud"
-    type: cloud
-    name:
-      en: Huawei Cloud
-      ru: Huawei Cloud
-    steps:
-      step2:
-        name:
-          en: Installation information
-          ru: Информация об установке
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing environment
-          ru: Подготовка окружения
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
-        name:
-          en: Installation
-          ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
-        name:
-          en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
-      step6:
-        name:
-          en: What can I do next?
-          ru: Куда двигаться дальше?
-        template: getting_started/global/STEP_FINISH.md
-  dvp-provider:
-    iconPath: images/icons/platforms/dvp.png
-    layout:
-      code: standard
-      name: Standard
-    pages_title:
-      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
-      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
-    type: cloud
-    name:
-      en: DVP
-      ru: DVP
-    steps:
-      step2:
-        name:
-          en: Installation information
-          ru: Информация об установке
-        template: getting_started/global/STEP_INSTALL_SCHEMA.md
-      step3:
-        name:
-          en: Preparing environment
-          ru: Подготовка окружения
-        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
-        name:
-          en: Installation
-          ru: Установка
-        template: getting_started/global/STEP_INSTALL.md
-      step5:
-        name:
-          en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
-        template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
           en: What can I do next?

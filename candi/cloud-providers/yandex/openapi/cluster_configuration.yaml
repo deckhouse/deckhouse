@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -98,7 +98,7 @@ apiVersions:
           instanceClass:
             type: object
             description: |
-              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
             additionalProperties: false
             required: [cores, memory, imageID]
             properties:
@@ -296,7 +296,7 @@ apiVersions:
               required: [cores, memory, imageID]
               type: object
               description: |
-                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 platform: *instanceClassPlatform
                 cores: *instanceClassCores
@@ -353,7 +353,7 @@ apiVersions:
         description: |
           A list of DHCP parameters to use for all subnets.
 
-          Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
+          Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
         properties:
           domainName:
             description: |
@@ -371,12 +371,12 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html) about possible provider layouts.
         enum: [Standard, WithoutNAT, WithNATInstance]
       withNATInstance:
         type: object
         description: |
-          Settings for the [`WithNATInstance`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
+          Settings for the [`WithNATInstance`](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
         additionalProperties: false
         properties:
           exporterAPIKey:
@@ -391,7 +391,7 @@ apiVersions:
             default: ""
           natInstanceExternalAddress:
             description: |
-              A [reserved external IP address](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
+              A [reserved external IP address](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
             type: string
             pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
           natInstanceInternalAddress:
@@ -415,7 +415,7 @@ apiVersions:
             description: |
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
 
-              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../../modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
+              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
             type: object
             default: {"cores": 2, "memory": 2048}
             x-doc-default: {}
@@ -438,7 +438,7 @@ apiVersions:
       provider:
         type: object
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/environment.html) to the Yandex Cloud API.
+          Contains [settings to connect](https://deckhouse.io/modules/cloud-provider-yandex/environment.html) to the Yandex Cloud API.
         additionalProperties: false
         properties:
           cloudID:

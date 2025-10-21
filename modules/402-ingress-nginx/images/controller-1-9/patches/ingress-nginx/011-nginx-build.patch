@@ -1,5 +1,5 @@
 diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index 8bf372f21..fad97e00e 100755
+index 8bf372f21..921c90728 100755
 --- a/images/nginx/rootfs/build.sh
 +++ b/images/nginx/rootfs/build.sh
 @@ -14,6 +14,9 @@
@@ -243,12 +243,28 @@ index 8bf372f21..fad97e00e 100755
    --with-http_gzip_static_module \
    --with-http_sub_module \
    --with-http_v2_module \
-@@ -729,7 +580,7 @@ writeDirs=( \
+@@ -652,8 +503,8 @@ WITH_MODULES=" \
+   --without-http_scgi_module \
+   --with-cc-opt="${CC_OPT}" \
+   --with-ld-opt="${LD_OPT}" \
+-  --user=www-data \
+-  --group=www-data \
++  --user=deckhouse \
++  --group=deckhouse \
+   ${WITH_MODULES}
+ 
+ make
+@@ -729,11 +580,11 @@ writeDirs=( \
    /var/log/nginx \
  );
  
 -adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
-+adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
++adduser -r -U -u 64535 -d /usr/local/nginx -s /sbin/nologin -c deckhouse deckhouse
  
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};
+-  chown -R www-data.www-data ${dir};
++  chown -R deckhouse.deckhouse ${dir};
+ done
+ 
+ rm -rf /etc/nginx/owasp-modsecurity-crs/.git

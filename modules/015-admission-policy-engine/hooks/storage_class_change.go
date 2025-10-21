@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/storage_class_change"
@@ -30,7 +32,7 @@ var _ = storage_class_change.RegisterHook(storage_class_change.Args{
 	ObjectKind:                    "StatefulSet",
 	ObjectName:                    "trivy-provider",
 	D8ConfigStorageClassParamName: "denyVulnerableImages.storageClass",
-	BeforeHookCheck: func(input *go_hook.HookInput) bool {
+	BeforeHookCheck: func(_ context.Context, input *go_hook.HookInput) bool {
 		return input.Values.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool()
 	},
 })

@@ -14,7 +14,7 @@
 038-registry/                   @RaveNoX
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
-040-node-manager/               @name212 @sprait
+040-node-manager/               @name212
 040-terraform-manager/          @name212 @sprait @aleksey-su
 042-kube-dns/                   @apolovov
 050-network-policy-engine/      @apolovov
@@ -38,28 +38,26 @@
 450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
-465-pod-reloader/               @name212 @sprait
 470-chrony/                     @name212 @sprait
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms
 500-openvpn/                    @apolovov
 500-cilium-hubble/              @apolovov
 500-dashboard/                  @shvgn
-500-upmeter/                    @shvgn
+500-upmeter/                    @vladimirGuryanov @lazovskiy @kolashtov
 500-okmeter/                    @vladimirGuryanov @lazovskiy @kolashtov
 500-operator-trivy/             @yalosev @ldmonster
 600-secret-copier/              @nabokihms
 600-namespace-configurator/     @yalosev @ldmonster
 610-service-with-healthchecks   @apolovov
-650-runtime-audit-engine/       @name212 @sprait
 800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
-candi/                          @name212 @sprait
+candi/                          @name212
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin @duckhawk
 deckhouse-controller/           @yalosev @ldmonster
-dhctl/                          @name212 @sprait
+dhctl/                          @name212
 docs/                           @z9r5
 helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5

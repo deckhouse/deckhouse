@@ -92,6 +92,7 @@ const (
 	ModuleDependencyRequirementFieldName string = "modules"
 
 	ExperimentalModuleStage = "Experimental"
+	DeprecatedModuleStage   = "Deprecated"
 )
 
 var (
@@ -111,21 +112,11 @@ var (
 
 var _ runtime.Object = (*Module)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleList is a list of Module resources
-type ModuleList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Module `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // Module is a deckhouse module representation.
 type Module struct {
@@ -250,15 +241,17 @@ func isEnabledInBundle(bundles []string, requested string) bool {
 	return false
 }
 
-func (m *Module) ConditionStatus(condName string) bool {
+func (m *Module) IsCondition(condName string, status corev1.ConditionStatus) bool {
 	for _, cond := range m.Status.Conditions {
 		if cond.Type == condName {
-			return cond.Status == corev1.ConditionTrue
+			return cond.Status == status
 		}
 	}
+
 	return false
 }
 
+// +kubebuilder:object:generate=false
 type ConditionOption func(opts *ConditionSettings)
 
 func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
@@ -267,6 +260,7 @@ func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
 	}
 }
 
+// +kubebuilder:object:generate=false
 type ConditionSettings struct {
 	Timer func() time.Time
 }
@@ -399,4 +393,18 @@ func (m *Module) GetVersion() string {
 
 func (m *Module) IsExperimental() bool {
 	return m.Properties.Stage == ExperimentalModuleStage
+}
+
+func (m *Module) IsDeprecated() bool {
+	return m.Properties.Stage == DeprecatedModuleStage
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleList is a list of Module resources
+type ModuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Module `json:"items"`
 }

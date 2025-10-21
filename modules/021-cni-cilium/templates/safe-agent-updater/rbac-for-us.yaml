@@ -21,6 +21,15 @@ rules:
     - list
     - delete
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
   - apps
   resources:
   - daemonsets

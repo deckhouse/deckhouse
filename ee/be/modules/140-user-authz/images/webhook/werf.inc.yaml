@@ -10,6 +10,8 @@ import:
     add: /src/healthcheck
     to: /healthcheck
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/webhook" ]
@@ -31,7 +33,7 @@ git:
         - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-user-authz-webhook-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
@@ -47,7 +49,8 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags '-s -w' -o webhook ./cmd/webhook/main.go
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o webhook ./cmd/webhook/main.go`) | indent 6 }}
     - go build -ldflags '-s -w' -o healthcheck ./cmd/healthcheck/main.go
     - chown 64535:64535 webhook healthcheck
     - chmod 0700 webhook healthcheck

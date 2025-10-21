@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"strings"
@@ -82,7 +83,7 @@ type storage struct {
 	RetentionSizeGiB int
 }
 
-func prometheusDisk(input *go_hook.HookInput) error {
+func prometheusDisk(_ context.Context, input *go_hook.HookInput) error {
 	var main storage
 	var longterm storage
 
@@ -95,7 +96,7 @@ func prometheusDisk(input *go_hook.HookInput) error {
 		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
 	}
 
-	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.NewSnapshots.Get("pvcs")) {
+	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.Snapshots.Get("pvcs")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'pvcs' snapshot: %v", err)
 		}

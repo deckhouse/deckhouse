@@ -16,6 +16,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
@@ -64,7 +65,7 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	}, nil
 }
 
-func versionsDiscovery(input *go_hook.HookInput) error {
+func versionsDiscovery(_ context.Context, input *go_hook.HookInput) error {
 	versionMap := make(map[string]istio_versions.IstioVersionInfo, 0)
 	for img := range input.Values.Get("global.modulesImages.digests.istio").Map() {
 		ver, err := imageToIstioVersion(img)

@@ -8,4 +8,8 @@ Deckhouse Virtualization Platform поставляется в редакциях
 
 Краткое сравнение ключевых возможностей и особенностей редакций:
 
+{% alert level="info" %}
+Список функций актуален для последнего стабильного релиза (канал обновлений **stable**).
+{% endalert %}
+
 {% include dvp/comparison.liquid %}

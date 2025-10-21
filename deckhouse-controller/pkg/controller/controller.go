@@ -47,6 +47,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -87,12 +88,16 @@ type DeckhouseController struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	settings       *helpers.DeckhouseSettingsContainer
-	log            *log.Logger
+
+	defaultReleaseChannel string
+
+	log *log.Logger
 }
 
 func NewDeckhouseController(
 	ctx context.Context,
 	version string,
+	defaultReleaseChannel string,
 	operator *addonoperator.AddonOperator,
 	logger *log.Logger,
 ) (*DeckhouseController, error) {
@@ -213,7 +218,7 @@ func NewDeckhouseController(
 		}
 
 		// set some version for the modules overridden by mpos
-		if module.ConditionStatus(v1alpha1.ModuleConditionIsOverridden) {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
 			return "v2.0.0", nil
 		}
 
@@ -253,8 +258,13 @@ func NewDeckhouseController(
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
-		ReleaseChannel: "Stable",
+		ReleaseChannel: defaultReleaseChannel,
 	})
+
+	err = metrics.RegisterDeckhouseControllerMetrics(operator.MetricStorage)
+	if err != nil {
+		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
+	}
 
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
@@ -316,7 +326,10 @@ func NewDeckhouseController(
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
-		log:            logger,
+
+		defaultReleaseChannel: defaultReleaseChannel,
+
+		log: logger,
 	}, nil
 }
 
@@ -388,7 +401,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
-			settings.ReleaseChannel = "Stable"
+			settings.ReleaseChannel = c.defaultReleaseChannel
 			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
 		}
 

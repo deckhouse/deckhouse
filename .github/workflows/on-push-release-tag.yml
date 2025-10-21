@@ -42,7 +42,7 @@ on:
 jobs:
   start_release_build_workflow:
     name: Start build for release
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 
       # <template: checkout_step>
@@ -67,6 +67,6 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 

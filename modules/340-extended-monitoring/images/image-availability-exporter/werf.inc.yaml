@@ -1,4 +1,4 @@
-{{ $imageAvailabilityExporterVersion := "0.13.0" }}
+{{ $imageAvailabilityExporterVersion := "0.14.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -47,6 +47,8 @@ import:
     add: /src/k8s-image-availability-exporter
     to: /k8s-image-availability-exporter
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/k8s-image-availability-exporter"]

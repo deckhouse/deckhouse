@@ -30,12 +30,13 @@ import (
 )
 
 type Proxy struct {
-	server         *http.Server
-	listener       net.Listener
-	getter         registry.ClientConfigGetter
-	registryClient registry.Client
-	cache          cache.Cache
-	logger         log.Logger
+    server         *http.Server
+    listener       net.Listener
+    getter         registry.ClientConfigGetter
+    registryClient registry.Client
+    cache          cache.Cache
+    logger         log.Logger
+    config         Config
 }
 
 func NewProxy(server *http.Server,
@@ -63,12 +64,22 @@ func NewProxy(server *http.Server,
 	return p
 }
 
-func (p *Proxy) Serve() {
-	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" && r.Method != "GET" {
-			p.logger.Error("method not allowed")
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
+type Config struct {
+    SignCheck bool
+}
+
+func (p *Proxy) Serve(cfg *Config) {
+    // Initialize runtime config (use zero values if nil)
+    if cfg != nil {
+        p.config = *cfg
+    } else {
+        p.config = Config{}
+    }
+    http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != "HEAD" && r.Method != "GET" {
+            p.logger.Error("method not allowed")
+            http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+            return
 		}
 
 		requestIP := getRequestIP(r)
@@ -158,7 +169,8 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
 		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		return size, reader, err
 	}
 
 	// otherwise try to find digest in the cache
@@ -169,11 +181,12 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
 		p.logger.Errorf("Get package from cache: %v", err)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		return size, reader, err
 	}
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, layerDigest, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -191,7 +204,7 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, size, teeReader)
+		err := p.cache.Set(digest, layerDigest, teeReader)
 		if err == nil {
 			return
 		}
@@ -207,17 +220,18 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
-	registryConfig, err := p.getter.Get(repository)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
-	if err != nil {
-		return 0, nil, err
-	}
-	return size, registryReader, nil
+func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
+    registryConfig, err := p.getter.Get(repository)
+    if err != nil {
+        return 0, "", nil, err
+    }
+    registryConfig.SignCheck = p.config.SignCheck
+    
+    size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
+    if err != nil {
+        return 0, "", nil, err
+    }
+	return size, layerDigest, registryReader, nil
 }
 
 type ProxyOption func(*Proxy)

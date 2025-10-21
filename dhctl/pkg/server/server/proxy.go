@@ -15,7 +15,6 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -44,21 +43,20 @@ import (
 
 type StreamDirector struct {
 	methodsPrefix string
-	log           *slog.Logger
 
-	wg       *sync.WaitGroup
-	stdOutMx *sync.Mutex
-	stdErrMx *sync.Mutex
+	wg          *sync.WaitGroup
+	syncWriters *syncWriters
 }
 
-func NewStreamDirector(log *slog.Logger, methodsPrefix string) *StreamDirector {
+func NewStreamDirector(methodsPrefix string) *StreamDirector {
 	return &StreamDirector{
 		methodsPrefix: methodsPrefix,
-		log:           log,
 
-		wg:       &sync.WaitGroup{},
-		stdOutMx: &sync.Mutex{},
-		stdErrMx: &sync.Mutex{},
+		wg: &sync.WaitGroup{},
+		syncWriters: &syncWriters{
+			stdoutWriter: &syncWriter{writer: os.Stdout},
+			stderrWriter: &syncWriter{writer: os.Stderr},
+		},
 	}
 }
 
@@ -111,9 +109,7 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			return outCtx, nil, fmt.Errorf("getting dhctl instance stderr pipe: %w", err)
 		}
 
-		d.wg.Add(2)
-		go writeLogs(log, stdOutReader, os.Stdout, d.stdOutMx, d.wg)
-		go writeLogs(log, stdErrReader, os.Stderr, d.stdErrMx, d.wg)
+		d.writeLogs(log, stdOutReader, stdErrReader)
 
 		err = cmd.Start()
 		if err != nil {
@@ -146,6 +142,28 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 	}
 }
 
+func (d *StreamDirector) writeLogs(log *slog.Logger, stdOutReader, stdErrReader io.Reader) {
+	d.wg.Add(2)
+
+	go func() {
+		defer d.wg.Done()
+
+		err := d.syncWriters.stdoutWriter.copyFrom(stdOutReader)
+		if err != nil {
+			log.Error("writing dhctl instance stdout logs", logger.Err(err))
+		}
+	}()
+
+	go func() {
+		defer d.wg.Done()
+
+		err := d.syncWriters.stderrWriter.copyFrom(stdErrReader)
+		if err != nil {
+			log.Error("writing dhctl instance stderr logs", logger.Err(err))
+		}
+	}()
+}
+
 func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error {
 	healthCl := grpc_health_v1.NewHealthClient(conn)
 	loop := retry.NewSilentLoop("wait for dhctl server", 10, time.Second)
@@ -171,16 +189,23 @@ func socketPath() (string, error) {
 	return address, nil
 }
 
-func writeLogs(log *slog.Logger, reader io.ReadCloser, writer io.Writer, mx *sync.Mutex, wg *sync.WaitGroup) {
-	defer wg.Done()
+type syncWriters struct {
+	stdoutWriter *syncWriter
+	stderrWriter *syncWriter
+}
 
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		mx.Lock()
-		_, err := fmt.Fprintf(writer, scanner.Text()+"\n")
-		mx.Unlock()
-		if err != nil {
-			log.Error("failed to write dhctl instance logs", logger.Err(err))
-		}
-	}
+type syncWriter struct {
+	writer io.Writer
+	mx     sync.Mutex
+}
+
+func (sw *syncWriter) Write(p []byte) (n int, err error) {
+	sw.mx.Lock()
+	defer sw.mx.Unlock()
+	return sw.writer.Write(p)
+}
+
+func (sw *syncWriter) copyFrom(reader io.Reader) error {
+	_, err := io.Copy(sw, reader)
+	return err
 }

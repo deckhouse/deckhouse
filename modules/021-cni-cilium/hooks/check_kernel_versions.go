@@ -27,6 +27,7 @@ in case of hook failure
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -93,7 +94,7 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}, nil
 }
 
-func handleNodes(input *go_hook.HookInput) error {
+func handleNodes(_ context.Context, input *go_hook.HookInput) error {
 	constraints := []nodeConstraint{
 		{
 			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
@@ -119,7 +120,7 @@ func handleNodes(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
-	nodes := input.NewSnapshots.Get("nodes")
+	nodes := input.Snapshots.Get("nodes")
 	if len(nodes) == 0 {
 		input.Logger.Error("no nodes found")
 		return nil

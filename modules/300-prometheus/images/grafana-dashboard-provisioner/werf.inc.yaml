@@ -13,6 +13,7 @@ import:
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
+{{- include "image mount points" . }}  
 ---
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact

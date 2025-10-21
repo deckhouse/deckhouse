@@ -18,7 +18,7 @@ lang: "ru"
 
 ### Отключение базовых политик
 
-Отключить сбор логов по базовым политикам можно установив флаг [basicAuditPolicyEnabled](../../../../reference/cr/parameters-apiserver-basicauditpolicyenabled.html) в `false`.
+Отключить сбор логов по базовым политикам можно установив флаг [`basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
 Пример включения возможности аудита в kube-apiserver, но без базовых политик Deckhouse:
 
@@ -45,7 +45,7 @@ d8 k patch mc control-plane-manager --type=strategic -p '{"settings":{"apiserver
 
 Модуль control-plane manager автоматизирует настройку kube-apiserver для добавления пользовательских политик аудита. Чтобы такие дополнительные политики заработали, нужно удостовериться, что аудит включён в секции параметров `apiserver` и создать секрет с политикой аудита:
 
-1. Включите параметр [auditPolicyEnabled](../../../../reference/cr/parameters-apiserver-auditpolicyenabled.html) в настройках модуля:
+1. Включите параметр [`auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -114,7 +114,7 @@ d8 k -n kube-system delete secret audit-policy
 
 ## Как работать с журналом аудита?
 
-Предполагается наличие на master-узлах сборщика логов *(например, [log-shipper](../../../../reference/cr/clusterloggingconfig.html), promtail, filebeat)*, который будет отправлять записи из файла в централизованное хранилище:
+Предполагается наличие на master-узлах сборщика логов *(например, [`log-shipper`](/modules/log-shipper/), promtail, filebeat)*, который будет отправлять записи из файла в централизованное хранилище:
 
 ```bash
 /var/log/kube-audit/audit.log
@@ -129,7 +129,7 @@ d8 k -n kube-system delete secret audit-policy
 
 ## Вывод аудит-лога в стандартный вывод
 
-Если в кластере настроен сборщик логов с подов, можно собирать аудит лог, выведя его в стандартный вывод. Для этого  в настройках модуля установите значение `Stdout` в параметре [apiserver.auditLog.output](../../../../reference/cr/parameters-apiserver-auditlog.html).
+Если в кластере настроен сборщик логов с подов, можно собирать аудит лог, выведя его в стандартный вывод. Для этого  в настройках модуля установите значение `Stdout` в параметре [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output).
 
 Пример включения аудита с выводом в stdout:
 

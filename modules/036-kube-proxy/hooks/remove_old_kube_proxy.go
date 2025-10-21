@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -32,7 +34,7 @@ type removeObject struct {
 	name       string
 }
 
-func removeOldKubeProxyResourcesHandler(input *go_hook.HookInput) error {
+func removeOldKubeProxyResourcesHandler(_ context.Context, input *go_hook.HookInput) error {
 	objects := []removeObject{
 		{
 			apiVersion: "rbac.authorization.k8s.io/v1",

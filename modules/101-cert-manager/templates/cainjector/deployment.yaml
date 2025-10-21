@@ -57,7 +57,7 @@ spec:
       - name: deckhouse-registry
       containers:
         - name: cainjector
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "certManagerCainjector") }}
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)

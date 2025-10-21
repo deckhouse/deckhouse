@@ -12,7 +12,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -93,7 +93,7 @@ apiVersions:
               type: string
             minItems: 1
             uniqueItems: true
-            description: | 
+            description: |
               A limited set of zones in which master nodes can be created.
 
               The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
@@ -102,7 +102,7 @@ apiVersions:
             additionalProperties: false
             required: [numCPUs, memory, template, mainNetwork, datastore]
             description: |
-              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
             properties: &instanceClassProperties
               numCPUs:
                 type: integer
@@ -201,7 +201,7 @@ apiVersions:
                   nestedHardwareVirtualization:
                     type: boolean
                     description: |
-                      Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                      Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
                   cpuShares:
                     type: integer
                     description: |
@@ -301,7 +301,7 @@ apiVersions:
               additionalProperties: false
               required: [numCPUs, memory, template, mainNetwork, datastore]
               description: |
-                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties:
                 <<: *instanceClassProperties
       sshPublicKey:
@@ -364,6 +364,10 @@ apiVersions:
         x-examples:
           - "dev/test"
         x-unsafe: true
+      storagePolicyID:
+        type: string
+        description: |
+          ID of the SPBM (Storage Policy Based Management) storage policy.
       vmFolderExists:
         type: boolean
         default: false
@@ -398,7 +402,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-vsphere/layouts.html) about possible provider layouts.
         x-unsafe: true
       provider:
         type: object

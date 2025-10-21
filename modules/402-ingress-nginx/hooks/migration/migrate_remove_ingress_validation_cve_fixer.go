@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 0},
 }, dependency.WithExternalDependencies(removeFixer))
 
-func removeFixer(_ *go_hook.HookInput, dc dependency.Container) error {
+func removeFixer(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient := dc.MustGetK8sClient()
 
 	if err := kubeClient.CoreV1().ServiceAccounts(d8SystemNs).Delete(context.Background(), fixerName, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {

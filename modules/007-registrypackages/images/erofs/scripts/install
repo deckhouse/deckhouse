@@ -19,4 +19,3 @@ mkdir -p /opt/deckhouse/lib
 cp -f dump.erofs /opt/deckhouse/bin
 cp -f fsck.erofs /opt/deckhouse/bin
 cp -f mkfs.erofs /opt/deckhouse/bin
-cp -f ld-musl-x86_64.so.1 /opt/deckhouse/lib/

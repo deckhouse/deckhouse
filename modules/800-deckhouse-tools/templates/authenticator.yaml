@@ -20,6 +20,7 @@ spec:
   allowedGroups:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
+  {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
   {{- if (include "helm_lib_ha_enabled" .) }}
   highAvailability: true
   {{- else }}

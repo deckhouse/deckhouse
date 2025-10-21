@@ -21,8 +21,10 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -54,7 +56,15 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-// SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
+type ResponseError struct {
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message"`
+}
+
+const (
+	MaxContentLen = 4096
+)
+
 func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time, metricLabels MetricLabels) error {
 	if release.GetNotified() {
 		return nil
@@ -66,11 +76,9 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, rele
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
 			metricLabels.SetTrue(NotificationNotSent)
-
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
-
 	return nil
 }
 
@@ -85,14 +93,13 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
 			metricLabels.SetTrue(NotificationNotSent)
-
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
-
 	return nil
 }
 
+// SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
 func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time) error {
 	if u.settings.NotificationConfig.WebhookURL == "" {
 		return nil
@@ -115,17 +122,27 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 	return nil
 }
 
+const (
+	defaultRetryBackoff          = 2 * time.Second
+	defaultNotifierClientTimeout = 10 * time.Second
+)
+
 func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 		},
-		Timeout: 10 * time.Second,
+		Timeout: defaultNotifierClientTimeout,
 	}
 
 	buf := bytes.NewBuffer(nil)
 
-	_, err := retry(5, 2*time.Second, func() (*http.Response, error) {
+	retryBackoff := defaultRetryBackoff
+	if config.RetryMinTime.Duration > 0 {
+		retryBackoff = config.RetryMinTime.Duration
+	}
+
+	_, err := retry(5, retryBackoff, func() (*http.Response, error) {
 		defer buf.Reset()
 
 		err := json.NewEncoder(buf).Encode(data)
@@ -146,8 +163,38 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		if err != nil {
 			return nil, err
 		}
+		defer resp.Body.Close()
 
-		return resp, nil
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return resp, nil
+		}
+
+		var responseError ResponseError
+
+		if resp.ContentLength == 0 {
+			return nil, fmt.Errorf("webhook response with status code %d, with empty body", resp.StatusCode)
+		}
+
+		if resp.ContentLength > MaxContentLen || resp.ContentLength < 0 {
+			return nil, fmt.Errorf("webhook response with status code %d: body is too large to read", resp.StatusCode)
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&responseError); err != nil {
+			return nil, fmt.Errorf("webhook response with status code %d: bad json", resp.StatusCode)
+		}
+
+		var errorParts []string
+		errorParts = append(errorParts, fmt.Sprintf("webhook response with status code %d", resp.StatusCode))
+
+		if responseError.Code != "" {
+			errorParts = append(errorParts, fmt.Sprintf("service code: %s", responseError.Code))
+		}
+
+		if responseError.Message != "" {
+			errorParts = append(errorParts, fmt.Sprintf("msg: %s", responseError.Message))
+		}
+
+		return nil, errors.New(strings.Join(errorParts, ", "))
 	})
 
 	return err
@@ -181,6 +228,7 @@ type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
 	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
+	RetryMinTime            libapi.Duration `json:"retryMinTime"`
 	Auth                    *Auth           `json:"auth,omitempty"`
 	ReleaseType             ReleaseType     `json:"releaseType"`
 }

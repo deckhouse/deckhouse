@@ -12,7 +12,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
     * Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
 2. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 3. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
-    * Installing operating system (see the list of [supported OS](../../supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
+    * Installing operating system (see the list of [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
     * Configuring nginx (and the system for automatically updating the list of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.
@@ -44,7 +44,7 @@ Nodes are managed through the [NodeGroup](cr.html#nodegroup) resource, and each 
 - a group of monitoring-related nodes;
 - a group of application nodes (the so-called worker nodes), etc.
 
-The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both cloud and static (bare metal or virtual machine) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
+The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both Static nodes deployed in the cloud and static (bare-metal or virtual machine) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
 
 Operations on the [cloud infrastructure](#working-with-nodes-on-supported-cloud-platforms) are performed by means provided by supported cloud providers. If there is no support for the desired cloud platform, you can use its resources as static nodes.
 
@@ -60,7 +60,7 @@ The following Managed Kubernetes services are supported (note that some service 
 The following node types that can be worked with within a node group (resource [NodeGroup](cr.html#nodegroup)) are supported:
 
 - `CloudEphemeral` — the nodes are automatically ordered, created, and deleted in the configured cloud provider.
-- `CloudPermanent` — the nodes differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](../cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
+- `CloudPermanent` — the nodes differ in that their configuration is not taken from the custom resource [nodeGroup](cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
 - `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
@@ -357,7 +357,7 @@ The service decides to re-run the scripts by comparing the single checksum of al
 You can see the checksum using the following command:
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```
 
 The service compares checksums every minute.

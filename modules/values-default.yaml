@@ -25,7 +25,6 @@ namespaceConfiguratorEnabled: true
 registryPackagesProxyEnabled: true
 nodeManagerEnabled: true
 operatorPrometheusEnabled: true
-podReloaderEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true

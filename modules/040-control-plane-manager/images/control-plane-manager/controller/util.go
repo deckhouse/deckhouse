@@ -36,10 +36,10 @@ import (
 const kubeconfigPath = "/etc/kubernetes/admin.conf"
 
 var defaultBackoff = wait.Backoff{
-	Duration: 500 * time.Millisecond,
-	Factor:   1.5,
+	Duration: 1 * time.Second,
+	Factor:   1.05,
 	Jitter:   0.2,
-	Steps:    30,
+	Steps:    50,
 }
 
 func installFileIfChanged(src, dst string, perm os.FileMode) error {

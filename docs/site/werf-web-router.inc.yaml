@@ -1,0 +1,44 @@
+image: web-router-artifact
+fromImage: builder/golang-alpine
+final: false
+shell:
+  install:
+  - cd /go/src/app
+  - go mod download
+  setup:
+  - cd /go/src/app
+  - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
+git:
+  - url: https://github.com/flant/web-router.git
+    tag: v1.0.14
+    add: /
+    to: /go/src/app
+    stageDependencies:
+      install: 'go.mod'
+      setup: '**/*'
+---
+image: web-router
+imageSpec:
+  config:
+    workingDir: "/app"
+fromImage: builder/alpine-3.22
+import:
+  - image: tools/curl
+    add: /usr/bin/curl-static
+    to: /usr/bin/curl
+    before: setup
+  - image: tools/jq
+    add: /usr/bin/jq
+    to: /usr/bin/jq
+    before: setup
+  - image: web-router-artifact
+    add: /go/src/app/server
+    to: /app/server
+    before: setup
+  - image: web-frontend-artifact
+    add: /app/_site
+    to: /app/root
+    before: setup
+    includePaths:
+    - en/includes/
+    - ru/includes/

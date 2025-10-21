@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleCreateCAPIStaticKubeconfig))
 
-func handleCreateCAPIStaticKubeconfig(input *go_hook.HookInput, dc dependency.Container) error {
+func handleCreateCAPIStaticKubeconfig(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	capiEnabledRaw := input.Values.Get("nodeManager.internal.capiControllerManagerEnabled")
 
 	if capiEnabledRaw.Exists() && capiEnabledRaw.Bool() {

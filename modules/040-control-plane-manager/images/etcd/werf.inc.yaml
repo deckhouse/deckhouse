@@ -34,12 +34,14 @@ import:
   - etcdctl
   - etcdutl
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -56,6 +58,9 @@ shell:
     - cd /src/
     - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
+    - cd server
+    - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /etcd .`) | indent 8 }}
+    - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..

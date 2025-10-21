@@ -15,6 +15,8 @@ import:
   add: /src/kiali/frontend/build
   to: /opt/kiali/console
   before: install
+git:
+{{- include "image mount points" . }}
 shell:
   install:
   - adduser --no-create-home --uid 1000 kiali

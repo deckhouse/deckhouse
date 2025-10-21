@@ -95,3 +95,11 @@ entries:
           en: Webhooks
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
+      - title:
+          en: Search
+          ru: Поиск
+        url: /code/documentation/user/search.html
+      - title:
+          en: Push rules
+          ru: Правила отправки изменений
+        url: /code/documentation/user/push-rules.html

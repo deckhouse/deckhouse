@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -113,7 +113,7 @@ apiVersions:
                   description: |
                     Path of the template OVA that is to be used.
 
-                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -136,6 +136,37 @@ apiVersions:
                     type: string
                     description: An IP address with a CIDR prefix.
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every master node VM, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                  additionalProperties:
+                    type: string
+                affinityRule:
+                  type: object
+                  additionalProperties: false
+                  description: |
+                    Specifies the affinity rule applied to virtual machines of the master nodes within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
+                  properties:
+                    polarity:
+                      type: string
+                      description: |
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
+                      enum: [Affinity, AntiAffinity]
+                    required:
+                      type: boolean
+                      description: |
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                      x-doc-default: false
         nodeGroups:
           type: array
           description: |
@@ -231,7 +262,7 @@ apiVersions:
                     description: |
                       Path of the template OVA that is to be used.
 
-                      Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                      Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                       If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -254,6 +285,37 @@ apiVersions:
                       type: string
                       description: An IP address with a CIDR prefix.
                       pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                  additionalMetadata:
+                    type: object
+                    description: |
+                      Custom string key-value pairs to be stored in the Metadata of every node VM, useful for organizing and categorizing your virtualization inventory.
+
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                    additionalProperties:
+                      type: string
+                  affinityRule:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Specifies the affinity rule applied to virtual machines of nodes of the NodeGroup within the cluster.
+                      Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                      which can help improve fault tolerance, and control the distribution of workloads.
+                      If not specified, no affinity rule will be applied by default.
+                    required: [polarity]
+                    properties:
+                      polarity:
+                        type: string
+                        description: |
+                          The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                          `Affinity` means that nodes should be placed on the same host,
+                          while `AntiAffinity` means they should be placed on different hosts.
+                        enum: [Affinity, AntiAffinity]
+                      required:
+                        type: boolean
+                        description: |
+                          Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                          If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                        x-doc-default: false
         bastion:
           type: object
           additionalProperties: false
@@ -301,7 +363,7 @@ apiVersions:
                   description: |
                     Path of the template OVA that is to be used.
 
-                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -314,6 +376,14 @@ apiVersions:
                     The IP address of the bastion host in the `mainNetwork`.
                     If not set, the DHCP client will be enabled.
                   pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of the bastion, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                  additionalProperties:
+                    type: string
         sshPublicKey:
           type: string
           description: |
@@ -361,7 +431,7 @@ apiVersions:
             externalPort:
               type: integer
               description: |
-                The external port mapped by the DNAT rule to forward incoming SSH 
+                The external port mapped by the DNAT rule to forward incoming SSH
                 connections to the master node.
               minimum: 1
               maximum: 65535
@@ -431,7 +501,7 @@ apiVersions:
           description: |
             The way resources are located in the cloud.
 
-            Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
+            Read [more](https://deckhouse.io/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
         provider:
           type: object
           additionalProperties: false
@@ -467,6 +537,17 @@ apiVersions:
 
             The parameter has an effect only when installing a cluster. In the working cluster, the need to enable the support for outdated versions of the VCD API is determined automatically.
           x-doc-default: false
+        metadata:
+          type: object
+          description: |
+            Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
+
+            Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the CloudEphemeral type.
+            This means that if you need to remove metadata entirely, you will have to do it manually.
+
+            > **Warning.** Changing the metadata will cause the recreation of CloudEphemeral nodes.
+          additionalProperties:
+            type: string
       allOf:
       - oneOf:
         - required: [layout]

@@ -3,7 +3,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -24,7 +24,7 @@ properties:
             description: |
               Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
             properties:
               authURL:
                 description: |
@@ -36,7 +36,7 @@ properties:
             description: |
               Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
 
-              Используется, если включен модуль [user-authn](../../../platform/modules/150-user-authn/) или задан параметр `externalAuthentication`.
+              Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -54,7 +54,7 @@ properties:
             description: |
               Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
             properties:
               authURL:
                 description: |
@@ -66,7 +66,7 @@ properties:
             description: |
               Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
 
-              Используется, если включен модуль [user-authn](../../../platform/modules/150-user-authn/) или задан параметр `externalAuthentication`.
+              Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -110,7 +110,7 @@ properties:
         description: |
           StorageClass для использования при проверке работоспособности дисков.
 
-          Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+          Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
           Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -136,7 +136,7 @@ properties:
               - `Disabled` — smoke-mini будут работать только по HTTP;
               - `CertManager` — smoke-mini будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
               - `CustomCertificate` — smoke-mini будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+              - `OnlyInURI` — smoke-mini будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
           certManager:
             properties:
               clusterIssuerName:
@@ -181,7 +181,7 @@ properties:
           - `Disabled` — webui/status будут работать только по HTTP;
           - `CertManager` — webui/status будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — webui/status будут работать по HTTPS, используя сертификат из namespace `d8-system`;
-          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — webui/status будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:

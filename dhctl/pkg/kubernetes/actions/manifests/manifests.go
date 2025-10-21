@@ -63,7 +63,7 @@ type imagesDigests map[string]map[string]interface{}
 func loadImagesDigests(filename string) (imagesDigests, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
 		return map[string]map[string]interface{}{
-			"common": {
+			"deckhouse": {
 				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
 			},
 		}, nil
@@ -181,7 +181,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -226,6 +226,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
+				RunAsGroup:   ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
@@ -258,6 +259,15 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
 							Path: "/var/lib/deckhouse",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "dev-dir",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/dev",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -297,6 +307,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/tmp",
 			},
 			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/run",
+			},
+			{
 				Name:      "kube",
 				ReadOnly:  false,
 				MountPath: "/.kube",
@@ -306,6 +321,18 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse/downloaded",
 			},
+			{
+				Name:      "dev-dir",
+				ReadOnly:  false,
+				MountPath: "/dev",
+			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
+			RunAsUser:              ptr.To(int64(0)),
+			RunAsGroup:             ptr.To(int64(0)),
+			RunAsNonRoot:           ptr.To(false),
+			Privileged:             ptr.To(true),
 		},
 	}
 
@@ -314,7 +341,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
+			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -322,6 +349,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse",
 			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
 		},
 	}
 
@@ -405,7 +435,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
-			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency",
+			Value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency",
 		},
 		{
 			Name:  "DOWNLOADED_MODULES_DIR",

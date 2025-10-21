@@ -1,7 +1,0 @@
-name: pod-reloader
-stage: "General Availability"
-subsystems:
-  - infrastructure
-namespace: d8-pod-reloader
-requirements:
-  deckhouse: ">= 1.68"

@@ -16,6 +16,7 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log/slog"
@@ -34,7 +35,8 @@ const HighUsagePercent = 80
 
 type CacheEntry struct {
 	lastAccessTime time.Time
-	size           uint64
+	layerDigest    string
+	isCorrupted    bool
 }
 
 type Cache struct {
@@ -59,11 +61,20 @@ func NewCache(logger *log.Logger, root string, retentionSize uint64, metrics *Me
 }
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
-	path := c.digestToPath(digest)
-
 	// check if cache entry exists
-	if !c.storageGetOK(digest) {
-		c.logger.Info("entry with digest is not found in the cache", slog.String("digest", digest))
+	entry, ok := c.storageGetOK(digest)
+	if !ok {
+		return 0, nil, cache.ErrEntryNotFound
+	}
+
+	path := c.layerDigestToPath(entry.layerDigest)
+
+	// check if file hash is correct
+	if !c.checkHashIsOK(entry.layerDigest) {
+		c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", digest))
+		c.Lock()
+		c.storage[digest].isCorrupted = true
+		c.Unlock()
 		return 0, nil, cache.ErrEntryNotFound
 	}
 
@@ -77,11 +88,11 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	}
 
 	stat, err := file.Stat()
-	c.logger.Info("found file with size in the cache", slog.String("name", stat.Name()), slog.Int64("size", stat.Size()))
-
 	if err != nil {
 		return 0, nil, err
 	}
+
+	c.logger.Info("found file with size in the cache", slog.String("digest", digest), slog.String("name", stat.Name()), slog.Int64("size", stat.Size()))
 
 	c.Lock()
 	c.storage[digest].lastAccessTime = time.Now()
@@ -90,16 +101,25 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	return stat.Size(), file, nil
 }
 
-func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
+func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
+
+	if digest == "" {
+		c.logger.Warn("digest is empty, skipping", slog.String("digest", digest))
+		return nil
+	}
+
+	if layerDigest == "" {
+		c.logger.Warn("layer digest is empty, skipping", slog.String("layerDigest", layerDigest))
+		return nil
+	}
+
 	// check if cache entry exists
-	if c.storageGetOK(digest) {
+	if _, ok := c.storageGetOK(digest); ok {
 		c.logger.Info("entry with digest already exists, skipping", slog.String("digest", digest))
 		return nil
 	}
 
-	c.logger.Info("write file with digest with size to the cache dir", slog.String("digest", digest), slog.Int64("size", size))
-
-	path := c.digestToPath(digest)
+	path := c.layerDigestToPath(layerDigest)
 
 	err := os.MkdirAll(filepath.Dir(path), 0755)
 	if err != nil && !os.IsExist(err) {
@@ -111,42 +131,22 @@ func (c *Cache) Set(digest string, size int64, reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(file, reader)
+	size, err := io.Copy(file, reader)
 	if err != nil {
 		return err
 	}
 
-	c.Lock()
+	c.logger.Info("wrote file with digest to the cache dir", slog.String("digest", digest), slog.String("path", path), slog.Int64("size", size))
+
+	c.RLock()
+	defer c.RUnlock()
 	c.storage[digest] = &CacheEntry{
 		lastAccessTime: time.Now(),
-		size:           uint64(size),
+		layerDigest:    layerDigest,
+		isCorrupted:    false,
 	}
-	c.Unlock()
 
 	c.metrics.CacheSize.Add(float64(size))
-	return nil
-}
-
-func (c *Cache) Delete(digest string) error {
-	// check if cache entry exists
-	if !c.storageGetOK(digest) {
-		c.logger.Info("entry with digest doesn't exists, skipping", slog.String("digest", digest))
-		return nil
-	}
-
-	path := c.digestToPath(digest)
-	c.logger.Info("remove file with path from the cache dir", slog.String("path", path))
-
-	err := os.Remove(path)
-	if err != nil {
-		return err
-	}
-
-	c.Lock()
-	c.metrics.CacheSize.Sub(float64(c.storage[digest].size))
-	delete(c.storage, digest)
-	c.Unlock()
-
 	return nil
 }
 
@@ -161,70 +161,193 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			err := c.ApplyRetentionPolicy()
-			if err != nil {
-				c.logger.Error("reconcile loop failed", log.Err(err))
-				return
+			if len(c.storage) == 0 {
+				c.logger.Info("storage map is empty")
+				continue
 			}
+
+			c.applyRetentionPolicy()
+			c.checkFilesHash()
+			c.deleteOrphanedOrCorruptedEntries()
+			c.deleteFiles()
 		}
 	}
 }
 
-func (c *Cache) ApplyRetentionPolicy() error {
+func (c *Cache) deleteOrphanedOrCorruptedEntries() {
+	c.logger.Info("starting cache delete orphaned or corrupted entries")
+	c.Lock()
+	defer c.Unlock()
+	// delete corrupted entries
+	for k, v := range c.storage {
+		if v.isCorrupted || v.layerDigest == "" {
+			c.logger.Info("delete corrupted entry", slog.String("digest", k), slog.String("layerDigest", v.layerDigest))
+			delete(c.storage, k)
+		}
+	}
+}
+
+func (c *Cache) deleteFiles() {
+	c.logger.Info("starting cache delete files")
+	c.RLock()
+	layerDigests := make(map[string]struct{}, len(c.storage))
+	for _, v := range c.storage {
+		layerDigests[v.layerDigest] = struct{}{}
+	}
+	c.RUnlock()
+
+	files := c.getFileList()
+	for _, file := range files {
+		if _, ok := layerDigests[filepath.Base(file)]; ok {
+			continue
+		}
+		stat, err := os.Stat(file)
+		if err != nil {
+			c.logger.Warn("failed to stat file", slog.String("path", file), log.Err(err))
+			continue
+		}
+		err = os.Remove(file)
+		if err != nil {
+			c.logger.Warn("failed to delete orphaned file", slog.String("path", file), log.Err(err))
+			continue
+		}
+		c.metrics.CacheSize.Sub(float64(stat.Size()))
+		c.logger.Info("delete orphaned file", slog.String("path", file))
+	}
+}
+
+func (c *Cache) checkFilesHash() {
+	c.logger.Info("starting cache files hash check")
+	c.Lock()
+	defer c.Unlock()
+	for k, v := range c.storage {
+		if !c.checkHashIsOK(v.layerDigest) {
+			c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", k))
+			c.storage[k].isCorrupted = true
+		}
+	}
+}
+
+func (c *Cache) applyRetentionPolicy() {
+	c.logger.Info("starting cache retention policy")
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
 		if usagePercent < HighUsagePercent {
-			c.logger.Info(fmt.Sprintf("current cache usage less than %d%%, compaction is not needed", HighUsagePercent), slog.Int("usage", usagePercent))
-			return nil
+			c.logger.Info("current cache usage low, compaction is not needed", slog.Int("usagePercent", usagePercent), slog.Int("HighUsagePercent", HighUsagePercent))
+			return
 		}
 
-		if len(c.storage) == 0 {
-			c.logger.Info("storage map is empty")
-			return nil
-		}
-
-		c.logger.Info(fmt.Sprintf("need to compact cache, current usage more than %d%%", HighUsagePercent), slog.Int("usage", usagePercent))
+		c.logger.Info("need to compact cache, current usage is high", slog.Int("usagePercent", usagePercent), slog.Int("HighUsagePercent", HighUsagePercent))
 
 		// sort descending by last access time
 		var oldestDigest string
 		lowestTime := time.Now()
 
 		c.Lock()
+		defer c.Unlock()
 		for k, v := range c.storage {
 			if lowestTime.Compare(v.lastAccessTime) >= 0 {
 				oldestDigest = k
 			}
 		}
-		c.Unlock()
-
-		// remove oldest entry
-		err := c.Delete(oldestDigest)
-		if err != nil {
-			return err
-		}
+		delete(c.storage, oldestDigest)
 	}
 }
 
-func (c *Cache) calculateCacheSize() uint64 {
-	c.Lock()
-	defer c.Unlock()
-	var size uint64
-	for _, v := range c.storage {
-		size += v.size
+func (c *Cache) calculateCacheSize() int64 {
+	files := c.getFileList()
+	var size int64
+
+	for _, file := range files {
+		stat, err := os.Stat(file)
+		if err != nil {
+			c.logger.Warn("failed to stat file", slog.String("path", file), log.Err(err))
+			continue
+		}
+		size += stat.Size()
 	}
+
 	return size
 }
 
-func (c *Cache) digestToPath(digest string) string {
-	// digest format is sha256:1234567....
-	// remove sha256: and convert to path
-	hash := digest[7:]
-	return filepath.Join(c.root, "packages", hash[:2], hash)
+func (c *Cache) layerDigestToPath(digest string) string {
+	return filepath.Join(c.root, "packages", digest[:2], digest)
 }
 
-func (c *Cache) storageGetOK(digest string) bool {
-	c.Lock()
-	defer c.Unlock()
-	_, ok := c.storage[digest]
-	return ok
+func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
+	if digest == "" {
+		c.logger.Info("digest is empty, skipping", slog.String("digest", digest))
+		return nil, false
+	}
+	c.RLock()
+	defer c.RUnlock()
+	entry, ok := c.storage[digest]
+
+	if !ok {
+		c.logger.Info("entry with digest is not found in the cache", slog.String("digest", digest))
+		return nil, false
+	}
+
+	if entry.isCorrupted {
+		c.logger.Warn("entry with digest is corrupted, skipping", slog.String("digest", digest))
+		return nil, false
+	}
+
+	if entry.layerDigest == "" {
+		c.logger.Warn("entry with digest doesn't have layer digest, skipping", slog.String("digest", digest))
+		return nil, false
+	}
+
+	// deepcopy
+	ret := &CacheEntry{
+		lastAccessTime: entry.lastAccessTime,
+		layerDigest:    entry.layerDigest,
+		isCorrupted:    entry.isCorrupted,
+	}
+	return ret, true
+}
+
+func (c *Cache) checkHashIsOK(layerDigest string) bool {
+	path := c.layerDigestToPath(layerDigest)
+	c.logger.Info("checking hash sum of file in the cache", slog.String("layerDigest", layerDigest), slog.String("path", path))
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		c.logger.Warn("failed to open file", slog.String("path", path), log.Err(err))
+		return false
+	}
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		c.logger.Warn("failed to calculate hash sum", slog.String("path", path), log.Err(err))
+		return false
+	}
+	hsum := fmt.Sprintf("%x", h.Sum(nil))
+	if hsum != layerDigest {
+		c.logger.Warn("entry with layer digest corrupted in the cache", slog.String("path", path), slog.String("hash", hsum), slog.String("layerHash", layerDigest))
+		return false
+	}
+
+	return true
+}
+
+func (c *Cache) getFileList() []string {
+	var files []string
+	err := filepath.Walk(c.root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		files = append(files, path)
+		return nil
+	})
+
+	if err != nil {
+		c.logger.Warn("failed to walk cache dir", log.Err(err))
+	}
+	return files
 }

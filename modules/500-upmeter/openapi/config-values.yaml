@@ -12,7 +12,7 @@ properties:
     description: |-
       The name of StorageClass that will be used in the cluster by default.
 
-      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
+      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
 
       The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
@@ -41,7 +41,7 @@ properties:
             description: |
               Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+              > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
             properties:
               authURL:
                 type: string
@@ -68,7 +68,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -118,7 +118,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -168,7 +168,7 @@ properties:
 
               This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+              **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
           whitelistSourceRanges:
             type: array
             items:
@@ -186,7 +186,7 @@ properties:
         description: |
           A StorageClass to use when checking the health of disks.
 
-          If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+          If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
 
           `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 

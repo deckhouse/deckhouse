@@ -1,5 +1,3 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -10,21 +8,7 @@ shell:
     - apt-get install conntrack-tools -y
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /sbin/iptables-wrapper
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
-        done
-      done
+
   {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $patch := $value.patch | toString }}
@@ -38,22 +22,15 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kube-proxy
   to: /usr/local/bin/kube-proxy
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-proxy"]
-  {{- end }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
+{{- end }}

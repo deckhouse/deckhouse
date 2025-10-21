@@ -11,7 +11,7 @@ The `cni-cilium module` provides a network in a cluster. It is based on the [Cil
 2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
 3. To ensure the stable operation of `cni-cilium` on cluster nodes, disable Elastic Agent or restrict its access to the Elastic management server. Elastic Agent includes an Elastic Endpoint component which uses the Extended Berkeley Packet Filter (eBPF) technology on cluster nodes and may remove critical eBPF programs required for `cni-cilium` to work correctly. For detailed information and discussion of the issue, refer to the publications of the [Cilium](https://github.com/cilium/cilium/issues/28433) and [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202) projects.
 4. Kernel requirements:
-   * Linux kernel version not lower than `5.8` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
+   * Linux kernel version not lower than `5.8` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/modules/{% else %}..{% endif %}/node-local-dns/) modules.
 5. OS compatibility:
     * Ubuntu:
       * incompatible with version 18.04;
@@ -29,7 +29,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
   * if `externalTrafficPolicy: Local` is specified in the `Service`, the traffic will be forwarded and balanced only to those target pods running on the same node where the traffic arrived. If the target pod is not running on this node, the traffic will be dropped.
   * if `externalTrafficPolicy: Cluster` is specified in the `Service`, the traffic will be forwarded and balanced to all target pods in the cluster. At the same time, if the target pods are located on other nodes, SNAT will be performed when transmitting traffic to them (the source IP address will be replaced with the InternalIP of the node).
 
-   ![SNAT data flow diagram](../../images/cni-cilium/snat.png)
+   ![SNAT data flow diagram](images/snat.png)
 
 * `DSR` (Direct Server Return) — is a method where all incoming traffic passes through the load balancer, and all outgoing traffic bypasses it. This method is used instead of `SNAT`. Often, responses are much larger than requests, and `DSR` can significantly increase the overall throughput of the scheme:
   * if `externalTrafficPolicy: Local` is specified in the `Service`, its behavior is completely analogous to `kube-proxy` and `bpfLB` in `SNAT` mode.
@@ -39,7 +39,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
     * outgoing traffic will go directly from the node on which the target pod was launched;
     * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
 
-   ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
+   ![DSR data flow diagram](images/dsr.png)
 
 {% alert level="warning" %}
 In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.
@@ -96,7 +96,7 @@ In Deckhouse Kubernetes Platform, you can apply the following algorithms to load
 By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
 
 * Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLoadBalancerAlgorithmsEnabled`](configuration.html#parameters-extralbalgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
-* In the service manifest, specify the `cilium.io/bpf-lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
+* In the service manifest, specify the `service.cilium.io/lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
 
 {% alert level="warning" %}
 This mechanism requires Linux kernel version 5.15 or higher to work correctly.
@@ -112,12 +112,12 @@ Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes:
 
 Pre-configured IP addresses are used on egress nodes.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_base_en.pdf"></div>
+<div data-presentation="presentations/egressgateway_base_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
 
 ### Virtual IP mode
 
 The ability to dynamically assign additional IP addresses to nodes is implemented.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<div data-presentation="presentations/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->

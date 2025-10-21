@@ -7,7 +7,7 @@ description: Как в модуле operator-trivy Deckhouse посмотрет�
 ## Просмотр ресурсов, которые не прошли CIS compliance-проверки
 
 ```bash
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
@@ -17,7 +17,7 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ```bash
 check_id="5.7.3"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
 ```
 
@@ -25,7 +25,7 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ```bash
 check_desc="Apply Security Context to Your Pods and Containers"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
 ```
 
@@ -47,7 +47,7 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 Пример команды для перезаписи аннотации `trivy-operator.aquasecurity.github.io/report-ttl`:
 
 ```bash
-kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
+d8 k annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
 
 ## Кто имеет доступ к результатам сканирования
@@ -67,5 +67,5 @@ kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator
 Для просмотра результатов сканирования вашего приложения воспользуйтесь Grafana-дашбордом `Security / Trivy Image Vulnerability Overview`.  
 Вы можете отфильтровать результаты по нужному пространству имён и ресурсу.
 
-Также вы можете напрямую просматривать [ресурсы](trivy-cr.html) с результатами сканирования, которые создаются для каждого сканируемого объекта.  
-Подробности о структуре их имён и местоположении доступны в [документации](trivy-cr.html).
+Также вы можете напрямую просматривать [ресурсы](cr.html) с результатами сканирования, которые создаются для каждого сканируемого объекта.  
+Подробности о структуре их имён и местоположении доступны в [документации](cr.html).
