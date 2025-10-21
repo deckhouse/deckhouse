@@ -385,7 +385,6 @@ func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 		var excludeList []string
 		if *excludeFiles != "" {
 			excludeList = strings.Split(*excludeFiles, ",")
-			// Убираем пробелы вокруг каждого значения
 			for i := range excludeList {
 				excludeList[i] = strings.TrimSpace(excludeList[i])
 			}
