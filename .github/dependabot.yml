@@ -313,6 +313,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/containerd/pidumount/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/007-registrypackages/images/toml-merge/src"
   labels:
   - "type/dependencies"
@@ -846,6 +855,15 @@ updates:
 
 - package-ecosystem: "pip"
   directory: "/modules/300-prometheus/images/grafana-dashboard-provisioner/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/vendor/go.opentelemetry.io/otel"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
