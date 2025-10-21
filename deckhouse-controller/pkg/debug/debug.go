@@ -371,27 +371,9 @@ func printExcludableFiles() {
 	}
 }
 
-func parseExcludeFiles(excludeFiles []string) []string {
-	if len(excludeFiles) == 0 {
-		return nil
-	}
-
-	var result []string
-	for _, file := range excludeFiles {
-		for _, part := range strings.FieldsFunc(file, func(r rune) bool {
-			return r == ',' || r == ' '
-		}) {
-			if part != "" {
-				result = append(result, part)
-			}
-		}
-	}
-	return result
-}
-
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
-	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can be specified multiple times or use comma/space separated values.").Strings()
+	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Use comma-separated values.").String()
 	listFiles := collectDebug.Flag("list-exclude", "List all files that can be excluded from the debug archive.").Short('l').Bool()
 
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
@@ -400,7 +382,15 @@ func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 			return nil
 		}
 
-		excludeList := parseExcludeFiles(*excludeFiles)
+		var excludeList []string
+		if *excludeFiles != "" {
+			excludeList = strings.Split(*excludeFiles, ",")
+			// Убираем пробелы вокруг каждого значения
+			for i := range excludeList {
+				excludeList[i] = strings.TrimSpace(excludeList[i])
+			}
+		}
+
 		tarball := createTarball(excludeList)
 
 		_, err := io.Copy(os.Stdout, tarball)
