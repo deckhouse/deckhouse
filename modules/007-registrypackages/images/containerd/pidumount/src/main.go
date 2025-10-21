@@ -1,4 +1,4 @@
-package pidumount
+package main
 
 /*
 #define _GNU_SOURCE
