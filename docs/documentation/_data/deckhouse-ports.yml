@@ -190,8 +190,8 @@ groups:
   - ports: "4228"
     protocol: TCP
     description:
-      en: "`storage-status` agent healthcheck"
-      ru: "Healthcheck агента модуля `storage-status`"
+      en: "`sds-node-configurator` agent healthcheck"
+      ru: "Healthcheck агента модуля `sds-node-configurator`"
   - ports: "4229"
     protocol: TCP
     description:
@@ -232,6 +232,11 @@ groups:
     description:
       en: "`csi-scsi-generic` CSI node healthcheck"
       ru: "Healthcheck CSI-агентов модуля `csi-scsi-generic`"
+  - ports: "4239"
+    protocol: TCP
+    description:
+      en: "`storage-status` agent healthcheck"
+      ru: "Healthcheck агента модуля `sds-node-configurator`"
   - ports: "4240"
     protocol: TCP
     description:
@@ -357,6 +362,16 @@ groups:
     description:
       en: "`sds-replicated-volume` CSI node metrics"
       ru: "Метрики CSI-агентов модуля `sds-replicated-volume`"
+  - ports: "4271"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `sds-replicated-volume`"
+  - ports: "4272"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI controller metrics"
+      ru: "Метрики CSI-контроллера модуля `sds-replicated-volume`"
   - ports: "4286"
     protocol: TCP
     description:
