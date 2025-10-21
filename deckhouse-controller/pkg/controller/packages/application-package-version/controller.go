@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
-	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -106,31 +105,38 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	packageName := packageVersion.Labels["registry"]
 	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, &pr)
 	if err != nil {
-		r.logger.Error("get packageVersion", log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("get packageVersion: %w", err)
+		r.logger.Error("get packageRepository", slog.String("application_package_version", packageVersion.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	// - create go registry client from creds from PackageRepository
-	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/redis/release-channel
+	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:stable
 	registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Labels["package"], "release-channel")
-	opts := []cr.Option{
-		cr.WithAuth(pr.Spec.Registry.DockerCFG),
-		// cr.WithUserAgent(ri.UserAgent),
-		cr.WithCA(pr.Spec.Registry.CA),
-		cr.WithInsecureSchema(strings.ToLower(pr.Spec.Registry.Scheme) == "http"),
-	}
+	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
+		DockerConfig: pr.Spec.Registry.DockerCFG,
+		CA:           pr.Spec.Registry.CA,
+		Scheme:       pr.Spec.Registry.Scheme,
+		// UserAgent: ,
+	}, r.logger)
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
 	if err != nil {
-		r.logger.Error("get registry client", log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("get registry client: %w", err)
+		r.logger.Error("get registry client", slog.String("application_package_version", packageVersion.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	// - get package.yaml from release image
-	_, err = registryClient.Image(ctx, "stable")
+	img, err := registryClient.Image(ctx, "stable")
 	if err != nil {
-		r.logger.Error("get release image", log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("get release image: %w", err)
+		r.logger.Error("get release image", slog.String("application_package_version", packageVersion.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
+
+	packageMeta, err := r.fetchPackageMetadata(ctx, img)
+	if err != nil {
+		r.logger.Error("couldn't fetch package release image metadata", slog.String("application_package_version", packageVersion.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+	_ = packageMeta
 
 	// - fill subresource status with new data
 	packageVersion.Status.PackageName = packageName
@@ -142,8 +148,8 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	delete(packageVersion.Labels, "draft")
 	err = r.client.Update(ctx, packageVersion)
 	if err != nil {
-		r.logger.Error("update packageVersion", log.Err(err))
-		return ctrl.Result{}, fmt.Errorf("update packageVersion: %w", err)
+		r.logger.Error("update packageVersion", slog.String("application_package_version", packageVersion.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
