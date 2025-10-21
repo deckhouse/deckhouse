@@ -25,6 +25,7 @@ import (
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
+	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 )
 
 const (
@@ -304,7 +305,7 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
-	username, password, err := helpers.CredsFromDockerCfg(
+	username, password, err := registry_docker.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,
 	)
