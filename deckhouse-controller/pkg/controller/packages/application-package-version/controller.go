@@ -68,50 +68,64 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	r.logger.Debug("reconciling ApplicationPackageVersion", slog.String("name", req.Name))
 
 	packageVersion := new(v1alpha1.ApplicationPackageVersion)
 	if err := r.client.Get(ctx, req.NamespacedName, packageVersion); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("application package version not found", slog.String("name", req.Name))
-			return ctrl.Result{}, nil
+
+			return res, nil
 		}
-		r.logger.Error("failed to get application package version", slog.String("name", req.Name), log.Err(err))
+
+		r.logger.Warn("failed to get application package version", slog.String("name", req.Name), log.Err(err))
+
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// handle delete event
 	if !packageVersion.DeletionTimestamp.IsZero() {
 		r.logger.Debug("deleting application package version", slog.String("name", req.Name))
+
 		return r.delete(ctx, packageVersion)
 	}
 
 	// skip handle for non drafted resources
-	if packageVersion.Labels["draft"] != "true" {
+	if !packageVersion.IsDraft() {
 		r.logger.Debug("package is not draft", slog.String("package_name", packageVersion.Name))
-		return ctrl.Result{}, nil
+
+		return res, nil
 	}
 
 	// handle create/update events
-	return r.handle(ctx, packageVersion)
+	err := r.handle(ctx, packageVersion)
+	if err != nil {
+		r.logger.Warn("failed to handle application package version", slog.String("name", req.Name), log.Err(err))
+
+		return res, err
+	}
+
+	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) error {
 	// TODO: implement application package version reconciliation logic
 	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
+	packageName := packageVersion.Spec.Repository
+
 	// - get registry creds from PackageRepository resource
 	var pr v1alpha1.PackageRepository
-	packageName := packageVersion.Labels["registry"]
 	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, &pr)
 	if err != nil {
-		r.logger.Error("get packageRepository", slog.String("application_package_version", packageVersion.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("get packageRepository %s: %w", packageName, err)
 	}
 
 	// - create go registry client from creds from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:stable
-	registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Labels["package"], "release-channel")
+	registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: pr.Spec.Registry.DockerCFG,
 		CA:           pr.Spec.Registry.CA,
@@ -120,43 +134,102 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	}, r.logger)
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
 	if err != nil {
-		r.logger.Error("get registry client", slog.String("application_package_version", packageVersion.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("get registry client for %s: %w", packageVersion.Name, err)
 	}
 
 	// - get package.yaml from release image
 	img, err := registryClient.Image(ctx, "stable")
 	if err != nil {
-		r.logger.Error("get release image", slog.String("application_package_version", packageVersion.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("get release image for %s: %w", packageVersion.Name, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
-		r.logger.Error("couldn't fetch package release image metadata", slog.String("application_package_version", packageVersion.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("fetch package release image metadata for %s: %w", packageVersion.Name, err)
 	}
-	_ = packageMeta
 
-	// - fill subresource status with new data
-	packageVersion.Status.PackageName = packageName
-	packageVersion.Status.Version = "" // TODO
+	// here we start changing the packageVersion object
+	original := packageVersion.DeepCopy()
 
-	packageVersion.Status.Metadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{} // from package.yaml
+	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
-	// - delete label "draft"
+	// - delete label "draft" and patch the main object
 	delete(packageVersion.Labels, "draft")
-	err = r.client.Update(ctx, packageVersion)
+
+	err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
 	if err != nil {
-		r.logger.Error("update packageVersion", slog.String("application_package_version", packageVersion.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
 	}
 
-	return ctrl.Result{}, nil
+	// - patch the status
+	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
+	}
+
+	return nil
 }
 
 func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	// TODO: implement application package version deletion logic
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 	return ctrl.Result{}, nil
+}
+
+func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
+	apv.Status.PackageName = pd.Name
+	apv.Status.Version = pd.Version
+
+	apv.Status.Metadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Description: &v1alpha1.PackageDescription{
+			Ru: pd.Description.Ru,
+			En: pd.Description.En,
+		},
+		Category: pd.Category,
+		Stage:    pd.Stage,
+		Licensing: &v1alpha1.PackageLicensing{
+			Editions: convertLicensingEditions(pd.Licensing.Editions),
+		},
+	}
+
+	if pd.Requirements != nil {
+		apv.Status.Metadata.Requirements = &v1alpha1.PackageRequirements{
+			Deckhouse:  pd.Requirements.Deckhouse,
+			Kubernetes: pd.Requirements.Kubernetes,
+			Modules:    pd.Requirements.Modules,
+		}
+	}
+
+	if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
+		apv.Status.Metadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
+			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
+				From:             pd.VersionCompatibilityRules.Upgrade.From,
+				AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),
+				AllowSkipMinor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMinor),
+				AllowSkipMajor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMajor),
+			},
+			Downgrade: &v1alpha1.PackageVersionCompatibilityRule{
+				To:               pd.VersionCompatibilityRules.Downgrade.To,
+				AllowSkipPatches: int(pd.VersionCompatibilityRules.Downgrade.AllowSkipPatches),
+				AllowSkipMinor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMinor),
+				AllowSkipMajor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMajor),
+				MaxRollback:      int(pd.VersionCompatibilityRules.Downgrade.MaxRollback),
+			},
+		}
+	}
+
+	return apv
+}
+
+func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1alpha1.PackageEdition {
+	if editions == nil {
+		return nil
+	}
+	result := make(map[string]v1alpha1.PackageEdition)
+	for k, v := range editions {
+		result[k] = v1alpha1.PackageEdition{
+			Available: v.Available,
+		}
+	}
+	return result
 }

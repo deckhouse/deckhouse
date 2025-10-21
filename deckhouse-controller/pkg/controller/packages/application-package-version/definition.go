@@ -24,24 +24,19 @@ var (
 
 // Definition of package.yaml file
 type PackageDefinition struct {
-	Name        string              `yaml:"name"`
-	Description *PackageDescription `yaml:"description"`
-	// Package category for classification like "Databases", "Monitoring", etc...
+	Name        string              `yaml:"name"`        // Package name (required)
+	Description *PackageDescription `yaml:"description"` // Description for catalog/UI (required)
+	// Package category for classification like "Databases", "Monitoring", etc... (required)
 	Category string `yaml:"category"`
-	// Maturity stage, like "Preview"
+	// Maturity stage, like "Preview" (required)
 	Stage string `yaml:"stage"`
-	// Package type, must be one of: Package, ClusterApplication, Application
-	Type    PackageType `yaml:"type"`
-	Version string      `yaml:"version"`
-	// Environment requirements (+optional)
-	// TODO: this implemet is incorrect, fix
-	// requirements:                         # environment requirements (+optional)
-	//   deckhouse: ">= 1.70"
-	//   kubernetes: ">= 1.31"
-	//   modules:
-	//     cert-manager: ">= 1.0.0"
-	Requirements map[string]string `yaml:"requirements"`
-	// Package availability by editions
+	// Package type, must be one of: Package, ClusterApplication, Application (required)
+	Type PackageType `yaml:"type"`
+	// Package version (required, injected during build)
+	Version string `yaml:"version"`
+	// Environment requirements (optional)
+	Requirements *PackageRequirements `yaml:"requirements"`
+	// Package availability by editions (optional)
 	Licensing PackageLicensing `yaml:"licensing"`
 	// Rules for upgrade and downgrade
 	VersionCompatibilityRules VersionCompatibilityRules `yaml:"versionCompatibilityRules"`
@@ -50,6 +45,12 @@ type PackageDefinition struct {
 type PackageDescription struct {
 	Ru string `yaml:"ru"`
 	En string `yaml:"en"`
+}
+
+type PackageRequirements struct {
+	Deckhouse  string            `yaml:"deckhouse"`
+	Kubernetes string            `yaml:"kubernetes"`
+	Modules    map[string]string `yaml:"modules"`
 }
 
 type PackageLicensing struct {

@@ -33,7 +33,6 @@ type PackageMetadata struct {
 	Version           string                 `json:"version"`
 	Changelog         map[string]interface{} `json:"-"`
 	PackageDefinition *PackageDefinition     `json:"module,omitempty"`
-	// Cooldown     *metav1.Time              `json:"-"`
 }
 
 var ErrImageIsNil = errors.New("image is nil")
@@ -118,12 +117,6 @@ func (r *reconciler) fetchPackageMetadata(_ context.Context, img registryv1.Imag
 		}
 
 		meta.PackageDefinition = &PackageDefinition
-		// if PackageDefinition.Requirements != nil {
-		// 	if meta.Requirements == nil {
-		// 		meta.Requirements = make(map[string]string, 1)
-		// 	}
-		// 	meta.Requirements["kubernetes"] = PackageDefinition.Requirements.Kubernetes
-		// }
 	}
 
 	if rr.changelogReader.Len() > 0 {
