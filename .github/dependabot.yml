@@ -862,15 +862,6 @@ updates:
     interval: "daily"
   open-pull-requests-limit: 0
 
-- package-ecosystem: "pip"
-  directory: "/vendor/go.opentelemetry.io/otel"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
 # npm
 - package-ecosystem: "npm"
   directory: "/modules/500-upmeter/images/webui/src"
