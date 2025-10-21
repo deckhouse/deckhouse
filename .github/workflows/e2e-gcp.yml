@@ -271,6 +271,7 @@ jobs:
         id: check
         uses: actions/github-script@v6.4.1
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'gcp';
             const kubernetesDefaultVersion = '1.30';

@@ -409,6 +409,7 @@ check_e2e_labels:
       id: check
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const provider = '{!{ $ctx.provider }!}';
           const kubernetesDefaultVersion = '{!{ $ctx.kubernetesDefaultVersion }!}';

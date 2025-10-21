@@ -117,6 +117,7 @@ jobs:
         id: check
         uses: actions/github-script@v6.4.1
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'eks';
             const kubernetesDefaultVersion = '1.30';
