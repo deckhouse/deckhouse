@@ -230,4 +230,5 @@ shell:
   - cd /src
   - go mod download
   - CGO_ENABLED=1 GOOS=linux go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go
+  - strip /pidumount
   - chmod 0700 /pidumount
