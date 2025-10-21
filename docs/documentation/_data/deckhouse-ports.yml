@@ -157,6 +157,11 @@ groups:
     description:
       en: "`sds-replicated-volume` agent metrics"
       ru: "Метрики агента `sds-replicated-volume`"
+  - ports: "4216"
+    protocol: TCP
+    description:
+      en: "`storage-status` agent metrics"
+      ru: "Метрики агента `storage-status`"
   - ports: "4218"
     protocol: TCP/UDP
     description:
@@ -182,6 +187,11 @@ groups:
     description:
       en: "Metrics of the `speaker` components in `metallb` modules"
       ru: "Метрики компонентов `speaker` модулей `metallb`"
+  - ports: "4228"
+    protocol: TCP
+    description:
+      en: "`storage-status` agent healthcheck"
+      ru: "Healthcheck агента модуля `storage-status`"
   - ports: "4229"
     protocol: TCP
     description:
