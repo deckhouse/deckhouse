@@ -104,9 +104,11 @@ import:
   - uninstall
   - containerd.service
   before: setup
+{{- if and (eq $.Env "CSE") $is_v2 }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
   add: /pidumount
   before: setup
+{{- end }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
   to: /runc
@@ -195,8 +197,8 @@ shell:
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out
   - chmod 755 /out/*
-{{- end }}
 
+  {{- if and (eq $.Env "CSE") $is_v2 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
 final: false
@@ -212,7 +214,7 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-pidumount-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
@@ -227,8 +229,12 @@ shell:
   - apk add --no-cache gcc musl-dev
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=1
   - cd /src
   - go mod download
-  - CGO_ENABLED=1 GOOS=linux go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go`) | indent 4 }}
   - strip /pidumount
   - chmod 0700 /pidumount
+  {{- end }}
+{{- end }}
