@@ -86,6 +86,11 @@ type PackageRequirements struct {
 	Modules    map[string]string `json:"modules,omitempty"`
 }
 
+type PackageDescription struct {
+	Ru string `json:"ru,omitempty"`
+	En string `json:"en,omitempty"`
+}
+
 type PackageLicensing struct {
 	Editions map[string]PackageEdition `json:"editions,omitempty"`
 }
