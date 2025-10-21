@@ -28,6 +28,8 @@ import (
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
 
+type PrivateKeyFileToPassphrase map[string][]byte
+
 var (
 	SSHPrivateKeys = make([]string, 0)
 
@@ -50,6 +52,9 @@ var (
 
 	SSHLegacyMode = false
 	SSHModernMode = false
+
+	// todo ugly solution need refact
+	PrivateKeysToPassPhrasesFromConfig = make(PrivateKeyFileToPassphrase)
 )
 
 type connectionConfigParser interface {

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package ssh
 
 import (
@@ -21,9 +22,51 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
+
+func tryToExtractPassPhraseFromConfig(path string) []byte {
+	if path == "" {
+		return nil
+	}
+
+	if len(app.PrivateKeysToPassPhrasesFromConfig) == 0 {
+		return nil
+	}
+
+	p, ok := app.PrivateKeysToPassPhrasesFromConfig[path]
+	if !ok {
+		return nil
+	}
+
+	if len(p) == 0 {
+		return nil
+	}
+
+	return p
+}
+
+func tryToExtractPassPhraseFromConfigOrTerminal(path string) ([]byte, error) {
+	p := tryToExtractPassPhraseFromConfig(path)
+	if len(p) > 0 {
+		return p, nil
+	}
+
+	p, err := terminal.AskPassword(
+		fmt.Sprintf("Enter passphrase for ssh key %q: ", path),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", path, err)
+	}
+
+	if len(p) == 0 {
+		return nil, fmt.Errorf("passphrase for ssh key %q is empty", path)
+	}
+
+	return p, nil
+}
 
 func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 	keyData, err := os.ReadFile(keyPath)
@@ -34,6 +77,10 @@ func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 	keyData = append(bytes.TrimSpace(keyData), '\n')
 
 	var privateKey interface{}
+
+	if len(passphrase) == 0 {
+		passphrase = tryToExtractPassPhraseFromConfig(keyPath)
+	}
 
 	if len(passphrase) == 0 {
 		privateKey, err = ssh.ParseRawPrivateKey(keyData)
@@ -59,11 +106,8 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 		switch {
 		case errors.As(err, &passphraseMissingError):
 			var err error
-			passphrase, err = terminal.AskPassword(
-				fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
+			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath); err != nil {
+				return nil, err
 			}
 			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
 			if err != nil {

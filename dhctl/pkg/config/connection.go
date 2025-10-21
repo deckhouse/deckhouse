@@ -166,6 +166,8 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		return fmt.Errorf("parsing ssh config from file: %w", err)
 	}
 
+	pathToPassPhrase := make(app.PrivateKeyFileToPassphrase)
+
 	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
 		f, err := os.CreateTemp(app.TmpDirName, "ssh-key-*")
@@ -177,7 +179,12 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 			return fmt.Errorf("unable to write temp file %s: %w", f.Name(), err)
 		}
 
-		keysPaths = append(keysPaths, f.Name())
+		fullPath := f.Name()
+
+		keysPaths = append(keysPaths, fullPath)
+		if len(key.Passphrase) > 0 {
+			pathToPassPhrase[fullPath] = []byte(key.Passphrase)
+		}
 	}
 
 	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
@@ -207,6 +214,8 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
 	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
 	app.SSHModernMode = cfg.SSHConfig.ModernMode
+	// todo it is ugly solution
+	app.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }
