@@ -452,7 +452,6 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			// if release version is greater in major or minor version than previous release
 			if !isPatchRelease(prevRelease.GetVersion(), release.GetVersion()) ||
 				(deployedReleaseInfo != nil && !isPatchRelease(deployedReleaseInfo.Version, release.GetVersion())) {
-
 				logger.Debug("current release is not a patch")
 
 				isPatch = false
