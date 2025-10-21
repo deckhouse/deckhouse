@@ -97,16 +97,27 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 }
 
 func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	var discoveryData OpenstackCloudDiscoveryData
-
-	if len(cloudProviderDiscoveryData) == 0 {
-		cloudProviderDiscoveryData = d.moduleConfig
-	}
+	var discoveryData, moduleConfig OpenstackCloudDiscoveryData
 
 	if len(cloudProviderDiscoveryData) > 0 {
 		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
+		}
+	}
+
+	if len(d.moduleConfig) > 0 {
+		err := json.Unmarshal(d.moduleConfig, &moduleConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal module config: %v", err)
+		}
+
+		if moduleConfig.Zones != nil || len(moduleConfig.Zones) > 0 {
+			discoveryData.Zones = moduleConfig.Zones
+		}
+
+		if moduleConfig.Instances != nil {
+			discoveryData.Instances = moduleConfig.Instances
 		}
 	}
 
@@ -400,8 +411,8 @@ func (d *Discoverer) getImages(ctx context.Context, provider *gophercloud.Provid
 }
 
 type OpenstackCloudDiscoveryData struct {
-	Zones     []string                             `json:"zones,omitempty" yaml:"zones,omitempty"`
-	Instances OpenstackCloudDiscoveryDataInstances `json:"instances,omitempty" yaml:"instances,omitempty"`
+	Zones     []string                              `json:"zones,omitempty" yaml:"zones,omitempty"`
+	Instances *OpenstackCloudDiscoveryDataInstances `json:"instances,omitempty" yaml:"instances,omitempty"`
 }
 
 type OpenstackCloudDiscoveryDataInstances struct {
