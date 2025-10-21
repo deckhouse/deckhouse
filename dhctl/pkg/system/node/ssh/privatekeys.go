@@ -58,11 +58,11 @@ func tryToExtractPassPhraseFromConfigOrTerminal(path string) ([]byte, error) {
 		fmt.Sprintf("Enter passphrase for ssh key %q: ", path),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", path, err)
+		return nil, fmt.Errorf("Getting passphrase for ssh key %q get error: %w", path, err)
 	}
 
 	if len(p) == 0 {
-		return nil, fmt.Errorf("passphrase for ssh key %q is empty", path)
+		return nil, fmt.Errorf("Passphrase for ssh key %q is empty", path)
 	}
 
 	return p, nil
@@ -94,7 +94,7 @@ func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
+		return nil, fmt.Errorf("Reading key file %q got error: %w", keyPath, err)
 	}
 
 	keyData = append(bytes.TrimSpace(keyData), '\n')
@@ -111,10 +111,10 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 			}
 			_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
 			if err != nil {
-				return nil, fmt.Errorf("wrong passphrase for ssh key")
+				return nil, fmt.Errorf("Wrong passphrase for ssh key")
 			}
 		default:
-			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
+			return nil, fmt.Errorf("Parsing private key %q got error: %w", keyPath, err)
 		}
 	}
 
