@@ -103,7 +103,6 @@ import:
   - install
   - uninstall
   - containerd.service
-  - pidumount
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
   add: /pidumount
