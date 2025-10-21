@@ -104,7 +104,7 @@ import:
   - uninstall
   - containerd.service
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
   add: /pidumount
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
