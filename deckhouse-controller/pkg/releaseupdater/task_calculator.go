@@ -36,6 +36,7 @@ import (
 const (
 	taskCalculatorServiceName = "task-calculator"
 	maxMinorVersionDiffForLTS = 10
+	deckhouseModuleName       = "" // Empty string indicates Deckhouse release (not a module)
 )
 
 type TaskCalculator struct {
@@ -473,47 +474,49 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
-			}
 
-			// logic for equal major versions (unless constraints endpoint is ahead)
-			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
-				// here we have only Deployed phase releases in prevRelease
-				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
+				// logic for equal major versions (unless constraints endpoint is ahead)
+				if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
+					// here we have only Deployed phase releases in prevRelease
+					ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
 
-				// it must await if deployed release has minor version more than one
-				if !ltsRelease &&
-					release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
-					msg := fmt.Sprintf(
-						"minor version is greater than deployed %s by one",
-						prevRelease.GetVersion().Original(),
-					)
+					// it must await if deployed release has minor version more than one
+					if !ltsRelease &&
+						release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
+						msg := fmt.Sprintf(
+							"minor version is greater than deployed %s by one",
+							prevRelease.GetVersion().Original(),
+						)
 
-					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+						logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
-					return &Task{
-						TaskType:            Await,
-						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-						QueueDepth:          queueDepthDelta,
-					}, nil
-				}
+						return &Task{
+							TaskType:            Await,
+							Message:             msg,
+							DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+							QueueDepth:          queueDepthDelta,
+						}, nil
+					}
 
-				// it must await if deployed release has minor version more than acceptable LTS channel limitation
-				if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
-					msg := fmt.Sprintf(
-						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
-						prevRelease.GetVersion().Original(),
-						release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
-					)
+					isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
+					// it must await if deployed release has minor version more than acceptable LTS channel limitation
+					// For modules, skip this check (allow any minor version jump)
+					if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+						msg := fmt.Sprintf(
+							"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
+							prevRelease.GetVersion().Original(),
+							release.GetVersion().Minor()-prevRelease.GetVersion().Minor(),
+						)
 
-					logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
+						logger.Debug("release awaiting", slog.String("channel", p.releaseChannel), slog.String("reason", msg))
 
-					return &Task{
-						TaskType:            Await,
-						Message:             msg,
-						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-						QueueDepth:          queueDepthDelta,
-					}, nil
+						return &Task{
+							TaskType:            Await,
+							Message:             msg,
+							DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+							QueueDepth:          queueDepthDelta,
+						}, nil
+					}
 				}
 			}
 

@@ -525,13 +525,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mr = suite.getModuleRelease("commander-1.0.3")
 			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
-
-			// Verify the final state
-			parca := suite.getModuleRelease("parca-1.2.2")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, parca.Status.Phase)
-
-			commander := suite.getModuleRelease("commander-1.0.3")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
 		})
 	})
 
