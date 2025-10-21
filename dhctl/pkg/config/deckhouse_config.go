@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -34,7 +35,7 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry                 RegistryData
+	Registry                 registry.Data
 	LogLevel                 string
 	Bundle                   string
 	DevBranch                string

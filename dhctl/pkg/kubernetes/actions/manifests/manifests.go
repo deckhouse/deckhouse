@@ -29,7 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -539,7 +539,7 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
+func DeckhouseRegistrySecret(registry registry.Data) *apiv1.Secret {
 	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,

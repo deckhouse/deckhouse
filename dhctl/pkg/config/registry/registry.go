@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package registry
 
 import (
 	"encoding/base64"
@@ -26,7 +26,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type RegistryData struct {
+type DeckhouseClusterConfig struct {
+	ImagesRepo        string `json:"imagesRepo"`
+	RegistryDockerCfg string `json:"registryDockerCfg,omitempty"`
+	RegistryCA        string `json:"registryCA,omitempty"`
+	RegistryScheme    string `json:"registryScheme,omitempty"`
+}
+
+type Data struct {
 	Address   string `json:"address"`
 	Path      string `json:"path"`
 	Scheme    string `json:"scheme"`
@@ -34,7 +41,7 @@ type RegistryData struct {
 	DockerCfg string `json:"dockerCfg"`
 }
 
-func (r *RegistryData) Process(cfg DeckhouseClusterConfig) error {
+func (r *Data) Process(cfg DeckhouseClusterConfig) error {
 	parts := strings.SplitN(cfg.ImagesRepo, "/", 2)
 	r.Address = parts[0]
 	if len(parts) == 2 {
@@ -53,11 +60,11 @@ func (r *RegistryData) Process(cfg DeckhouseClusterConfig) error {
 	return nil
 }
 
-func (r *RegistryData) KubeadmTemplatesCtx() (map[string]interface{}, error) {
+func (r *Data) KubeadmTemplatesCtx() (map[string]interface{}, error) {
 	return r.toMap()
 }
 
-func (r *RegistryData) BashibleBundleTemplateCtx() (map[string]interface{}, error) {
+func (r *Data) BashibleBundleTemplateCtx() (map[string]interface{}, error) {
 	ret, err := r.toBashibleCtx()
 	if err != nil {
 		return nil, err
@@ -68,7 +75,7 @@ func (r *RegistryData) BashibleBundleTemplateCtx() (map[string]interface{}, erro
 	return ret.ToMap()
 }
 
-func (r *RegistryData) Auth() (string, error) {
+func (r *Data) Auth() (string, error) {
 	type dockerCfg struct {
 		Auths map[string]struct {
 			Auth     string `json:"auth"`
@@ -107,7 +114,7 @@ func (r *RegistryData) Auth() (string, error) {
 	return registryAuth, nil
 }
 
-func (r *RegistryData) toMap() (map[string]interface{}, error) {
+func (r *Data) toMap() (map[string]interface{}, error) {
 	log.DebugF("registry data: %v\n", r)
 
 	ret := map[string]interface{}{
@@ -128,7 +135,7 @@ func (r *RegistryData) toMap() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (r *RegistryData) toBashibleCtx() (*bashible.Context, error) {
+func (r *Data) toBashibleCtx() (*bashible.Context, error) {
 	log.DebugF("registry data: %v\n", r)
 
 	imagesBase := r.Address

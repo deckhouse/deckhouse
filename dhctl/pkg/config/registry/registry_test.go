@@ -12,21 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package registry
 
 import (
 	"encoding/base64"
 	"fmt"
 	"testing"
+	"encoding/json"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func validRegistryData() RegistryData {
-	return RegistryData{
+func validData() Data {
+	return Data{
 		Address:   "r.example.com",
 		Path:      "/deckhouse/ce",
 		Scheme:    "https",
@@ -35,9 +37,47 @@ func validRegistryData() RegistryData {
 	}
 }
 
-func TestRegistryDataProcess(t *testing.T) {
+func dockerCfgAuth(username, password string) string {
+	auth := fmt.Sprintf("%s:%s", username, password)
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+func generateDockerCfg(host, username, password string) string {
+	return fmt.Sprintf(`{"auths":{"%s":{"auth":"%s"}}}`, host, dockerCfgAuth(username, password))
+}
+
+func generateOldDockerCfg(host string, username, password *string) string {
+	res := map[string]interface{}{
+		"auths": map[string]interface{}{
+			host: make(map[string]interface{}),
+		},
+	}
+
+	if username != nil {
+		err := unstructured.SetNestedField(res, *username, "auths", host, "username")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if password != nil {
+		err := unstructured.SetNestedField(res, *password, "auths", host, "password")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	auth, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(auth)
+}
+
+func TestDataProcess(t *testing.T) {
 	type result struct {
-		rData RegistryData
+		rData Data
 		err   bool
 	}
 
@@ -60,7 +100,7 @@ func TestRegistryDataProcess(t *testing.T) {
 				return ret
 			}(),
 			result: result{
-				rData: RegistryData{
+				rData: Data{
 					Address: "r.example.com",
 					Path:    "/deckhouse/ce",
 					Scheme:  "https",
@@ -75,7 +115,7 @@ func TestRegistryDataProcess(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rData := RegistryData{}
+			rData := Data{}
 			err := rData.Process(tt.input)
 			if tt.result.err {
 				assert.Error(t, err, "Expected errors but got none")
@@ -87,7 +127,7 @@ func TestRegistryDataProcess(t *testing.T) {
 	}
 }
 
-func TestRegistryDataAuth(t *testing.T) {
+func TestDataAuth(t *testing.T) {
 	type result struct {
 		auth string
 		err  bool
@@ -95,13 +135,13 @@ func TestRegistryDataAuth(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		input  RegistryData
+		input  Data
 		result result
 	}{
 		{
 			name: "Valid registry data: username + password",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.DockerCfg = base64.StdEncoding.EncodeToString([]byte(
 					generateDockerCfg(ret.Address, "username", "password"),
 				))
@@ -114,8 +154,8 @@ func TestRegistryDataAuth(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: username + password",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				username := "username"
 				password := "password"
 				ret.DockerCfg = base64.StdEncoding.EncodeToString([]byte(
@@ -130,8 +170,8 @@ func TestRegistryDataAuth(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: username + empty password",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				username := "username"
 				ret.DockerCfg = base64.StdEncoding.EncodeToString([]byte(
 					generateOldDockerCfg(ret.Address, &username, nil),
@@ -145,8 +185,8 @@ func TestRegistryDataAuth(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: empty username + password",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				password := "password"
 				ret.DockerCfg = base64.StdEncoding.EncodeToString([]byte(
 					generateOldDockerCfg(ret.Address, nil, &password),
@@ -160,8 +200,8 @@ func TestRegistryDataAuth(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: empty username + empty password",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.DockerCfg = base64.StdEncoding.EncodeToString([]byte(
 					generateOldDockerCfg(ret.Address, nil, nil),
 				))
@@ -174,8 +214,8 @@ func TestRegistryDataAuth(t *testing.T) {
 		},
 		{
 			name: "Invalid registry data: invalid dockerCfg",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.DockerCfg = "123"
 				return ret
 			}(),
@@ -198,7 +238,7 @@ func TestRegistryDataAuth(t *testing.T) {
 	}
 }
 
-func TestRegistryDataToMap(t *testing.T) {
+func TestDataToMap(t *testing.T) {
 	type result struct {
 		toMap map[string]interface{}
 		err   bool
@@ -206,13 +246,13 @@ func TestRegistryDataToMap(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		input  RegistryData
+		input  Data
 		result result
 	}{
 		{
 			name: "Valid registry data: with auth",
-			input: func() RegistryData {
-				ret := RegistryData{
+			input: func() Data {
+				ret := Data{
 					Address: "r.example.com",
 					Path:    "/deckhouse/ce",
 					Scheme:  "https",
@@ -242,8 +282,8 @@ func TestRegistryDataToMap(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: empty auth",
-			input: func() RegistryData {
-				ret := RegistryData{
+			input: func() Data {
+				ret := Data{
 					Address:   "r.example.com",
 					Path:      "/deckhouse/ce",
 					Scheme:    "https",
@@ -280,7 +320,7 @@ func TestRegistryDataToMap(t *testing.T) {
 	}
 }
 
-func TestRegistryDataToBashibleCtx(t *testing.T) {
+func TestDataToBashibleCtx(t *testing.T) {
 	type result struct {
 		bashibleCtx *bashible.Context
 		err         bool
@@ -288,13 +328,13 @@ func TestRegistryDataToBashibleCtx(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		input  RegistryData
+		input  Data
 		result result
 	}{
 		{
 			name: "Valid registry data: with auth",
-			input: func() RegistryData {
-				ret := RegistryData{
+			input: func() Data {
+				ret := Data{
 					Address: "r.example.com",
 					Path:    "/deckhouse/ce",
 					Scheme:  "https",
@@ -347,21 +387,21 @@ func TestRegistryDataToBashibleCtx(t *testing.T) {
 func TestValidateHTTPRegistryScheme(t *testing.T) {
 	tests := []struct {
 		name    string
-		input   RegistryData
+		input   Data
 		wantErr string
 	}{
 		{
 			name: "Valid registry data",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				return ret
 			}(),
 			wantErr: "",
 		},
 		{
 			name: "Valid registry data: https + CA",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.Scheme = "https"
 				ret.CA = "==exampleCA=="
 				return ret
@@ -370,8 +410,8 @@ func TestValidateHTTPRegistryScheme(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: https + empty CA",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.Scheme = "https"
 				ret.CA = ""
 				return ret
@@ -380,8 +420,8 @@ func TestValidateHTTPRegistryScheme(t *testing.T) {
 		},
 		{
 			name: "Valid registry data: http + empty CA",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.Scheme = "http"
 				ret.CA = ""
 				return ret
@@ -390,8 +430,8 @@ func TestValidateHTTPRegistryScheme(t *testing.T) {
 		},
 		{
 			name: "Invalid registry data: http + CA",
-			input: func() RegistryData {
-				ret := validRegistryData()
+			input: func() Data {
+				ret := validData()
 				ret.Scheme = "http"
 				ret.CA = "==exampleCA=="
 				return ret

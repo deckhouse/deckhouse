@@ -24,6 +24,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -241,7 +242,7 @@ func TestPrepareRegistry(t *testing.T) {
 		})
 
 		t.Run("Correct prepare registry object", func(t *testing.T) {
-			expectedData := RegistryData{
+			expectedData := registry.Data{
 				Address:   "r.example.com",
 				Path:      "/deckhouse/ce",
 				Scheme:    "https",
@@ -257,7 +258,7 @@ func TestPrepareRegistry(t *testing.T) {
 		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
 
 		t.Run("Registry object for CE edition", func(t *testing.T) {
-			expectedData := RegistryData{
+			expectedData := registry.Data{
 				Address:   "registry.deckhouse.io",
 				Path:      "/deckhouse/ce",
 				Scheme:    "https",

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
@@ -35,7 +36,7 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Scheme:  "https",
 			Address: "test.registry.io",
 			CA:      "",
@@ -64,7 +65,7 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Scheme:  "https",
 			Address: "test.registry.io",
 			CA:      "",
@@ -93,7 +94,7 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Scheme:  "https",
 			Address: "test.registry.io",
 			CA:      "",

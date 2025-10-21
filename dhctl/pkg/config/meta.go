@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -51,7 +52,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  registry.Data          `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -95,7 +96,13 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-		err := m.Registry.Process(m.DeckhouseConfig)
+
+		err := m.Registry.Process(registry.DeckhouseClusterConfig{
+			ImagesRepo:        m.DeckhouseConfig.ImagesRepo,
+			RegistryDockerCfg: m.DeckhouseConfig.RegistryDockerCfg,
+			RegistryCA:        m.DeckhouseConfig.RegistryCA,
+			RegistryScheme:    m.DeckhouseConfig.RegistryScheme,
+		})
 		if err != nil {
 			return nil, err
 		}

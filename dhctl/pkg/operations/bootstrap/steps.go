@@ -44,6 +44,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	config_registry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -295,7 +296,7 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(config config_registry.Data) (*registryClientConfigGetter, error) {
 	auth, err := config.Auth()
 	if err != nil {
 		return nil, fmt.Errorf("registry auth: %v", err)
@@ -317,7 +318,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config_registry.Data, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)

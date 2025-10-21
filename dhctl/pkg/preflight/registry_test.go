@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
@@ -71,7 +72,7 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Address: "registry.deckhouse.io",
 			Scheme:  "https",
 		},
@@ -97,7 +98,7 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Address: "registry.deckhouse.io",
 			Scheme:  "https",
 		},
@@ -122,7 +123,7 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Address: "registry.deckhouse.io",
 			Scheme:  "https",
 		},
@@ -257,7 +258,7 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: config.RegistryData{
+					Registry: registry.Data{
 						Address:   "registry.deckhouse.io",
 						Path:      "/deckhouse/ce",
 						Scheme:    "https",
@@ -266,7 +267,7 @@ func TestCheckRegistryCredentials(t *testing.T) {
 					},
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: config.RegistryData{
+					Registry: registry.Data{
 						Address:   "registry.deckhouse.io",
 						Path:      "/deckhouse/ce",
 						Scheme:    "https",

@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
 type PreflightChecksTestSuite struct {
@@ -35,7 +36,7 @@ func (s *PreflightChecksTestSuite) SetupSuite() {
 func (s *PreflightChecksTestSuite) SetupTest() {
 	app.AppVersion = "v1.50.6"
 	s.checker.installConfig = &config.DeckhouseInstaller{
-		Registry: config.RegistryData{
+		Registry: registry.Data{
 			Address:   "registry.deckhouse.io",
 			Path:      "/deckhouse/ce",
 			DockerCfg: "ewogICJhdXRocyI6IHsKICAgICJyZWdpc3RyeS5kZWNraG91c2UuaW8iOiB7CiAgICAgICJhdXRoIjogIiIKICAgIH0KICB9Cn0=",
