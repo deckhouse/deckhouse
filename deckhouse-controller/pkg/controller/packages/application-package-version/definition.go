@@ -37,9 +37,9 @@ type PackageDefinition struct {
 	// Environment requirements (optional)
 	Requirements *PackageRequirements `yaml:"requirements"`
 	// Package availability by editions (optional)
-	Licensing PackageLicensing `yaml:"licensing"`
+	Licensing *PackageLicensing `yaml:"licensing"`
 	// Rules for upgrade and downgrade
-	VersionCompatibilityRules VersionCompatibilityRules `yaml:"versionCompatibilityRules"`
+	VersionCompatibilityRules *VersionCompatibilityRules `yaml:"versionCompatibilityRules"`
 }
 
 type PackageDescription struct {
@@ -55,7 +55,7 @@ type PackageRequirements struct {
 
 type PackageLicensing struct {
 	Editions map[string]PackageEdition `yaml:"editions"`
-	// Only for modules, array of bundles, where module enabled by deafult
+	// Only for modules, array of bundles, where module enabled by default
 	EnabledInBundles []string `yaml:"enabledInBundles"`
 }
 

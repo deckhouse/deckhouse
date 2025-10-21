@@ -23,16 +23,21 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"gopkg.in/yaml.v2"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+type VersionFile struct {
+	Version string `json:"version"`
+}
+
 type PackageMetadata struct {
-	Version           string                 `json:"version"`
-	Changelog         map[string]interface{} `json:"-"`
-	PackageDefinition *PackageDefinition     `json:"module,omitempty"`
+	Version           string
+	Changelog         map[string]interface{}
+	PackageDefinition *PackageDefinition
 }
 
 var ErrImageIsNil = errors.New("image is nil")
@@ -40,7 +45,7 @@ var ErrImageIsNil = errors.New("image is nil")
 type packageReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
-	moduleReader    *bytes.Buffer
+	packageReader   *bytes.Buffer
 }
 
 func (rr *packageReader) untarMetadata(rc io.Reader) error {
@@ -67,7 +72,7 @@ func (rr *packageReader) untarMetadata(rc io.Reader) error {
 				return err
 			}
 		case "package.yaml", "package.yml":
-			_, err := io.Copy(rr.moduleReader, tr)
+			_, err := io.Copy(rr.packageReader, tr)
 			if err != nil {
 				return err
 			}
@@ -94,7 +99,7 @@ func (r *reconciler) fetchPackageMetadata(_ context.Context, img registryv1.Imag
 	rr := &packageReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
-		moduleReader:    bytes.NewBuffer(nil),
+		packageReader:   bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -103,15 +108,17 @@ func (r *reconciler) fetchPackageMetadata(_ context.Context, img registryv1.Imag
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta.Version)
+		var version VersionFile
+		err = json.NewDecoder(rr.versionReader).Decode(&version)
 		if err != nil {
 			return nil, fmt.Errorf("metadata decode: %w", err)
 		}
+		meta.Version = version.Version
 	}
 
-	if rr.moduleReader.Len() > 0 {
+	if rr.packageReader.Len() > 0 {
 		var PackageDefinition PackageDefinition
-		err = yaml.NewDecoder(rr.moduleReader).Decode(&PackageDefinition)
+		err = yaml.NewDecoder(rr.packageReader).Decode(&PackageDefinition)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal package yaml failed: %w", err)
 		}

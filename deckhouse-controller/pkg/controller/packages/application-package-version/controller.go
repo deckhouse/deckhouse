@@ -47,11 +47,13 @@ type reconciler struct {
 
 func RegisterController(
 	runtimeManager manager.Manager,
+	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
 		logger: logger,
+		dc:     dc,
 	}
 
 	applicationPackageVersionController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -116,22 +118,25 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 
 	packageName := packageVersion.Labels["package"]
 	packageRepoName := packageVersion.Labels["repository"]
+	r.logger.Debug("repo and package name from labels", slog.String("name", packageVersion.Name), slog.String("package", packageName), slog.String("repository", packageRepoName)) // debug
 
 	// - get registry creds from PackageRepository resource
-	var pr v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: packageRepoName}, &pr)
+	var packageRepo v1alpha1.PackageRepository
+	err := r.client.Get(ctx, types.NamespacedName{Name: packageRepoName}, &packageRepo)
 	if err != nil {
 		return fmt.Errorf("get packageRepository %s: %w", packageRepoName, err)
 	}
+	r.logger.Debug("got package repository", slog.String("package_version", packageVersion.Name), slog.String("repository", packageRepo.Name)) // debug
 
 	// - create go registry client from creds from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:stable
 	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
-	registryPath := path.Join(pr.Spec.Registry.Repo, packageName, "release") // test
+	registryPath := path.Join(packageRepo.Spec.Registry.Repo, packageName, "release")                                    // test
+	r.logger.Debug("package registry path", slog.String("name", packageVersion.Name), slog.String("path", registryPath)) // debug
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
-		DockerConfig: pr.Spec.Registry.DockerCFG,
-		CA:           pr.Spec.Registry.CA,
-		Scheme:       pr.Spec.Registry.Scheme,
+		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
+		CA:           packageRepo.Spec.Registry.CA,
+		Scheme:       packageRepo.Spec.Registry.Scheme,
 		// UserAgent: ,
 	}, r.logger)
 	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
@@ -149,26 +154,32 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	if err != nil {
 		return fmt.Errorf("fetch package release image metadata for %s: %w", packageVersion.Name, err)
 	}
+	if packageMeta.PackageDefinition.Name != "" {
+		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name)) // debug
+	}
 
 	// here we start changing the packageVersion object
 	original := packageVersion.DeepCopy()
 
 	packageVersion = enrichWithPackageDefinition(packageVersion, packageMeta.PackageDefinition)
 
-	// - delete label "draft" and patch the main object
-	delete(packageVersion.Labels, "draft")
-
-	err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
-	}
-
 	// - patch the status
+	r.logger.Info("patch package version status", slog.String("name", packageVersion.Name)) // debug
 	err = r.client.Status().Patch(ctx, packageVersion, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch status packageVersion %s: %w", packageVersion.Name, err)
 	}
 
+	// - delete label "draft" and patch the main object
+	delete(packageVersion.Labels, "draft")
+
+	r.logger.Info("patch package version", slog.String("name", packageVersion.Name)) // debug
+	err = r.client.Patch(ctx, packageVersion, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("patch packageVersion %s: %w", packageVersion.Name, err)
+	}
+
+	r.logger.Info("handle ApplicationPackageVersion complete", slog.String("name", packageVersion.Name)) // debug
 	return nil
 }
 
