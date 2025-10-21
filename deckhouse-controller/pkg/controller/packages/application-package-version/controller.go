@@ -114,18 +114,20 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	// TODO: implement application package version reconciliation logic
 	r.logger.Info("handling ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
-	packageName := packageVersion.Spec.Repository
+	packageName := packageVersion.Labels["package"]
+	packageRepoName := packageVersion.Labels["repository"]
 
 	// - get registry creds from PackageRepository resource
 	var pr v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: packageName}, &pr)
+	err := r.client.Get(ctx, types.NamespacedName{Name: packageRepoName}, &pr)
 	if err != nil {
-		return fmt.Errorf("get packageRepository %s: %w", packageName, err)
+		return fmt.Errorf("get packageRepository %s: %w", packageRepoName, err)
 	}
 
 	// - create go registry client from creds from PackageRepository
 	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/release-channel:stable
-	registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
+	// registryPath := path.Join(pr.Spec.Registry.Repo, packageVersion.Spec.PackageName, "release-channel")
+	registryPath := path.Join(pr.Spec.Registry.Repo, packageName, "release") // test
 	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
 		DockerConfig: pr.Spec.Registry.DockerCFG,
 		CA:           pr.Spec.Registry.CA,
