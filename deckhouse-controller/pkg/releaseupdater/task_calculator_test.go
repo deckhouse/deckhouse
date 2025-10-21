@@ -21,14 +21,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func mkDR(name, ver, phase string) *v1alpha1.DeckhouseRelease {
@@ -588,7 +588,7 @@ func TestTaskCalculator_CalculatePendingReleaseTask(t *testing.T) {
 			tc := NewDeckhouseReleaseTaskCalculator(nil, logger, tt.releaseChannel)
 
 			// Mock the listFunc to return our test releases
-			tc.listFunc = func(ctx context.Context, c client.Client, moduleName string) ([]v1alpha1.Release, error) {
+			tc.listFunc = func(_ context.Context, _ client.Client, _ string) ([]v1alpha1.Release, error) {
 				return tt.releases, nil
 			}
 
@@ -691,7 +691,7 @@ func (m *mockRelease) GetApprovedStatus() bool {
 	return false
 }
 
-func (m *mockRelease) SetApprovedStatus(b bool) {
+func (m *mockRelease) SetApprovedStatus(_ bool) {
 	// no-op for mock
 }
 
