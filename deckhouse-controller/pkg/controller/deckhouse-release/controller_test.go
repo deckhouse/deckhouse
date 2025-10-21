@@ -863,6 +863,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Test auto-mode for postponed release with previous suspend", func() {
+		suite.setupController("auto-mode-with-previous-suspend.yaml", initValues, embeddedMUP)
+		dr := suite.getDeckhouseRelease("v1.70.17")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+		dr = suite.getDeckhouseRelease("v1.72.10")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("Test autoPatch-mode for postponed patch release", func() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
