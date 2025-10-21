@@ -1,4 +1,4 @@
-{{- $mig_manager_version := "0.12.1" }}
+{{- $mig_manager_version := "0.12.3" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- $version := $key | toString }}
