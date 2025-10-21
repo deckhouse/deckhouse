@@ -213,7 +213,7 @@ secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-pidumount-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
@@ -222,7 +222,7 @@ import:
   before: install
 secrets:
 - id: GOPROXY
-  value: {{ .GOPROXY }}
+  value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
