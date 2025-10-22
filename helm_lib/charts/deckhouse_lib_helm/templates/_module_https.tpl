@@ -140,10 +140,10 @@ metadata:
 type: kubernetes.io/tls
 data:
 {{- if (hasKey $module_values.internal.customCertificateData "ca.crt") }}
-  ca.crt: {{ index $module_values.internal.customCertificateData "ca.crt" | b64enc }}
+  ca.crt: {{ index $module_values.internal.customCertificateData "ca.crt" }}
 {{- end }}
-  tls.crt: {{ index $module_values.internal.customCertificateData "tls.crt" | b64enc }}
-  tls.key: {{ index $module_values.internal.customCertificateData "tls.key" | b64enc }}
+  tls.crt: {{ index $module_values.internal.customCertificateData "tls.crt" }}
+  tls.key: {{ index $module_values.internal.customCertificateData "tls.key" }}
   {{- end -}}
 {{- end -}}
 
