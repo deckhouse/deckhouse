@@ -318,26 +318,6 @@ entries:
                         ru: Обзор
                       url: /admin/integrations/virtualization/overview.html
                     - title:
-                        en: Integration with VMware vSphere
-                        ru: Интеграция с VMware vSphere
-                      folders:
-                        - title:
-                            en: Connection and authorization
-                            ru: Подключение и авторизация
-                          url: /admin/integrations/virtualization/vsphere/authorization.html
-                        - title:
-                            en: Layouts and configuration
-                            ru: Схемы размещения и настройка
-                          url: /admin/integrations/virtualization/vsphere/layout.html
-                        - title:
-                            en: Storage and load balancing
-                            ru: Хранилище и балансировка
-                          url: /admin/integrations/virtualization/vsphere/storage.html
-                        - title:
-                            en: Integration with VMware vSphere services
-                            ru: Интеграция со службами VMware vSphere
-                          url: /admin/integrations/virtualization/vsphere/services.html
-                    - title:
                         en: Integration with DVP
                         ru: Интеграция с DVP
                       folders:
@@ -365,6 +345,26 @@ entries:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
+                    - title:
+                        en: Integration with VMware vSphere
+                        ru: Интеграция с VMware vSphere
+                      folders:
+                        - title:
+                            en: Connection and authorization
+                            ru: Подключение и авторизация
+                          url: /admin/integrations/virtualization/vsphere/authorization.html
+                        - title:
+                            en: Layouts and configuration
+                            ru: Схемы размещения и настройка
+                          url: /admin/integrations/virtualization/vsphere/layout.html
+                        - title:
+                            en: Storage and load balancing
+                            ru: Хранилище и балансировка
+                          url: /admin/integrations/virtualization/vsphere/storage.html
+                        - title:
+                            en: Integration with VMware vSphere services
+                            ru: Интеграция со службами VMware vSphere
+                          url: /admin/integrations/virtualization/vsphere/services.html
                     - title:
                         en: Integration with zVirt
                         ru: Интеграция с zVirt
