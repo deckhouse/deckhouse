@@ -128,10 +128,8 @@ certManager:
   {{- $secret_name_prefix := index . 2 -}} {{- /* Secret name prefix */ -}}
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CustomCertificate" -}}
-    {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) | default dict -}}
-    {{- $cert_data := (dig $module_values "internal" "customCertificateData" | default dict) -}}
-    {{- if gt (len $cert_data) 0 -}}
-      {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
+    {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
+    {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
 ---
 apiVersion: v1
 kind: Secret
@@ -141,12 +139,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
 data:
-{{- if hasKey $cert_data "ca.crt" }}
-  ca.crt: {{ index $cert_data "ca.crt" }}
+{{- if (hasKey $module_values.internal.customCertificateData "ca.crt") }}
+  ca.crt: {{ index $module_values.internal.customCertificateData "ca.crt" }}
 {{- end }}
-  tls.crt: {{ index $cert_data "tls.crt" }}
-  tls.key: {{ index $cert_data "tls.key" }}
-    {{- end -}}
+  tls.crt: {{ index $module_values.internal.customCertificateData "tls.crt" }}
+  tls.key: {{ index $module_values.internal.customCertificateData "tls.key" }}
   {{- end -}}
 {{- end -}}
 
