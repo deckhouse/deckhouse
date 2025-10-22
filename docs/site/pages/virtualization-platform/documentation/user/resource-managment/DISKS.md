@@ -7,7 +7,7 @@ Disks in virtual machines are necessary for writing and storing data, ensuring t
 
 Depending on the storage properties, the behavior of disks during creation of virtual machines during operation may differ:
 
-`VolumeBindingMode` property:
+The behavior of disks during their creation depends on the `VolumeBindingMode` parameter, which defines when exactly the disk is created and on which node:
 
 `Immediate`: The disk is created immediately after the resource is created (the disk is assumed to be available for connection to a virtual machine on any node in the cluster).
 
@@ -17,14 +17,16 @@ Depending on the storage properties, the behavior of disks during creation of vi
 
 ![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.png)
 
-The behavior of disks during operation depends on the `AccessMode`:
+The `AccessMode` parameter determines how the virtual machine can access the disk — whether it is used exclusively by one VM or shared among several:
 
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
 - `ReadWriteOnce (RWO)`: Only one instance of the virtual machine can access the disk. Live migration of virtual machines with such disks is supported only in DVP commercial editions. Live migration is only available if all disks are connected statically via (`.spec.blockDeviceRefs`). Disks connected dynamically via `VirtualMachineBlockDeviceAttachments` must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
 
 When creating a disk, the controller will independently determine the most optimal parameters supported by the storage.
 
-Attention: It is impossible to create disks from iso-images!
+{% alert level="warning" %}
+It is impossible to create disks from ISO images.
+{% endalert %}
 
 To find out the available storage options, run the following command:
 

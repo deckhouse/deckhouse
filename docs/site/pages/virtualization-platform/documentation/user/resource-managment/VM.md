@@ -1211,7 +1211,7 @@ How to work with bootable block devices in the web interface:
 
 #### Additional Block Devices
 
-Additional block devices can be connected and disconnected from a virtual machine that is in a running state without having to reboot it.
+Additional block devices can be connected to and disconnected from a running virtual machine without having to reboot it.
 
 The `VirtualMachineBlockDeviceAttachment` (`vmbda`) resource is used to connect additional block devices.
 

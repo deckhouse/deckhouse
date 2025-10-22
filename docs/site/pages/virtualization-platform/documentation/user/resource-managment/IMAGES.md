@@ -6,7 +6,7 @@ permalink: en/virtualization-platform/documentation/user/resource-management/ima
 The [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
 
 {% alert level="warning" %}
-Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 {% endalert %}
 
 When connected to a virtual machine, the image is accessed in read-only mode.
