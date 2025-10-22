@@ -79,4 +79,3 @@ lang: ru
    ```shell
    d8 k get netappstorageclasses.storage.deckhouse.io <имя netappstorageclass>
    ```
-
