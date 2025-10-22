@@ -118,7 +118,7 @@ For Windows family operating systems, the platform supports initialization with 
 Virtual machines use PersistentVolume resources. To manage these resources and allocate disk space within the cluster, one or more supported storage systems must be installed:
 
 | Storage System            | Disk Location             |
-| ------------------------- | ------------------------- |
+|---------------------------|---------------------------|
 | sds-local-volume          | Local                     |
 | sds-replicated-volume     | Replicas on cluster nodes |
 | Ceph Cluster              | External storage          |
@@ -126,3 +126,4 @@ Virtual machines use PersistentVolume resources. To manage these resources and a
 | TATLIN.UNIFIED (Yadro)    | External storage          |
 | Huawei Dorado             | External storage          |
 | HPE 3par                  | External storage          |
+| NetApp                    | External storage          |
