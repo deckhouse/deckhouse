@@ -1,0 +1,25 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: test-apv
+  labels:
+    package: test-package
+    repository: test-repo
+    draft: "true"
+  deletionTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  packageName: test-package
+  version: "1.0.0"
+  repository: test-repo
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: test-repo
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca
