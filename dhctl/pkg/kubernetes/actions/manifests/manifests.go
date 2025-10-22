@@ -34,9 +34,9 @@ import (
 var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
-	deckhouseRegistrySecretName      = "deckhouse-registry"
-	registryInitSecretName           = "registry-init"
-	registryBashibleConfigSecretName = "registry-bashible-config"
+	deckhouseRegistrySecretName          = "deckhouse-registry"
+	registryInitSecretName               = "registry-init"
+	RegistryBashibleConfigSecretDataName = "registry-bashible-config"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
@@ -572,7 +572,7 @@ func RegistryInitSecret(data map[string][]byte) *apiv1.Secret {
 	return ret
 }
 
-func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
+func RegistryBashibleConfigSecretData(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{

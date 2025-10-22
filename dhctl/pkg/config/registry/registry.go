@@ -59,9 +59,21 @@ type CertKey struct {
 	Key  string `json:"key" yaml:"key"`
 }
 
-func New(deckhouseSettings map[string]any) (Registry, error) {
+func FromDeckhouseSettings(rawJson string) (Registry, error) {
 	spec := Spec{}
-	err := spec.fromDeckhouseSettings(deckhouseSettings)
+	err := spec.fromDeckhouseSettings(rawJson)
+	return Registry{spec: spec}, err
+}
+
+func FromDefault() (Registry, error) {
+	spec := Spec{}
+	err := spec.fromDefault()
+	return Registry{spec: spec}, err
+}
+
+func FromInitConfig(initConfig InitConfigSpec) (Registry, error) {
+	spec := Spec{}
+	err := spec.fromInitConfig(initConfig)
 	return Registry{spec: spec}, err
 }
 
@@ -110,7 +122,7 @@ func (r *Registry) InitWithGlobalCache() error {
 	return nil
 }
 
-func (r *Registry) ConfigBuilder() *ConfigBuilder {
+func (r Registry) ConfigBuilder() *ConfigBuilder {
 	return &ConfigBuilder{registry: r}
 }
 

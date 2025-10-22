@@ -32,6 +32,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
+type MocRegistryConfigBuilder struct{}
+
+func (m MocRegistryConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, error) {
+	return map[string][]byte{}, nil
+}
+func (m MocRegistryConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
+	return map[string][]byte{}, nil
+}
+func (m MocRegistryConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]byte, error) {
+	return map[string][]byte{}, nil
+}
+func (m MocRegistryConfigBuilder) InclusterImagesRepo() string {
+	return "images-repo"
+}
+
 // func TestNewRegistryClientConfigGetter(t *testing.T) {
 // 	t.Run("Path with leading slash", func(t *testing.T) {
 // 		config := registry.Data{
@@ -178,10 +193,11 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &config.DeckhouseInstaller{
-		Bundle:    "minimal",
-		LogLevel:  "Info",
-		UUID:      clusterUUID,
-		DevBranch: "pr1111",
+		RegistryConfigBuilder: &MocRegistryConfigBuilder{},
+		Bundle:                "minimal",
+		LogLevel:              "Info",
+		UUID:                  clusterUUID,
+		DevBranch:             "pr1111",
 	}
 
 	assertDeploymentAndUUIDCmCreated := func(t *testing.T, fakeClient *client.KubernetesClient) {

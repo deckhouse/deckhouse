@@ -16,6 +16,7 @@ package registry
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -29,7 +30,21 @@ import (
 )
 
 type ConfigBuilder struct {
-	registry *Registry
+	registry Registry
+}
+
+func (builder *ConfigBuilder) DeckhouseSettings() (map[string]any, error) {
+	rawSettings, err := json.Marshal(builder.registry.spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal registry settings: %w", err)
+	}
+
+	var ret map[string]any
+	err = json.Unmarshal(rawSettings, &ret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal registry settings: %w", err)
+	}
+	return ret, nil
 }
 
 func (builder *ConfigBuilder) InclusterData() (Data, error) {
@@ -163,7 +178,7 @@ func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, 
 	return ret, nil
 }
 
-func (builder *ConfigBuilder) RegistryBashibleConfigSecret() (map[string][]byte, error) {
+func (builder *ConfigBuilder) RegistryBashibleConfigSecretData() (map[string][]byte, error) {
 	var (
 		imagesBase string
 		mirrorHost string

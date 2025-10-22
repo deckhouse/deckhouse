@@ -25,7 +25,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -34,8 +33,15 @@ const (
 	DefaultLogLevel = "Info"
 )
 
+type RegistryConfigBuilder interface {
+	DeckhouseRegistrySecretData() (map[string][]byte, error)
+	RegistryInitSecretData() (map[string][]byte, error)
+	RegistryBashibleConfigSecretData() (map[string][]byte, error)
+	InclusterImagesRepo() string
+}
+
 type DeckhouseInstaller struct {
-	RegistryConfigBuilder    *registry.ConfigBuilder
+	RegistryConfigBuilder    RegistryConfigBuilder
 	LogLevel                 string
 	Bundle                   string
 	DevBranch                string
@@ -159,10 +165,16 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		}
 	}
 
+	registry, err := metaConfig.Registry.ConfigBuilder().DeckhouseSettings()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get registry settings: %s", err)
+	}
+
 	if deckhouseCm == nil {
 		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
+			"registry": registry,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)

@@ -77,7 +77,7 @@ func (s *Spec) fromInitConfig(initConfig InitConfigSpec) error {
 		return err
 	}
 
-	spec := Spec{
+	*s = Spec{
 		Mode: registry_const.ModeUnmanaged,
 		Unmanaged: &UnmanagedModeSpec{
 			ImagesRepo: initConfig.ImagesRepo,
@@ -87,25 +87,17 @@ func (s *Spec) fromInitConfig(initConfig InitConfigSpec) error {
 			Password:   password,
 		},
 	}
-
-	if err := spec.Validate(); err != nil {
+	if err := s.Validate(); err != nil {
 		return err
 	}
-
-	*s = spec
 	return nil
 }
 
-func (s *Spec) fromDeckhouseSettings(deckhouseSettings map[string]any) error {
+func (s *Spec) fromDeckhouseSettings(rawJson string) error {
 	var err error
 	var spec Spec
 
-	rawSpec, ok := deckhouseSettings["registry"]
-	if !ok {
-		return fmt.Errorf("empty registry spec in deckhouse moduleConfig")
-	}
-
-	jsonSpec, err := json.Marshal(rawSpec)
+	jsonSpec, err := json.Marshal(rawJson)
 	if err != nil {
 		return fmt.Errorf("failed to get registry config: %w", err)
 	}
@@ -122,15 +114,31 @@ func (s *Spec) fromDeckhouseSettings(deckhouseSettings map[string]any) error {
 		spec.Unmanaged.ImagesRepo = strings.TrimRight(spec.Unmanaged.ImagesRepo, "/")
 	}
 
-	if err := spec.Validate(); err != nil {
+	*s = spec
+	if err := s.Validate(); err != nil {
 		return err
 	}
-
-	*s = spec
 	return nil
 }
 
-func (s *Spec) Validate() error {
+func (s *Spec) fromDefault() error {
+	*s = Spec{
+		Mode: registry_const.ModeUnmanaged,
+		Unmanaged: &UnmanagedModeSpec{
+			ImagesRepo: "registry.deckhouse.io/deckhouse/ce",
+			Scheme:     SchemeHTTPS,
+			CA:         "",
+			Username:   "",
+			Password:   "",
+		},
+	}
+	if err := s.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s Spec) Validate() error {
 	return validation.ValidateStruct(&s,
 		validation.Field(&s.Mode,
 			validation.In(registry_const.ModeDirect, registry_const.ModeUnmanaged),
@@ -146,7 +154,7 @@ func (s *Spec) Validate() error {
 	)
 }
 
-func (s *UnmanagedModeSpec) Validate() error {
+func (s UnmanagedModeSpec) Validate() error {
 	return validation.ValidateStruct(&s,
 		validation.Field(&s.ImagesRepo, validation.Required),
 		validation.Field(&s.Scheme, validation.In(SchemeHTTP, SchemeHTTPS)),
@@ -156,7 +164,7 @@ func (s *UnmanagedModeSpec) Validate() error {
 	)
 }
 
-func (s *DirectModeSpec) Validate() error {
+func (s DirectModeSpec) Validate() error {
 	return validation.ValidateStruct(&s,
 		validation.Field(&s.ImagesRepo, validation.Required),
 		validation.Field(&s.Scheme, validation.In(SchemeHTTP, SchemeHTTPS)),

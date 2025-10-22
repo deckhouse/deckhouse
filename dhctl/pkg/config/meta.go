@@ -102,25 +102,46 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(m.DeckhouseConfig.ImagesRepo), "/")
 	}
 	{
-		var err error
-		var mcDeckhouse *ModuleConfig
-		for _, mc := range m.ModuleConfigs {
-			if mc.GetName() == "deckhouse" {
-				mcDeckhouse = mc
+		var (
+			err              error
+			deckhouseConfig  *ModuleConfig
+			registrySettings []byte
+		)
+
+		// Find the deckhouse module config
+		for _, cfg := range m.ModuleConfigs {
+			if cfg.GetName() == "deckhouse" {
+				deckhouseConfig = cfg
+				break
 			}
 		}
 
-		if mcDeckhouse == nil {
-			return nil, fmt.Errorf("Failed to get mc deckhouse, is empty")
+		// Extract the "registry" section from deckhouse settings, if present
+		if deckhouseConfig != nil {
+			if rawRegistry, exists := deckhouseConfig.Spec.Settings["registry"]; exists {
+				registrySettings, err = json.Marshal(rawRegistry)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal registry settings from deckhouse ModuleConfig: %w", err)
+				}
+			}
 		}
 
-		m.Registry, err = registry.New(mcDeckhouse.Spec.Settings)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get registry options from deckhouse moduleConfig %w", err)
+		// Use deckhouse-provided settings or fall back to default
+		if len(registrySettings) > 0 {
+			m.Registry, err = registry.FromDeckhouseSettings(string(registrySettings))
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry from deckhouse settings: %w", err)
+			}
+		} else {
+			m.Registry, err = registry.FromDefault()
+			if err != nil {
+				return nil, fmt.Errorf("failed to create default registry settings: %w", err)
+			}
 		}
-		err = m.Registry.InitWithGlobalCache()
-		if err != nil {
-			return nil, err
+
+		// Initialize registry with global cache
+		if err := m.Registry.InitWithGlobalCache(); err != nil {
+			return nil, fmt.Errorf("failed to initialize registry with global cache: %w", err)
 		}
 	}
 
