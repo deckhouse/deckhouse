@@ -11,7 +11,7 @@ Creating StorageClass for `csi.netapp.com` CSI driver by users is prohibited.
 Currently, the module supports storage systems compatible with [NetApp Trident CSI](https://github.com/NetApp/trident). For support of other NetApp storage systems, please contact [Deckhouse technical support](/tech-support/).
 {% endalert %}
 
-This page provides instructions for connecting NetApp to DKP, configuring the connection, creating StorageClass, and verifying storage functionality.
+This page provides instructions for connecting NetApp to DKP, configuring the connection, and creating StorageClass.
 
 ## System Requirements
 
