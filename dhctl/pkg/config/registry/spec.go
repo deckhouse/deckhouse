@@ -21,9 +21,9 @@ import (
 	"regexp"
 	"strings"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 var (
@@ -95,12 +95,7 @@ func (s *Spec) fromDeckhouseSettings(rawJson string) error {
 	var err error
 	var spec Spec
 
-	jsonSpec, err := json.Marshal(rawJson)
-	if err != nil {
-		return fmt.Errorf("failed to get registry config: %w", err)
-	}
-
-	err = json.Unmarshal(jsonSpec, &spec)
+	err = json.Unmarshal([]byte(rawJson), &spec)
 	if err != nil {
 		return fmt.Errorf("failed to get registry config: %w", err)
 	}
