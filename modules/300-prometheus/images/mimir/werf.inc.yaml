@@ -38,7 +38,6 @@ shell:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
-    - go build -o mimir ./cmd/mimir
     - |
       {{- include "image-build.build" (set $ "BuildCommand" `go build -o mimir ./cmd/mimir`) | indent 6 }}
     - chown -R 64535:64535 /src/mimir
