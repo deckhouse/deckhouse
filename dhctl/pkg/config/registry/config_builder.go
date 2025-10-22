@@ -101,8 +101,9 @@ func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
 	}
 
 	ret := bashible.Context{
-		Mode:       builder.registry.spec.Mode,
-		ImagesBase: imagesBase,
+		RegistryModuleEnable: true,
+		Mode:                 builder.registry.spec.Mode,
+		ImagesBase:           imagesBase,
 		Hosts: map[string]bashible.ContextHosts{
 			mirrorHost: {Mirrors: mirrors}},
 	}
