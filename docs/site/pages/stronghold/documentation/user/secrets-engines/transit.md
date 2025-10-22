@@ -103,7 +103,7 @@ Key           Value
 ciphertext    vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7w==
 ```
 
-The returned ciphertext starts with `vault:v1:`. The first prefix (`stronghold`) identifies that it has been wrapped by Stronghold. The `v1` indicates the key version 1 was used to encrypt the plaintext; therefore, when you rotate keys, Stronghold knows which version to use for decryption. 
+The returned ciphertext starts with `vault:v1:`. The first prefix (`stronghold`) identifies that it has been wrapped by Stronghold. The `v1` indicates the key version 1 was used to encrypt the plaintext; therefore, when you rotate keys, Stronghold knows which version to use for decryption.
 
 Note that Stronghold _does not store_ any of this data. The caller is responsible for storing the encrypted ciphertext. When the caller wants the plaintext, it must provide the ciphertext back to Stronghold to decrypt the value.
 

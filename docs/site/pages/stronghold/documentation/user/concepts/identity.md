@@ -46,7 +46,7 @@ one of type GitHub and one of type LDAP.
 
 ![Entity overview](/images/stronghold/identity-doc-1.png)
 
-However, if both aliases are created on the same auth mount, such as a Github mount, both aliases cannot be mapped to the same entity.
+However, if both aliases are created on the same auth mount, such as a GitHub mount, both aliases cannot be mapped to the same entity.
 The aliases can have the same auth type, as long as the auth mounts are different, and still be associated to the same entity.
 The diagrams below illustrate both valid and invalid scenarios.
 
@@ -85,7 +85,7 @@ To know the full set of capabilities of the token with an associated entity iden
 the policies on the token should be taken into account.
 
 {% alert level="warning" %}
-Be careful in granting permissions to non-readonly identity endpoints.
+Be careful in granting permissions to non-read-only identity endpoints.
 If a user can modify an entity, they can grant it additional privileges through policies.
 If a user can modify an alias they can login with, they can bind it to an entity with higher privileges.
 If a user can modify group membership, they can add their entity to a group with higher privileges.
