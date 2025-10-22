@@ -321,6 +321,7 @@ floatingNetworkID: "floatingNetworkID"
 project: default
 env: production
 `))
+			Expect(f.ValuesGet(internal + "hybridMode").Bool()).To(Not(BeTrue()))
 		})
 	})
 
@@ -394,6 +395,7 @@ subnetID: overrideSubnetID
 aaa: bbb
 ccc: ddd
 `))
+			Expect(b.ValuesGet(internal + "hybridMode").Bool()).To(BeTrue())
 		})
 
 		Context("Cluster has cloudProviderOpenstack and discovery data", func() {
@@ -435,6 +437,7 @@ subnetID: overrideSubnetID
 aaa: bbb
 ccc: ddd
 `))
+				Expect(b.ValuesGet(internal + "hybridMode").Bool()).To(BeTrue())
 			})
 		})
 	})
@@ -472,6 +475,7 @@ subnetID: overrideSubnetID
 aaa: bbb
 ccc: ddd
 `))
+			Expect(b.ValuesGet(internal + "hybridMode").Bool()).To(Not(BeTrue()))
 		})
 	})
 
@@ -513,6 +517,7 @@ sshKeyPairName: my-ssh-keypair
 project: default
 env: production
 `))
+			Expect(c.ValuesGet(internal + "hybridMode").Bool()).To(Not(BeTrue()))
 		})
 	})
 
@@ -563,6 +568,7 @@ floatingNetworkID: "floatingNetworkID"
 project: default
 env: production
 `))
+			Expect(d.ValuesGet(internal + "hybridMode").Bool()).To(Not(BeTrue()))
 		})
 	})
 })
