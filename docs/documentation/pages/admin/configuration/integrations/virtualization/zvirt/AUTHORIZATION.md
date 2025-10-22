@@ -5,7 +5,7 @@ permalink: en/admin/integrations/virtualization/zvirt/authorization.html
 
 ## Requirements
 
-To ensure proper operation of Deckhouse with the zVirt cloud, the following are required:
+To ensure proper operation of Deckhouse Kubernetes Platform with the zVirt cloud, the following are required:
 
 - A working zVirt installation with accessible API.
 - zVirt version `4.0`-`4.4`.
