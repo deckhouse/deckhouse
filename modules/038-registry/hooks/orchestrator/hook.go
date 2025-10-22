@@ -276,6 +276,18 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}
 
+	// Initialize state with init config
+	if CA := inputs.InitConfig.CA; CA != nil {
+		values.State.PKI.CA.Cert = CA.Cert
+		values.State.PKI.CA.Key = CA.Key
+	}
+	if RO := inputs.InitConfig.UserRO; RO != nil {
+		values.State.Users.RO = RO
+	}
+	if RW := inputs.InitConfig.UserRO; RW != nil {
+		values.State.Users.RW = RW
+	}
+
 	// Initialize RegistrySecret before processing
 	values.State.RegistrySecret.Config = inputs.RegistrySecret
 
