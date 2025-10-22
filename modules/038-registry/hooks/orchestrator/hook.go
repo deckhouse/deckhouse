@@ -100,7 +100,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &secret)
 				if err != nil {
-					return nil, fmt.Errorf("failed to convert config secret to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert state secret to struct: %v", err)
 				}
 
 				stateData, ok := secret.Data["state"]
@@ -128,7 +128,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 
 				err := sdk.FromUnstructured(obj, &secret)
 				if err != nil {
-					return nil, fmt.Errorf("failed to convert secret to struct: %v", err)
+					return nil, fmt.Errorf("failed to convert init secret to struct: %v", err)
 				}
 
 				config, ok := secret.Data["config"]
@@ -185,9 +185,10 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		inputs        Inputs
 		err           error
 		hasInitSecret bool
+		initConfig    registry_init.Config
 	)
 
-	inputs.InitConfig, err = helpers.SnapshotToSingle[registry_init.Config](input, initSnapName)
+	initConfig, err = helpers.SnapshotToSingle[registry_init.Config](input, initSnapName)
 	if err == nil {
 		hasInitSecret = true
 	} else if !errors.Is(err, helpers.ErrNoSnapshot) {
@@ -277,15 +278,15 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Initialize state with init config
-	if CA := inputs.InitConfig.CA; CA != nil {
-		values.State.PKI.CA.Cert = CA.Cert
-		values.State.PKI.CA.Key = CA.Key
+	if initConfig.CA != nil {
+		values.State.PKI.CA.Cert = initConfig.CA.Cert
+		values.State.PKI.CA.Key = initConfig.CA.Key
 	}
-	if RO := inputs.InitConfig.UserRO; RO != nil {
-		values.State.Users.RO = RO
+	if initConfig.UserRO != nil {
+		values.State.Users.RO = initConfig.UserRO
 	}
-	if RW := inputs.InitConfig.UserRO; RW != nil {
-		values.State.Users.RW = RW
+	if initConfig.UserRW != nil {
+		values.State.Users.RW = initConfig.UserRW
 	}
 
 	// Initialize RegistrySecret before processing
