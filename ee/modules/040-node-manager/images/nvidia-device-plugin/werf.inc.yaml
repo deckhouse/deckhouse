@@ -16,6 +16,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/k8s-device-plugin.git /src/device-plugin
   - cd /src/device-plugin
+  - git apply /patches/*.patch --verbose
   - echo $(git rev-parse --short HEAD) > .GIT_HASH
   - rm -rf .git test vendor
 ---
