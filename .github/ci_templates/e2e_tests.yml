@@ -388,9 +388,6 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 check_e2e_labels:
   name: Check e2e labels
   runs-on: "regular"
-  permissions:
-    contents: read
-    issues: write
   outputs:
 {!{ range $criName := $ctx.criNames }!}
 {!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
@@ -409,7 +406,7 @@ check_e2e_labels:
       id: check
       uses: {!{ index (ds "actions") "actions/github-script" }!}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         script: |
           const provider = '{!{ $ctx.provider }!}';
           const kubernetesDefaultVersion = '{!{ $ctx.kubernetesDefaultVersion }!}';
