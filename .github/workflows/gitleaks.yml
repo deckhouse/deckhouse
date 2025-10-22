@@ -1,0 +1,21 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+name: Secret Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  gitleaks_full_scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Run Gitleaks full scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: full
+          gitleaks_version: v8.28.0
