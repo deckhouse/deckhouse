@@ -19,6 +19,7 @@ import (
 	"errors"
 
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -48,9 +49,9 @@ type Data struct {
 }
 
 type PKI struct {
-	CA     CertKey  `json:"ca" yaml:"ca"`
-	UserRW pki.User `json:"userRW" yaml:"userRW"`
-	UserRO pki.User `json:"userRO" yaml:"userRO"`
+	CA     CertKey    `json:"ca" yaml:"ca"`
+	UserRW users.User `json:"userRW" yaml:"userRW"`
+	UserRO users.User `json:"userRO" yaml:"userRO"`
 }
 
 type CertKey struct {
@@ -85,12 +86,12 @@ func (r *Registry) InitWithGlobalCache() error {
 			return err
 		}
 
-		userRW, err := pki.NewUser(rwUser)
+		userRW, err := users.New(rwUser)
 		if err != nil {
 			return err
 		}
 
-		userRO, err := pki.NewUser(roUser)
+		userRO, err := users.New(roUser)
 		if err != nil {
 			return err
 		}
