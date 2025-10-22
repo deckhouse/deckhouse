@@ -120,7 +120,7 @@ certManager:
 {{- end -}}
 
 {{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} */ -}}
-{{- /* Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) */ -}}
+{{- /* Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) */ -}}
 {{- /* in passed namespace with passed prefix */ -}}
 {{- define "helm_lib_module_https_copy_custom_certificate" -}}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
@@ -138,7 +138,12 @@ metadata:
   namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
-data: {{ $module_values.internal.customCertificateData | toJson }}
+data:
+{{- if (hasKey $module_values.internal.customCertificateData "ca.crt") }}
+  ca.crt: {{ index $module_values.internal.customCertificateData "ca.crt" }}
+{{- end }}
+  tls.crt: {{ index $module_values.internal.customCertificateData "tls.crt" }}
+  tls.key: {{ index $module_values.internal.customCertificateData "tls.key" }}
   {{- end -}}
 {{- end -}}
 
