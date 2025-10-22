@@ -1,0 +1,133 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: azureinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-azure
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of the Azure Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required: [machineSize]
+              properties:
+                machineSize:
+                  type: string
+                  description: |
+                    The type of instances to provision.
+
+                    You can view a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-sizes --location westeurope -o table
+                    ```
+                  x-doc-examples: ['Standard_F4']
+                capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
+                  type: object
+                  description: |
+                    Deprecated: the parameter is no longer used. Deckhouse is using parameters from the cloud for passed instance type.
+
+                    Instance capacity for *non-standard* instance types (the `machineSize` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`Standard_A1_v2`, `Standard_B16ms`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1000m"]
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1500Mi"]
+                urn:
+                  type: string
+                  description: |
+                    The VM image to use for an instance.
+
+                    More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                    You can get the latest version of an image using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
+
+                    By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+
+                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  x-doc-examples: ['Canonical:UbuntuServer:18.04-LTS:18.04.202010140']
+                  x-doc-required: false
+                diskSizeGb:
+                  description: Instance root disk size in gibibytes.
+                  x-doc-default: 50
+                  x-doc-examples: [40]
+                  type: integer
+                diskType:
+                  type: string
+                  description: |
+                    The type of the volume to create.
+
+                    You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-skus -l westeurope --zone`
+                    ```
+                  x-doc-default: "StandardSSD_LRS"
+                additionalTags:
+                  type: object
+                  description: |
+                    The additional tags to attach to the instances created.
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                acceleratedNetworking:
+                  type: boolean
+                  description: |
+                    Accelerated Networking provides up to 30Gbps in networking throughput.
+                  x-doc-default: true
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: azureinstanceclasses
+    singular: azureinstanceclass
+    kind: AzureInstanceClass
+    categories:
+      - cloudinstanceclasses

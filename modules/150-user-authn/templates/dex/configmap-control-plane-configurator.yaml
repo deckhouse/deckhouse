@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex" "control-plane-configurator" "")) | nindent 2 }}
+data:
+  oidcIssuerURL: https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+{{ if .Values.userAuthn.internal.dexTLS.ca }}
+  oidcCA: |
+  {{ .Values.userAuthn.internal.dexTLS.ca | nindent 4 }}
+{{- end }}
+{{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
+  oidcIssuerAddress: {{ .Values.userAuthn.internal.discoveredDexClusterIP | nindent 4 }}
+{{- end }}

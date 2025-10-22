@@ -1,0 +1,105 @@
+entries:
+  - title:
+      en: Overview
+      ru: Обзор
+    url: /code/documentation/
+  - title:
+      en: Administration guide
+      ru: Руководство администратора
+    folders:
+      - title:
+          en: Overview
+          ru: Обзор
+        url: /code/documentation/admin/
+      - title:
+          en: Access configuration
+          ru: Настройка доступа
+        url: /code/documentation/admin/install/access.html
+      - title:
+          en: Create a group for users
+          ru: Создание группы для пользователей
+        url: /code/documentation/admin/configuration/group.html
+      - title:
+          en: Configuring MergeRequestApprovals
+          ru: Настройка MergeRequestApprovals
+        url: /code/documentation/admin/configuration/mr-approvals.html
+      - title:
+          en: Monitoring and control
+          ru: Мониторинг и управление
+        url: /code/documentation/admin/configuration/monitoring.html
+      - title:
+          en: Service account
+          ru: Сервисный аккаунт
+        url: /code/documentation/admin/service-account.html
+      - title:
+          en: Audit events
+          ru: События аудита безопасности
+        url: /code/documentation/admin/audit-events.html
+  - title:
+      en: User guide
+      ru: Руководство пользователя
+    folders:
+      - title:
+          en: Overview
+          ru: Обзор
+        url: /code/documentation/user/
+      - title:
+          en: Login
+          ru: Вход в систему
+        url: /code/documentation/user/login.html
+      - title:
+          en: Creating a project
+          ru: Создание проекта
+        url: /code/documentation/user/project.html
+      - title:
+          en: Managing Git repositories
+          ru: Управление репозиториями Git
+        url: /code/documentation/user/repositories.html
+      - title:
+          en: Working with the codebase and Code Review
+          ru: Работа с кодовой базой и Code Review
+        url: /code/documentation/user/code-review.html
+      - title:
+          en: Task and project management
+          ru: Управление задачами и проектами
+        url: /code/documentation/user/project-management.html
+      - title:
+          en: Delivery (CI/CD)
+          ru: Непрерывная сборка и поставка ПО (CI/CD)
+        url: /code/documentation/user/delivery.html
+      - title:
+          en: User, access and change management
+          ru: Управление пользователями, доступом и изменениями
+        url: /code/documentation/user/user-management.html
+      - title:
+          en: API
+          ru: API
+        url: /code/documentation/user/api.html
+      - title:
+          en: Pull Mirroring
+          ru: Pull зеркалирование
+        url: /code/documentation/user/pull-mirroring.html
+      - title:
+          en: External Vault integration
+          ru: Интеграция с внешним Vault
+        url: /code/documentation/user/external-vault.html
+      - title:
+          en: OmniAuth & LDAP
+          ru: OmniAuth и LDAP
+        url: /code/documentation/user/oauth-and-ldap.html
+      - title:
+          en: Group Wiki
+          ru: Wiki группы
+        url: /code/documentation/user/group-wiki.html
+      - title:
+          en: Webhooks
+          ru: Вебхуки
+        url: /code/documentation/user/web-hooks.html
+      - title:
+          en: Search
+          ru: Поиск
+        url: /code/documentation/user/search.html
+      - title:
+          en: Push rules
+          ru: Правила отправки изменений
+        url: /code/documentation/user/push-rules.html

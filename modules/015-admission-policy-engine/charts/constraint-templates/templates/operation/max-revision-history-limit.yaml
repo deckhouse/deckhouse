@@ -1,0 +1,35 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8revisionhistorylimit
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Max revision history limit"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: Check maximum limit for deployments / daemonsets revision history.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8RevisionHistoryLimit
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            limit:
+              description: "A maximum value for a revision history."
+              type: integer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          current := input.review.object.spec.revisionHistoryLimit
+          desired := input.parameters.limit
+          current > desired
+          msg := sprintf("%v <%v> has .spec.revisionHistoryLimit: %v, required: %v", [input.review.object.kind, input.review.object.metadata.name, current, desired])
+        }

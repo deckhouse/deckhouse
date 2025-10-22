@@ -1,0 +1,12 @@
+{{- range $instance_name, $instance := .Values.keepalived.internal.instances }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keepalived-instance-config-{{ $instance_name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | nindent 2 }}
+data:
+  config.json: |
+    {{- $instance | toJson | nindent 4 }}
+{{- end }}

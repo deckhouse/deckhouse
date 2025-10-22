@@ -1,0 +1,20 @@
+ci:
+  fixes:
+    - summary: Fix suspend forkflow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1124
+deckhouse:
+  fixes:
+    - summary: disable hook reaction on DeckhouseRelease events
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1145
+istio:
+  fixes:
+    - summary: apiJWT exp prolongation and api-proxy logging improvements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1012
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Restore HPA external metrics behavior
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1154
+      impact: >-
+        Disable enforced namespace passing to a query. If your metric need to be selected with a
+        specific namespace label value, you should set it directly in an HPA's label selector
+

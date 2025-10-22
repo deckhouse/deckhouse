@@ -1,0 +1,29 @@
+{{- if hasKey .Values.certManager "cloudDNSServiceAccount" }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: clouddns
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+  {{- if .Values.certManager.internal.email }}
+    email: "{{ .Values.certManager.internal.email }}"
+  {{- end }}
+    privateKeySecretRef:
+      name: clouddns-tls-key
+    solvers:
+    - dns01:
+        cloudDNS:
+          {{ $serviceAccount := .Values.certManager.cloudDNSServiceAccount | b64dec | fromJson}}
+          {{- if and (hasKey $serviceAccount "project_id") ($serviceAccount.project_id) }}
+          project: {{ $serviceAccount.project_id | quote }}
+          {{- else }}
+            {{ cat "`certManager.cloudDNSServiceAccount` spec doesn't have project_id key." $serviceAccount.project_id | fail }}
+          {{- end }}
+          serviceAccountSecretRef:
+            name: clouddns
+            key: key.json
+{{- end }}

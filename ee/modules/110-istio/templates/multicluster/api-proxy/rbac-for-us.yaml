@@ -1,0 +1,110 @@
+{{- if .Values.istio.multicluster.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multicluster-api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+# This rules were copied from original istio charts for role istio-reader with value .Values.global.externalIstiod = false
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:multicluster:api-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+rules:
+- apiGroups:
+  - config.istio.io
+  - security.istio.io
+  - networking.istio.io
+  - authentication.istio.io
+  - rbac.istio.io
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - pods
+  - services
+  - nodes
+  - replicationcontrollers
+  - namespaces
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - multicluster.x-k8s.io
+  resources:
+  - serviceexports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - multicluster.x-k8s.io
+  resources:
+  - serviceimports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:multicluster:api-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:multicluster:api-proxy
+subjects:
+- kind: ServiceAccount
+  name: multicluster-api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+{{- end }}

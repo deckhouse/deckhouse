@@ -1,0 +1,113 @@
+@use "components/common/_variables.scss";
+@use "components/common/_mixins";
+
+.resources {
+  ul, ol, li {
+    & p:not(.resources__attrs) {
+      font-size: 14px;
+      margin: 0;
+      line-height: mixins.rem(20px);
+      padding-top: 0;
+      padding-bottom: variables.$text-spacing-m;
+
+      &:last-child {
+        padding-bottom: 0;
+      }
+    }
+  }
+
+  &__prop {
+    &_wrap {
+      padding: 8px 8px 0;
+      margin-left: -24px;
+      width: calc(100% + 16px);
+
+      &:hover {
+        background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%) no-repeat;
+        border-radius: 4px;
+        background-size: auto 80px;
+      }
+    }
+
+    &_name {
+      display: flex;
+      gap: 11px;
+      color: variables.$color-main;
+      font-weight: variables.$font-weight-bold;
+      font-family: monospace, 'Source Code Pro';
+      line-height: 22px;
+      margin-bottom: 6px;
+      cursor: pointer;
+
+      & .resources__prop_is_deprecated {
+        font-family: monospace, monospace;
+        font-size: 90%;
+        font-weight: normal;
+        line-height: 1rem;
+        background: #f9a3bb;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+    }
+
+    &_name .ancestors,
+    &_title .ancestors {
+      opacity: 55%;
+      word-break: break-all;
+    }
+
+    &_type {
+      display: inline-block;
+      color: variables.$color-muted;
+      font-style: normal;
+      text-transform: uppercase;
+      line-height: 22px;
+      margin-left: 20px;
+
+      & + p.resources__attrs.required {
+        display: inline-flex;
+        text-transform: uppercase;
+        margin-left: mixins.rem(10px);
+        margin-top: 0;
+      }
+    }
+
+    &_description {
+      margin-left: 20px;
+      padding-top: 12px;
+
+      & ul {
+        padding: mixins.rem(5px);
+
+        & li {
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  &__attrs {
+    margin-top: 1rem;
+    margin-bottom: 0;
+    display: flex;
+    gap: 7px;
+    overflow-x: hidden;
+
+    &_name {
+      font-weight: variables.$font-weight-regular;
+      font-style: italic;
+      color: variables.$color-muted;
+
+      &.required {
+        font-style: normal;
+        color: #ff7a7a;
+      }
+    }
+
+    &_content {
+      line-height: 1.2rem;
+      font-size: 0.9rem;
+      overflow: auto;
+    }
+  }
+}

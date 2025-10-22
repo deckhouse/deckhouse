@@ -1,0 +1,166 @@
+- name: kubernetes.node
+  rules:
+  - alert: CPUStealHigh
+    expr: max by (node) (irate(node_cpu_seconds_total{mode="steal", tier="cluster"}[30m]) * 100) > 10
+    for: 30m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: CPU steal on node `{{ $labels.node }}` is too high.
+      description: |-
+        The CPU steal has been excessively high on node `{{ $labels.node }}` over the past 30 minutes.
+
+        Another component, such as a neighboring virtual machine, may be consuming the node's resources. This may be the result of "overselling" the hypervisor, meaning the hypervisor is hosting more virtual machines than it can handle.
+
+  - alert: NodeSystemExporterDoesNotExistsForNode
+    expr: sum by (node) (kubernetes_build_info{job="kubelet"}) unless (sum by (node) (up{node=~".+", job="kubelet"}) and sum by (node) (up{node=~".+", job="node-exporter"}))
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Some system exporters aren't functioning correctly on node `{{ $labels.node }}`.
+      description: |-
+        To resolve the issue, follow these steps:
+
+        1. Find the `node-exporter` Pod running on the affected node:
+        
+           ```bash
+           d8 k -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
+           ```
+
+        2. Describe the `node-exporter` Pod:
+        
+           ```bash
+           d8 k -n d8-monitoring describe pod <POD_NAME>
+           ```
+
+        3. Verify that the kubelet is running on node `{{ $labels.node }}`.
+
+  - alert: NodeConntrackTableFull
+    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 70 )
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `conntrack` table on node `{{ $labels.node }}` is approaching the size limit.
+      description: |-
+        The `conntrack` table on node `{{ $labels.node }}` is currently at {{ $value }}% of its maximum capacity.
+
+        This is acceptable as long as the `conntrack` table remains 70-80% full. However, if it reaches full capacity, new connections may fail, causing network disruptions and erratic software behavior.
+
+        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
+
+  - alert: NodeConntrackTableFull
+    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 95 )
+    for: 1m
+    labels:
+      severity_level: "3"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `conntrack` table on node `{{ $labels.node }}` is full.
+      description: |-
+        As a result, no new connections created or accepted on the node. Keeping the `conntrack` table at full capacity may lead to erratic software behavior.
+
+        To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
+
+  - alert: NodeUnschedulable
+    expr: max by (node) (kube_node_spec_unschedulable) == 1
+    for: 20m
+    labels:
+      severity_level: "8"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node `{{ $labels.node }}` is cordon-protected, preventing new pods from being scheduled.
+      description: |-
+        The node `{{ $labels.node }}` is in a cordon-protected state, meaning no new pods can be scheduled onto it.
+        
+        Someone may have executed one of the following commands on this node:
+
+        - To cordon the node:
+        
+          ```bash
+          d8 k cordon {{ $labels.node }}
+          ```
+
+        - To drain the node (if draining has been running for more than 20 minutes):
+        
+          ```bash
+          d8 k drain {{ $labels.node }}
+          ```
+
+        The was likely caused by the scheduled maintenance of that node.
+
+  - alert: NodeSUnreclaimBytesUsageHigh
+    expr: |
+      max by (node) (predict_linear(node_memory_SUnreclaim_bytes{tier="cluster"}[2h], 43200) > node_memory_MemTotal_bytes{tier="cluster"} * 0.25)
+      and
+      max by (node) (node_memory_SUnreclaim_bytes{tier="cluster"} > node_memory_MemTotal_bytes{tier="cluster"} * 0.1)
+    for: 20m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node `{{ $labels.node }}` has high kernel memory usage.
+      description: |-
+        The node `{{ $labels.node }}` has a potential kernel memory leak. One known issue could be causing this problem.
+
+        Steps to troubleshoot:
+
+        1. Check the `cgroupDriver` setting on node `{{ $labels.node }}`:
+
+           ```bash
+           cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'
+           ```
+
+        1. If `cgroupDriver` is set to `systemd`, a reboot is required to switch back to the `cgroupfs` driver.
+           In this case, drain and reboot the node.
+
+        For further details, refer to the [issue](https://github.com/deckhouse/deckhouse/issues/2152).
+
+  - alert: NodeTCPMemoryExhaust
+    expr: max by (node) (node_sockstat_TCP_mem_bytes{tier="cluster"} > node_sysctl_net_ipv4_tcp_mem{index="2", tier="cluster"} * 4096 * 0.90)
+    for: 1m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node `{{ $labels.node }}` has high TCP stack memory usage.
+      description: |-
+        The TCP stack on node `{{ $labels.node }}` is experiencing high memory pressure.
+        This may be caused by applications with intensive TCP networking usage.
+
+        Steps to troubleshoot:
+
+        1. Identify applications consuming excessive TCP memory.
+        1. Adjust TCP memory configuration if needed.
+        1. Investigate network traffic sources.

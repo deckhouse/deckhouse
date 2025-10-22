@@ -1,0 +1,9 @@
+name: cloud-provider-azure
+critical: true
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-azure
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

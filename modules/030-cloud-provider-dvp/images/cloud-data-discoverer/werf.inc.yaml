@@ -1,0 +1,71 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /discoverer
+  to: /discoverer
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+fromCacheVersion: 2025-03-04.01
+git:
+- add: {{ .gitPrefix }}/go_lib/cloud-data
+  to: /go_lib/cloud-data
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /src/cloud-data-discoverer/src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dvp-common
+  to:  /src/dvp-common
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+shell:
+  install:
+  - mv /go_lib /src
+  - cd /src/cloud-data-discoverer/src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../../../../go_lib/cloud-data/# /src/go_lib/cloud-data#g' go.mod
+  - cd /src/dvp-common
+  - rm -rf .git vendor
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src/cloud-data-discoverer/src
+  - export GOPROXY={{ $.GOPROXY }}
+  - go mod download
+  setup:
+  - cd /src/cloud-data-discoverer/src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+  - chown 64535:64535 /discoverer
+  - chmod 0755 /discoverer

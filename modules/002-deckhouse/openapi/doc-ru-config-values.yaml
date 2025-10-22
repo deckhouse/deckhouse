@@ -1,0 +1,262 @@
+properties:
+  logLevel:
+    description: |
+      Уровень логирования Deckhouse.
+
+  bundle:
+    description: |
+      [Набор модулей](../../#наборы-модулей) Deckhouse. Определяет включенные по умолчанию модули:
+      - `Default` — рекомендованный набор модулей для работы кластера: мониторинга, контроля авторизации, организации работы сети и других потребностей.
+      - `Managed` — набор для managed-кластеров от облачных провайдеров (например, Google Kubernetes Engine).
+      - `Minimal` — минимально возможный набор, который включает единственный модуль (этот). **Обратите внимание,** что в набор модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI). Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
+
+  releaseChannel:
+    description: |
+      Желаемый канал обновлений Deckhouse ([переключение](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#что-происходит-при-смене-канала-обновлений) на него произойдет при появлении такой возможности).
+
+      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+
+  update:
+    description: Настройки режима и окон обновления Deckhouse.
+    properties:
+      mode:
+        description: |
+          Режим обновления Deckhouse на выбранном [канале обновлений](#parameters-releasechannel).
+
+          - `AutoPatch` — автоматический режим обновления для патч-версий.
+
+            Для обновления минорной версии (например, с `v1.69.*` на `v1.70.*`) необходимо подтверждение.
+
+            Обновление патч-версии (например, с `v1.70.1` на `v1.70.2`) применяется с учетом [окон обновлений](#parameters-update-windows), если они заданы.
+
+          - `Auto` — автоматический режим обновления для всех версий.
+
+            Обновления минорной версии (например, с `v1.69.*` на `v1.70.*`) и патч-версии (например, с `v1.70.1` на `v1.70.2`) применяются с учетом заданных [окон обновлений](#parameters-update-windows), либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений.
+          - `Manual` — ручной режим обновления для всех версий.
+
+            Для обновления и минорной, и патч-версии необходимо подтверждение.
+
+          Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) необходимо установить поле `approved` в `true`.
+
+          Выбранный режим обновления применяется **только** при установленном [канале обновлений](#parameters-releasechannel).
+      disruptionApprovalMode:
+        x-doc-deprecated: true
+        description: |
+          Режим обновления версий Deckhouse, имеющих изменения, которые могут привести к кратковременному простою в работе системных компонентов:
+          - `Auto` — автоматический режим обновления.
+          - `Manual` — ручной режим обновления. Для применения обновления нужно установить аннотацию `release.deckhouse.io/disruption-approved=true` на соответствующий ресурс [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+      windows:
+        description: |
+          Список окон обновлений в течение суток.
+        items:
+          properties:
+            from:
+              description: |
+                Время начала окна обновления (в часовом поясе UTC).
+
+                Должно быть меньше времени окончания окна обновления.
+            to:
+              description: |
+                Время окончания окна обновления (в часовом поясе UTC).
+
+                Должно быть больше времени начала окна обновления.
+            days:
+              description: Дни недели, в которые применяется окно обновлений.
+              items:
+                description: День недели.
+      notification:
+        type: object
+        description: |
+          Настройка оповещений о запланированном обновлении Deckhouse.
+
+          Имеет эффект **только** при установленном [автоматическом режиме](#parameters-update-mode) обновлений.
+        properties:
+          webhook:
+            description: |
+              URL-адрес вебхука.
+
+              Вызов вебхука произойдет после появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента ее применения в кластере.
+
+              > **Внимание.** При указании неверного адреса вебхука, обновление Deckhouse будет заблокировано.
+
+              > Используйте параметр [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) при необходимости установить минимальное время, которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse на используемом канале обновлений.
+
+              На адрес вебхука выполняется POST-запрос с `Content-Type: application/json`. Пример содержания запроса:
+
+              ```json
+              {
+                "subject":"Deckhouse",
+                "version": "1.36.0",
+                "requirements":  {"k8s": "1.20.0"},
+                "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+                "applyTime": "2023-01-01T14:30:00Z00:00",
+                "message": "New Deckhouse Release 1.36.0 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
+              }
+              ```
+
+              Описание полей POST-запроса:
+              - `subject` — строка, тип события обновления. Возможные значения: `Deckhouse`, `Module`;
+              - `moduleName` — строка, имя модуля. Устанавливается только если `subject: Module`
+              - `version` — строка в формате x.y.z (семантическое версионирование);
+              - `requirements` — объект, требования к версии;
+              - `changelogLink` — строка, ссылка на список изменений (changelog) минорной версии;
+              - `applyTime` — строка, дата и время запланированного обновления (с учетом установленных окон обновлений) в формате `RFC3339`;
+              - `message` — строка, текстовое сообщение о доступности новой минорной версии и запланированном времени обновления.
+          tlsSkipVerify:
+            description: Пропустить валидацию TLS-сертификата при запросе вебхука.
+          minimalNotificationTime:
+            description: |
+              Минимальное время, которое должно пройти перед обновлением с момента появления новой минорной версии Deckhouse на используемом канале обновлений.
+
+              Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+
+              Механизм обновления гарантирует, что Deckhouse не обновится, пока не пройдет указанный период времени.
+
+              При использовании окон обновлений обновление Deckhouse произойдет в ближайшее возможное окно обновлений, но не ранее чем истечет указанное в `minimalNotificationTime` время.
+          retryMinTime:
+            description: |
+              Минимальный интервал между повторными попытками вызова вебхука при неуспешном запросе.
+
+              Задается в виде строки с указанием часов, минут или секунд: 30s, 1m, 2m30s, 1h, 2h30m.
+
+              Повторные попытки выполняются с экспоненциальной задержкой: каждый следующий интервал в два раза больше предыдущего. Например, при `retryMinTime = 2s` задержки будут: 2s, 4s, 8s, 16s, 32s.
+
+              По умолчанию — 2 секунды (если не указано).
+          auth:
+            description: |
+              Структура, описывающая способ авторизации на вебхуке.
+
+              Если не указано, авторизация не используется.
+            properties:
+              basic:
+                type: object
+                description: Basic-аутентификация на вебхуке.
+                properties:
+                  username:
+                    type: string
+                    description: |
+                      Имя пользователя для авторизации на вебхуке.
+
+                      Имя и пароль пользователя будут в заголовке `Authorization` в формате `Basic <base64(username:password)>`.
+                  password:
+                    type: string
+                    description: |
+                      Пароль для авторизации на вебхуке.
+
+                      Имя и пароль пользователя будут в заголовке `Authorization` в формате `Basic <base64(username:password)>`.
+              bearerToken:
+                type: string
+                description: |
+                    Токен для авторизации на вебхуке.
+
+                    Токен будет в заголовке `Authorization` в формате `Bearer <token>`.
+          releaseType:
+            description: |
+              Определяет тип версии, о которой будет отправлено оповещение:
+              - `Minor` — только для обновления минорной версии.
+              - `All` — для любых обновлений, включая обновление патч-версии.
+
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+      **Внимание.** Deckhouse перестанет работать, если в `nodeSelector` указать несуществующий лейбл. Для восстановления работоспособности необходимо изменить значения на правильные в `ModuleConfig/deckhouse` и `deployment/deckhouse`.
+
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+      **Внимание.** Deckhouse перестанет работать, если указать некорректные `tolerations`. Для восстановления работоспособности необходимо изменить значения на корректные в `ModuleConfig/deckhouse` и `deployment/deckhouse`.
+
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+  allowExperimentalModules:
+    description: |
+      Разрешает использование экспериментальных модулей (модули на стадии жизненного цикла `Experimental`).
+
+      Экспериментальные модули могут быть нестабильными и не поддерживаются в рамках SLA Deckhouse. Используйте их с осторожностью.
+
+  license:
+    type: object
+    description: |
+      Настройки редакции Deckhouse Kubernetes Platform.
+    properties:
+      edition:
+        type: string
+        x-examples: ["CE"]
+        description: |
+          Редакция Deckhouse Kubernetes Platform.
+          - `CE` — Community Edition.
+          - `BE` — Basic Edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Edition+.
+        default: "CE"
+
+  registry:
+    description: |
+      Настройки для доступа к хранилищу образов контейнеров (container registry) с образами Deckhouse.
+
+      Этот параметр позволяет настроить, как Deckhouse будет подключаться к container registry для загрузки образов своих компонентов.
+      Вы можете либо положиться на предварительно настроенный доступ на узлах кластера (режим `Unmanaged`), либо предоставить Deckhouse прямые учетные данные для доступа (режим `Direct`).
+    properties:
+      mode:
+        description: |
+          Режим доступа к container registry с образами Deckhouse.
+
+          - `Unmanaged` — режим по умолчанию. В этом режиме модуль `registry` не запускает внутренний registry. Для настройки необходимо задать параметры в секции `unmanaged`. В кластерах, не поддерживаемых модулем `registry`, настройка производится вручную с помощью вспомогательного скрипта `change-registry`. **Важно:** изменение registry в Unmanaged режиме приведёт к перезапуску всех компонентов Deckhouse.
+          - `Direct` — режим прямого доступа к registry. Используется «виртуальный» адрес registry, который «на лету» подменяется на реальный. Это позволяет изменять registry без полного перезапуска компонентов. **Важно:** при первом переключении на режим `Direct` произойдёт полный перезапуск всех компонентов Deckhouse.
+      direct:
+        description: |
+          Параметры для режима доступа `Direct`.
+          Эти параметры обязательны, если `mode` установлен в `Direct`.
+        properties: &registryDirectProperties
+          imagesRepo:
+            description: |
+              Адрес репозитория в container registry, где хранятся образы Deckhouse.
+              В изолированных средах это может быть адрес частного registry, который зеркалирует публичный.
+          license:
+            description: |
+              Лицензионный ключ для доступа к container registry Deckhouse.
+              Этот ключ используется в качестве пароля с именем пользователя `license-token`.
+              Это поле является взаимоисключающим с `username`/`password`.
+          username:
+            description: |
+              Имя пользователя для аутентификации в реестре контейнеров.
+              Это поле обязательно, если не предоставлен `license`.
+          password:
+            description: |
+              Пароль для аутентификации в container registry.
+
+              Параметр обязателен, если не указан параметр `license`.
+          scheme:
+            description: |
+              Протокол для подключения к container registry.
+
+              Используйте `HTTP` только для небезопасных, доверенных container registry (например, в изолированной среде). По умолчанию используется `HTTPS`.
+          ca:
+            description: |
+              Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата container registry.
+
+              Параметр необходимо указывать, если container registry использует самоподписанный сертификат или сертификат, выданный частным центром сертификации.
+
+              Если параметр не указан, будут использоваться сертификаты, определенные в хранилище корневых сертификатов узла.
+          checkMode:
+            description: |
+              Режим проверки container registry:
+
+              - `Default` (по умолчанию) — проверяет наличие всех критически важных компонентов в container registry.
+              - `Relax` — проверяет только наличие тега образа Deckhouse в container registry (используется для переключения между редакциями Deckhouse).
+
+      unmanaged:
+        description: |
+          Параметры для режима доступа `Unmanaged`.
+        properties:
+          <<: *registryDirectProperties

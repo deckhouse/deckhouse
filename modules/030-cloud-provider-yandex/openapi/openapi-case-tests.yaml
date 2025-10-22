@@ -1,0 +1,30 @@
+positive:
+  configValues:
+    # empty configuration is valid
+    - {}
+
+    # empty storage class is valid
+    - "storageClass": {}
+
+    # only exclude
+    - storageClass:
+        exclude: ["disk-type", "ssd-.*"]
+
+    # only default
+    - storageClass:
+        default: "ssd"
+
+    # all in
+    - storageClass:
+        default: "ssd"
+        exclude: ["disk-type", "ssd-.*"]
+negative:
+  configValues:
+    - storageClass:
+        exclude: "must be array"
+    - storageClass:
+        exclude: {"key": "must be array"}
+    - storageClass:
+        default: ["must be string"]
+    - storageClass:
+        default: {"key": "must be string"}

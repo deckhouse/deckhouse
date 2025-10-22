@@ -1,0 +1,13 @@
+name: node-manager
+critical: true
+weight: 40
+subsystems:
+  - infrastructure
+namespace: d8-cloud-instance-manager
+description: |
+  Managing nodes
+descriptions:
+  en: Managing nodes
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

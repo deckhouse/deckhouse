@@ -1,0 +1,70 @@
+- name: d8.prometheus.storage
+  rules:
+  - alert: PrometheusDiskUsage
+    expr: |
+      d8_prometheus_fs_used_percent > 95
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Prometheus disk usage exceeds 95%.
+      description: |
+        Deckhouse has detected that the Prometheus disk is over 95% full.
+
+        To check the current usage, run the following command:
+
+        ```shell
+        d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
+        ```
+
+        Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).
+  # If there was retention in the last 24 hours and the oldest metric was recorded less than 10 days ago and storage.tsdb.retention.size has not been changed.
+  - alert: PrometheusMainRotatingEarlierThanConfiguredRetentionDays
+    expr: |
+      group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus"}[24h]) > 0)
+      and
+      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus"}) / 60 / 60 / 24 < d8_prometheus_storage_retention_days{prometheus="main"})
+      and
+      group by (service) (delta(prometheus_tsdb_retention_limit_bytes{service="prometheus"}[24h]) == 0)
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Prometheus-main data is rotating earlier than the configured retention period.
+      description: |
+        The `prometheus-main` instance is rotating data earlier than specified by the `retentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `retentionDays` parameter in the module configuration.
+  - alert: PrometheusLongtermRotatingEarlierThanConfiguredRetentionDays
+    expr: |
+      group by (service) (increase(prometheus_tsdb_size_retentions_total{service="prometheus-longterm"}[24h]) > 0)
+      and
+      group by (service) ((time() - prometheus_tsdb_lowest_timestamp_seconds{service="prometheus-longterm"}) / 60 / 60 / 24 < d8_prometheus_storage_retention_days{prometheus="longterm"})
+      and
+      group by (service) (delta(prometheus_tsdb_retention_limit_bytes{service="prometheus-longterm"}[24h]) == 0)
+    labels:
+      tier: cluster
+      severity_level: "4"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Prometheus-longterm data is rotating earlier than the configured retention period.
+      description: |
+        The `prometheus-longterm` instance is rotating data earlier than specified by the `longtermRetentionDays` parameter.
+
+        Troubleshooting options:
+
+        - Increase the Prometheus disk size.
+        - Reduce the number of metrics collected.
+        - Lower the `longtermRetentionDays` parameter in the module configuration.

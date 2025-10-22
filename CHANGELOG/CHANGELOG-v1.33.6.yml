@@ -1,0 +1,7 @@
+snapshot-controller:
+  fixes:
+    - summary: >-
+        The `snapshot-controller` does not allow install CRD until `v1alpha1` is preserved in
+        cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1808
+

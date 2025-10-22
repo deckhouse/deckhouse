@@ -1,0 +1,43 @@
+candi:
+  fixes:
+    - summary: added file sync on bashible.sh change
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1440
+    - summary: Fix startup config in Kubernetes API proxy configuration script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1426
+docs:
+  fixes:
+    - summary: Highlight default Kubernetes version in the supported versions table on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1458
+    - summary: Added the Storage section to the sidebar of the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1451
+    - summary: Revert OpenAPI generator changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1448
+    - summary: Fixed formatting on the 'Supported Kubernetes and OS versions' page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1411
+log-shipper:
+  fixes:
+    - summary: Migrate deprecated Elasticsearch fields.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1454
+namespace-configurator:
+  fixes:
+    - summary: Exclude upmeter probe namespaces from namespace-configurator snapshots.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1439
+openvpn:
+  fixes:
+    - summary: Fixed "loadBalancer" OpenAPI spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1417
+    - summary: Documentation and openAPI spec. minor changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1416
+prometheus:
+  fixes:
+    - summary: Fixed PersistentVolumeClaim size calculation for local storage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1437
+snapshot-controller:
+  fixes:
+    - summary: fix snapshot-controller deployment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1435
+upmeter:
+  fixes:
+    - summary: Added link to CustomResources into the sidebar of the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1434
+

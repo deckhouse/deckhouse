@@ -1,0 +1,85 @@
+{{- define "etcd_backup_resources" }}
+cpu: 25m
+memory: 40Mi
+{{- end }}
+
+{{- $backupEnabled := true -}}
+{{- $etcdBackup := ((.Values.controlPlaneManager).etcd).backup | default dict }}
+{{- if hasKey $etcdBackup "enabled" -}}
+  {{- $backupEnabled = $etcdBackup.enabled -}}
+{{- end -}}
+
+{{- $backupSchedule := $etcdBackup.cronSchedule | default "0 0 * * *" -}}
+{{- $backupHostPath := $etcdBackup.hostPath | default "/var/lib/etcd" -}}
+{{- $etcdQuotaBackendBytes := (.Values.controlPlaneManager.internal).etcdQuotaBackendBytes | default "2147483648" -}}
+
+{{- if $backupEnabled }}
+  {{- if .Values.global.clusterIsBootstrapped }}
+    {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
+      {{- range $node := .Values.controlPlaneManager.internal.mastersNode }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: d8-etcd-backup-{{ $node | sha256sum | trunc 33 }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-etcd-backup")) | nindent 2 }}
+spec:
+  schedule: {{ $backupSchedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 10 }}
+          {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 10 }}
+          {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 10 }}
+          nodeSelector:
+            kubernetes.io/hostname: {{ $node }}
+          imagePullSecrets:
+          - name: deckhouse-registry
+          restartPolicy: Never
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          containers:
+          - name: backup
+            {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 12 }}
+            image: {{ include "helm_lib_module_image" (list $ "etcdBackup") }}
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: ETCDQUOTA
+              value: {{ $etcdQuotaBackendBytes | quote }}
+            - name: HOSTPATH
+              value: {{ $backupHostPath | quote }}
+            resources:
+              requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}
+              {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+                {{- include "control_plane_manager_resources" $ | nindent 16 }}
+              {{- end }}
+            volumeMounts:
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+              readOnly: true
+            - mountPath: /var/backup
+              name: backup-data
+            - mountPath: /tmp
+              name: tmp
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/pki/etcd
+              type: DirectoryOrCreate
+            name: etcd-certs
+          - hostPath:
+              path: {{ $backupHostPath | quote }}
+              type: DirectoryOrCreate
+            name: backup-data
+          - name: tmp
+            emptyDir: {}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

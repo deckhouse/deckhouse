@@ -1,0 +1,216 @@
+{{- define "coredns_resources" }}
+cpu: 20m
+memory: 40Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-dns")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: d8-kube-dns
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "coredns"
+      minAllowed:
+        {{- include "coredns_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+spec:
+# Policy #1: replicas
+#    * If there are special nodes for kube-dns then deployment must fit there and on masters
+#    * If there are system-nodes then deployment must fit there and on masters
+#    * Else:
+#      * there should be at least 2 replicas or more if someone configured it manually
+#      * there must not be more replicas then non-specific nodes
+  replicas: {{ .Values.kubeDns.internal.replicas }}
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      shareProcessNamespace: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      # hardcoded, because kube-dns is a critical component and system-cluster-critical priority class exists by default
+      priorityClassName: system-cluster-critical
+      automountServiceAccountToken: true
+      serviceAccountName: d8-kube-dns
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
+      containers:
+      - name: coredns
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "coredns") }}
+        args: [ "-conf", "/etc/coredns/Corefile", "-dns.port", "5353", "-pidfile", "/tmp/coredns.pid" ]
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        ports:
+        - containerPort: 5353
+          name: dns
+          protocol: UDP
+        - containerPort: 5353
+          name: dns-tcp
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "coredns_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9154"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 9154
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 9154
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 9154
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9153/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: kube-system
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: d8-kube-dns
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+      dnsPolicy: Default
+      volumes:
+      - name: config-volume
+        configMap:
+          name: d8-kube-dns
+          items:
+          - key: Corefile
+            path: Corefile
+      - name: tmp
+        emptyDir: {}
+      affinity:
+        nodeAffinity:
+{{- if .Values.kubeDns.internal.specificNodeType }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "node-role.kubernetes.io/control-plane"
+                operator: "Exists"
+            - matchExpressions:
+              - key: "node-role.deckhouse.io/{{ .Values.kubeDns.internal.specificNodeType }}"
+                operator: "Exists"
+            - matchExpressions:
+              - key: "node-role.kubernetes.io/{{ .Values.kubeDns.internal.specificNodeType }}"
+                operator: "Exists"
+{{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: "node-role.kubernetes.io/control-plane"
+                operator: "Exists"
+{{- end }}
+        podAntiAffinity:
+###
+# Policy #2:
+# * do not run more than one kube-dns on single node except cases with single master and lack of specific nodes
+{{- if .Values.kubeDns.internal.enablePodAntiAffinity }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: "kubernetes.io/hostname"
+            labelSelector:
+              matchLabels:
+                k8s-app: "kube-dns"
+{{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: "kubernetes.io/hostname"
+                labelSelector:
+                  matchLabels:
+                    k8s-app: "kube-dns"
+{{- end }}

@@ -1,0 +1,29 @@
+{{- if .Values.deckhouseTools.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "deckhouse-tools"
+  namespace: "d8-system"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "deckhouse-tools" )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "tools") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
+  {{- end }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.deckhouseTools.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- with .Values.deckhouseTools.auth.allowedUserGroups }}
+  allowedGroups:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  highAvailability: true
+  {{- else }}
+  highAvailability: false
+  {{- end }}
+{{- end }}

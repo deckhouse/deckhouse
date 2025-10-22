@@ -1,0 +1,14 @@
+name: registry
+critical: true
+weight: 38
+stage: Preview
+subsystems:
+  - deckhouse
+  - infrastructure
+  - kubernetes
+namespace: d8-system
+disable:
+  confirmation: true
+  message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+requirements:
+  deckhouse: ">= 1.71"

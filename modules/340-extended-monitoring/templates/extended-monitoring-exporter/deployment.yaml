@@ -1,0 +1,145 @@
+{{- define "extended_monitoring_exporter_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: extended-monitoring-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring-exporter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: extended-monitoring-exporter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: extended-monitoring
+      minAllowed:
+        {{- include "extended_monitoring_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: extended-monitoring-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "extended-monitoring-exporter")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: extended-monitoring-exporter
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: extended-monitoring-exporter
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: extended-monitoring-exporter
+      containers:
+      - name: extended-monitoring
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "extendedMonitoringExporter") }}
+        startupProbe:
+          httpGet:
+            path: /startup
+            scheme: HTTPS
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8081
+          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            scheme: HTTPS
+            port: 8081
+          timeoutSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "extended_monitoring_exporter_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8081"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 8081
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            - /ready
+            - /startup
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: extended-monitoring-exporter
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}

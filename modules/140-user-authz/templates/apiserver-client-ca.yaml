@@ -1,0 +1,12 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apiserver-authentication-requestheader-client-ca
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  ca.crt: |
+    {{- .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | nindent 4 }}
+{{- end }}

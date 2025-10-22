@@ -1,0 +1,56 @@
+{{- $LokiVersion := "v2.9.15" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - "**/*"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $LokiVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/loki.git /src
+    - cd /src
+    - git apply --verbose /patches/*.patch
+    - rm -r .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -o loki ./cmd/loki`) | indent 6 }}
+    - chown -R 64535:64535 /src/loki
+    - chmod 0700 /src/loki
+    - rm -rf vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/loki
+    to: /usr/bin/loki
+    after: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/loki"]

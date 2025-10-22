@@ -1,0 +1,73 @@
+{{- define "alt packages proxy" }}
+# Replace altlinux repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i "s|ftp.altlinux.org/pub/distributions/archive|{{ $.DistroPackagesProxy }}/repository/archive-ALT-Linux-APT-Repository|g" /etc/apt/sources.list.d/alt.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update -y
+{{- end }}
+
+{{- define "alt dist upgrade" }}
+- apt-get dist-upgrade -y
+- find /var/cache/apt/ -type f -delete
+- rm -rf /var/log/*log /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+{{- end }}
+
+{{- define "debian packages proxy" }}
+# 5 years 157680000
+- |
+    echo "Acquire::Check-Valid-Until false;" >> /etc/apt/apt.conf
+    echo "Acquire::Check-Date false;" >> /etc/apt/apt.conf
+    echo "Acquire::Max-FutureTime 157680000;" >> /etc/apt/apt.conf
+# Replace debian repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- if [ -f /etc/apt/sources.list ]; then sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list; fi
+- if [ -f /etc/apt/sources.list.d/debian.sources ]; then sed -i "s|http://deb.debian.org|http://{{ $.DistroPackagesProxy }}/repository|g" /etc/apt/sources.list.d/debian.sources; fi
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+- apt-get update
+{{- end }}
+
+{{- define "ubuntu packages proxy" }}
+  # Replace ubuntu repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|http://archive.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/archive-ubuntu|g' /etc/apt/sources.list
+- sed -i 's|http://security.ubuntu.com|http://{{ $.DistroPackagesProxy }}/repository/security-ubuntu|g' /etc/apt/sources.list
+  {{- end }}
+- export DEBIAN_FRONTEND=noninteractive
+# one year
+- apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false -o Acquire::Max-FutureTime=31536000 update
+{{- end }}
+
+{{- define "alpine packages proxy" }}
+# Replace alpine repos with our proxy
+  {{- if $.DistroPackagesProxy }}
+- sed -i 's|https://dl-cdn.alpinelinux.org|http://{{ $.DistroPackagesProxy }}/repository|g' /etc/apk/repositories
+  {{- end }}
+- apk update
+{{- end }}
+
+{{- define "node packages proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- npm config set registry http://{{ $.DistroPackagesProxy }}/repository/npmjs/
+  {{- end }}
+{{- end }}
+
+{{- define "yarn3 packages proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- yarn config set npmRegistryServer http://{{ $.DistroPackagesProxy }}/repository/npmjs/
+- yarn config set unsafeHttpWhitelist {{ (split ":" $.DistroPackagesProxy)._0 }}
+  {{- end }}
+{{- end }}
+
+{{- define "pypi proxy" }}
+  {{- if $.DistroPackagesProxy }}
+- |
+  cat <<"EOD" > /etc/pip.conf
+  [global]
+  index = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/pypi
+  index-url = http://{{ $.DistroPackagesProxy }}/repository/pypi-proxy/simple
+  trusted-host = {{ $.DistroPackagesProxy }}
+  EOD
+  {{- end }}
+{{- end }}

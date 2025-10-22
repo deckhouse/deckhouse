@@ -1,0 +1,30 @@
+{% for module in site.data.deckhouse-alerts.modules-having-alerts %}
+<h2 id="{{ module }}">{{ site.data.i18n.common['module'][page.lang] | capitalize }} {{ module }}</h2>
+
+{% assign alerts = site.data.deckhouse-alerts.alerts | where: "module", module  %}
+<ul class="alertslist">
+{% for alert in alerts %}
+<li markdown="0">
+<span id="{{ module }}-{{ alert["name"] | downcase }}" class="alertslist__name anchored">{{ alert["name"] }}
+  <span class="alertslist__badge alertslist__badge_edition" title="{{ site.data.i18n.common['alert_edition'][page.lang] }}">{{ alert["edition"] | upcase }}</span>
+{% if alert["severity"] and alert["severity"] != "undefined" -%}
+  <span class="alertslist__badge alertslist__badge_severity alertslist__badge_severity-s{{ alert["severity"] }}" title="{{ site.data.i18n.common['alert_severity'][page.lang] }}"><span></span>S{{ alert["severity"] }}</span>
+{%- endif %}
+</span>
+<div class="alertslist__summary-body">
+{% if alert["summary"].size > 0 and alert["description"].size > 0 %}
+<details>
+  <summary>{{ alert["summary"] | normalizeAlertContent }}</summary>
+  <span class="alertslist__description">{{ alert["description"] | normalizeAlertContent | markdownify}}</span>
+</details>
+{% elsif alert["summary"].size > 0 %}
+  <span class="alertslist__summary">{{ alert["summary"] | normalizeAlertContent | markdownify }}</span>
+{% elsif alert["description"].size > 0 %}
+  <span class="alertslist__description">{{ alert["description"] | normalizeAlertContent | markdownify }}</span>
+{% endif %}
+</div>
+
+</li>
+{% endfor %}
+</ul>
+{% endfor %}

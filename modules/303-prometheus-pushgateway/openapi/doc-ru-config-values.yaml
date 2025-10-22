@@ -1,0 +1,14 @@
+properties:
+  instances:
+    description: |
+      Содержит список инстансов, для каждого из которых будет создан отдельный PushGateway.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

@@ -1,0 +1,2596 @@
+modules:
+  admission-policy-engine:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:admission-policy-engine:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - operationpolicies
+          - securitypolicies
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - templates.gatekeeper.sh
+          resources:
+          - constrainttemplates
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - admission-policy-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:admission-policy-engine:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - operationpolicies
+          - securitypolicies
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - templates.gatekeeper.sh
+          resources:
+          - constrainttemplates
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - admission-policy-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-admission-policy-engine
+    subsystems:
+    - security
+  cert-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cert-manager:view
+        rules:
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - clusterissuers
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cert-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cert-manager:edit
+        rules:
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - clusterissuers
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cert-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:cert-manager:view
+        rules:
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - certificaterequests
+          - certificates
+          - issuers
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:cert-manager:edit
+        rules:
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - certificaterequests
+          - certificates
+          - issuers
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-cert-manager
+    subsystems:
+    - security
+  chrony:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:chrony:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - chrony
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:chrony:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - chrony
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-chrony
+    subsystems:
+    - infrastructure
+  cilium-hubble:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cilium-hubble:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cilium-hubble
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cilium-hubble:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cilium-hubble
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cni-cilium
+    subsystems:
+    - networking
+  cloud-provider-aws:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-aws:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-aws
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-aws:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-aws
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-aws
+    subsystems:
+    - infrastructure
+  cloud-provider-azure:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-azure:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-azure
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-azure:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-azure
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-azure
+    subsystems:
+    - infrastructure
+  cloud-provider-dynamix:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-dynamix:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-dynamix
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-dynamix:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-dynamix
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-dynamix
+    subsystems:
+    - infrastructure
+  cloud-provider-gcp:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-gcp:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-gcp
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-gcp:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-gcp
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-gcp
+    subsystems:
+    - infrastructure
+  cloud-provider-huaweicloud:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-huaweicloud:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-huaweicloud
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-huaweicloud:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-huaweicloud
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-huaweicloud
+    subsystems:
+    - infrastructure
+  cloud-provider-openstack:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-openstack:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-openstack
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-openstack:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-openstack
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-openstack
+    subsystems:
+    - infrastructure
+  cloud-provider-vcd:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-vcd:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-vcd
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-vcd:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-vcd
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-vcd
+    subsystems:
+    - infrastructure
+  cloud-provider-vsphere:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-vsphere:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-vsphere
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-vsphere:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-vsphere
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-vsphere
+    subsystems:
+    - infrastructure
+  cloud-provider-yandex:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-yandex:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-yandex
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-yandex:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-yandex
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-yandex
+    subsystems:
+    - infrastructure
+  cloud-provider-zvirt:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cloud-provider-zvirt:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-zvirt
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cloud-provider-zvirt:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cloud-provider-zvirt
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-provider-zvirt
+    subsystems:
+    - infrastructure
+  cni-cilium:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cni-cilium:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-cilium
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cni-cilium:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-cilium
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cni-cilium
+    subsystems:
+    - networking
+  cni-flannel:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cni-flannel:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-flannel
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cni-flannel:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-flannel
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cni-flannel
+    subsystems:
+    - networking
+  cni-simple-bridge:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:cni-simple-bridge:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-simple-bridge
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:cni-simple-bridge:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - cni-simple-bridge
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cni-simple-bridge
+    subsystems:
+    - networking
+  control-plane-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:control-plane-manager:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - control-plane-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:control-plane-manager:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - kubeschedulerwebhookconfigurations
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - control-plane-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-system
+    subsystems:
+    - kubernetes
+  dashboard:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:dashboard:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - dashboard
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:dashboard:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - dashboard
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-dashboard
+    subsystems:
+    - observability
+  deckhouse:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:deckhouse:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - deckhousereleases
+          - moduleconfigs
+          - moduledocumentations
+          - modulepulloverrides
+          - modulereleases
+          - modules
+          - modulesources
+          - moduleupdatepolicies
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:deckhouse:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - deckhousereleases
+          - moduleconfigs
+          - moduledocumentations
+          - modulepulloverrides
+          - modulereleases
+          - modules
+          - modulesources
+          - moduleupdatepolicies
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+      use: null
+    namespace: d8-system
+    subsystems:
+    - deckhouse
+  descheduler:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:descheduler:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - deschedulers
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - descheduler
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:descheduler:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - deschedulers
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - descheduler
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-descheduler
+    subsystems:
+    - infrastructure
+  extended-monitoring:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:extended-monitoring:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - extended-monitoring
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:extended-monitoring:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - extended-monitoring
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  flow-schema:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:flow-schema:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - flow-schema
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:flow-schema:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - flow-schema
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-system
+    subsystems:
+    - kubernetes
+    - networking
+  ingress-nginx:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:ingress-nginx:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - ingressnginxcontrollers
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - ingress-nginx
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:ingress-nginx:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - ingressnginxcontrollers
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - ingress-nginx
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-ingress-nginx
+    subsystems:
+    - networking
+  istio:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:istio:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - ingressistiocontrollers
+          - istiofederations
+          - istiomulticlusters
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - istio
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:istio:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - ingressistiocontrollers
+          - istiofederations
+          - istiomulticlusters
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - istio
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-istio
+    subsystems:
+    - infrastructure
+    - networking
+  keepalived:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:keepalived:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - keepalivedinstances
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - keepalived
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:keepalived:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - keepalivedinstances
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - keepalived
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-keepalived
+    subsystems:
+    - infrastructure
+  kube-dns:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:kube-dns:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - kube-dns
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:kube-dns:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - kube-dns
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-system
+    subsystems:
+    - kubernetes
+    - networking
+  kube-proxy:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:kube-proxy:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - kube-proxy
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:kube-proxy:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - kube-proxy
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-system
+    subsystems:
+    - kubernetes
+    - networking
+  local-path-provisioner:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:local-path-provisioner:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - localpathprovisioners
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - local-path-provisioner
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:local-path-provisioner:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - localpathprovisioners
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - local-path-provisioner
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-local-path-provisioner
+    subsystems:
+    - infrastructure
+  log-shipper:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:log-shipper:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterlogdestinations
+          - clusterloggingconfigs
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - log-shipper
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:log-shipper:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterlogdestinations
+          - clusterloggingconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - log-shipper
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:log-shipper:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - podloggingconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:log-shipper:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - podloggingconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-log-shipper
+    subsystems:
+    - observability
+  loki:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:loki:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - loki
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:loki:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - loki
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - infrastructure
+  metallb:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:metallb:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - metallb
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:metallb:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - metallb
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-metallb
+    subsystems:
+    - networking
+  monitoring-applications:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-applications:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-applications
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-applications:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-applications
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  monitoring-custom:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-custom:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-custom
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-custom:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-custom
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  monitoring-deckhouse:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-deckhouse:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-deckhouse
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-deckhouse:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-deckhouse
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  monitoring-kubernetes:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-kubernetes:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-kubernetes
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-kubernetes:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-kubernetes
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  monitoring-kubernetes-control-plane:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-kubernetes-control-plane:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-kubernetes-control-plane
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-kubernetes-control-plane:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-kubernetes-control-plane
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  monitoring-ping:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:monitoring-ping:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-ping
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:monitoring-ping:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - monitoring-ping
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  multitenancy-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:multitenancy-manager:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - projects
+          - projecttemplates
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - multitenancy-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:multitenancy-manager:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - projects
+          - projecttemplates
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - multitenancy-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-multitenancy-manager
+    subsystems:
+    - deckhouse
+  network-gateway:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:network-gateway:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - network-gateway
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:network-gateway:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - network-gateway
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-network-gateway
+    subsystems:
+    - networking
+  network-policy-engine:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:network-policy-engine:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - network-policy-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:network-policy-engine:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - network-policy-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-system
+    subsystems:
+    - networking
+  node-local-dns:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:node-local-dns:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - node-local-dns
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:node-local-dns:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - node-local-dns
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-system
+    subsystems:
+    - networking
+  node-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:node-manager:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - instances
+          - instancetypescatalogs
+          - nodegroupconfigurations
+          - nodegroups
+          - nodeusers
+          - sshcredentials
+          - staticinstances
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - node-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:node-manager:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - instances
+          - instancetypescatalogs
+          - nodegroupconfigurations
+          - nodegroups
+          - nodeusers
+          - sshcredentials
+          - staticinstances
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - node-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-cloud-instance-manager
+    subsystems:
+    - infrastructure
+  okmeter:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:okmeter:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - okmeter
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:okmeter:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - okmeter
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-okmeter
+    subsystems:
+    - observability
+  openvpn:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:openvpn:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - openvpn
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:openvpn:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - openvpn
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-openvpn
+    subsystems:
+    - networking
+  operator-prometheus:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:operator-prometheus:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - operator-prometheus
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:operator-prometheus:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - operator-prometheus
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-operator-prometheus
+    subsystems:
+    - observability
+  operator-trivy:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:operator-trivy:view
+        rules:
+        - apiGroups:
+          - aquasecurity.github.io
+          resources:
+          - clustercompliancereports
+          - clusterconfigauditreports
+          - clusterinfraassessmentreports
+          - clusterrbacassessmentreports
+          - clustersbomreports
+          - clustervulnerabilityreports
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - operator-trivy
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:operator-trivy:edit
+        rules:
+        - apiGroups:
+          - aquasecurity.github.io
+          resources:
+          - clustercompliancereports
+          - clusterconfigauditreports
+          - clusterinfraassessmentreports
+          - clusterrbacassessmentreports
+          - clustersbomreports
+          - clustervulnerabilityreports
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - operator-trivy
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:operator-trivy:view
+        rules:
+        - apiGroups:
+          - aquasecurity.github.io
+          resources:
+          - configauditreports
+          - exposedsecretreports
+          - infraassessmentreports
+          - rbacassessmentreports
+          - sbomreports
+          - vulnerabilityreports
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:operator-trivy:edit
+        rules:
+        - apiGroups:
+          - aquasecurity.github.io
+          resources:
+          - configauditreports
+          - exposedsecretreports
+          - infraassessmentreports
+          - rbacassessmentreports
+          - sbomreports
+          - vulnerabilityreports
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-operator-trivy
+    subsystems:
+    - security
+  priority-class:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:priority-class:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - priority-class
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:priority-class:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - priority-class
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-system
+    subsystems:
+    - kubernetes
+  prometheus:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:prometheus:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusteralerts
+          - customalertmanagers
+          - customprometheusrules
+          - grafanaadditionaldatasources
+          - grafanaalertschannels
+          - grafanadashboarddefinitions
+          - prometheusremotewrites
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:prometheus:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusteralerts
+          - customalertmanagers
+          - customprometheusrules
+          - grafanaadditionaldatasources
+          - grafanaalertschannels
+          - grafanadashboarddefinitions
+          - prometheusremotewrites
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  prometheus-metrics-adapter:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:prometheus-metrics-adapter:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterdaemonsetmetrics
+          - clusterdeploymentmetrics
+          - clusteringressmetrics
+          - clusterpodmetrics
+          - clusterservicemetrics
+          - clusterstatefulsetmetrics
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus-metrics-adapter
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:prometheus-metrics-adapter:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterdaemonsetmetrics
+          - clusterdeploymentmetrics
+          - clusteringressmetrics
+          - clusterpodmetrics
+          - clusterservicemetrics
+          - clusterstatefulsetmetrics
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus-metrics-adapter
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:prometheus-metrics-adapter:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - daemonsetmetrics
+          - deploymentmetrics
+          - ingressmetrics
+          - namespacemetrics
+          - podmetrics
+          - servicemetrics
+          - statefulsetmetrics
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:prometheus-metrics-adapter:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - daemonsetmetrics
+          - deploymentmetrics
+          - ingressmetrics
+          - namespacemetrics
+          - podmetrics
+          - servicemetrics
+          - statefulsetmetrics
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-monitoring
+    subsystems:
+    - observability
+  prometheus-pushgateway:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:prometheus-pushgateway:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus-pushgateway
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:prometheus-pushgateway:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - prometheus-pushgateway
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-prometheus-pushgateway
+    subsystems:
+    - observability
+  runtime-audit-engine:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:runtime-audit-engine:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - falcoauditrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - runtime-audit-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:runtime-audit-engine:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - falcoauditrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - runtime-audit-engine
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-runtime-audit-engine
+    subsystems:
+    - security
+  secret-copier:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:secret-copier:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - secret-copier
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:secret-copier:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - secret-copier
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: ""
+    subsystems:
+    - security
+  static-routing-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:static-routing-manager:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - static-routing-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:static-routing-manager:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - static-routing-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-static-routing-manager
+    subsystems:
+    - networking
+  terraform-manager:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:terraform-manager:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - terraform-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:terraform-manager:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - terraform-manager
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-system
+    subsystems:
+    - infrastructure
+  upmeter:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:upmeter:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - downtimes
+          - upmeterhookprobes
+          - upmeterremotewrites
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - upmeter
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:upmeter:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - downtimes
+          - upmeterhookprobes
+          - upmeterremotewrites
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - upmeter
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: d8-upmeter
+    subsystems:
+    - observability
+  user-authn:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:user-authn:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexproviders
+          - groups
+          - users
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - user-authn
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:user-authn:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexproviders
+          - groups
+          - users
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - user-authn
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:user-authn:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexauthenticators
+          - dexclients
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:user-authn:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexauthenticators
+          - dexclients
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: d8-user-authn
+    subsystems:
+    - security
+  user-authz:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:user-authz:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - user-authz
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:user-authz:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - clusterauthorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - user-authz
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use:
+      - name: d8:use:capability:module:user-authz:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:user-authz:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - authorizationrules
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+    namespace: ""
+    subsystems:
+    - security
+  vertical-pod-autoscaler:
+    capabilities:
+      manage:
+      - name: d8:manage:permission:module:vertical-pod-autoscaler:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - vertical-pod-autoscaler
+          resources:
+          - moduleconfigs
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:manage:permission:module:vertical-pod-autoscaler:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resourceNames:
+          - vertical-pod-autoscaler
+          resources:
+          - moduleconfigs
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+      use: null
+    namespace: kube-system
+    subsystems:
+    - infrastructure
+subsystems:
+  deckhouse:
+    modules:
+    - deckhouse
+    - multitenancy-manager
+    namespaces:
+    - d8-multitenancy-manager
+    - d8-system
+  infrastructure:
+    modules:
+    - cloud-provider-dynamix
+    - cloud-provider-huaweicloud
+    - cloud-provider-openstack
+    - cloud-provider-vcd
+    - keepalived
+    - cloud-provider-vsphere
+    - cloud-provider-zvirt
+    - cloud-provider-aws
+    - cloud-provider-azure
+    - cloud-provider-gcp
+    - cloud-provider-yandex
+    - local-path-provisioner
+    - node-manager
+    - terraform-manager
+    - istio
+    - vertical-pod-autoscaler
+    - descheduler
+    - loki
+    - chrony
+    namespaces:
+    - d8-chrony
+    - d8-cloud-instance-manager
+    - d8-cloud-provider-aws
+    - d8-cloud-provider-azure
+    - d8-cloud-provider-dynamix
+    - d8-cloud-provider-gcp
+    - d8-cloud-provider-huaweicloud
+    - d8-cloud-provider-openstack
+    - d8-cloud-provider-vcd
+    - d8-cloud-provider-vsphere
+    - d8-cloud-provider-yandex
+    - d8-cloud-provider-zvirt
+    - d8-descheduler
+    - d8-istio
+    - d8-keepalived
+    - d8-local-path-provisioner
+    - d8-monitoring
+    - d8-system
+    - kube-system
+  kubernetes:
+    modules:
+    - priority-class
+    - flow-schema
+    - kube-proxy
+    - control-plane-manager
+    - kube-dns
+    namespaces:
+    - d8-system
+    - kube-system
+  networking:
+    modules:
+    - node-local-dns
+    - static-routing-manager
+    - network-gateway
+    - metallb
+    - flow-schema
+    - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
+    - kube-proxy
+    - kube-dns
+    - network-policy-engine
+    - istio
+    - ingress-nginx
+    - cilium-hubble
+    - openvpn
+    namespaces:
+    - d8-cni-cilium
+    - d8-cni-flannel
+    - d8-cni-simple-bridge
+    - d8-ingress-nginx
+    - d8-istio
+    - d8-metallb
+    - d8-network-gateway
+    - d8-openvpn
+    - d8-static-routing-manager
+    - d8-system
+    - kube-system
+  observability:
+    modules:
+    - monitoring-applications
+    - operator-prometheus
+    - prometheus
+    - prometheus-metrics-adapter
+    - prometheus-pushgateway
+    - extended-monitoring
+    - monitoring-custom
+    - monitoring-deckhouse
+    - monitoring-kubernetes
+    - monitoring-kubernetes-control-plane
+    - monitoring-ping
+    - log-shipper
+    - dashboard
+    - okmeter
+    - upmeter
+    namespaces:
+    - d8-dashboard
+    - d8-log-shipper
+    - d8-monitoring
+    - d8-okmeter
+    - d8-operator-prometheus
+    - d8-upmeter
+    - kube-prometheus-pushgateway
+  security:
+    modules:
+    - operator-trivy
+    - runtime-audit-engine
+    - admission-policy-engine
+    - cert-manager
+    - user-authz
+    - user-authn
+    - secret-copier
+    namespaces:
+    - d8-admission-policy-engine
+    - d8-cert-manager
+    - d8-operator-trivy
+    - d8-runtime-audit-engine
+    - d8-user-authn

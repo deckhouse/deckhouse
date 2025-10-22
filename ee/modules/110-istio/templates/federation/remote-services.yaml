@@ -1,0 +1,44 @@
+{{- if .Values.istio.federation.enabled }}
+  {{- range $federation := .Values.istio.internal.federations }}
+    {{- range $publicService := $federation.publicServices }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: {{ $federation.name }}-{{ $publicService.hostname | replace "." "-" }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  hosts:
+  - {{ $publicService.hostname | quote }}
+  location: MESH_INTERNAL
+  ports:
+      {{- range $port := $publicService.ports }}
+  - name: {{ $port.name }}
+    number: {{ $port.port }}
+    protocol: {{ $port.protocol }}
+      {{- end }}
+  resolution: STATIC
+  endpoints:
+      {{- range $ingressGateway := $federation.ingressGateways }}
+  - address: {{ $ingressGateway.address | quote }}
+    ports:
+        {{- range $port := $publicService.ports }}
+      {{ $port.name }}: {{ $ingressGateway.port }}
+        {{- end }}
+      {{- end }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ $federation.name }}-{{ $publicService.hostname | replace "." "-" }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  host: {{ $publicService.hostname | quote }}
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    {{- end }}
+  {{- end }}
+{{- end }}

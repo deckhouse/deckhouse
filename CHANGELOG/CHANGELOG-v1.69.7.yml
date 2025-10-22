@@ -1,0 +1,9 @@
+docs:
+  fixes:
+    - summary: Fixed new layouts at documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13492
+kube-dns:
+  fixes:
+    - summary: Fixed release upgrade issue with removed d8-kube-dns-redirect service.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13487
+

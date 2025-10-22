@@ -1,0 +1,131 @@
+{{- define "exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-metrics-exporter
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-metrics-exporter
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: exporter
+      minAllowed:
+        {{- include "exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-metrics-exporter
+  namespace: d8-cloud-provider-yandex
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-metrics-exporter")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cloud-metrics-exporter
+  template:
+    metadata:
+      labels:
+        app: cloud-metrics-exporter
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-metrics-exporter/secret-exporter-creds.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: cloud-metrics-exporter
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+      - name: exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "cloudMetricsExporter") }}
+        args:
+        - "--listen-address=127.0.0.1:8081"
+        - "--logger-type=json"
+        env:
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cloud-metrics-exporter-app-creds
+              key: api-key
+        - name: FOLDER_ID
+          valueFrom:
+            secretKeyRef:
+              name: cloud-metrics-exporter-app-creds
+              key: folder-id
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "exporter_resources" . | nindent 12 }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8080"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+        ports:
+          - containerPort: 8080
+            name: https-metrics
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              upstreams:
+              - upstream: http://127.0.0.1:8081/
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-provider-yandex
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: cloud-metrics-exporter
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

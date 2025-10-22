@@ -1,0 +1,51 @@
+type: object
+properties:
+  testString:
+    type: string
+    description: Test string
+  testArray:
+    type: array
+    description: Test array
+    items:
+      type: string
+  testEnum:
+    type: string
+    enum: ["Aa", "Bb"]
+    description: testEnum
+  https:
+    type: object
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+      customCertificate:
+        type: object
+        default: { }
+        properties:
+          secretName:
+            type: string
+            default: "false"
+  auth:
+    description: Test auth
+    type: object
+    default: {}
+    properties:
+      externalAuthentication:
+        type: object
+        default: {}
+        properties:
+          authURL:
+            type: string
+          authSignInURL:
+            type: string

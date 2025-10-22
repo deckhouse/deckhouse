@@ -1,0 +1,170 @@
+{{- define "agent_resources" }}
+cpu: 20m
+memory: 20Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: upmeter-agent
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: agent
+      minAllowed:
+        {{- include "agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 40Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: upmeter-agent
+  template:
+    metadata:
+      labels:
+        app: upmeter-agent
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      serviceAccountName: upmeter-agent
+      automountServiceAccountToken: true
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      volumes:
+      - name: data
+        hostPath:
+          type: DirectoryOrCreate
+          path: /var/lib/upmeter/agent
+      - name: tmp
+        emptyDir:
+          medium: Memory
+      initContainers:
+      {{- include "helm_lib_module_init_container_chown_deckhouse_volume" (tuple . "data") | nindent 6 }}
+      - name: migrator
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
+        command:
+          - /migrate
+          - -verbose
+          - "-path=/data/migrations/agent"
+          - "-database=sqlite3:///db/db.sqlite?x-no-tx-wrap=true"
+          - up
+        volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "agent_resources" . | nindent 12 }}
+{{- end }}
+      containers:
+        - name: agent
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list $ "upmeter") }}
+          command:
+            - /upmeter
+            - agent
+            - --user-agent=UpmeterAgent/1.0 (Deckhouse {{ $.Values.global.deckhouseEdition }} {{ $.Values.global.deckhouseVersion }})
+            {{- range $probeRef := .Values.upmeter.internal.disabledProbes }}
+            - --disable-probe={{ $probeRef }}
+            {{- end }}
+            {{- if .Values.upmeter.internal.dynamicProbes }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.ingressControllerNames }}
+            - --dynamic-probe-nginx-controller={{ $name }}
+              {{- end }}
+              {{- range $name := .Values.upmeter.internal.dynamicProbes.cloudEphemeralNodeGroupNames }}
+            - --dynamic-probe-nodegroup={{ $name }}
+              {{- end }}
+              {{- range $zone := .Values.upmeter.internal.dynamicProbes.zones }}
+            - --dynamic-probe-known-zone={{ $zone }}
+              {{- end }}
+            - --dynamic-probe-known-zoneprefix={{ .Values.upmeter.internal.dynamicProbes.zonePrefix}}
+            {{- end }}
+          volumeMounts:
+          - mountPath: /db
+            name: data
+            readOnly: false
+          - mountPath: /tmp
+            name: tmp
+            readOnly: false
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: UPMETER_SCHEDULER_PROBE_IMAGE
+            value: {{ include "helm_lib_module_common_image" (list . "init") }}
+          - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
+            value: "deckhouse-registry"
+          - name: UPMETER_TLS
+            value: "true"
+          - name: UPMETER_SERVICE_HOST
+            value: upmeter
+          - name: UPMETER_SERVICE_PORT
+            value: "443"
+          - name: UPMETER_DB_PATH
+            value: "/db/db.sqlite"
+          {{- if hasKey $.Values.global "clusterConfiguration" }}
+            {{- if eq $.Values.global.clusterConfiguration.clusterType "Cloud" }}
+          - name: UPMETER_CLOUD_CONTROLLER_MANAGER_NAMESPACE
+            value: "d8-cloud-provider-{{ $.Values.global.clusterConfiguration.cloud.provider | lower }}"
+            {{- end }}
+          {{- end }}
+          - name: UPMETER_SCHEDULER_PROBE_NODE
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: UPMETER_CLUSTER_DOMAIN
+            value: {{ .Values.global.discovery.clusterDomain | quote }}
+          - name: LOG_LEVEL
+            value: "info"
+          - name: LOG_TYPE
+            value: "json"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_WINDOW_SIZE
+            value: "5"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_FREEZE_THRESHOLD
+            value: "5m"
+          - name: UPMETER_DECKHOUSE_CONTROLLER_PROBE_ALLOWED_TASKS_PER_INTERVAL
+            value: "10"
+          - name: UPMETER_EXPORT_TIMEOUT
+            value: "15s"
+          # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables
+          - name: KUBE_CLIENT_QPS
+            value: "5"
+          - name: KUBE_CLIENT_BURST
+            value: "10"
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "agent_resources" . | nindent 14 }}
+{{- end }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      enableServiceLinks: false

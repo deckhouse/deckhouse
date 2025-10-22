@@ -1,0 +1,13 @@
+name: cilium-hubble
+stage: "General Availability"
+subsystems:
+  - networking
+namespace: d8-cni-cilium
+description: |
+  The cilium-hubble module
+descriptions:
+  en: The cilium-hubble module
+requirements:
+  modules:
+    cni-cilium: ">= 0.0.0"
+  deckhouse: ">= 1.68"

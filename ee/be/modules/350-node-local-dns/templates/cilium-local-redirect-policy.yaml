@@ -1,0 +1,24 @@
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+apiVersion: "cilium.io/v2"
+kind: CiliumLocalRedirectPolicy
+metadata:
+  name: "node-local-dns"
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  redirectFrontend:
+    serviceMatcher:
+      serviceName: d8-kube-dns
+      namespace: kube-system
+  redirectBackend:
+    localEndpointSelector:
+      matchLabels:
+        app: node-local-dns
+    toPorts:
+    - port: "53"
+      name: dns
+      protocol: UDP
+    - port: "53"
+      name: dns-tcp
+      protocol: TCP
+{{- end }}

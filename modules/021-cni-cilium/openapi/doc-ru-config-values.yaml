@@ -1,0 +1,166 @@
+type: object
+properties:
+  debugLogging:
+    description: Включает отладочный уровень логирования для компонентов Cilium.
+  labelsRegex:
+    description: |
+      Cilium создает идентификаторы безопасности основываясь на лейблах сущностей k8s, чем больше лейблов участвует в этом процессе - тем более детализированно можно настроить доступы.
+      Но в кластерах больших объёмов излишняя детализация может создать большую нагрузку, и при помощи опции labelsRegex можно более явно указать - какие лейблы будут использоваться для политик безопасности,
+      а какими следует пренебречь. Подробнее об уменьшении количества создаваемых identity можно прочитать в [документации](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels)
+
+      Каждый лейбл должен задаваться RegExp-выражением в формате YAML quoted string с экранированием спецсимволов.
+  createNodeRoutes:
+    description: |
+      Включает создание маршрутов к подам на других узлах.
+
+      Все узлы должны находиться в одной сети L2.
+  masqueradeMode:
+    description: |
+      Режим работы SNAT для трафика подов, исходящего из кластера.
+
+      - `BPF` — использовать BPF. Базовый режим работы.
+
+        В данном режиме сетевые запросы из подов не будут подвержены процедуре Source NAT, если IP-адрес назначения принадлежит `podSubnetCIDR` или `InternalIP`/`ExternalIP` любого из узлов кластера.
+
+      - `Netfilter` — использовать Netfilter(iptables/nf_tables).
+
+        В данном режиме сетевые запросы из подов не будут подвержены процедуре Source NAT, если IP-адрес назначения принадлежит `podSubnetCIDR` или `InternalIP` любого из узлов кластера.
+
+      > В режиме `BPF`, если на узле кластера указан ExternalIP, отличный от InternalIP, но этот IP-адрес не назначен на ни на один интерфейс, то он будет не доступен с соседних узлов из сети подов.
+      > Режим `Netfilter` позволяет обойти это ограничение. Однако при этом некоторые другие функции перестают работать, в частности `EgressGateway`.
+  tunnelMode:
+    description: |
+      Режим работы туннеля.
+
+      > Внимание! После изменения параметра необходимо перезагрузить все узлы, иначе могут быть проблемы с доступностью подов.
+
+      > Внимание! Режим VXLAN не совместим со следующими режимами bpfLBMode: Hybrid, DSR. Если tunnelMode настроен на VXLAN, то bpfLBMode будет переопределён на SNAT автоматически.
+  svcSourceRangeCheck:
+    description: |
+      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      Проверка не производится, если доступ производится изнутри кластера или параметр `sourceRanges` пуст/не указан.
+      Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего трафика на основе параметра `sourceRanges`, в таком случае [документация по cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
+      рекомендует отключать проверку `svcSourceRangeCheck`.
+
+      Не включайте, если перед сервисами есть другой балансировщик или какие-либо виды SNAT.
+  loadBalancerSourceRangeAllTypes:
+    description: |
+      Включает проверку source IP для всех типов сервисов, а не только для LoadBalancer.
+      К соответствующему NodePort или ClusterIP также будет применен фильтр CIDR.
+      Для получения более подробной информации, пожалуйста, перейдите по [ссылке](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
+  policyAuditMode:
+    description: |
+      Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
+  exclusiveCNIPlugin:
+    description: |
+      Предотвращает включение дополнительных CNI-плагинов на узлах кластера. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в значение `CNIPlugin`, то данная опция автоматически будет установлена в значение `false`.
+
+      Явно отключать эту опцию рекомендуется только при использовании дополнительного CNI или специфичного CNI-плагина в кластере. Примером такого использования может быть CNI-плагин Linkerd.
+  bpfLBMode:
+    description: |
+      Режим работы балансировщика eBPF:
+      - `SNAT` — трафик от клиента до пода (и обратно) проходит через NAT, соответственно теряется адрес отправителя.
+      - `DSR` — трафик от клиента до пода проходит с сохранением адреса отправителя, а обратно - согласно правилам роутинга (минуя балансировщик). Этот режим экономит сетевой трафик, уменьшает задержки, но работает только для TCP трафика.
+      - `Hybrid` — TCP трафик обрабатывается в режиме DSR, а UDP - в режиме SNAT.
+  activeL2NeighborDiscoveryEnabled:
+    description: |
+      Включает механизм `L2 neighbor discovery`, который помогает гарантировать актуальность записей в таблице ARP на всех узлах кластера.
+  extraLoadBalancerAlgorithmsEnabled:
+    description: |
+      Позволяет избирательно переопределить алгоритм балансировки с помощью eBPF между бэкендами для отдельных сервисов. Для переопределения используется аннотация `service.cilium.io/lb-algorithm` с одним из значений: `random`, `maglev` или `least-conn`.
+
+      > Внимание! Данная опция для работы требует на узлах версию ядра Linux не ниже 5.15.
+  resourcesManagement:
+    description: |
+      Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами агента cilium.
+    properties:
+      mode:
+        description: |
+          Режим управления ресурсами:
+          - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
+      vpa:
+        description: |
+          Настройка управления ресурсами в режиме `VPA`.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки VPA при работе с CPU.
+            properties:
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+          memory:
+            description: |
+               Настройка ограничений (limits) использования CPU и памяти.
+            properties:
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+      static:
+        description: |
+          Настройка управления ресурсами в режиме `Static`.
+        properties:
+          requests:
+            description: |
+              Настройки запросов ресурсов (requests) подов.
+            properties:
+              cpu:
+                description: |
+                  Настройка запроса CPU (CPU requests).
+              memory:
+                description: |
+                  Настройка запроса памяти (memory requests).
+          limits:
+            description: |
+              Настройка ограничений (limits) использования CPU и памяти.
+            properties:
+              cpu:
+                description: |
+                  Настройка ограничений использования CPU (CPU limits).
+              memory:
+                description: |
+                  Настройка ограничений использования памяти (memory limits).
+  encryption:
+    description: |
+      Настройки шифрования CNI Cilium.
+    properties:
+      mode:
+        description: |
+          Режим шифрования трафика:
+          - `Disabled` — шифрование трафика отключено.
+          - `WireGuard` — включено шифрование трафика между подами с использованием WireGuard.
+
+          > Внимание! Перед использованием шифрования с помощью WireGuard, пожалуйста убедитесь, что ядро Linux, используемое на узлах кластера, поддерживает WireGuard (указан параметр конфигурации ядра CONFIG_WIREGUARD=m для Linux 5.6 и старше, или установлен внешний модуль WireGuard для более ранних версий ядра).
+
+          > Внимание! Использование шифрования с помощью WireGuard может повлечь значительное потребление CPU подами агента Cilium.
+      nodeToNodeModeEnabled:
+        description: |
+          Включение шифрования трафика между узлами и подами работающими в `HostNetwork`.
+
+          > Внимание! Межузловой трафик к узлам control-plane или от них остается незашифрованным, для предотвращения возможных проблем сетевого взаимодействия в процессе обмена ключами шифрования WireGuard. При этом, сетевой трафик между системными компонентами платформы остаётся зашифрованным на прикладном уровне.
+
+          > Внимание! Когда этот режим активен, из `PodNetwork` не доступны `NodePort` and `HostPort`.

@@ -1,0 +1,264 @@
+candi:
+  features:
+    - summary: Automatic update of Kubernetes version from 1.19 to 1.21.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1288
+      impact: >-
+        For clusters with automatic Kubernetes version selection, Kubernetes v1.21 becomes the
+        default version.
+
+        * The Kubernetes version update in such clusters will be done during the Deckhouse version
+        update.
+
+        * Updating the Kubernetes version will cause the restart of the cluster Control Plane
+        components.
+
+        * Run the following command to find out if the cluster has enabled automatic Kubernetes
+        version selection: `kubectl -n kube-system get secret d8-cluster-configuration -o json | jq
+        '.data."cluster-configuration.yaml"' -r | base64 -d | grep kubernetesVersion`. If the result
+        is ‘kubernetesVersion: Automatic’ — the cluster has enabled automatic Kubernetes version
+        selection.
+    - summary: added kubelet container logs parameters for notManaged mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1263
+    - summary: refactor kubernetes-api-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1193
+    - summary: New kubernetes patchversions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1136
+  fixes:
+    - summary: >-
+        Added imagePullPolicy: IfNotPresent to kubernetes-api-proxy static pod. Fixed
+        kubernetes-api-proxy run in docker envs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1297
+    - summary: Protect bashible.sh from corruption
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1270
+    - summary: configOverrides field in the InitConfiguration is not required anymore
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1233
+ceph-csi:
+  features:
+    - summary: Added new module ceph-csi
+      pull_request: https://github.com/deckhouse/deckhouse/pull/426
+      impact: >-
+        The new module - ceph-csi. Manages the creation of Ceph volumes (RBD and CephFS) and
+        attaches them to workloads.
+chrony:
+  fixes:
+    - summary: chrony's container livenessProbe's timeout increased from 5 to 15 seconds
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1240
+ci:
+  fixes:
+    - summary: Fixed 'state is null' in slash command dispatcher workflow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1181
+cloud-provider-aws:
+  fixes:
+    - summary: Allow ssh access to master nodes only from bastion for with-nat layout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1217
+    - summary: Ignore disk size when calculating checksum if disk size is equal to default size
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1179
+    - summary: >-
+        The necessary IAM policies for creating a peering connection have been added to the
+        documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/504
+cloud-provider-azure:
+  fixes:
+    - summary: Ignore disk size when calculating checksum if disk size is equal to default size
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1179
+cloud-provider-gcp:
+  fixes:
+    - summary: Ignore disk size when calculating checksum if disk size is equal to default size
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1179
+cloud-provider-vsphere:
+  fixes:
+    - summary: Correct behavior of nestedHardwareVirtualization parameter for VsphereInstanceClass.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1331
+      impact: >-
+        Node groups with VsphereInstanceClass runtimeOptions.nestedHardwareVirtualization set to
+        false have to be manually updated for this setting to take place. New nodes will be created
+        with disabled nested hardware virtualization if it is disabled in configuration.
+cloud-provider-yandex:
+  fixes:
+    - summary: Ignore disk size when calculating checksum if disk size is equal to default size
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1179
+control-plane-manager:
+  features:
+    - summary: Add listing object from all namespaces to default audit policy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1246
+  fixes:
+    - summary: Add the `--experimental-initial-corrupt-check` flag for etcd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1267
+      impact: Etcd will be restarted.
+deckhouse:
+  features:
+    - summary: Add docs about Deckhouse release pinning
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1058
+docs:
+  fixes:
+    - summary: Fix typos on the 'Installation process' page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1322
+    - summary: Minor data refactoring of the site
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1293
+    - summary: >-
+        Fix generating config.yml in the getting started (private environment) when specifying
+        registryCA.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1285
+    - summary: >-
+        Add development mode to Jekyll in the documentation part of the site. Jekyll runs with trace
+        and profiler In this mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1274
+    - summary: >-
+        Getting started - Installing in a private environment: Remove unnecessary trailing slash in
+        the URL of a repo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1229
+    - summary: Fix "Getting started - Installing in a private environment".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1225
+    - summary: Pin kindest/node version
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1146
+    - summary: Minor fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1105
+flant-integration:
+  fixes:
+    - summary: Set the tier = cluster label for alerts without the namespace label
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1300
+ingress-nginx:
+  features:
+    - summary: >-
+        Add 1.1 IngressNginxController version which is "must have" for clusters with k8s version >
+        1.21
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1209
+istio:
+  features:
+    - summary: New helm lib for resource management and it's application to istiod.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1060
+kube-dns:
+  fixes:
+    - summary: Changed sts-pods-hosts-appender-webhook probes from tcpSocket to httpGet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1283
+kube-proxy:
+  fixes:
+    - summary: >-
+        Set short hostname if itsn't and force short hostname for kube-dns'es
+        nodeport-bind-address.sh init-container
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1298
+      impact: kube-proxy pods will restart.
+linstor:
+  features:
+    - summary: Added automated integration tests for LINSTOR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1148
+    - summary: Added more alerts for LINSTOR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1055
+    - summary: Grafana dashboard for LINSTOR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1035
+      impact: Added Grafana dashboard to monitor LINSTOR cluster and DRBD resources
+    - summary: Alerts for LINSTOR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1035
+      impact: >-
+        Add alerts with the recommended course of action to monitor LINSTOR, Piraeus-operator,
+        capacity of storage-pools and resources states
+    - summary: Metrics are now securely collected from linstor
+      pull_request: https://github.com/deckhouse/deckhouse/pull/982
+    - summary: Autoimport LVM pools based on tags
+      pull_request: https://github.com/deckhouse/deckhouse/pull/923
+      impact: Now LVM pools can automatically be added to the LINSTOR cluster and StorageClasses generated
+  fixes:
+    - summary: fix mtab warning for mkfs commands
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1275
+    - summary: LINSTOR module now supports high-availability
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1147
+      impact: Multimaster clusters will automatically turn LINSTOR into HA-mode
+    - summary: linstor-scheduler now uses native kubernetes clusterroles
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1084
+    - summary: disable global usage survey
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1053
+log-shipper:
+  features:
+    - summary: |-
+        Various improvements to the log-shipper module:
+        * Update vector to v0.20.0
+        * Add the exclude namespaces option to the cluster logs config
+        * Change default VPA mode to 'Initial'
+        * NodeSelector and Tolerations options for the log-shipper agent pods
+        * Rebalance connections among all Logstash instances
+        * New dashboard for Grafana
+        * Grouping log-shipper alerts
+        * Troubleshooting guide
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1106
+node-local-dns:
+  fixes:
+    - summary: Reworked health checking logic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/388
+      impact: Now Pods shouldn't crash unexpectedly now due to poor implementation of locking/probing.
+node-manager:
+  features:
+    - summary: '`NodeGroup` validation to forbid minPerZone = 0 while maxPerZone > 0'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1249
+  fixes:
+    - summary: Fix panic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1294
+    - summary: Don't deploy standby-holder if there is minPerZone == maxPerZone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1221
+    - summary: Validate NodeGroup has maxPerZone greater than minPerZone
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1199
+openvpn:
+  features:
+    - summary: Added OpenAPI specs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1282
+  fixes:
+    - summary: Fixed OpenAPI
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1307
+    - summary: >-
+        Web interface changed to https://github.com/flant/ovpn-admin. Persistent storage has been
+        replaced with Kubernetes secrets. Added HostPort inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/522
+      impact: >-
+        OpenVPN will be migrated from using PVC to store certificates to Kubernetes secrets. PVC
+        will still remain in the cluster as a backup. If you don't need it, you should manually
+        delete it from the cluster.
+prometheus:
+  features:
+    - summary: Improved dashboards for `kube-apiserver` and `etcd`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1242
+    - summary: |-
+        Fixed retention calculation for localstorage.
+        prometheus_disk hook rewritten in Go.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/813
+  fixes:
+    - summary: Do not show more than one value on home Grafana dashboard stat panels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1268
+    - summary: Set Grafana sample limit to 5000
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1215
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Change VPA mode to 'Initial'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1195
+snapshot-controller:
+  features:
+    - summary: 'New module: snapshot-controller'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1068
+      impact: >-
+        The new module - snapshot-controller. Enables snapshot support for compatible CSI drivers
+        and cloud providers.
+testing:
+  features:
+    - summary: Support x-required-for-helm, add x-test-focus
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1086
+upmeter:
+  fixes:
+    - summary: Upmeter no longer exposes DNS queries to the Internet
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1256
+    - summary: Fixed the calculation of groups uptime
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1144
+user-authn:
+  fixes:
+    - summary: Do not wait for deleting publish API secret
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1252
+    - summary: Dex usage doc fix due to new default Gitlab settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1236
+    - summary: Increase authentication rate limit x2
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1224
+    - summary: Allow having numbers in kubeconfig-generator ids
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1223
+user-authz:
+  features:
+    - summary: >-
+        Add validation for ClusterAuthorizationRule with `limitNamespaces` or
+        `allowAccessToSystemNamespaces` features
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1260
+

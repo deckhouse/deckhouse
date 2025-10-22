@@ -1,0 +1,13 @@
+.disabled {
+    display: none;
+}
+
+.mustChange {
+    background-color: #f25c54 !important;
+    color: #fff  !important;
+}
+
+.mightChange {
+    background-color: #ffee93 !important;
+    color: #02003E !important;
+}

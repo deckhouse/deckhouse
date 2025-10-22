@@ -1,0 +1,47 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /egress-gateway-agent
+    to: /egress-gateway-agent
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/egress-gateway-agent"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+  # Forces a rebuild when source files are modified.
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
+    - chown 64535:64535 /egress-gateway-agent
+    - chmod 0755 /egress-gateway-agent

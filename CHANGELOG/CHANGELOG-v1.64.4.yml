@@ -1,0 +1,43 @@
+candi:
+  fixes:
+    - summary: Added information about the need for running services from the `cloud-init` package.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10175
+deckhouse:
+  fixes:
+    - summary: Fix `ValidatingAdmissionPolicy` for checking update windows.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10151
+deckhouse-controller:
+  features:
+    - summary: Add mechanism to check that desired modules are disabled before deckhouse update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10176
+dhctl:
+  fixes:
+    - summary: Do not return error if deckhouse release exists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10164
+    - summary: Only one resource will create for namespace if it namespace does not exist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10159
+docs:
+  fixes:
+    - summary: Fixed text at Azure vNet DNS config and fixed broken links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10171
+    - summary: Add conditions reference, fix links on actual DKP istio version - v1.19
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10166
+istio:
+  fixes:
+    - summary: Fix supported Kubernetes version in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10148
+loki:
+  fixes:
+    - summary: Removed migrator init containers from modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10150
+prometheus:
+  fixes:
+    - summary: Removed migrator init containers from modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10150
+upmeter:
+  fixes:
+    - summary: Removed migrator init containers from modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10150
+    - summary: Fixed API status summary showing numbers instead of "Operational", "Degraded", or "Outage"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9546
+

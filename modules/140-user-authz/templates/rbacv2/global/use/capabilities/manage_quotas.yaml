@@ -1,0 +1,20 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:kubernetes:manage_quotas
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - resourcequotas
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection

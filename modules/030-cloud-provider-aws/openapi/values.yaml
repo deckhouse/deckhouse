@@ -1,0 +1,107 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      storageClasses:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "type"]
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+            iops:
+              type: string
+            throughput:
+              type: string
+            iopsPerGB:
+              type: string
+          oneOf:
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["gp2", "sc1", "st1"]
+              additionalProperties: false
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["gp3"]
+                iops:
+                  type: string
+                throughput:
+                  type: string
+              additionalProperties: false
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["io1", "io2"]
+                iopsPerGB:
+                  type: string
+              additionalProperties: false
+        x-examples:
+        - [{"name": "gp3", "type": "gp3", "iops": "6000", "throughput": "300"}]
+      cniSecretData:
+        type: string
+      instances:
+        type: object
+        properties:
+          ami:
+            type: string
+          additionalSecurityGroups:
+            type: array
+            items:
+              type: string
+          associatePublicIPAddress:
+            type: boolean
+          iamProfileName:
+            type: string
+        x-examples:
+        - {"ami": "test", "additionalSecurityGroups": ["test"], "associatePublicIPAddress": false, "iamProfileName": "test"}
+      keyName:
+        type: string
+        x-examples:
+        - mykeyname
+      loadBalancerSecurityGroup:
+        type: string
+        x-examples:
+        - mylbsecgroupid
+      zones:
+        type: array
+        items:
+          type: string
+        x-examples:
+        - ["zonea", "zoneb"]
+      zoneToSubnetIdMap:
+        type: object
+        additionalProperties:
+          type: string
+        x-examples:
+        - {"zonea": "aaa", "zoneb": "bbb"}
+      providerAccessKeyId:
+        type: string
+        x-examples:
+        - myprovacckeyid
+      providerSecretAccessKey:
+        type: string
+        x-examples:
+        - myprovsecretaccesskey
+      region:
+        type: string
+        x-examples:
+        - myregion
+      tags:
+        type: object
+        additionalProperties:
+          type: string
+        x-examples:
+        - {"aaa": "aaa"}

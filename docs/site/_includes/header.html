@@ -1,0 +1,323 @@
+{% assign topnav = site.data[page.topnav].topnav[page.lang] %}
+
+<div class="header-container">
+  <header class="header {%- if page.lang == 'ru' %} header_float{%- endif %}">
+    <div class="header__content container">
+      <div class="header__left-box">
+        <div class="header__logo">
+          <a href="/" class="header__logo-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="157" height="52" fill="none" viewBox="0 0 157 52"><g id="logo"><g id="sign"><path id="Vector" fill="#0064FF" d="M27.43 33.1h-7.06V18.9h7.06a7.1 7.1 0 0 1 0 14.2Z"/><g id="Group"><g id="Group_2" fill="#00003C"><path id="Vector_2" d="m14.32 19.73-3.79-3.8L.5 26l10.04 10.07 3.78-3.9-1.94-1.85v-8.64l1.94-1.95Z"/><path id="Vector_3" d="m42.28 15.93-3.8 3.8 1.85 1.95v8.64l-1.84 1.85 3.79 3.9L52.3 26 42.28 15.93Z"/><path id="Vector_4" d="m16.37 10.07 3.79 3.8 1.95-1.95h8.6l1.84 1.95 3.9-3.8L26.4 0 16.37 10.07Z"/><path id="Vector_5" d="m34.5 39.98-1.95-1.85-1.84 1.85h-8.6l-1.95-1.85-1.84 1.85-1.95 1.95L26.41 52l10.03-10.07-1.94-1.95Z"/></g></g></g><g id="Deckhouse" fill="#0064FF"><path d="M69.22 19.85c3.39 0 5.84 2.43 5.84 5.77a5.61 5.61 0 0 1-5.84 5.76h-4.35V19.85h4.35Zm-.05 9.23c1.97 0 3.34-1.45 3.34-3.46 0-2.04-1.37-3.44-3.34-3.44h-1.81v6.9h1.8ZM85.54 26.92c0 .23-.01.46-.05.7h-6.73c.21 1.21 1 1.89 2.17 1.89.84 0 1.53-.4 1.9-1.04h2.51a4.54 4.54 0 0 1-4.4 3.18 4.58 4.58 0 0 1-4.62-4.71c0-2.67 1.98-4.7 4.61-4.7 2.73 0 4.61 2.11 4.61 4.68Zm-4.6-2.62c-1.08 0-1.84.63-2.12 1.68h4.32c-.35-1.09-1.12-1.68-2.2-1.68ZM91.39 31.65a4.65 4.65 0 0 1-4.73-4.73 4.6 4.6 0 0 1 4.74-4.68c2.31 0 4.09 1.47 4.52 3.66h-2.4a2.28 2.28 0 0 0-2.13-1.4c-1.3 0-2.3 1.05-2.3 2.44 0 1.36 1.01 2.43 2.3 2.43.97 0 1.73-.52 2.14-1.48h2.42a4.5 4.5 0 0 1-4.56 3.76ZM105.93 31.38h-2.91l-2.85-4.25v4.25h-2.4V19.3h2.4v7.15l2.66-3.95h2.77l-3.01 4.25 3.34 4.64ZM112.1 22.3c2 0 3.26 1.43 3.26 3.68v5.4h-2.4V26.4c0-1.33-.49-1.99-1.56-1.99-1.2 0-1.99.87-1.99 2.32v4.66h-2.4V19.3h2.4v4.04a3.86 3.86 0 0 1 2.68-1.04ZM121.77 31.65a4.65 4.65 0 0 1-4.8-4.71c0-2.69 2.05-4.7 4.8-4.7s4.81 2.01 4.81 4.7a4.65 4.65 0 0 1-4.8 4.7Zm0-2.28c1.39 0 2.37-.98 2.37-2.43 0-1.44-.98-2.44-2.37-2.44-1.38 0-2.37 1-2.37 2.44 0 1.45.99 2.43 2.37 2.43ZM132.37 31.65c-2.5 0-4.19-1.62-4.19-4.02v-5.14h2.4v4.88c0 1.26.68 2 1.79 2 1.12 0 1.78-.75 1.78-2v-4.88h2.4v5.14c0 2.4-1.66 4.02-4.18 4.02ZM141.88 31.65c-2.22 0-3.72-1.29-3.72-3.18h2.34c.02.79.63 1.18 1.48 1.18.66 0 1.27-.3 1.27-.9 0-.61-.77-.8-1.71-.94-1.42-.25-3.23-.63-3.23-2.72 0-1.68 1.43-2.85 3.57-2.85 2.15 0 3.56 1.2 3.58 2.98h-2.3c0-.7-.5-1.05-1.34-1.05-.74 0-1.19.33-1.19.84 0 .6.76.74 1.68.9 1.45.27 3.31.57 3.31 2.74 0 1.81-1.48 3-3.74 3ZM156.02 26.92c0 .23-.01.46-.05.7h-6.73c.21 1.21 1 1.89 2.17 1.89.84 0 1.53-.4 1.9-1.04h2.51a4.54 4.54 0 0 1-4.4 3.18 4.58 4.58 0 0 1-4.62-4.71c0-2.67 1.97-4.7 4.61-4.7 2.74 0 4.61 2.11 4.61 4.68Zm-4.6-2.62c-1.08 0-1.84.63-2.12 1.68h4.32c-.35-1.09-1.12-1.68-2.2-1.68Z"/></g></g></svg>
+          </a>
+        </div>
+        <ul id="top-header-nav" class="nav header__nav">
+          <li class="header__navigation-item current-menu-parent menu-item-has-children">
+          {%- unless site.mode == "module" %}
+            {%- if page.lang == "ru" %}
+            <a href="#">Продукты</a>
+            <div class="sub-menu-container">
+            <ul class="sub-menu sub-menu_products">
+              <li>
+                <a href="/products/kubernetes-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                  </svg>
+                  <span>Kubernetes Platform</span>
+                  <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/virtualization-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                  </svg>
+                  <span>Virtualization Platform</span>
+                  <p>Управление виртуальными машинами</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/observability-platform/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                  </svg>
+                  <span>Observability Platform</span>
+                  <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/stronghold/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                  </svg>
+                  <span>Stronghold</span>
+                  <p>Безопасное управление жизненным циклом секретов</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/delivery-kit/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                  </svg>
+                  <span>Delivery Kit</span>
+                  <p>Сборка и&nbsp;доставка контейнеризованного&nbsp;ПО</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/commander/">
+                  <svg class="products__icon">
+                    <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                  </svg>
+                  <span>Commander</span>
+                  <p>Центр управления парком кластеров</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/prompp/">
+                  <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
+                    <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
+                    <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                  </svg>
+                  <span>Prom++</span>
+                  <p>Open Source-система мониторинга</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/code/">
+                  <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+                    <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+                    <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
+                  </svg>
+                  <span>Code</span>
+                  <p>Непрерывная разработка и&nbsp;управление жизненным циклом ПО</p>
+                </a>
+              </li>
+              <li>
+                <a href="/products/development-platform/">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 165 165" fill="none">
+                    <path d="M82.2153 44.9685L49.2305 64.0212V102.127L82.2153 121.179L115.2 102.127V64.0212L82.2153 44.9685ZM99.2064 83.0407C99.2064 91.2536 92.5563 97.9038 84.3433 97.9038H69.4802V68.1776H84.3433C92.5563 68.1776 99.2064 74.8277 99.2064 83.0407Z" fill="black"/>
+                    <path d="M107.744 0.954648L94.4131 14.2859L150.959 70.832L164.29 57.5007L107.744 0.954648Z" fill="#0064FF"/>
+                    <path d="M56.6583 0.997428L0.87207 57.5483L14.2937 70.7885L70.08 14.2376L56.6583 0.997428Z" fill="#0064FF"/>
+                    <path d="M13.4451 95.2148L0.200195 108.632L56.7553 164.461L70.0002 151.044L13.4451 95.2148Z" fill="#0064FF"/>
+                    <path d="M150.99 95.1924L94.4346 151.022L107.679 164.439L164.235 108.609L150.99 95.1924Z" fill="#0064FF"/>
+                  </svg>
+                  <span>Development Platform</span>
+                  <p>Управление разработкой через&nbsp;единое окно</p>
+                </a>
+              </li>
+            </ul>
+          </div>
+            {%- else %}
+              <a href="#">Products</a>
+              <div class="sub-menu-container">
+                <ul class="sub-menu sub-menu_products">
+                  <li>
+                    <a href="/products/kubernetes-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                      </svg>
+                      <span>Kubernetes Platform</span>
+                      <p>Creating identical Kubernetes clusters and&nbsp;managing them</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/virtualization-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                      </svg>
+                      <span>Virtualization Platform</span>
+                      <p>Managing virtual machines</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/observability-platform/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                      </svg>
+                      <span>Observability Platform</span>
+                      <p>Infrastructure and&nbsp;application monitoring and&nbsp;logging</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/stronghold/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                      </svg>
+                      <span>Stronghold</span>
+                      <p>Securely managing lifecycle of&nbsp;secrets</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/delivery-kit/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                      </svg>
+                      <span>Delivery Kit</span>
+                      <p>Building and&nbsp;delivering containerized software</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/commander/">
+                      <svg class="products__icon">
+                        <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                      </svg>
+                      <span>Commander</span>
+                      <p>Cluster control center</p>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="/products/prompp/">
+                      <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
+                        <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
+                        <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                      </svg>
+                      <span>Prom++</span>
+                      <p>Open Source monitoring system</p>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            {%- endif %}
+          </li>
+          {%- endunless %}
+          {% for entry in topnav %}
+            {% for item in entry.items %}
+              {%- if site.mode == 'module' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
+              {%- if item.title == site.data.i18n.common.products[page.lang] %}{% continue %}{% endif %}
+              {%- assign page_url_without_lang = page.url | regex_replace: '^(/)?(ru/|en/)', '\1'-%}
+              {%- assign item_url_parts = item.url | split: '/' -%}
+              {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
+              <li class="header__navigation-item
+                {%- unless item.external_url.size > 0 %}
+                {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item active{% endif %}
+                {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item active{% endif %}
+                {%- if item.url.size>1 and page.url == item.url %} header__navigation-item active{% endif %}
+                {%- if page_url_without_lang == item.url %} header__navigation-item active{% endif %}
+                {%- if item.items %} current-menu-parent menu-item-has-children{% endif %}
+                {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item active{% endif %}
+                {%- endunless %}"
+                {%- if item.items %} data-proofer-ignore{% endif %}
+              >
+                <a
+                  {%- if item.external_url %} href="{{ item.external_url }}"
+                  {%- elsif item.url %} href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ item.url }}"
+                  {%- else %} href="#"
+                  {%- endif %}
+                  {%- if item.target.size > 0 %} target="{{ item.target }}"{% elsif item.external_url.size > 0 %} target="_blank"{% endif %}>{{- item.title -}}
+                </a>
+
+                {% if item.items %}
+                  <div class="sub-menu-container">
+                    <ul class="sub-menu">
+                      {% for subitem in item.items %}
+                        {%- assign item_url_parts = subitem.url | split: '/' -%}
+                        <li data-proofer-ignore>
+                          <a
+                            {%- if subitem.external_url %}
+                              href="{{ subitem.external_url }}" {%- if !subitem.target %} target="_blank"{% endif %}
+                            {%- elsif subitem.url %}
+                              href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ subitem.url }}"
+                            {%- else %}
+                              href="#"
+                            {% endif %}
+                            {%- if subitem.target.size > 0 %} target="{{ subitem.target }}"{% endif %}
+                            >
+                              {{ subitem.title }}
+                            </a>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="header__right-box">
+        <div class="header__buttons">
+          {%- unless site.mode == "module" %}
+            <a href="/docs/" class="button button--outline">{{ site.data.i18n.common['documentation'][page.lang] }}</a>
+            <a data-open-modal="request_callback" href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
+          {%- endunless %}
+        </div>
+        {%- if page.lang == "ru" %}
+          <a class="lang-switcher" href="
+            {%- if site.mode == 'module' %}/en
+              {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+            {%- else -%}
+              {%- if page.mode == 'ssi' -%}
+                {{ site.urls['en'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+              {%- else -%}
+                {{ site.urls['en'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+              {%- endif %}
+            {%- endif %}"
+          >
+            <span>Ru</span>
+            <span>En</span>
+        {%- else %}
+          <a class="lang-switcher" href="
+            {%- if site.mode == 'module' %}/ru
+              {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+            {%- else -%}
+              {%- if page.mode == 'ssi' -%}
+                {{ site.urls['ru'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
+              {%- else -%}
+                {{ site.urls['ru'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+              {%- endif %}
+            {%- endif %}"
+          >
+            <span>En</span>
+            <span>Ru</span>
+        {%- endif %}
+          </a>
+      </div>
+    </div>
+    {%- unless site.mode == "module" %}
+    {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
+    {%- if l2MenuData %}
+    {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
+    {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
+    {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+    {%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
+    {%- assign productName = productMenuData.title %}
+    <div class="header header__product-menu">
+      <div class="container">
+        <div class="header__product-menu-logo">
+          {%- if productName == "Code" %}
+          <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+            <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+            <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
+          </svg>
+          {%- else %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <use xlink:href="{{ productLogoURL }}"></use>
+          </svg>
+          {%- endif %}
+          <span>{{ productName }}</span>
+        </div>
+        <ul class="nav header__nav">
+          {%- for item in productMenuData.items %}
+            {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.title == "Возможности" %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+            <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+              <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
+                {% if item.items %}
+                  <div class="sub-menu-container">
+                    <ul class="sub-menu">
+                      {% for item in item.items %}
+                        <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+              {% endif %}
+            </li>
+          {%- endfor %}
+        </ul>
+      </div>
+    </div>
+    {%- endif %}
+    {%- endunless %}
+  </header>
+</div>

@@ -1,0 +1,115 @@
+{{- define "local_path_provisioner_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- $context := . }}
+{{- range $localPathProvisioner := $context.Values.localPathProvisioner.internal.localPathProvisioners }}
+  {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "local-path-provisioner"
+      minAllowed:
+        {{- include "local_path_provisioner_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: {{ $context.Chart.Name }}
+      name: {{ $localPathProvisioner.name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner" )) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: {{ $context.Chart.Name }}
+      name: {{ $localPathProvisioner.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $context.Chart.Name }}
+        name: {{ $localPathProvisioner.name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $context | sha256sum }}
+    spec:
+      {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: {{ $context.Chart.Name }}
+      containers:
+      - name: local-path-provisioner
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $context "localPathProvisioner") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - local-path-provisioner
+        - --debug
+        - start
+        - --config
+        - /etc/config/config.json
+        - --service-account-name
+        - {{ $context.Chart.Name }}
+        - --configmap-name
+        - "{{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}"
+        - --provisioner-name
+        - deckhouse.io/{{ $localPathProvisioner.name }}
+        - --helper-image
+        - {{ include "helm_lib_module_image" (list $context "helper") }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config/
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "local_path_provisioner_resources" $context | nindent 12 }}
+  {{- end }}
+
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+{{- end }}

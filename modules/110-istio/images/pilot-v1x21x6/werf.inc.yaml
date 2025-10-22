@@ -1,0 +1,60 @@
+---
+{{- $istioVersion := "1.21.6" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.pilot
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/istio/out/pilot-discovery
+  to: /usr/local/bin/pilot-discovery
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/pilot-discovery"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  setup:
+  - cd /src/istio/
+  - echo {{ $istioVersion }} > version
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-discovery/
+  - strip /src/istio/out/pilot-discovery
+  - chmod 0700 /src/istio/out/pilot-discovery
+  - chown 1337:1337 /src/istio/out/pilot-discovery

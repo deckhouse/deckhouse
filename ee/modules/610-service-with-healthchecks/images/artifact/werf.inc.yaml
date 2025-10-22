@@ -1,0 +1,53 @@
+---
+image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*.go"
+shell:
+  install:
+    - cd /src
+---
+image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+  - image: {{ .ModuleName }}/service-with-healthchecks-src-artifact
+    add: /src
+    to: /src
+    before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  # git needs for patch
+  - apk --no-cache add git
+  setup:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - git apply /src/patches/*.patch --verbose
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/cmd/agent
+  - go build -mod=vendor -ldflags="-s -w" -o /agent .
+  - chown 64535:64535 /agent
+  - chmod +x /agent
+  - cd /src/cmd/controller
+  - go build -mod=vendor -ldflags="-s -w" -o /controller .
+  - chown 64535:64535 /controller
+  - chmod +x /controller
+  - rm -rf /src/vendor

@@ -1,0 +1,9 @@
+positive:
+  configValues:
+  - nodeSelector:
+      test: test
+    apiKey: test
+negative:
+  configValues:
+  - test: [false, true]
+  - {}

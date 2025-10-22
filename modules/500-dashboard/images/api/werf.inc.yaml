@@ -1,0 +1,47 @@
+# #####################################################################
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/api/Dockerfile
+# #####################################################################
+{{- $version := "1.10.2" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /dashboard-api
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-api"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src/modules/api
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/api/pkg/environment.Version=v{{ $version }}" -o /dashboard-api .
+  - chown 64535:64535 /dashboard-api
+  - chmod 0755 /dashboard-api
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b api/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
+  - rm -r .git .github charts docs hack

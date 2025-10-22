@@ -1,0 +1,57 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "openstack") }}'
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/openstack
+  to: /deckhouse/candi/cloud-providers/openstack
+import:
+- image: terraform-provider-openstack
+  add: /terraform-provider-openstack
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "openstack") }}/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
+  before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.openstack.version }} $(cat /run/secrets/SOURCE_REPO)/terraform-provider-openstack/terraform-provider-openstack.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: terraform-provider-openstack
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - make fmt
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
+  - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
+  - chmod -R 755 /terraform-provider-openstack
+  - chown 64535:64535 /terraform-provider-openstack

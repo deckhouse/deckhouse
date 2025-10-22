@@ -1,0 +1,3 @@
+dirs:
+- /etc/ssl/report-updater
+- /root/.docker

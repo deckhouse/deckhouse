@@ -1,0 +1,56 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
+    {{ $annotations := "" }}
+    {{ $sourceRanges := "" }}
+    {{ $loadBalancerClass := "" }}
+    {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
+      {{ $annotations = $crd.spec.loadBalancer.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
+      {{ $loadBalancerClass = $crd.spec.loadBalancer.loadBalancerClass }}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
+      {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
+      {{ $loadBalancerClass = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerClass }}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
+      {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
+      {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
+      {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $crd.name }}-load-balancer
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name "deckhouse-service-type" "provider-managed" )) | nindent 2 }}
+    {{- if $annotations }}
+  annotations:
+      {{- range $key, $value := $annotations }}
+    {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+    {{- if $sourceRanges }}
+  loadBalancerSourceRanges:
+    {{- $sourceRanges | toYaml | nindent 4 }}
+    {{- end }}
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+    {{- if $loadBalancerClass }}
+  loadBalancerClass: {{ $loadBalancerClass }}
+    {{- end }}
+  selector:
+    app: controller
+    name: {{ $crd.name }}
+  {{- end }}
+{{- end }}

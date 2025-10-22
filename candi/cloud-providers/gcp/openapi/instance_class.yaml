@@ -1,0 +1,140 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gcpinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-gcp
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - machineType
+              properties:
+                machineType:
+                  description: |
+                    Machine type of GCP instance.
+
+                    **Caution!** Make sure that this type is present in all zones specified in the `zones` parameter.
+
+                    GCP [lets you](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) specify a custom amount of resources (CPU and RAM), e.g., `custom-8-40960` or `n2-custom-8-40960`.
+                  x-doc-examples: ['n1-standard-4']
+                  type: string
+                capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
+                  type: object
+                  description: |
+                    Deprecated: the parameter is no longer used. Deckhouse is using parameters from the cloud for passed instance type.
+
+                    Instance capacity for *non-standard* instance types (the `machineType` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`a2-highgpu-8g`, `c2-standard-8`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1000m"]
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1500Mi"]
+                image:
+                  description: |
+                    Image to use while provisioning GCP servers.
+
+                    You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
+
+                    The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313"]
+                  x-doc-required: false
+                  type: string
+                preemptible:
+                  description: Should instances be preemptible.
+                  type: boolean
+                  x-doc-default: false
+                diskType:
+                  description: Instance's disk type.
+                  x-doc-examples: ["pd-ssd"]
+                  x-doc-default: "pd-standard"
+                  type: string
+                  enum:
+                  - "pd-standard"
+                  - "pd-ssd"
+                diskSizeGb:
+                  description: Instance's root disk size in gibibytes.
+                  x-doc-examples: [20]
+                  x-doc-default: 50
+                  type: integer
+                disableExternalIP:
+                  description: Defines whether to disable external ip for an instance or not. True means that an instance is created without external ip
+                  type: boolean
+                additionalNetworkTags:
+                  description: |
+                    The list of additional tags.
+
+                    For example, you can use tags to apply firewall rules to instances. The detailed description of network tags is available in the [official documentation](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                  type: array
+                  items:
+                    type: string
+                additionalLabels:
+                  type: object
+                  description: |
+                    Additional labels.
+
+                    [More info...](https://cloud.google.com/resource-manager/docs/creating-managing-labels)
+                  x-doc-examples:
+                  - project: cms-production
+                    severity: critical
+                  x-kubernetes-preserve-unknown-fields: true
+                  additionalProperties:
+                    type: string
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: gcpinstanceclasses
+    singular: gcpinstanceclass
+    kind: GCPInstanceClass
+    categories:
+      - cloudinstanceclasses

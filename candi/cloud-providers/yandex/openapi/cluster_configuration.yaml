@@ -1,0 +1,499 @@
+kind: YandexClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Describes the configuration of a cloud cluster in Yandex Cloud.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: YandexClusterConfiguration
+        layout: Standard
+        nodeNetworkCIDR: '127.0.0.1/8'
+        labels: { "label-2": "b" }
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            cores: 4
+            memory: 8192
+            imageID: fd85m9q2qspfnsv055rh
+        nodeGroups:
+          - name: worker
+            replicas: 1
+            zones:
+              - ru-central1-a
+            instanceClass:
+              cores: 4
+              memory: 8192
+              imageID: fd85m9q2qspfnsv055rh
+              coreFraction: 50
+              externalIPAddresses:
+                - "198.51.100.5"
+                - "Auto"
+        provider:
+          cloudID: "<CLOUD_ID>"
+          folderID: "<FOLDER_ID>"
+          serviceAccountJSON: |
+            {
+            "id": "id",
+            "service_account_id": "service_account_id",
+            "key_algorithm": "RSA_2048",
+            "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
+            }
+    additionalProperties: false
+    required: [apiVersion, kind, masterNodeGroup, nodeNetworkCIDR, sshPublicKey, layout, provider]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [YandexClusterConfiguration]
+      sshPublicKey:
+        type: string
+        description: |
+          A public key for accessing nodes.
+      masterNodeGroup:
+        type: object
+        description: |
+          The definition of the master's NodeGroup.
+
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+        additionalProperties: false
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            description: |
+              The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            type: integer
+            minimum: 1
+          zones:
+            description: |
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
+            x-doc-required: false
+            type: array
+            items:
+              enum:
+              - ru-central1-a
+              - ru-central1-b
+              - ru-central1-d
+            uniqueItems: true
+          instanceClass:
+            type: object
+            description: |
+              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+            additionalProperties: false
+            required: [cores, memory, imageID]
+            properties:
+              platform: &instanceClassPlatform
+                description: |
+                  The type of virtual machine to create.
+                type: string
+                default: standard-v2
+              cores: &instanceClassCores
+                description: |
+                  Amount of CPU cores to provision on a Yandex Compute Instance.
+                type: integer
+              memory: &instanceClassMemory
+                type: integer
+                description: |
+                  Amount of primary memory in MB provision on a Yandex Compute Instance.
+                example: 8192
+              imageID: &instanceClassImageID
+                type: string
+                description: |
+                  Image ID to use while provisioning Yandex Compute Instances.
+                example: fd85m9q2qspfnsv055rh
+              diskSizeGB: &instanceClassDiskSizeGB
+                type: integer
+                description: |
+                  Yandex Compute Instance disk size in gibibytes.
+                example: network-ssd
+                x-doc-default: 50
+              diskType: &instanceClassDiskType
+                type: string
+                description: |
+                  Yandex Compute Instance disk type. Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
+                example: network-ssd-io-m3
+                x-doc-default: network-ssd
+                enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]
+              etcdDiskSizeGb:
+                type: integer
+                description: |
+                  etcd disk size in gibibytes.
+
+                  If this parameter is changed, each etcd disk must be manually expanded in the Yandex Cloud interface (the reason for this behavior is in the [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
+                example: 10
+                default: 10
+              externalIPAddresses: &instanceClassExternalIPAddresses
+                type: array
+                description: |
+                  A list of external IP addresses, listed in the order of the zones where nodes will be created.
+
+                  The following values can be specified in the list:
+                  - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
+                  - [reserved public IP address](faq.html#how-to-reserve-a-public-ip-address), if the list of additional external networks is not defined (parameter `externalSubnetIDs`);
+                  - `Auto`, to order a public IP address in the corresponding zone.
+
+                  Please note:
+                  - The array elements must be listed according to the order of zones (parameter `zones`) in which the nodes will be created.
+
+                    For example:
+
+                    ```yaml
+                    - <RU-CENTRAL1-A-IP-ADDRESS>
+                    - <RU-CENTRAL1-B-IP-ADDRESS>
+                    - <RU-CENTRAL1-D-IP-ADDRESS>
+                    ```
+
+                  - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
+                  - If `externalIPAddresses` is not specified, the nodes in the group will be ordered without external IP addresses.
+                items:
+                  type: string
+                  pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$'
+              externalSubnetID: &instanceClassExternalSubnetID
+                type: string
+                description: |
+                  If specified, an additional network interface will be added to the node (the latter will use it as a default route).
+                x-doc-deprecated: true
+              externalSubnetIDs: &instanceClassExternalSubnetIDs
+                type: array
+                description: |
+                  List of additional external networks connected to the nodes.
+
+                  The node interface that is in the list will be assigned as the default gateway.
+
+                  Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
+
+                  The array elements **must** be listed in the same order as the zones (parameter `zones`) in which the nodes will be created. For example:
+
+                  ```yaml
+                  - <RU-CENTRAL1-A-SUBNET-ID>
+                  - <RU-CENTRAL1-B-SUBNET-ID>
+                  - <RU-CENTRAL1-D-SUBNET-ID>
+                  ```
+                items:
+                  type: string
+              additionalLabels: &instanceClassAdditionalLabels
+                type: object
+                description: |
+                  Additional labels.
+                x-doc-example: |
+                  ```yaml
+                  project: cms-production
+                  severity: critical
+                  ```
+                additionalProperties:
+                  type: string
+              networkType: &instanceClassNetworkType
+                type: string
+                description: |
+                  Network type.
+                x-doc-default: Standard
+                enum:
+                  - Standard
+                  - SoftwareAccelerated
+      nodeGroups:
+        type: array
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              description: |
+                The name of the NodeGroup to use for generating node names.
+              type: string
+            replicas:
+              description: |
+                The number of nodes to create.
+              type: integer
+            zones:
+              type: array
+              description: |
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
+              items:
+                enum:
+                - ru-central1-a
+                - ru-central1-b
+                - ru-central1-d
+              uniqueItems: true
+            nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
+              properties:
+                labels:
+                  type: object
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                  additionalProperties:
+                    type: string
+                taints:
+                  type: array
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                    > Available fields: `effect`, `key`, and `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              required: [cores, memory, imageID]
+              type: object
+              description: |
+                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              properties:
+                platform: *instanceClassPlatform
+                cores: *instanceClassCores
+                memory: *instanceClassMemory
+                imageID: *instanceClassImageID
+                diskSizeGB: *instanceClassDiskSizeGB
+                diskType: *instanceClassDiskType
+                externalIPAddresses: *instanceClassExternalIPAddresses
+                externalSubnetID: *instanceClassExternalSubnetID
+                externalSubnetIDs: *instanceClassExternalSubnetIDs
+                additionalLabels: *instanceClassAdditionalLabels
+                networkType: *instanceClassNetworkType
+                coreFraction:
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  type: integer
+                  example: 20
+                  x-doc-default: 100
+                  enum: [ 5,20,50,100 ]
+      existingNetworkID:
+        type: string
+        description: |
+          The ID of the existing VPC Network.
+      nodeNetworkCIDR:
+        type: string
+        description: |
+          This subnet will be split into **three** equal parts.
+
+          They will serve as a basis for subnets in three Yandex Cloud zones.
+        x-unsafe: true
+      existingZoneToSubnetIDMap:
+        type: object
+        description: |
+          One or more pre-existing subnets mapped to respective zone.
+
+          > **Warning!** Deckhouse will create a route table that must be manually attached to these subnets. You can only associate one routing table with a given subnet. This means you cannot run multiple clusters using `cni-simple-bridge` in the same subnets. To run multiple clusters in the same network ranges, use `cni-cilium` instead.
+        x-examples:
+          - ru-central1-a: e2lu8r1tbbtryhdpa9ro
+            ru-central1-b: e2lu8r1tbbtryhdpa9ro
+            ru-central1-d: e2lu8r1tbbtryhdpa9ro
+        additionalProperties:
+          type: string
+        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+      labels:
+        description: |
+          Labels to attach to resources created in the Yandex Cloud.
+
+          Note that you have to re-create all the machines to add new labels if labels were modified in the running cluster.
+        type: object
+        additionalProperties:
+          type: string
+      dhcpOptions:
+        type: object
+        description: |
+          A list of DHCP parameters to use for all subnets.
+
+          Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
+        properties:
+          domainName:
+            description: |
+              The name of the search domain.
+            type: string
+          domainNameServers:
+            type: array
+            description: |
+              A list of recursive DNS addresses.
+            items:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+      layout:
+        type: string
+        description: |
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html) about possible provider layouts.
+        enum: [Standard, WithoutNAT, WithNATInstance]
+      withNATInstance:
+        type: object
+        description: |
+          Settings for the [`WithNATInstance`](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html#withnatinstance) layout.
+        additionalProperties: false
+        properties:
+          exporterAPIKey:
+            description: |
+              API-key for cloud metrics exporter.
+
+              - If parameter is empty, cloud metrics exporter will not be deployed in the cluster.
+              - If parameter is `Auto`, Deckhouse will create service account with the `monitoring.viewer` role and create API-key manually. Provider service account should have the `admin` role.
+              - Any other value is considered a valid API-key. See [this instruction](https://cloud.yandex.ru/docs/iam/operations/api-key/create) for creating API-key.
+                Service account should have `monitoring.viewer` role.
+            type: string
+            default: ""
+          natInstanceExternalAddress:
+            description: |
+              A [reserved external IP address](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
+            type: string
+            pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+          natInstanceInternalAddress:
+            type: string
+            description: |
+              Consider using automatically generated address instead.
+            pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+            x-doc-deprecated: true
+          internalSubnetID:
+            description: |
+              ID of a subnet for the internal interface.
+            type: string
+          internalSubnetCIDR:
+            description: |
+              CIDR of an automatically created subnet for the internal interface. Overrides `internalSubnetID` parameter.
+          externalSubnetID:
+            description: |
+              If specified, an additional network interface will be added to the node (the node will use it as a default route).
+            type: string
+          natInstanceResources:
+            description: |
+              Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
+
+              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
+            type: object
+            default: {"cores": 2, "memory": 2048}
+            x-doc-default: {}
+            properties:
+              cores:
+                description: |
+                  Amount of CPU cores to provision on the NAT instance.
+                type: integer
+                default: 2
+              memory:
+                description: |
+                  Amount of primary memory in MB provision on the NAT instance.
+                type: integer
+                default: 2048
+              platform:
+                description: |
+                  Processor platform type on the NAT instance.
+                type: string
+                default: "standard-v2"
+      provider:
+        type: object
+        description: |
+          Contains [settings to connect](https://deckhouse.io/modules/cloud-provider-yandex/environment.html) to the Yandex Cloud API.
+        additionalProperties: false
+        properties:
+          cloudID:
+            description: |
+              The cloud ID.
+            type: string
+            x-unsafe: true
+          folderID:
+            description: |
+              ID of the directory.
+            type: string
+            x-unsafe: true
+          serviceAccountJSON:
+            description: |
+              A key to the Service Account in the JSON format.
+
+              You can get it by using `[yc iam key create](environment.html)` command.
+            type: string
+            pattern: '^[ \t\n]*\{(.|\n)*\}[ \t\n]*$'
+            x-doc-example: |
+              ```yaml
+              serviceAccountJSON: |
+                {
+                   "id": "...",
+                   "service_account_id": "...",
+                   "created_at": "2022-08-04T05:38:34.756137618Z",
+                   "key_algorithm": "RSA_2048",
+                   "public_key": "-----BEGIN PUBLIC KEY-----...-----END PUBLIC KEY-----\n",
+                   "private_key": "-----BEGIN PRIVATE KEY-----...-----END PRIVATE KEY-----\n"
+                }
+              ```
+        required:
+        - cloudID
+        - folderID
+        - serviceAccountJSON
+      zones:
+        type: array
+        description: |
+          The globally restricted set of zones that this cloud provider works with.
+        items:
+          enum:
+            - ru-central1-a
+            - ru-central1-b
+            - ru-central1-d
+        uniqueItems: true
+    oneOf:
+    - required: [layout]
+      properties:
+        layout:
+          enum:
+          - Standard
+          - WithoutNAT
+          type: string
+    - required: [layout, withNATInstance]
+      properties:
+        layout:
+          enum: [WithNATInstance]
+          type: string

@@ -1,0 +1,72 @@
+
+{{- define "rbac.check.valid.spec" }}
+  {{- $kind := index . 0 }}
+  {{- $crd := index . 1 }}
+  {{- if and (eq $kind "ClusterRoleBinding") (not (list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" "SuperAdmin" | has $crd.spec.accessLevel)) }}
+    {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" | fail }}
+  {{- end }}
+  {{- if and (eq $kind "RoleBinding") (not (list "User" "PrivilegedUser" "Editor" "Admin" | has $crd.spec.accessLevel)) }}
+    {{- cat "Unsupported accessLevel type" $crd.spec.accessLevel "in" $crd.name "crd" "in namespace" $crd.namespace | fail }}
+  {{- end }}
+{{- end}}
+
+{{- define "rbac.namespace" }}
+  {{- $kind := index . 0}}
+  {{- if eq $kind "RoleBinding" }}
+namespace: {{ index . 1 }}
+  {{- end }}
+{{- end }}
+
+{{- define "rbac.binding" }}
+  {{- $context := index . 0 }}
+  {{- $kind := index . 1 }}
+  {{- $crd := index . 2 }}
+  {{- $namePostfix := index . 3 }}
+  {{- $roleName := index . 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ $kind }}
+metadata:
+  name: {{ printf "user-authz:%s:%s" $crd.name $namePostfix }}
+  {{- include "rbac.namespace" (list $kind $crd.namespace) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $roleName }}
+subjects:
+{{ $crd.spec.subjects | toYaml }}
+{{- end }}
+
+
+{{- range $data := list (dict "kind" "RoleBinding" "values" "authRuleCrds") (dict "kind" "ClusterRoleBinding" "values" "clusterAuthRuleCrds") }}
+  {{- range $crd := index $.Values.userAuthz.internal $data.values }}
+
+
+    {{- if $crd.spec.additionalRoles }}
+      {{- range $additional_role := $crd.spec.additionalRoles }}
+        {{/* We can use there only name because CAR supports only ClusterRoles in additionalRoles field */}}
+{{- include "rbac.binding" (list $ $data.kind $crd (printf "additional-role:%s" $additional_role.name) $additional_role.name) }}
+      {{- end }}
+    {{- end }}
+
+    {{- if hasKey $crd.spec "accessLevel" }}
+      {{- include "rbac.check.valid.spec" (list $data.kind $crd) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd ($crd.spec.accessLevel | kebabcase) (printf "user-authz:%s" ($crd.spec.accessLevel | kebabcase)) ) }}
+      {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd (printf "%s:custom-cluster-role:%s" ($crd.spec.accessLevel | kebabcase) $customClusterRole) $customClusterRole ) }}
+      {{- end }}
+    {{- end }}
+
+    {{- if hasKey $crd.spec "portForwarding" }}
+      {{- if ($crd.spec.portForwarding | default false) }}
+{{- include "rbac.binding" ( list $ $data.kind $crd "port-forward" "user-authz:port-forward" ) }}
+      {{- end }}
+    {{- end }}
+
+    {{- if $crd.spec.allowScale }}
+{{- include "rbac.binding" ( list $ $data.kind $crd "scale" "user-authz:scale" ) }}
+    {{- end }}
+
+  {{- end }}
+{{- end }}

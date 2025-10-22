@@ -1,0 +1,65 @@
+{{- $version := "2.11" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+  add: /relocate
+  to: /
+  includePaths:
+  - nvme
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nvme-cli": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/nvme-cli.git /src/nvme-cli
+  - git clone -b v1.11.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
+  - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alt
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential meson glibc-devel-static
+  - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
+  install:
+  - cd /src/nvme-cli
+  - |
+    meson .build --buildtype=release --default-library=static -Dc_link_args="-static" --wrap-mode=forcefallback \
+      -Dlibnvme:tests=false -Dlibnvme:keyutils=disabled -Djson-c=disabled -Dlibnvme:json-c=disabled \
+      -Dlibnvme:openssl=disabled -Dlibnvme:python=disabled -Ddocs=false
+  - ninja -C .build
+  - mkdir /relocate
+  - cp .build/nvme /relocate
+  - cp /src/scripts/* /relocate

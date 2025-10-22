@@ -1,0 +1,5 @@
+- name: Kubernetes Autoscaler
+  link: https://github.com/kubernetes/autoscaler
+  description: A autoscaling-related components for Kubernetes.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0

@@ -1,0 +1,83 @@
+type: object
+required: [nodeSelector, subnet, publicAddress]
+properties:
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-examples: [{"type":"network-gateway"}]
+    description: |
+      Selects nodes that will be used to configure iptables rules and to run the DHCP server.
+
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes. Instance Pods inherit this field as is.
+  tolerations:
+    type: array
+    description: |
+      Tolerations for DHCP Pods and iptables managers.
+
+      [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the Pods' `spec.tolerations` parameter in Kubernetes. The instance's Pods inherit this field as is.
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  subnet:
+    type: string
+    x-examples: ["192.168.42.0/24"]
+    pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+    description: |
+      The address of a local subnet that gateway serves.
+
+      The DHCP options to pass to clients are generated based on this address:
+      * Address pool — numbers starting with 50 and up to the last one.
+      * Router — the subnet's first address.
+  publicAddress:
+    type: string
+    pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+    x-examples: ["10.220.203.240"]
+    description: Replaces the src of the packets outgoing from the LAN.
+  disableDHCP:
+    type: boolean
+    default: false
+    description: Disables the DHCP server.
+  dns:
+    type: object
+    description: Settings to pass to clients via DHCP.
+    properties:
+      servers:
+        type: array
+        description: List of DNS servers.
+        x-examples:
+          - ['4.2.2.2', '8.8.8.8']
+        items:
+          type: string
+      search:
+        type: array
+        description: List of search domains.
+        x-examples:
+          - ['office.example.com', 'srv.example.com']
+        items:
+          type: string
+  storageClass:
+    type: string
+    description: |-
+      The name of the StorageClass to use for storing the DHCP lease.
+
+      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
+
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+      *Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      If `false` is specified, emptyDir will be forced to be used.
+
+      Dnsmasq (underlies our DHCP server) has its own mechanisms for protecting against the duplication of IP addresses if the lease database is lost (but it is better not to lose it).

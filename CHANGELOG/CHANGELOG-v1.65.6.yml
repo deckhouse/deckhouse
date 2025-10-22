@@ -1,0 +1,29 @@
+common:
+  fixes:
+    - summary: Bump shell-operator image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10764
+      impact: Fix webhook-handler memory leak.
+    - summary: Bump shell-operator image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10761
+      impact: Fix webhook-handler memory leak.
+control-plane-manager:
+  fixes:
+    - summary: Fix kubeadm template when changing ServiceAcciount Issuer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10762
+dhctl:
+  fixes:
+    - summary: Skip remove labels if node was not found during converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10658
+    - summary: Do not run converge second time.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10658
+    - summary: Fix random sorting of master in the list.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10441
+prometheus:
+  fixes:
+    - summary: Fixed insecureSkipVerify parameter in CustomAlertManager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10728
+testing:
+  fixes:
+    - summary: E2e test disable `earlyOomEnabled` in `yc`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10647
+

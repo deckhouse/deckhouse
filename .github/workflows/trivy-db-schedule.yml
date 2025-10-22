@@ -1,0 +1,269 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2023 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Trivy DB Download
+on:
+  schedule:
+  - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+# Always run a single job at a time.
+# Note: Concurrency is currently in beta and subject to change.
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency:
+  group: trivy-db-download
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+
+  # <template: skip_tests_repos>
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  # </template: skip_tests_repos>
+  download-and-repush-images:
+    name: Download and repush images
+    needs:
+      - skip_tests_repos
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw cse registry credentials
+        id: check_rw_cse_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw cse registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_cse_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_CSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_CSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: login_dev_cse_registry_step>
+      - name: Check dev cse registry credentials
+        id: check_dev_cse_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev cse registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_cse_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_cse_registry_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+      - name: Download custom trivy-db binary and copy image
+        env:
+          TRIVY_VERSION: v0.63.0
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_USER: ${{secrets.DECKHOUSE_REGISTRY_USER}}
+          DECKHOUSE_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_PASSWORD}}
+
+          DECKHOUSE_CSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}
+          DECKHOUSE_CSE_REGISTRY_USER: ${{secrets.DECKHOUSE_CSE_REGISTRY_USER}}
+          DECKHOUSE_CSE_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD}}
+
+          DECKHOUSE_DEV_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+          DECKHOUSE_DEV_REGISTRY_USER: ${{secrets.DECKHOUSE_DEV_REGISTRY_USER}}
+          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD}}
+
+          DECKHOUSE_DEV_CSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
+          DECKHOUSE_CSE_DEV_REGISTRY_USER: ${{secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER}}
+          DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD: ${{secrets.DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD}}
+
+          GHCR_HOST: "ghcr.io"
+          GHCR_IO_REGISTRY_USER: ${{secrets.GHCR_IO_REGISTRY_USER}}
+          GHCR_IO_REGISTRY_PASSWORD: ${{secrets.GHCR_IO_REGISTRY_PASSWORD}}
+        run: |
+          rm -rf ./trivy-db
+          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{secrets.DECKHOUSE_PRIVATE_REPO}}:deckhouse/trivy-db.git trivy-db-patch
+          git clone --depth 1 --branch ${TRIVY_VERSION} ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          cd trivy-db
+          git apply --verbose --whitespace=fix ../trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
+          cp ../.github/scripts/trivy-db-update-vulnerability-references.sh ./update-vulnerability-references.sh
+          cp ../.github/scripts/trivy-db-update.sh ./update.sh
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe
+          ./update.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss
+          ./update.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}/deckhouse/cse/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+          ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}/sys/deckhouse-cse/security/trivy-bdu:1
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>

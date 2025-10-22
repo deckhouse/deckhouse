@@ -1,0 +1,60 @@
+{{- $cniVersion := "1.7.1" }}
+---
+# #####################################################################
+# Build cni binaries
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/download-cni.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/cni-version.sh
+# #####################################################################
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
+  - cd /src/plugins
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf /src/plugins/.git
+---
+image: {{ .ModuleName }}/cni-plugins-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils tar
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/plugins
+  - go mod download -x
+  - go mod vendor && go mod verify
+  - export FLAGS='-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
+  - |
+    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- include "image-build.build" (set $ "BuildCommand" `./build_linux.sh -ldflags "${FLAGS}"`) | indent 4 }}
+  - mkdir -p /out/linux/amd64/bin
+  - cp -f /src/plugins/bin/* /out/linux/amd64/bin
+  - strip /out/linux/amd64/bin/*
+  - rm -rf /src/plugins/vendor
+---

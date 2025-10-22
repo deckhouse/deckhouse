@@ -1,0 +1,17 @@
+docs:
+  fixes:
+    - summary: Fix typos and formatting
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2363
+    - summary: Fixed some typos in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2352
+    - summary: Added a second option to getting an etcd leader.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2339
+go_lib:
+  fixes:
+    - summary: Fixed `GetValuesFirstDefined` value priority.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2372
+istio:
+  fixes:
+    - summary: Fixed `D8IstioDataPlaneVersionMismatch` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2370
+

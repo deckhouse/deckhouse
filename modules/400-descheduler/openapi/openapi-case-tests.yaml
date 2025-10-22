@@ -1,0 +1,56 @@
+positive:
+  values:
+    - internal:
+        deschedulers: []
+    - internal:
+        deschedulers:
+          - nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
+            name: test1
+            podLabelSelector:
+              matchExpressions:
+                - key: dbType
+                  operator: In
+                  values:
+                    - test1
+                    - test2
+              matchLabels:
+                app: test1
+            priorityClassThreshold:
+              value: 1000
+            namespaceLabelSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: test
+            strategies:
+              highNodeUtilization:
+                enabled: true
+                thresholds:
+                  cpu: 14
+                  memory: 23
+                  pods: 3
+          - name: test2
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                thresholds:
+                  cpu: 10
+                  memory: 20
+                  pods: 30
+                targetThresholds:
+                  cpu: 40
+                  memory: 50
+                  pods: 50
+                  gpu: "gpuNode"
+          - name: test3
+            evictLocalStoragePods: false
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                thresholds:
+                  cpu: 10
+                  memory: 20
+                  pods: 30
+                targetThresholds:
+                  cpu: 40
+                  memory: 50
+                  pods: 50
+                  gpu: "gpuNode"

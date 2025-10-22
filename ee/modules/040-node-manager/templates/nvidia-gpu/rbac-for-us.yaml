@@ -1,0 +1,355 @@
+{{- if include "nvidia_gpu_enabled" . }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-device-plugin
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-gpu-feature-discovery
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-feature-discovery-master
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-feature-discovery-gc
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-mig-manager
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-mig-manager-role
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+  - apiGroups:
+    - ""
+    resources:
+    - nodes
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-mig-manager-role-binding
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: nvidia-mig-manager
+    namespace: d8-nvidia-gpu
+roleRef:
+  kind: ClusterRole
+  name: d8:node-manager:nvidia-gpu:nvidia-mig-manager-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:nvidia-gpu:nvidia-gpu-feature-discovery
+subjects:
+- kind: ServiceAccount
+  name: nvidia-gpu-feature-discovery
+  namespace: d8-nvidia-gpu
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: nvidia-device-plugin
+  namespace: d8-nvidia-gpu
+roleRef:
+  kind: ClusterRole
+  name: d8:node-manager:nvidia-gpu:nvidia-device-plugin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - nodes/status
+  verbs:
+  - get
+  - patch
+  - update
+  - list
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeatures
+  - nodefeaturerules
+  - nodefeaturegroups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeaturegroups/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - "nfd-master.nfd.kubernetes.io"
+  verbs:
+  - get
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes/proxy
+  verbs:
+  - get
+- apiGroups:
+  - topology.node.k8s.io
+  resources:
+  - noderesourcetopologies
+  verbs:
+  - delete
+  - list
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeatures
+  verbs:
+  - delete
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery
+subjects:
+- kind: ServiceAccount
+  name: node-feature-discovery-master
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:nvidia-gpu:node-feature-discovery-gc
+subjects:
+- kind: ServiceAccount
+  name: node-feature-discovery-gc
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeatures
+  verbs:
+  - create
+  - get
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:nvidia-gpu:node-feature-discovery-worker
+subjects:
+- kind: ServiceAccount
+  name: node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-mig-manager
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-mig-manager
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:nvidia-gpu:nvidia-mig-manager
+subjects:
+- kind: ServiceAccount
+  name: nvidia-mig-manager
+  namespace: d8-nvidia-gpu
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+subjects:
+- kind: ServiceAccount
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+{{- end }}

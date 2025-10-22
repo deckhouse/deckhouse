@@ -1,0 +1,48 @@
+positive:
+  configValues:
+    - controlPlane:
+        replicasManagement:
+          mode: Static
+          static:
+            replicas: 3
+        resourcesManagement:
+          vpa:
+            memory:
+              max: "2.000G"
+              min: "1.123G"
+    - controlPlane:
+        replicasManagement:
+          mode: HPA
+          hpa:
+            minReplicas: 2
+            maxReplicas: 5
+            metrics:
+            - type: CPU
+              targetAverageUtilization: 80
+        resourcesManagement:
+          static:
+            requests:
+              memory: "2G"
+    - sidecar:
+        resourcesManagement:
+          static:
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+  values:
+    - {}
+negative:
+  configValues:
+  #Bad cpu limit value
+    - sidecar:
+        resourcesManagement:
+          static:
+            limits:
+              cpu: 1
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi

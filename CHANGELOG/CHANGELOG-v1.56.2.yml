@@ -1,0 +1,5 @@
+dhctl:
+  fixes:
+    - summary: dhctl mirror will tag release channels images with their versions as well.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7008
+

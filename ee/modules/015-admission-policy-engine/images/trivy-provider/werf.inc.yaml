@@ -1,0 +1,47 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /trivy_provider
+    to: /trivy_provider
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/trivy_provider" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: operator-trivy/trivy-src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - ln -s ./trivy-db ./original-trivy-db
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy_provider main.go`) | indent 4 }}
+  - chown 64535:64535 /trivy_provider
+  - chmod 0700 /trivy_provider

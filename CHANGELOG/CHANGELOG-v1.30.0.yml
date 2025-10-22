@@ -1,0 +1,239 @@
+bashible:
+  features:
+    - description: Docker face slapper (pods stuck in terminating)
+      note: New step added
+      pull_request: https://github.com/deckhouse/deckhouse/pull/473
+  fixes:
+    - description: Fix remove of docker
+      pull_request: https://github.com/deckhouse/deckhouse/pull/639
+    - description: Fixed notManaged mode for CRI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/485
+bashible-apiserver:
+  fixes:
+    - description: Fix do not render bashible bundle in static clusters .
+      pull_request: https://github.com/deckhouse/deckhouse/pull/571
+cert-manager:
+  features:
+    - description: Actualize annotation to delete in the orphan secrets alert description
+      pull_request: https://github.com/deckhouse/deckhouse/pull/587
+    - description: Support k8s v1.22 mutating admission for annotations-converter webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/554
+  fixes:
+    - description: Disable legacy cert-manager for >= 1.22 kubernetes
+      note: Legacy cert-manager resources () will not be supported in 1.22+ clusters
+      pull_request: https://github.com/deckhouse/deckhouse/pull/551
+chrony:
+  features:
+    - description: Disable ntp on nodes by custom bashible step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/643
+  fixes:
+    - description: Bashible step fix — missed openntpd.service and time-sync.target in list.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/653
+    - description: >-
+        Add VPA label  to make it take part in resources requests
+        calculations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/455
+cloud-provider-vsphere:
+  fixes:
+    - description: Install latest version of open-vm-tools
+      pull_request: https://github.com/deckhouse/deckhouse/pull/667
+cluster-and-infustructure:
+  features:
+    - description: Add Kubernetes 1.22 support.
+      note: Numerous deckhouse components would be restarted due to the upgrade of .
+      pull_request: https://github.com/deckhouse/deckhouse/pull/394
+control-plane-manager:
+  features:
+    - description: Add basic audit-policy.
+      note: Due to the new basic audit-policy api-server component will be restarted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/467
+deckhouse:
+  features:
+    - description: Check requirements before applying a DeckhouseRelease
+      pull_request: https://github.com/deckhouse/deckhouse/pull/598
+    - description: Different severity level based on pending DeckhouseReleases count
+      pull_request: https://github.com/deckhouse/deckhouse/pull/439
+    - description: Add alert if deckhouse config is broken
+      pull_request: https://github.com/deckhouse/deckhouse/pull/430
+    - description: Add canary deckhouse release update
+      pull_request: https://github.com/deckhouse/deckhouse/pull/429
+  fixes:
+    - description: Fix requirements check semver lib
+      pull_request: https://github.com/deckhouse/deckhouse/pull/658
+    - description: The start and end times of the update window must belong to the same day.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/496
+    - description: Use scrape interval x2 instead of hardcoded value for invalid config values alerting
+      pull_request: https://github.com/deckhouse/deckhouse/pull/493
+dhctl:
+  fixes:
+    - description: Check deckhouse pod readiness before get logs. It fixes static cluster bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/571
+    - description: All master nodes will have  role in new clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/562
+docs:
+  fixes:
+    - description: Fix instructions for switching registry and image copier
+      pull_request: https://github.com/deckhouse/deckhouse/pull/533
+extended-monitoring:
+  features:
+    - description: Add cert-exporter alerts
+      note: Added alerts to track certificates expiration and cert-exporter health
+      pull_request: https://github.com/deckhouse/deckhouse/pull/512
+    - description: Add cert-exporter
+      note: Added cert-exporter to track certificates expiration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/479
+  fixes:
+    - description: CronJobFailed alert bugfix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/489
+flant-integration:
+  features:
+    - description: >-
+        Add madison-proxy notification channel to send alert from grafana to madison via proxy and
+        show them in Polk
+      note: >-
+        Add rewrite rule to madison-proxy from /api/v1/alerts url to madison url, because grafana
+        always send notification to this url.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/402
+  fixes:
+    - description: Remove the plan parameter from the OpenAPI specification
+      pull_request: https://github.com/deckhouse/deckhouse/pull/486
+    - description: Implement proper HA remote-write and reduce outgoing traffic amount.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/412
+global:
+  features:
+    - description: All master nodes will have  role in new exist clusters.
+      note: Add migration for adding role. Bashible steps will be rerunned on master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/562
+    - description: Update Kubernetes patch versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/558
+  fixes:
+    - description: Fix parsing deckhouse images repo if there is the sha256 sum in the image name
+      pull_request: https://github.com/deckhouse/deckhouse/pull/527
+    - description: Fix serialization of empty strings in secrets
+      pull_request: https://github.com/deckhouse/deckhouse/pull/523
+helm:
+  fixes:
+    - description: Provide an actual description for deprecated resources API versions alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/569
+ingress-nginx:
+  features:
+    - description: Add an example of usage LoadBalancer inlet with MetalLB.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/465
+    - description: Add ingress-nginx controller version 1.0
+      pull_request: https://github.com/deckhouse/deckhouse/pull/394
+  fixes:
+    - description: Added "pcre_jit on" to nginx.tmpl for controller-0.46 and above
+      note: Ingress Controller >= 0.46 will be restarted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/515
+    - description: Set proper version for new ingress-nginx controller 1.0 (drop the patch version).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/480
+    - description: Always return auth request cookies (only for controllers >= 0.33)
+      note: Ingress Nginx controllers >=0.33 pods will be restarted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/368
+istio:
+  features:
+    - description: >-
+         option to set a static port for NodePort-type
+        ingressgateway Service.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/575
+  fixes:
+    - description: Correct decision to deploy ingressgateway for multiclusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/640
+    - description: ' option clarification in documentation.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/584
+local-path-provisioner:
+  features:
+    - description: Added reclaimPolicy selector, set default reclaimPolicy to Retain
+      pull_request: https://github.com/deckhouse/deckhouse/pull/561
+  fixes:
+    - description: Update local-path-provisioner v0.0.21, include fix
+      note: Protect PVs to be reused in case of unmounted storage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/478
+log-shipper:
+  fixes:
+    - description: >-
+        Add VPA label  to make it take part in resources requests
+        calculations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/455
+monitoring-kubernetes:
+  features:
+    - description: Added ebpf-exporter
+      note: ebpf-exporter that monitors global and per-cgroup OOMs. With recording rules and dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/387
+  fixes:
+    - description: Filter VPA by actual controllers to calculate VPA coverage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/459
+    - description: Fixed node-exporter apparmor profile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/457
+namespace-configurator:
+  features:
+    - description: New namespace-configurator module
+      note: >-
+        namespace-configurator module allows to assign annotations and labels to namespaces
+        automatically
+      pull_request: https://github.com/deckhouse/deckhouse/pull/435
+node-manager:
+  features:
+    - description: Added Early OOM killer
+      note: >-
+        Primitive early OOM that prevents nodes from getting stuck in out-of-memory conditions.
+        Triggers when MemAvailable becomes less than 500 MiB.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/387
+  fixes:
+    - description: Fix Static node template annotations updating
+      pull_request: https://github.com/deckhouse/deckhouse/pull/544
+okmener:
+  fixes:
+    - description: Bump oksupervisor version to fix updating problems
+      pull_request: https://github.com/deckhouse/deckhouse/pull/482
+okmeter:
+  features:
+    - description: >-
+        Okmeter agent image will be checked periodically by tag and used sha256 hash to pin the
+        image for agent.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/556
+prometheus:
+  features:
+    - description: >-
+        Provisioning alerts channels from CRD's to grafana via new secret. Migrate to direct
+        datasources.
+      note: >-
+        Grafana will be restarted.
+
+        Now grafana using direct (proxy) type for deckhouse datasources (main, longterm, uncached),
+        because direct(browse) datasources type is depreated now. And alerts don't work with direct
+        data sources.
+
+        Provisioning datasources from secret instead configmap. Deckhouse datasources need client
+        certificates to connect to  prometheus or trickter. Old cm leave to prevent mount error
+        while terminating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/402
+  fixes:
+    - description: Make Grafana home dashboard queries to only show the top-used versions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/476
+prometheus-crd:
+  features:
+    - description: Add GrafanaAlertsChannel CRD.
+      note: Support only prometheus alert manager notification channel
+      pull_request: https://github.com/deckhouse/deckhouse/pull/402
+upmeter:
+  fixes:
+    - description: Assigned limited access rights to the agent serviceaccount
+      pull_request: https://github.com/deckhouse/deckhouse/pull/469
+user-authn:
+  features:
+    - description: Validation webhook for preventing duplicate DexAuthenticators to be created.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/530
+    - description: Update oauth2-proxy to the latest version (7.2.0)
+      note: Dex Authenticators will be restarted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/368
+  fixes:
+    - description: Ignore updating an existing DexAuthenticator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/539
+    - description: Delete publish API secrets with not matching names to avoid the orphaned secrets alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/472
+user-authz:
+  fixes:
+    - description: Allow empty group and apiVersion requests in user-authz webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/526
+

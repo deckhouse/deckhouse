@@ -1,0 +1,20 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+skinparam componentStyle rectangle
+
+component "<color:navy>Использование механизма контроля DM-Verity</color>" as DMV #LightBlue
+component "<color:navy>Проверка подписи\n <color:navy>при загрузке образа" as CS #LightBlue
+component "<color:navy>Использование\n <color:navy>EROFS-snapshotter,\n <color:navy>отказ от RW upperdir" as EROFS #LightBlue
+
+[Контроль целостности] --> [Контроль целостности\n при запуске контейнеров]
+[Контроль целостности] --> [Контроль целостности\n работающих контейнеров]
+[Контроль целостности\n работающих контейнеров] <.. DMV
+[Контроль целостности\n при запуске контейнеров] <.. DMV
+[Контроль целостности\n при запуске контейнеров] <.. CS
+[Контроль целостности\n при запуске контейнеров] <.. EROFS
+@enduml

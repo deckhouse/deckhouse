@@ -1,0 +1,96 @@
+{{- define "machine_controller_manager_enabled" }}
+  {{- if not .Values.nodeManager.mcmEmergencyBrake }}
+    {{- if .Values.nodeManager.internal.machineControllerManagerEnabled }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "capi_controller_manager_enabled" }}
+  {{- if not .Values.nodeManager.capiEmergencyBrake }}
+    {{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_enabled" }}
+  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+    {{- if eq $ng.nodeType "CloudEphemeral" }}
+      {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
+        not empty string
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "nvidia_gpu_enabled" }}
+  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+    {{- if ($ng).gpu }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "nvidia_node_selector" }}
+  {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $strategy := index . 1 }} {{- /* strategy, one of "gfd" "mig-manager" "device-plugin" "any" */ -}}
+  {{- $ng := index . 2 }} {{- /* NodeGroup name  */ -}}
+
+  {{- if eq $strategy "gfd" }}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-0302_10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: feature.node.kubernetes.io/pci-0300_10de.present
+              operator: In
+              values:
+                - "true"
+        - matchExpressions:
+            - key: nvidia.com/gpu.deploy.gpu-feature-discovery
+              operator: In
+              values:
+                - "true"
+nodeSelector:
+  node.deckhouse.io/group: {{ $ng | quote }}
+  {{- else if eq $strategy "device-plugin" }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.deploy.device-plugin
+                    operator: In
+                    values:
+                    - "true"
+              - matchExpressions:
+                  - key: nvidia.com/gpu.count
+                    operator: Gt
+                    values:
+                    - "0"
+              - matchExpressions:
+                  - key: node.deckhouse.io/group
+                    operator: In
+                    values:
+                    - {{ $ng | quote }}
+nodeSelector:
+  node.deckhouse.io/group: {{ $ng | quote }}
+  {{- else if eq $strategy "mig-manager" }}
+nodeSelector:
+  nvidia.com/mig.capable: "true"
+  {{- else if eq $strategy "any" }}
+nodeSelector:
+  node.deckhouse.io/gpu: ""
+  {{- end }}
+{{- end }}

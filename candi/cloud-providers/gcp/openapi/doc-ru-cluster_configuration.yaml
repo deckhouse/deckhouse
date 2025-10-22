@@ -1,0 +1,159 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в GCP.
+
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      subnetworkCIDR:
+        description: Подсеть, в которой будут работать узлы кластера.
+      sshKey:
+        description: Публичный ключ для доступа на узлы под пользователем `user`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по SSH.
+
+          По умолчанию — с любого адреса.
+      labels:
+        description: |
+          Список лейблов, которые будут прикреплены ко всем ресурсам кластера (которые это поддерживают).
+
+          Если поменять теги в рабочем кластере, после конвержа необходимо пересоздать все машины, чтобы теги применились.
+
+          Подробнее про лейблы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+
+          Формат — `key: value`.
+      peeredVPCs:
+        description: |
+          Список GCP VPC networks, с которыми будет объединена сеть кластера.
+
+          Сервис-аккаунт должен иметь доступ ко всем перечисленным VPC. Если доступа нет, пиринг необходимо [настраивать вручную](https://cloud.google.com/vpc/docs/using-vpc-peering#gcloud).
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов.
+
+              Для обеспечения кворума важно, чтобы оно было нечетным.
+          instanceClass:
+            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+            properties: &instanceClassProperties_ru
+              machineType:
+                description: |
+                  Тип заказываемых инстансов.
+
+                  > **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+
+                  GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+              image:
+                description: |
+                  Образ, который будет использоваться в заказанных инстансах.
+
+                  Список доступных образов можно найти в [документации провайдера](https://cloud.google.com/compute/docs/images#ubuntu).
+
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+
+              diskSizeGb:
+                description: Размер root-диска. Значение указывается в `ГиБ`.
+              etcdDiskSizeGb:
+                description: Размер диска для etcd. Значение указывается в `ГиБ`.
+              disableExternalIP:
+                description: |
+                  Устанавливает, запретить назначение внешнего IP для инстанса или нет.
+
+                  Параметр доступен только для layout `Standard`.
+
+                  `true` — узлы не имеют публичных адресов, доступ в интернет осуществляется через `CloudNAT`.
+
+                  `false` — для узлов создаются статические публичные адреса, они же используются для One-to-One NAT.
+              additionalNetworkTags:
+                description: |
+                  Список дополнительных сетевых тегов (network tags).
+
+                  Сетевые теги позволяют применять к инстансам firewall-правила. Подробно о сетевых тегах можно прочитать [в документации Google Cloud](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+              additionalLabels:
+                description: |
+                  Список дополнительных лейблов.
+
+                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+          zones: &NodeGroupZones_ru
+            description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+      nodeGroups:
+        description: Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных фронтов или шлюзов).
+        items:
+          properties:
+            name:
+              description: Имя NodeGroup, будет использоваться для генерации имен узлов.
+            replicas:
+              description: Количество узлов.
+            nodeTemplate:
+              description: Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                annotations:
+                  description: Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > Доступны только поля `effect`, `key`, `values`.
+            additionalNetworkTags:
+              description: |
+                Список дополнительных тегов.
+
+                К примеру, теги позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать в [официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+            additionalLaddiabels:
+              description: |
+                Список дополнительных label'ов.
+
+                Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+            instanceClass:
+              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
+            zones: *NodeGroupZones_ru
+      layout:
+        description: |
+          Название схемы размещения.
+
+          `Standard` — включает режим [Cloud NAT](https://cloud.google.com/nat/docs/overview#benefits). [Подробнее...](https://deckhouse.ru/modules/cloud-provider-gcp/layouts.html#standard).
+
+          `WithoutNAT` — выделенная VPN создается для кластера. Все узлы имеют публичные IP-адреса. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-gcp/layouts.html#withoutnat).
+      standard:
+        description: Настройки для схемы размещения `Standard`.
+        properties:
+          cloudNATAddresses:
+            description: Список имен публичных статических IP-адресов для `Cloud NAT`.
+      withoutNAT:
+        description: Настройки для схемы размещения `WithoutNAT`.
+      provider:
+        description: Параметры подключения к API GCP.
+        properties:
+          region:
+            description: Имя региона, в котором будут заказываться инстансы.
+          serviceAccountJSON:
+            description: |
+              Ключ к Service Account'у с правами Project Admin (`service account key`) в JSON-формате.
+
+              [Как получить](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys) `service account key`.
+      zones: *NodeGroupZones_ru
+

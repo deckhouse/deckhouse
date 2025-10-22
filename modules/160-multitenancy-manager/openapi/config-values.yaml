@@ -1,0 +1,15 @@
+type: object
+properties:
+  allowNamespacesWithoutProjects:
+    type: boolean
+    default: true
+    description: |
+      If this option is disabled - prohibit to create a namespace which is not a part of a Project.
+
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.

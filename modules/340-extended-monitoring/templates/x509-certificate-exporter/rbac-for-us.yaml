@@ -1,0 +1,48 @@
+{{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: x509-certificate-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:extended-monitoring:x509-certificate-exporter
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["namespaces", "secrets"]
+  verbs: ["get", "list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:extended-monitoring:x509-certificate-exporter
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: x509-certificate-exporter
+  namespace: d8-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:extended-monitoring:x509-certificate-exporter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:extended-monitoring:x509-certificate-exporter:rbac-proxy
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: x509-certificate-exporter
+  namespace: d8-monitoring
+{{- end }}

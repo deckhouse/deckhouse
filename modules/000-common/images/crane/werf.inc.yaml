@@ -1,0 +1,26 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/scratch
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /crane
+  to: /crane
+  before: install
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}      
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch  v0.20.3 {{ .SOURCE_REPO }}/google/go-containerregistry.git /go-containerregistry
+  - cd go-containerregistry/cmd/crane
+  - export GOPROXY={{ .GOPROXY }}
+  - CGO_ENABLED=0 GOOS=linux go build  -ldflags '-s -w -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=v0.20.3' -o /crane
+  - rm -rf /go-containerregistry

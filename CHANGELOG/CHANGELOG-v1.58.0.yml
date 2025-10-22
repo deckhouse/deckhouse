@@ -1,0 +1,286 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix audit policy generation error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7406
+candi:
+  features:
+    - summary: Allow to customize Yandex Cloud NAT instance resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7309
+    - summary: Add Kubernetes 1.29 support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7247
+      impact: All control plane components will restart.
+    - summary: Add support for the new cloud provider — VMware Cloud Director.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6527
+  fixes:
+    - summary: Add the `tzdata` package to the bootstrap script on AltLinux `10.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7403
+    - summary: |-
+        Update `containerd` version to `1.7.13`, `runc` version to `1.1.12`.
+        Fix error with two sequental containerd restarts on version change. Set LimitNOFILE=1048576.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7390
+    - summary: Improve strict for validation pattern of proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7289
+    - summary: Packet forwarding for IPv4 is enabled via sysctl-tuner.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7278
+    - summary: Add AltLinux 10.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7252
+    - summary: >-
+        Fix setting the default value for the `kubelet.resourceReservation` parameter in
+        `NodeGroup`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7100
+ceph-csi:
+  fixes:
+    - summary: Avoid listening on all addresses and listen on the host IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7524
+cert-manager:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+chrony:
+  fixes:
+    - summary: Avoid listening on all addresses and listen on the host IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7519
+    - summary: Fix the incorrect path in the `NTPDaemonOnNodeDoesNotSynchronizeTime` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7507
+ci:
+  features:
+    - summary: Add Kubernetes 1.28 e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7246
+  fixes:
+    - summary: Fix libs in `deckhouse-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7511
+    - summary: fix e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7502
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix the path in the `ensure_crds` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7610
+cloud-provider-vsphere:
+  fixes:
+    - summary: Update requirements for VM template in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7451
+cloud-provider-yandex:
+  features:
+    - summary: Add link to the Yandex Migration Guide.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7514
+cni-cilium:
+  fixes:
+    - summary: Adding safe-agent-updater.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7333
+      impact: Cilium-agent pods will restart.
+common:
+  fixes:
+    - summary: Fix k8s patches for 1.28 and 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7537
+control-plane-manager:
+  fixes:
+    - summary: Reduces the chances of false positive tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7577
+    - summary: Fix runtime-config for api-server
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7542
+    - summary: Fix runtime config for kube-apiserver
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7522
+    - summary: Fix audit policy generation error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7406
+    - summary: >-
+        Automatic Kubernetes version update will be aborted by an error if any resource in the
+        cluster does not support the new Kubernetes version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7401
+    - summary: Fix serviceaccounts generation in `basicAuditPolicy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7342
+    - summary: Remove `/healthz` HTTP endpoint from the `kubernetes-api-proxy-reloader`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7311
+dashboard:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+deckhouse:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+    - summary: Bump addon-operator to avoid panic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7512
+    - summary: Fix failure message detailed output on pull override.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7365
+    - summary: Fix release apply on the cluster bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7303
+dhctl:
+  fixes:
+    - summary: >-
+        Set version field for the `install-data` ConfigMap in the `dhctl bootstrap-phase
+        install-deckhouse` command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7493
+    - summary: Ignore a master node SSH fingerprint.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7360
+docs:
+  fixes:
+    - summary: Istio and `admission-policy-engine` restrictions clarifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7398
+    - summary: Add support for Astra Linux `1.7.5`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7396
+documentation:
+  features:
+    - summary: Module documentation is available in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6449
+  fixes:
+    - summary: Fix e2e tests for AWS. And curl to the deckhouse container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7578
+extended-monitoring:
+  features:
+    - summary: >-
+        Support custom container registry CA, registry credentials and insecure (HTTP) registries in
+        the image-availability-exporter. Change ModuleConfig settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7354
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+flant-integration:
+  features:
+    - summary: >-
+        flant-pricing based on ALT Linux image, grafana-agent and madison-proxy images based on a
+        distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6957
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+helm_lib:
+  fixes:
+    - summary: Running check-kernel-version init-container as deckhouse user
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7518
+      impact: All related Pods will be restarted — cilium-agent, node-local-dns, openvpn.
+ingress-nginx:
+  features:
+    - summary: The controller image is now based on ALT Linux.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7002
+  fixes:
+    - summary: Fix `/tmp` access rights for controller v1.6.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7498
+istio:
+  fixes:
+    - summary: Fix audit policy generation error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7406
+kube-dns:
+  features:
+    - summary: Added a parameter that allows you to change the upstream transport protocol (tcp/udp).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7541
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+    - summary: Increased sts-pods-hosts-appender-webhook wait timeout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7389
+local-path-provisioner:
+  fixes:
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7550
+log-shipper:
+  features:
+    - summary: New labels for log filtering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7098
+metallb:
+  features:
+    - summary: MetalLB dashboard for Grafana
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7459
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+monitoring-custom:
+  fixes:
+    - summary: Add the `reserved_domain_nodes` metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7361
+monitoring-kubernetes:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+monitoring-kubernetes-control-plane:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+multitenancy-manager:
+  features:
+    - summary: Prevent manual modification of Project resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7480
+    - summary: Remove all namespace from the `Project`, except the project one.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7443
+  fixes:
+    - summary: Fix audit flag in Project templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7573
+    - summary: Clarify commands in the doc, fix example fields and API version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7395
+    - summary: >-
+        All Pods of a project for which the value "dedicatedNodeName" is defined must run only on
+        the Node with the corresponding taint key.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6864
+    - summary: |-
+        Add default project templates:
+        - the **default** — to match most cases
+        - the **secure** — for advanced secured projects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6633
+    - summary: Renames in multitenancy applied and functionality preserved.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6544
+network-policy-engine:
+  fixes:
+    - summary: Add /run/xtables.lock mount.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7554
+node-local-dns:
+  fixes:
+    - summary: Fix node local dns readiness probes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7553
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+node-manager:
+  fixes:
+    - summary: Set providerID only on Static nodes (fix CloudStatic nodes bootstrap).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7486
+    - summary: Prevent node (with `CloudPermanent` or `Static` type) deletion by autoscaler.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7339
+    - summary: Forbid to change `NodeGroup` if it contains unknown zone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7248
+openvpn:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6245
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+operator-prometheus:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+operator-trivy:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+prometheus:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+    - summary: Update Prometheus version from `v2.44.0` to `v2.45.2`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7195
+runtime-audit-engine:
+  fixes:
+    - summary: Remove the `trusted_sa` macros in Falco rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7241
+shell_lib:
+  fixes:
+    - summary: Fix an error with password generation in shell hooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7548
+terraform-manager:
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+testing:
+  fixes:
+    - summary: Ignore alerts generated by not init ebpf exporter only for older kernels in e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7364
+upmeter:
+  features:
+    - summary: Add the ability to configure some TLS parameters in `UpmeterRemoteWrite` CR.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7495
+  fixes:
+    - summary: Bind `kube-rbac-proxy` sidecar container to the pod IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7521
+user-authz:
+  fixes:
+    - summary: Fix audit policy generation error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7406
+

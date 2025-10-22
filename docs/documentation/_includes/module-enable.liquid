@@ -1,0 +1,83 @@
+{% if page.lang == 'ru' -%}
+{% offtopic title="Как явно включить или отключить модуль..." %}
+Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}`, установите `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}` (создайте, при необходимости), или воспользуйтесь командой `deckhouse-controller module` в поде `d8-system/deckhouse`.
+
+Пример **включения** модуля:
+- с помощью ресурса ModuleConfig:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: true
+  ```
+
+- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  ```
+
+Пример **выключения** модуля:
+
+- с помощью ресурса ModuleConfig:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: false
+  ```
+
+- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  ```
+
+{% endofftopic %}
+{% else %}
+{% offtopic title="How to explicitly enable the module..." %}
+Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false` in the `ModuleConfig/{{ moduleKebabName }}` resource (create it, if necessary) to explicitly enable or disable the module, or use the `deckhouse-controller module` command in the `d8-system/deckhouse` pod.
+
+Example of enabling the module:
+- by using the ModuleConfig resource:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: true
+  ```
+
+- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  ```
+
+Example of disabling the module:
+- by using the ModuleConfig resource:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: {{ include.moduleKebabName }}
+  spec:
+    enabled: false
+  ```
+
+- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
+
+  ```shell
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  ```
+{% endofftopic %}
+{% endif %}

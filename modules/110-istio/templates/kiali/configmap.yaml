@@ -1,0 +1,74 @@
+{{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+data:
+  config.yaml: |
+    auth:
+      strategy: header
+    deployment:
+      namespace: d8-{{ $.Chart.Name }}
+      accessible_namespaces:
+      - '**'
+      additional_service_yaml: {}
+      custom_dashboards:
+        excludes:
+        - ""
+        includes:
+        - '*'
+    external_services:
+      istio:
+        component_status:
+          enabled: false
+        root_namespace: d8-{{ $.Chart.Name }}
+        url_service_version: http://istiod.d8-istio:15014/version
+        istiod_deployment_name: istiod-{{ $revision }}
+        config_map_name: istio-{{ $revision }}
+        istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
+      prometheus:
+        url: https://trickster.d8-monitoring/trickster/main
+        auth:
+          insecure_skip_verify: true
+          type: bearer
+          use_kiali_token: true
+      grafana:
+        url: http://{{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+      custom_dashboards:
+        enabled: true
+{{- if and .Values.istio.tracing.enabled .Values.istio.tracing.kiali }}
+      tracing:
+        enabled: true
+        url: {{ .Values.istio.tracing.kiali.jaegerURLForUsers }}
+  {{- if .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
+        in_cluster_url: {{ .Values.istio.tracing.kiali.jaegerGRPCEndpoint }}
+        use_grpc: true
+  {{- else }}
+        in_cluster_url: ""
+  {{- end }}
+{{- else }}
+      tracing:
+        enabled: false
+{{- end }}
+    identity: {}
+    istio_namespace: d8-{{ $.Chart.Name }}
+    api:
+      namespaces:
+        exclude:
+        # https://www.formauri.es/personal/pgimeno/misc/non-match-regex/?word=ingress
+        - ^d8-([^i]|i(i|n(i|g(i|r(i|e(i|si)))))*([^in]|n([^gi]|g([^ir]|r([^ei]|e([^is]|s[^is]))))))*(i(i|n(i|g(i|r(i|e(i|si)))))*(n(g?|gr(e?|es)))?)?$
+        - ^kube-system$
+        - ^upmeter-probe-namespace-.+$
+    server:
+      metrics_enabled: true
+      metrics_port: 9090
+      port: 20001
+      web_root: /
+    kiali_feature_flags:
+      istio_annotation_action: false
+      istio_injection_action: false
+      istio_upgrade_action: false

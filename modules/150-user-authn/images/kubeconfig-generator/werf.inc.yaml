@@ -1,0 +1,70 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-artifact
+    add: /src/dex-k8s-authenticator
+    to: /app/bin/dex-k8s-authenticator
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-artifact
+    add: /etc/nsswitch.conf
+    to: /etc/nsswitch.conf
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-artifact
+    add: /src/html
+    to: /app/html
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-artifact
+    add: /src/templates
+    to: /app/templates
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/dex-k8s-authenticator"]
+    workingDir: "/app"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+  - url: {{ $.SOURCE_REPO }}/mintel/dex-k8s-authenticator.git
+    to: /src
+    commit: 378a39dd93bed9f56a5a1b1a799a208c61ead83f
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+shell:
+  install:
+    - cd /src
+    - git apply --whitespace=fix -v /patches/*.patch
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-k8s-authenticator-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-k8s-authenticator-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o dex-k8s-authenticator .`) | indent 6 }}
+    - chown 64535:64535 dex-k8s-authenticator
+    - chmod 0700 dex-k8s-authenticator

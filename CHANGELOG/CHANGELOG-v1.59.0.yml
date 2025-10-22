@@ -1,0 +1,305 @@
+admission-policy-engine:
+  features:
+    - summary: Add new columns to Grafana representing policy name and policy type.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7926
+    - summary: Add the ability to specify restrictions on applying cluster roles to users.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7660
+    - summary: >-
+        Add a security policy to control the mounting of service account tokens in pods. This rule
+        will prohibit running pods with `automountServiceAccountToken` for existing
+        _SecurityPolicy_. To restore the old behavior, add `automountServiceAccountToken: true` to
+        the policy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7571
+  fixes:
+    - summary: Fix storageClass fake alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7912
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+candi:
+  features:
+    - summary: Add Deckhouse Kubernetes Platform Standart Edition (SE).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7828
+    - summary: Add support for Debian 12, remove support for Debian 9.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7631
+    - summary: Add OpenStack server group support for master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7312
+    - summary: Use FQDN for a node name (for the new nodes).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7117
+  fixes:
+    - summary: Disable updating tfadm for bootstraping.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7930
+    - summary: fix problem with conflicting packages in bashible step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7902
+    - summary: Remove requirements for the linstor module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7896
+    - summary: Update the tfadm pub key.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7714
+    - summary: Fix bootstrap by replace bb-error checks with trap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7647
+    - summary: Remove `yum versionlock` and `apt-mark hold`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7280
+ci:
+  features:
+    - summary: Add release requirements validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7869
+cloud-provider-aws:
+  fixes:
+    - summary: Update `aws-ebs-csi-driver` version to `v1.28.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7691
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+cloud-provider-azure:
+  fixes:
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+cloud-provider-gcp:
+  fixes:
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+cloud-provider-openstack:
+  features:
+    - summary: Allow to install clusters with http proxy in OpenStack
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7924
+    - summary: Add alert about orphaned disks (without PV) in the cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7458
+cloud-provider-vsphere:
+  features:
+    - summary: Add a feature to discover orphaned disks for vSphere.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7676
+    - summary: Added a parameter that allows you to use an existing VM folder.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7667
+cloud-provider-yandex:
+  features:
+    - summary: Add a feature to discover orphaned disks for YandexCloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7603
+  fixes:
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+    - summary: Fix a long node name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6718
+cni-cilium:
+  features:
+    - summary: >-
+        Add workaround for the stale DNS connections to the node-local-dns in the host network
+        applications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7632
+dashboard:
+  fixes:
+    - summary: Add `kube-rbac-proxy-ca.crt` configMap to `d8-dashboard` namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7766
+deckhouse:
+  features:
+    - summary: Fail `deckhouse-controller` if module restoration failed on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7915
+    - summary: Create embedded default `ModuleUpdatePolicy`, if no others are set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7703
+    - summary: Add `Ignore` mode for `ModuleUpdatePolicy` to exclude desired modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7703
+  fixes:
+    - summary: Use the same logic as minor/patch for `apply-now` release, except the time settings.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7988
+    - summary: Сhange the way the `deckhouse` pod readiness is determined during the minor version update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7770
+    - summary: Validation configs of disabled modules is disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7744
+deckhouse-controller:
+  features:
+    - summary: Ability to set and display the current life cycle stage for modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7807
+    - summary: Rework the process of updating modules' statuses.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7741
+    - summary: Provides Deckhouse HA mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7634
+    - summary: Added module loading metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7424
+descheduler:
+  fixes:
+    - summary: Remove incorrect inclusions of the `removeDuplicates` field.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7242
+dhctl:
+  features:
+    - summary: Support for creating chunked images bundles in mirror.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8000
+    - summary: Added debug output for `dhctl mirror` when `DHCTL_DEBUG` is set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7739
+  fixes:
+    - summary: Fix meta config deep copy method does not return the copy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7854
+extended-monitoring:
+  features:
+    - summary: >-
+        Support force image check with `image-availability-exporter`, even when workloads are
+        disabled or suspended.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7606
+external-module-manager:
+  features:
+    - summary: Disable module hooks on restart.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7582
+  fixes:
+    - summary: Fix panic at a module status update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7648
+global-hooks:
+  fixes:
+    - summary: Fix ability to downgrade Kubernetes by more than 1 minor version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7279
+go_lib:
+  features:
+    - summary: Add orphaned disks reconcile function.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7458
+ingress-nginx:
+  features:
+    - summary: >-
+        Add the IP address and hostname to the `status` field of the `IngressNginxController`
+        resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7785
+    - summary: Add VPA support to OpenKruise advance daemonsets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7557
+      impact: >-
+        Vpa-admission-controller/recommender/updater pods will be recreated. OpenKruise controller
+        manager pod will restart.
+  fixes:
+    - summary: Digital ocean Kubernetes upgrade, update `timeoutSeconds`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7933
+    - summary: Improve description of `NginxIngressSslWillExpire` and `NginxIngressSslExpired` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7830
+    - summary: Fix HTTPS port validation for HostPort inlet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7813
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+istio:
+  features:
+    - summary: >-
+        The new traffic redirection mode "IstioCNI" for the Istio module is to replace the old one,
+        "InitContainer".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7488
+      impact: >-
+        Application traffic redirection setup method in the istio module deligated to a special CNI
+        plugin. Cilium agent pods will restart, and L7-based policies will flap.
+l2-load-balancer:
+  features:
+    - summary: Show public IP in the status field of the `L2LoadBalancer` CustomResource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7937
+    - summary: >-
+        The new module for redundant L2 load-balancing and a new IngressNginxController inlet
+        L2LoadBalancer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7752
+  fixes:
+    - summary: Fix missed `externalTrafficPolicy` option for L2LoadBalancer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7968
+    - summary: Fixed markdown linter errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7946
+log-shipper:
+  features:
+    - summary: Validate the TLS certificate of the remote host for Loki.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6911
+      impact: Loki and Grafana will restart.
+loki:
+  features:
+    - summary: Add `kube-rbac-proxy` to prevent access to Loki from unauthorized clients.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6911
+      impact: Loki and Grafana will restart.
+monitoring-kubernetes:
+  features:
+    - summary: '`ebpf_exporter` image is based on a distroless image. Bump version to v2.3.0.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7769
+  fixes:
+    - summary: Reducing the number of scans of release secrets in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7558
+node-local-dns:
+  features:
+    - summary: >-
+        Add a workaround for the stale DNS connections to the `node-local-dns` in the host network
+        applications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7632
+node-manager:
+  features:
+    - summary: Scale all NodeGroups (with low priority) if any of them have a priority.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7772
+    - summary: Check the `StaticInstance` address by establishing a TCP connection.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7640
+    - summary: Add check for minimal Debian version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7631
+  fixes:
+    - summary: Fix panic error in `discoverMinimalNodesOSVersion` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8024
+    - summary: Simplify ng zones check expression.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8022
+    - summary: Add livenessProbe for early-oom.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7738
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+    - summary: >-
+        Add the `PasswordAuthentication=no` option to the OpenSSH client if public key
+        authentication is used.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7621
+    - summary: Check for `SSHCredentials` in the `StaticInstance` webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7619
+    - summary: Fix the cleanup phase in the 'caps-controller-manager' if the cleanup script does not exist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7615
+    - summary: Add NodeGroup validation to prevent adding more than one taint with the same key and effect.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7474
+    - summary: Fix a race in instance controller if NodeGroup has been deleted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7454
+    - summary: >-
+        Add the ability to disable StaticInstance bootstrapping by adding the
+        `"node.deckhouse.io/allow-bootstrap": "false"` label.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7244
+    - summary: Add the alert about an impossible node drain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6190
+operator-prometheus:
+  fixes:
+    - summary: Prevent rendering of unavailable components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7663
+prometheus:
+  features:
+    - summary: >-
+        - Equal alerts with different severity are deduplicated (only lowest severity alert is
+        displayed in the cluster).
+
+        - Alerts queue size changed from 100 to 500.
+
+        - Removed `DeadMansSwitch` alert and added `MissingDeadMansSwitch` alert in the case of
+        `DeadMansSwitch` alert does not send by cluster Prometheus.
+
+        - Added `ClusterHasTooManyAlerts` alert to indicate queue fullness.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7809
+      impact: '`alerts-receiver` will restart.'
+    - summary: Aggregating proxy for Prometheus in HA mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7757
+      impact: >-
+        Now there is one Grafana datasource to see combined metrics from the Main and the Longterm
+        Prometheus.
+    - summary: Add separate transition deployment for Grafana v10.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7018
+  fixes:
+    - summary: Fix aggregation with longterm Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8056
+    - summary: Migrate from `statusmap` and `status-history` to `state-timeline` plugin.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8040
+    - summary: Increase `sampleLimit` threshold to 100000.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7858
+registrypackages:
+  features:
+    - summary: Add the `d8` tools (`deckhouse-cli`) to registry packages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7792
+testing:
+  features:
+    - summary: Distroless image linter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5984
+  fixes:
+    - summary: Disable `ebpf_exporter` on CentOS based e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7929
+    - summary: skip new images of istio in distroless image linter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7795
+user-authn:
+  features:
+    - summary: Add option `addKubeconfigGeneratorEntry`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7545
+vertical-pod-autoscaler:
+  features:
+    - summary: Add VPA support to OpenKruise advance daemonsets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7557
+      impact: >-
+        Vpa-admission-controller/recommender/updater pods will be recreated. OpenKruise controller
+        manager pod will be recreated.
+

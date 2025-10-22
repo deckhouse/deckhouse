@@ -1,0 +1,9 @@
+name: cni-cilium
+stage: "General Availability"
+critical: true
+weight: 21
+subsystems:
+  - networking
+namespace: d8-cni-cilium
+requirements:
+  deckhouse: ">= 1.68"

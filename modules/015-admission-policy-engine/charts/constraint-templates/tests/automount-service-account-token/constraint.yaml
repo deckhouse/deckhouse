@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AutomountServiceAccountTokenPod
+metadata:
+  name: security-policy
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]

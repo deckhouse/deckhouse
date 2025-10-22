@@ -1,0 +1,66 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option go_package = "pb/dhctl";
+
+package dhctl;
+
+import "google/protobuf/duration.proto";
+import "common.proto";
+
+message CheckRequest {
+  oneof message {
+    CheckStart start = 1;
+    CheckCancel cancel = 2;
+  }
+}
+
+message CheckResponse {
+  oneof message {
+    CheckResult result = 1;
+    Logs logs = 2;
+    Progress progress = 4;
+  }
+}
+
+message CheckStart {
+  string connection_config = 1;
+  string cluster_config = 2;
+  string provider_specific_cluster_config = 3;
+  string state = 4;
+  CheckStartOptions options = 5;
+}
+
+message CheckCancel {}
+
+message CheckStartOptions {
+  bool commander_mode = 1;
+  string commander_uuid = 2;
+  int32 log_width = 3;
+  google.protobuf.Duration resources_timeout = 4;
+  google.protobuf.Duration deckhouse_timeout = 5;
+  string api_server_url = 6;
+  string api_server_token = 7;
+  bool api_server_insecure_skip_tls_verify = 8;
+  string api_server_certificate_authority_data = 9;
+  OperationOptions common_options = 10;
+}
+
+message CheckResult {
+  string result = 1;
+  string err = 2;
+  string state = 3;
+}

@@ -1,0 +1,18 @@
+candi:
+  fixes:
+    - summary: Fix registry packages install scripts for CentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1621
+      impact: Control-plane components restart on CentOS-based clusters.
+docs:
+  fixes:
+    - summary: Fix build of the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1645
+    - summary: Fixed rendering CRD file with a dot in the name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1610
+    - summary: Fix spelling mistakes, slang and formatting in documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1584
+user-authn:
+  fixes:
+    - summary: DexProvider CR doc fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1616
+

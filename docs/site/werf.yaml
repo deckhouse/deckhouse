@@ -1,0 +1,46 @@
+{{- $_ := set . "Env" (.Env | default "EE") }}
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
+{{- end }}
+
+project: deckhouse-web
+configVersion: 1
+cleanup:
+  keepPolicies:
+  - references:
+      tag: /.*/
+  - references:
+      branch: /.*/
+    imagesPerReference:
+      last: 2
+  - references:
+      branch: main
+    imagesPerReference:
+      last: 10
+---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+---
+# Base Images
+{{- include "parse_base_images_map" . }}
+---
+{{- $context := . }}
+{{- $_ := set $context "ModuleName" "website-docs" }}
+{{- $_ := set $context "ImageName" "builder" }}
+{{- $_ := set $context "ModulePath" "../../" }}
+{{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
+{{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
+---
+{{ tpl (.Files.Get "werf-modules-watcher.inc.yaml") $ }}
+---
+{{ tpl (.Files.Get "werf-web-router.inc.yaml") $ }}
+---
+{{- $_ := set $context "ImageName" "web" }}
+{{ tpl (.Files.Get "werf-web-frontend.inc.yaml") $ }}

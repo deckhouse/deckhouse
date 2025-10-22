@@ -1,0 +1,34 @@
+{{- define "alertmanager_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
+    {{- range .Values.prometheus.internal.alertmanagers.internal }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: alertmanager-{{ .name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "alertmanager-%s" .name))) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: alertmanager-{{ .name }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: alertmanager-{{ .name }}
+      minAllowed:
+        {{- include "alertmanager_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" $ | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

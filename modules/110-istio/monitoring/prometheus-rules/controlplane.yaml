@@ -1,0 +1,92 @@
+- name: d8.istio.controlplane
+  rules:
+    - alert: D8IstioGlobalControlplaneDoesntWork
+      expr: |
+        # all_revision_pods - revision_non_running_pods == 0 -> controlplane is dead
+        # count all istiod pods for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_labels{namespace="d8-istio", pod=~"istiod-.+"}
+                  )
+                  * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        -
+        # count all istiod pods in non running phase for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_status_phase{namespace="d8-istio", pod=~"istiod-.+", phase="Running"}
+                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{namespace="d8-istio", pod=~"istiod-.+"} == 0
+                  )
+                * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        # there are no running control plane pods
+        == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Global control plane isn't working.
+        description: |
+          Deckhouse has detected that the global Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.
+
+          As a result, sidecar injection for pods with global revision isn't working as well, and the validating webhook for Istio resources is absent.
+
+          To check the status of the control plane pods, run the following command:
+
+          ```bash
+          d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          ```
+
+    - alert: D8IstioAdditionalControlplaneDoesntWork
+      expr: |
+        # all_revision_pods - revision_non_running_pods == 0 -> controlplane is dead
+        # count all istiod pods for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_labels{namespace="d8-istio", pod=~"istiod-.+"}
+                  )
+                  * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod-.+"}
+                  # exclude global revision
+                  unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        -
+        # count all istiod pods in non running phase for revision
+        count by (label_istio_io_rev)
+                (
+                  (
+                    kube_pod_status_phase{namespace="d8-istio", pod=~"istiod-.+", phase="Running"}
+                    * on (pod) group_left (label_istio_io_rev) kube_pod_labels{namespace="d8-istio", pod=~"istiod-.+"} == 0
+                  )
+                * on (label_istio_io_rev) group_left kube_service_labels{namespace="d8-istio", service=~"istiod-.+"}
+                # exclude global revision
+                unless on (label_istio_io_rev) kube_service_labels{namespace="d8-istio", service="istiod"}
+                )
+        == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Additional control plane isn't working.
+        description: |
+          Deckhouse has detected that the additional Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.
+
+          As a result, sidecar injection for pods with `{{$labels.label_istio_io_rev}}` isn't working as well.
+
+          To check the status of the control plane pods, run the following command:
+
+          ```
+          d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          ```

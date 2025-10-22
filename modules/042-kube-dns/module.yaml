@@ -1,0 +1,10 @@
+name: kube-dns
+stage: "General Availability"
+critical: true
+weight: 42
+subsystems:
+  - kubernetes
+  - networking
+namespace: kube-system
+requirements:
+  deckhouse: ">= 1.68"

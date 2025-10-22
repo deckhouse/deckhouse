@@ -1,0 +1,107 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- range $env := slice "test" "test2" "test3" "test4" "test5" "test6" "test7" "stage" -}!}
+{!{-   $ctx := dict "webEnv" $env }!}
+{!{-   $outFile := printf "deploy-web-%s.yml" $env }!}
+{!{-   $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
+{!{-   tmpl.Exec "deploy_web_workflow_template" $ctx | file.Write $outPath }!}
+{!{- end -}!}
+
+{!{- define "deploy_web_workflow_template" -}!}
+{!{- $workflowName := printf "Deploy web to %s" .webEnv -}!}
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: '{!{ $workflowName }!}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: true
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: true
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: true
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
+        required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Cancel in-progress jobs for the same tag/branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-{!{ .webEnv }!}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "check_label_job" (slice "deploy-web" .webEnv) | strings.Indent 2 }!}
+
+  run_web_deploy:
+    needs:
+    - check_label
+    - git_info
+    if: needs.check_label.outputs.should_run == 'true'
+    name: Deploy site
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "deploy_site_template" .webEnv | strings.Indent 6 }!}
+{!{ tmpl.Exec "doc_version_template" | strings.Indent 6 }!}
+{!{ tmpl.Exec "deploy_doc_template" .webEnv | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final,docs" $workflowName) | strings.Indent 6 }!}
+
+{!{ end -}!}

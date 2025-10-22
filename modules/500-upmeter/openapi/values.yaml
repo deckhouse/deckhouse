@@ -1,0 +1,129 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+x-required-for-helm:
+  - auth
+  - internal
+  - statusPageAuthDisabled
+properties:
+  internal:
+    type: object
+    default: {}
+    required:
+      - disabledProbes
+      - upmeter
+      - smokeMini
+    properties:
+      deployStatusDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      effectiveStorageClass:
+        $ref: "#/definitions/storageClass"
+      disabledProbes:
+        type: array
+        default: []
+        x-examples:
+          - ["synthetic/dns"]
+        items:
+          type: string
+      upmeter:
+        type: object
+        default: {}
+        properties:
+          key:
+            type: string
+          certificate:
+            type: string
+          certificate_updated:
+            type: boolean
+      smokeMini:
+        type: object
+        default: {}
+        required:
+          - sts
+        properties:
+          sts:
+            type: object
+            default: {}
+            required: ["a", "b", "c", "d", "e"]
+            properties:
+              a:
+                $ref: "#/definitions/stsEntry"
+              b:
+                $ref: "#/definitions/stsEntry"
+              c:
+                $ref: "#/definitions/stsEntry"
+              d:
+                $ref: "#/definitions/stsEntry"
+              e:
+                $ref: "#/definitions/stsEntry"
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      dynamicProbes:
+        type: object
+        default: {}
+        properties:
+          ingressControllerNames:
+            type: array
+            default: []
+            items:
+              type: string
+          cloudEphemeralNodeGroupNames:
+            type: array
+            default: []
+            items:
+              type: string
+          zones:
+            type: array
+            default: []
+            items:
+              type: string
+          zonePrefix:
+            type: string
+            default: ""
+      auth:
+        type: object
+        default: {}
+        properties:
+          status:
+            type: object
+            default: {}
+            properties:
+              password:
+                type: string
+          webui:
+            type: object
+            default: {}
+            properties:
+              password:
+                type: string
+
+definitions:
+  stsEntry:
+    type: object
+    default: {}
+    properties:
+      node:
+        type: string
+      zone:
+        type: string
+      image:
+        type: string
+      effectiveStorageClass:
+        $ref: "#/definitions/storageClass"
+  storageClass:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum: [false]
+    x-examples: ["default"]

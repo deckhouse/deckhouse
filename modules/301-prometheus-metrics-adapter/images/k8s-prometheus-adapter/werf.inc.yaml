@@ -1,0 +1,54 @@
+{{ $k8sPrometheusAdapterVersion := "0.12.0" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/301-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $k8sPrometheusAdapterVersion }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/prometheus-adapter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -ldflags '-s -w' -o adapter ./cmd/adapter/adapter.go
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/adapter
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/adapter
+    to: /adapter
+    before: setup
+git:    
+{{- include "image mount points" . }}    
+imageSpec:
+  config:
+    entrypoint: ["/adapter"]

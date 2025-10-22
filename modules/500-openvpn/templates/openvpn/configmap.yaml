@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  openvpn.conf: |-
+    server {{ include "get_network_address" (list . .Values.openvpn.tunnelNetwork) }} {{ include "get_dotted_network_mask" (list . .Values.openvpn.tunnelNetwork) }}
+    verb 3
+    tls-server
+    ca /etc/openvpn/certs/pki/ca.crt
+    key /etc/openvpn/certs/pki/private/server.key
+    cert /etc/openvpn/certs/pki/issued/server.crt
+    dh /etc/openvpn/certs/pki/dh.pem
+    crl-verify /etc/openvpn/certs/pki/crl.pem
+    tls-auth /etc/openvpn/certs/pki/ta.key
+    client-config-dir /etc/openvpn/ccd
+    key-direction 0
+    data-ciphers AES-256-GCM:AES-128-GCM:AES-128-CBC
+    keepalive 10 60
+    persist-key
+    persist-tun
+    topology subnet
+    port 1194
+    status /tmp/openvpn-status.log
+    user nobody
+    group nogroup
+    push "topology subnet"
+    push "route-metric 9999"
+    {{- if .Values.openvpn.pushDefaultGatewayToClient }}
+    push "redirect-gateway def1"
+    {{- end }}
+    {{- if hasKey .Values.openvpn.internal "pushToClientRoutes" }}
+    {{- range $route := .Values.openvpn.internal.pushToClientRoutes }}
+    push "route {{ include "push_route_format" (list . $route) }}"
+    {{- end }}
+    {{- else }}
+    {{- end }}
+    push "dhcp-option DNS {{ .Values.openvpn.pushToClientDNS | default .Values.global.discovery.clusterDNSAddress }}"
+    {{- if hasKey .Values.openvpn.internal "pushToClientSearchDomains" }}
+      {{- range $searchDomain := .Values.openvpn.internal.pushToClientSearchDomains }}
+    push "dhcp-option DOMAIN {{ $searchDomain }}"
+      {{- end }}
+    {{- end }}

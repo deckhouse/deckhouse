@@ -1,0 +1,84 @@
+{{- $flannel_version := "0.26.2" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  - go build -ldflags="-s -w" -o /entrypoint main.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/flannel
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache linux-headers build-base
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - make dist/flanneld
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/flanneld/entrypoint
+  to: /src/entrypoint
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/flanneld/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - mkdir -p /src/flannel
+  - cd /src/flannel
+  - git clone --depth 1 --branch v{{ $flannel_version }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/flannel.git . && rm -rf /src/flannel/.git
+  - git apply /patches/*.patch --verbose
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/dist/flanneld
+  to: /opt/bin/flanneld
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+  add: /entrypoint
+  to: /entrypoint
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/entrypoint"]

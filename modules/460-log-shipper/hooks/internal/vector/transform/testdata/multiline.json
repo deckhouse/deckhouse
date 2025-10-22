@@ -1,0 +1,14 @@
+[
+	{
+		"group_by": [
+			"file",
+			"stream"
+		],
+		"inputs": [],
+		"merge_strategies": {
+			"message": "concat"
+		},
+		"starts_when": "if exists(.message) {\n    if length!(.message) \u003e 0 {\n        matched, err = match(.message, r'^[^\\s\\t]');\n        if err != null {\n            false;\n        } else {\n            matched;\n        };\n    } else {\n        false;\n    };\n} else {\n  false;\n}",
+		"type": "reduce"
+	}
+]

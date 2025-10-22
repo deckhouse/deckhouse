@@ -1,0 +1,131 @@
+---
+title: "Быстрый старт — выбор инфраструктуры"
+permalink: ru/gs/index.html
+description: Пошаговый процесс установки Deckhouse Kubernetes Platform поверх любой инфраструктуры.
+layout: page-nosidebar
+lang: ru
+toc: false
+---
+
+<link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
+<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+
+<div class="main-tabs-container">
+  <div class="main-tabs">
+    <button id="tab-button-manual-install" class="main-tab active" onclick="openInstallTab(event, 'tab-manual-install');">Вручную из командной строки</button>
+    <button id="tab-button-gui-install" class="main-tab" onclick="openInstallTab(event, 'tab-gui-install');">
+      C помощью графического установщика
+      <span class="main-beta-badge">Beta</span>
+    </button>
+  </div>
+</div>
+<div id="tab-gui-install" class="tab-content">
+{% include getting_started/global/partials/installer/installer_block_ru.html %}
+</div>
+<div id="tab-manual-install" class="tab-content active">
+<p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
+  Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
+
+<p>Установка платформы Deckhouse Kubernetes Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
+  из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
+  поэтому ниже приведены примеры установки для разных вариантов.</p>
+
+<h2>Выберите тип инфраструктуры, в которой будет устанавливаться Deckhouse Kubernetes Platform</h2>
+
+<div class="block" style="margin: 0;">
+  <div class="block__columns block__columns_top">
+    <div>
+      <h3>Облачная платформа</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
+        {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+          {% if provider[1].extraIcons %}
+          <div class="footer">
+            {%- for extraIcon in provider[1].extraIcons %}
+            <img src="/{{extraIcon[1]}}" alt=""/>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+      <p>
+        <small>
+          Полный список настроек облачных провайдеров Deckhouse&nbsp;Kubernetes&nbsp;Platform доступен <a href="/products/kubernetes-platform/documentation/v1/admin/integrations/integrations-overview.html"
+          title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.
+        </small>
+      </p>
+    </div>
+    <div>
+      <h3>Другие варианты</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
+        {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default button_card"
+          href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}
+            <div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>
+          {% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+        </a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  function openInstallTab(evt, installTabName) {
+      const url = new URL(window.location.href);
+      if (installTabName == 'tab-manual-install') {
+        url.hash = '';
+      }
+      if (installTabName == 'tab-gui-install') {
+        url.hash = 'gui-install';
+      }
+      window.history.replaceState(null, '', url.toString());
+      document.getElementById("tab-manual-install").classList.remove("active");
+      document.getElementById("tab-gui-install").classList.remove("active");
+
+      document.getElementById("tab-button-manual-install").classList.remove("active");
+      document.getElementById("tab-button-gui-install").classList.remove("active");
+
+      document.getElementById(installTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function getHashValue() {
+      const hash = window.location.hash;
+      return hash.substring(1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const hashValue = getHashValue();
+      if (hashValue == "gui-install") {
+        document.getElementById("tab-manual-install").classList.remove("active");
+        document.getElementById("tab-gui-install").classList.add("active");
+        document.getElementById("tab-button-manual-install").classList.remove("active");
+        document.getElementById("tab-button-gui-install").classList.add("active");
+      }
+  });
+</script>

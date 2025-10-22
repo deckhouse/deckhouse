@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: endpoints
+    apiVersion: v1
+    kind: Endpoints
+    queue: "endpoints-config"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - kubernetes
+    jqFilter: |
+      {
+        "count": (.subsets[].addresses | length )
+      }
+kubernetesValidating:
+- name: d8-cluster-configuration-secret.deckhouse.io
+  group: main
+  labelSelector:
+    matchLabels:
+      name: d8-cluster-configuration
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["v1"]
+    operations:  ["*"]
+    resources:   ["secrets"]
+    scope:       "Namespaced"
+EOF
+}
+
+function __main__() {
+  # Secret kube-system/d8-cluster-configuration cannot be deleted
+  if context::jq -e -r '.review.request.operation == "DELETE"' >/dev/null 2>&1; then
+    echo '{"allowed":false, "message":"it is forbidden to delete secret d8-cluster-configuration"}' > "$VALIDATING_RESPONSE_PATH"
+    return 0
+  fi
+
+  if context::jq -e -r '.review.request.operation == "UPDATE"' >/dev/null 2>&1; then
+    oldConfig=$(context::jq -r '.review.request.oldObject.data."cluster-configuration.yaml"' | base64 -d)
+    newConfig=$(context::jq -r '.review.request.object.data."cluster-configuration.yaml"' | base64 -d)
+    unsafeMode=$(context::jq -r '.review.request.object.metadata.annotations."deckhouse.io/allow-unsafe"')
+
+    if [ "${unsafeMode}" == null ]; then
+      # podSubnetNodeCIDRPrefix cannot be changed in a running cluster in a safe mode
+      oldPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$oldConfig")
+      newPrefix=$(yq eval '.podSubnetNodeCIDRPrefix' - <<< "$newConfig")
+      if [ "${oldPrefix}" != "${newPrefix}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
+
+      # podSubnetCIDR cannot be changed in a running cluster in a safe mode
+      oldPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$oldConfig")
+      newPodCIDR=$(yq eval '.podSubnetCIDR' - <<< "$newConfig")
+      if [ "${oldPodCIDR}" != "${newPodCIDR}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change podSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
+
+      # serviceSubnetCIDR cannot be changed in a running cluster in a safe mode
+      oldServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$oldConfig")
+      newServiceCIDR=$(yq eval '.serviceSubnetCIDR' - <<< "$newConfig")
+      if [ "${oldServiceCIDR}" != "${newServiceCIDR}" ]; then
+        echo '{"allowed":false, "message":"it is forbidden to change serviceSubnetCIDR in a running cluster"}' > "$VALIDATING_RESPONSE_PATH"
+        return 0
+      fi
+    fi
+
+    # Not allow to downgrade more than 1 minor kubernetes version
+    newKubernetesVersion=$(yq eval '.kubernetesVersion' - <<< "$newConfig")
+    oldKubernetesVersion=$(yq eval '.kubernetesVersion' - <<< "$oldConfig")
+    # Possible kubernetes versions are "Automatic" or semver(1.28)
+    if [ "${newKubernetesVersion}" != "Automatic" ]; then
+      maxUsedControlPlaneKubernetesVersionB64=$(context::jq -r '.review.request.object.data."maxUsedControlPlaneKubernetesVersion"')
+      if [ "${maxUsedControlPlaneKubernetesVersionB64}" != "null" ]; then
+        maxUsedControlPlaneKubernetesVersion="$(echo "$maxUsedControlPlaneKubernetesVersionB64" | base64 -d )"
+
+        majMaxKubeVersion=$(echo "$maxUsedControlPlaneKubernetesVersion" | cut -d "." -f 1)
+        minMaxKubeVersion=$(echo "$maxUsedControlPlaneKubernetesVersion" | cut -d "." -f 2)
+
+        majNewKubeVersion=$(echo "$newKubernetesVersion" | cut -d "." -f 1)
+        minNewKubeVersion=$(echo "$newKubernetesVersion" | cut -d "." -f 2)
+
+        if [ $(("${majMaxKubeVersion}" - "${majNewKubeVersion}")) -gt 0 ] || [ $(("${minMaxKubeVersion}" - "${minNewKubeVersion}")) -gt 1 ]; then
+          echo '{"allowed":false, "message":"can not downgrade kubernetes version more than 1 minor version. maxUsedControlPlaneKubernetesVersion='"${maxUsedControlPlaneKubernetesVersion}"" newKubernetesVersion=${newKubernetesVersion}"'"}' > "$VALIDATING_RESPONSE_PATH"
+          return 0
+        fi
+      fi
+    elif [ "${newKubernetesVersion}" == "Automatic" ] && [ "$oldKubernetesVersion" != "Automatic" ]; then
+      # switch from concrete version to Automatic
+      # we should check that Automatic (default in deckhouse) version >= concrete version
+      automaticVersionB64=$(context::jq -r '.review.request.object.data."deckhouseDefaultKubernetesVersion"')
+      if [ "${automaticVersionB64}" != "null" ]; then
+        automaticVersion="$(echo "$automaticVersionB64" | base64 -d )"
+
+        majAutomaticVersion=$(echo "$automaticVersion" | cut -d "." -f 1)
+        minAutomaticVersion=$(echo "$automaticVersion" | cut -d "." -f 2)
+
+        majOldKubeVersion=$(echo "$oldKubernetesVersion" | cut -d "." -f 1)
+        minOldKubeVersion=$(echo "$oldKubernetesVersion" | cut -d "." -f 2)
+
+        if [ $(("${majOldKubeVersion}" - "${majAutomaticVersion}")) -gt 0 ] || [ $(("${minOldKubeVersion}" - "${minAutomaticVersion}")) -gt 0 ]; then
+          echo '{"allowed":false, "message":"can not set Automatic because it will downgrade kubernetes version. Automatic='"${automaticVersion}"" oldKubernetesVersion=${oldKubernetesVersion}"'"}' > "$VALIDATING_RESPONSE_PATH"
+          return 0
+        fi
+      fi
+    fi
+
+    # defaultCRI cannot be changed if count of endpoints < 3
+    endpointsCount=$(context::jq -r '.snapshots.endpoints[].filterResult.count')
+    oldDefaultCRI=$(yq eval '.defaultCRI // "Containerd"' - <<< "$oldConfig")
+    newDefaultCRI=$(yq eval '.defaultCRI // "Containerd"' - <<< "$newConfig")
+    if [[ ("${newDefaultCRI}" != "${oldDefaultCRI}") && ("${endpointsCount}" -lt 3) ]]; then
+      echo '{"allowed":true, "warnings":["it is disruptive to change defaultCRI type for cluster with apiserver endpoints < 3"]}' > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
+  fi
+
+  # allowed response
+  echo '{"allowed":true}' > "$VALIDATING_RESPONSE_PATH"
+}
+
+hook::run "$@"

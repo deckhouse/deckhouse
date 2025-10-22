@@ -1,0 +1,24 @@
+{% assign lang = page.lang | default: 'en' %}
+{% for group in site.data.deckhouse-ports.groups %}
+  <h2>{{ group.description[lang] }}</h2>
+
+  <table class="deckhouse-ports" markdown="0">
+    <thead>
+      <tr>
+          <th>{{ site.data.i18n.common['port'][page.lang] | capitalize }}</th>
+          <th>{{ site.data.i18n.common['protocol'][page.lang] | capitalize }}</th>
+          <th>{{ site.data.i18n.common['purpose'][page.lang] | capitalize }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for destination in group.destinations %}
+        <tr>
+          <td>{% if destination.ports.size > 0 %}<code>{{ destination.ports }}</code>{% else %}—{% endif %}</td>
+          <td>{{ destination.protocol }}</td>
+          <td class="desc">{{ destination.description[lang] | markdownify }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endfor %}
+

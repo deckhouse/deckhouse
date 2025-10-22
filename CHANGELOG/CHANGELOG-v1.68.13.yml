@@ -1,0 +1,8 @@
+prometheus:
+  fixes:
+    - summary: >-
+        Enables WAL for Grafana SQLite database to prevent locking errors, thus fixing in-dashboard
+        alerting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13068
+      impact: Grafana deployment will be rollout restarted.
+

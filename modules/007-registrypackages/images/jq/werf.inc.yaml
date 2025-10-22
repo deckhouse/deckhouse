@@ -1,0 +1,43 @@
+{{- $version := .CandiVersionMap.jq.version }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  - jq
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "jq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /jq
+  before: setup
+shell:
+  setup:
+  - chmod +x /jq /install /uninstall

@@ -1,0 +1,36 @@
+- name: Prometheus
+  link: https://github.com/prometheus/prometheus
+  description: A systems and service monitoring system.
+  logo: /images/logos/prometheus-icon-color.svg
+  license: Apache License 2.0
+
+- name: Grafana
+  link: https://github.com/grafana/grafana
+  description: An open-source platform for monitoring and observability.
+  logo: https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg
+  license: GNU Affero General Public License v3.0
+
+- name: Trickster
+  link: https://github.com/trickstercache/trickster
+  description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
+  logo: https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg
+  license: Apache License 2.0
+
+- name: Mimir
+  link: https://github.com/grafana/mimir
+  description: A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.
+  logo: https://grafana.com/static/img/logos/logo-mimir.svg
+  license: AGPL-3.0 license
+
+- name: Promxy
+  link: https://github.com/jacksontj/promxy
+  logo: /images/logos/prometheus-icon-color.svg
+  description: Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).
+  license: MIT License
+
+- name: Memcached
+  link: https://github.com/memcached/memcached
+  logo: /images/logos/memcached-icon.svg
+  description: High performance multithreaded event-based key/value cache store intended to be used in a distributed system.
+  license: BSD-3-Clause license
+

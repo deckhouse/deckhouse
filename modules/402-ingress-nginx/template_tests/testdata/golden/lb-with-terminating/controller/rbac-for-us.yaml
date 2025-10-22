@@ -1,0 +1,88 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: controller
+  namespace: d8-ingress-nginx
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  - secrets
+  - namespaces
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resourceNames:
+  - ingress-controller-leader-%!s(<nil>)
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: controller
+  namespace: d8-ingress-nginx
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: controller
+subjects:
+- kind: ServiceAccount
+  name: ingress-nginx
+  namespace: d8-ingress-nginx

@@ -1,0 +1,102 @@
+---
+{{ $TricksterVersion := "1.1.5" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+  add: /src/entrypoint
+  to: /usr/local/bin/entrypoint
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/OPATH/trickster
+  to: /usr/local/bin/trickster
+  before: setup
+git:  
+{{- include "image mount points" . }}  
+imageSpec:
+  config:
+    entrypoint: ["entrypoint"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $TricksterVersion }} $(cat /run/secrets/SOURCE_REPO)/trickstercache/trickster.git /src/trickster
+  - cd /src/trickster
+  - git apply /patches/*.patch --verbose
+  - rm -r vendor
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/trickster
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH={{ $.Commit.Hash }}
+  - |
+    export LDFLAGS="-X main.applicationBuildTime=$(date +%Y%m%d-%H:%M:%S) \
+    -X main.applicationGitCommitID=${COMMIT_HASH} \
+    -X main.applicationGoVersion=$(shell go version | awk '{print $$3}') \
+    -X main.applicationGoArch=${GOARCH}
+    -extldflags '-static' -w -s"
+  - go mod tidy
+  - go mod vendor
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go`) | indent 6 }}
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/OPATH/trickster
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -ldflags="-s -w" -o entrypoint
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/entrypoint

@@ -1,0 +1,60 @@
+{{- define "dex_authenticators_with_access_to_kubernetes_api" }}
+  {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+    {{- if $crd.allowAccessToKubernetes }}
+      "not empty string"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+
+{{- $context := . }}
+{{- if or (include "dex_authenticators_with_access_to_kubernetes_api" $context) $context.Values.userAuthn.publishAPI.enabled $context.Values.userAuthn.kubeconfigGenerator }}
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: nn2wezlsnzsxizltzpzjzzeeeirsk # kubernetes
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
+id: kubernetes
+name: kubernetes
+secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+trustedPeers:
+{{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+    {{- if $crd.allowAccessToKubernetes }}
+- {{ printf "%s-%s-dex-authenticator" $crd.name $crd.namespace }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if $context.Values.userAuthn.internal.dexClientCRDs }}
+  {{- range $crd := $context.Values.userAuthn.internal.dexClientCRDs }}
+    {{- if $crd.allowAccessToKubernetes }}
+- {{ $crd.id }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if $context.Values.userAuthn.publishAPI.enabled }}
+- kubeconfig-generator
+{{- end }}
+{{- if $context.Values.userAuthn.kubeconfigGenerator}}
+  {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
+- kubeconfig-generator-{{ $index }}
+  {{- end }}
+{{- end }}
+redirectURIs:
+  {{- if $context.Values.userAuthn.kubeconfigGenerator }}
+    {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
+- https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
+    {{- end }}
+  {{- end }}
+  {{- if $context.Values.userAuthn.publishAPI.enabled }}
+- https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
+  {{- end }}
+  {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+    {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+      {{- if $crd.allowAccessToKubernetes }}
+- https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

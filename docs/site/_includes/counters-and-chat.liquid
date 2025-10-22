@@ -1,0 +1,90 @@
+{%- if site.urls.size > 0 %}
+  {%- assign siteUrls = "" %}
+  {%- for url in site.urls %}
+    {%- if siteUrls.size > 0 %}
+      {%- assign siteUrls = siteUrls | append: ", " %}
+    {%- endif %}
+    {%- assign siteUrls = siteUrls | append: "'" | append: (url[1] | remove_first: "https://" )|  append: "'" %}
+  {%- endfor %}
+{%- endif %}
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+const lang = document.documentElement.getAttribute('lang');
+let metricId = lang === 'ru' ? {{ site.metrics.yandex['ru'] }} : {{ site.metrics.yandex['en'] }};
+if ([{{ siteUrls }}].includes(window.location.hostname)) {
+  (function (m, e, t, r, i, k, a) {
+    m[i] = m[i] || function () {
+      (m[i].a = m[i].a || []).push(arguments)
+    };
+    m[i].l = 1 * new Date();
+    k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a)
+  })
+  (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+  ym(metricId, 'init', {
+    clickmap: true,
+    trackLinks: true,
+    accurateTrackBounce: true,
+    webvisor: true,
+  });
+
+  function getCookie (name) {
+    let value = '; ' + document.cookie;
+    let parts = value.split(`; ${name}=`);
+    if (parts.length == 2) return parts.pop().split(';').shift();
+  }
+
+  var token = getCookie('license-token') ? getCookie('license-token') : getCookie('demotoken')
+  if (token) {
+    window.yaParams = { 'license-token': token }
+    ym(metricId, 'params', window.yaParams || {});
+  }
+}
+</script>
+<!-- /Yandex.Metrika counter -->
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script type="text/javascript" >
+if ([{{ siteUrls }}].includes(window.location.hostname)) {
+
+  var script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://www.googletagmanager.com/gtag/js?id={{ site.metrics.google }}';
+  document.head.appendChild(script);
+
+
+  window.dataLayer = window.dataLayer || [];
+
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+
+  gtag('js', new Date());
+  gtag('config', '{{ site.metrics.google }}');
+}
+</script>
+<!-- /Global site tag (gtag.js) -->
+
+<!-- Bitrix24 messenger -->
+<script type="text/javascript">
+if ([{{ siteUrls }}].includes(window.location.hostname) || window.location.hostname.includes('.test.') || window.location.hostname.includes('.stage.')) {
+  (function (w, d, u) {
+    var s = d.createElement('script');
+    s.async = true;
+    s.src = u + '?' + (Date.now() / 60000 | 0);
+    var h = d.getElementsByTagName('script')[0];
+    h.parentNode.insertBefore(s, h);
+  })(window, document, '{{ site.chat_script_url[page.lang] }}');
+  window.addEventListener('onBitrixLiveChat', function (event) {
+    var widget = event.detail.widget;
+    widget.subscribe({
+      type: BX.LiveChatWidget.SubscriptionType.widgetOpen,
+      callback: function (event) {
+        ym(78422802, 'reachGoal', 'open_online_chat');
+      }
+    });
+  });
+}
+</script>
+<!-- /Bitrix24 messenger -->

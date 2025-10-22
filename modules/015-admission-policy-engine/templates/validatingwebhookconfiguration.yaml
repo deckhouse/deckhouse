@@ -1,0 +1,126 @@
+{{- define "validating.webhook.config" }}
+admissionReviewVersions:
+  - v1
+clientConfig:
+  caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
+  service:
+    name: gatekeeper-webhook-service
+    namespace: d8-admission-policy-engine
+    path: /v1/admit
+failurePolicy: Fail
+matchPolicy: Exact
+sideEffects: None
+objectSelector: {}
+{{- end }}
+
+{{- define "validating.webhook.tracked.resources"}}
+  {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedConstraintResources }}
+- apiGroups:
+    {{- $trackResource.apiGroups | toYaml | nindent 4 }}
+  apiVersions:
+  - '*'
+  operations:
+  {{- if $trackResource.operations }}
+    {{- $trackResource.operations | toYaml | nindent 4 }}
+  {{- else }}
+    - CREATE
+    - UPDATE
+    - DELETE
+  {{- end }}
+  resources:
+    {{- $trackResource.resources | toYaml | nindent 4 }}
+  {{- end }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  apiVersions:
+  - '*'
+  operations:
+  - CREATE
+  - UPDATE
+  - DELETE
+  resources:
+  - roles
+  - rolebindings
+- apiGroups:
+  - constraints.gatekeeper.sh
+  apiVersions:
+  - '*'
+  operations:
+  - CREATE
+  - UPDATE
+  - DELETE
+  resources:
+  - '*'
+  scope: '*'
+{{- end }}
+
+{{- if .Values.admissionPolicyEngine.internal.bootstrapped }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-admission-policy-engine-config
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+webhooks:
+  {{- if include "trivy.provider.enabled" . }}
+- name: trivy-provider.deckhouse.io
+  namespaceSelector:
+    matchLabels:
+      security.deckhouse.io/trivy-provider: ""
+  rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets"]
+    apiVersions: ["*"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+  - apiGroups: ["apps.kruise.io"]
+    apiVersions: ["*"]
+    resources: ["daemonsets"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods"]
+    operations: ["CREATE", "DELETE"]
+
+  {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
+  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+
+  {{/* Always validate CONNECT for exec/attach subresources */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
+
+  {{/* Increase timeout for trivy-provider */}}
+  timeoutSeconds: 30
+
+  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- end }} # End of trivy-provider.deckhouse.io config
+
+  {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
+  {{- if include "trivy.provider.enabled" . }}
+    - key: security.deckhouse.io/trivy-provider
+      operator: DoesNotExist
+  {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
+  rules:
+  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+  {{/* Always validate CONNECT for exec/attach subresources */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+{{- end }}
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- end }}
+{{- end }}

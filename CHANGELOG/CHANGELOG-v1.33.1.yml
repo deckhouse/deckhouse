@@ -1,0 +1,9 @@
+helm:
+  fixes:
+    - summary: Avoid failing on incorrect helm releases.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1754
+ingress-nginx:
+  fixes:
+    - summary: Fix workability of 0.33 controller with IngressClass resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1753
+

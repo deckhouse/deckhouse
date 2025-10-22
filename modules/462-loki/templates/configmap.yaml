@@ -1,0 +1,58 @@
+{{- $lokiConfigSnakeCase := dict }}
+{{- range (keys .Values.loki.lokiConfig) }}
+{{- $_ := set $lokiConfigSnakeCase (. | snakecase) (. | get $.Values.loki.lokiConfig) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  config.yaml: |-
+    auth_enabled: false
+
+    server:
+      http_listen_address: 127.0.0.1
+      http_listen_port: 3101
+      {{- pick $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
+
+    limits_config:
+      split_queries_by_interval: 0s
+      {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
+
+    query_range:
+      parallelise_shardable_queries: false
+
+    common:
+      path_prefix: /loki # WARNING: other data must be stored here too for force-expiration
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper # WARNING: do not change without testing force-expiration
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    ingester:
+      wal:
+        checkpoint_duration: 1m
+    compactor:
+      shared_store: filesystem
+      retention_enabled: true
+      compaction_interval: 60s
+      retention_delete_delay: 1s
+      retention_delete_worker_count: 150
+      deletion_mode: filter-and-delete
+      force_expiration_threshold: {{ .Values.loki.internal.cleanupThreshold | int64 }}

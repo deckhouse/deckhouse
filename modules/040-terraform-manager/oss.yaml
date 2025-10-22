@@ -1,0 +1,5 @@
+- name: Terraform
+  link: https://github.com/hashicorp/terraform
+  description: A tool for building, changing, and versioning infrastructure safely and efficiently.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0

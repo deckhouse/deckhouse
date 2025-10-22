@@ -1,0 +1,31 @@
+cni-cilium:
+  fixes:
+    - summary: Update documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7479
+dhctl:
+  fixes:
+    - summary: >-
+        Change the order in which resources are created. Service accounts will be created before
+        secrets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7470
+log-shipper:
+  fixes:
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7484
+loki:
+  fixes:
+    - summary: Update documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7442
+monitoring-kubernetes:
+  fixes:
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7483
+node-manager:
+  fixes:
+    - summary: Fix panic when the vSphere driver creates a disk.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7465
+prometheus:
+  fixes:
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7482
+

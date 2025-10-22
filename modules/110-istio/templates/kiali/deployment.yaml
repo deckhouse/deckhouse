@@ -1,0 +1,174 @@
+{{- define "kiali_resources" }}
+cpu: 50m
+memory: 500Mi
+{{- end }}
+
+{{- $versionInfo :=  get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $imageSuffix := get $versionInfo "imageSuffix" }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: kiali
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: kiali
+      minAllowed:
+        {{- include "kiali_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 1000Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: kiali
+  template:
+    metadata:
+      labels:
+        app: kiali
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/kiali/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "kiali")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_custom" (list . 1000 1000) | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: kiali
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: kiali
+        image: {{ include "helm_lib_module_image" (list $ (printf "kiali%s" $imageSuffix)) }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "uid" 1000 ) | nindent 8 }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/opt/kiali/kiali"
+        - "-config"
+        - "/kiali-configuration/config.yaml"
+        ports:
+        - name: http-metrics
+          containerPort: 9090
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 20001
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 20001
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 30
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "kiali_resources" . | nindent 12 }}
+  {{- end }}
+        env:
+        - name: ACTIVE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: LOG_FORMAT
+          value: json
+        - name: LOG_LEVEL
+          value: info
+        volumeMounts:
+        - name: kiali-configuration
+          mountPath: "/kiali-configuration"
+        - name: kiali-signing-key
+          mountPath: "/kiali-override-secrets/login-token-signing-key"
+      - name: kube-rbac-proxy
+      {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /api/health
+            upstreams:
+            - upstream: http://127.0.0.1:20001/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-istio
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: kiali
+        ports:
+        - containerPort: 8443
+          name: https
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+          - name: kube-rbac-proxy-ca
+            mountPath: /etc/kube-rbac-proxy
+      volumes:
+      - name: kiali-configuration
+        configMap:
+          name: kiali
+      - name: kiali-signing-key
+        secret:
+          secretName: kiali-signing-key
+          items:
+          - key: key
+            path: value.txt
+          optional: false
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt

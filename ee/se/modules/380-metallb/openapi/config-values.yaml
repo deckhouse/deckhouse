@@ -1,0 +1,277 @@
+x-config-version: 2
+type: object
+required: ["addressPools"]
+properties:
+  loadBalancerClass:
+    type: string
+    description: An optional field describing the LoadBalancer class. The LoadBalancerClass field should be used in L2 LoadBalancer mode to specify the MetalLoadBalancerClass that defines the balancer parameters for the Service.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      A selector for the main controller. It is the same as the Pod's `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      Tolerations for the main controller. They are the same as the Pod's `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  speaker:
+    type: object
+    required: ["nodeSelector"]
+    description: |
+      Settings for the `speaker` component that implements the LoadBalancer's IPs publishing protocol for external infrastructure.
+    properties:
+      nodeSelector:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          A selector for the speaker DaemonSet. It is the same as the Pod's `spec.nodeSelector` parameter in Kubernetes.
+
+          If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+      tolerations:
+        type: array
+        description: |
+          Tolerations for the speaker DaemonSet. They are the same as the Pod's `spec.tolerations` parameter in Kubernetes.
+
+          If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+        items:
+          type: object
+          properties:
+            effect:
+              type: string
+            key:
+              type: string
+            operator:
+              type: string
+            tolerationSeconds:
+              type: integer
+              format: int64
+            value:
+              type: string
+  bgpPeers:
+    type: array
+    default: []
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
+    description: |
+      A list of external BGP routers to use with the module.
+
+      Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
+    items:
+      type: object
+      required: ["peer-address", "peer-asn", "my-asn"]
+      properties:
+        peer-address:
+          type: string
+          description: |
+            The IP address of the external BGP router.
+          pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+        peer-asn:
+          type: integer
+          description: |
+            The AS number on the external BGP router.
+          maximum: 4294967295
+          minimum: 0
+        my-asn:
+          type: integer
+          description: |
+            The AS number in the cluster.
+          maximum: 4294967295
+          minimum: 0
+        peer-port:
+          type: integer
+          default: 179
+          description: |
+            Port to dial when establishing the session.
+          maximum: 16384
+          minimum: 0
+        source-address:
+          type: string
+          description: |
+            The source IP address for outbound connections.
+          pattern: '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'
+        router-id:
+          type: string
+          description: |
+            BGP router ID to advertise to the peer.
+        hold-time:
+          anyOf:
+            - type: integer
+            - type: string
+          x-kubernetes-int-or-string: true
+          pattern: "^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$"
+          description: |
+            The timeout after which the neighboring BGP peer is considered dead. This value is divided by three to get the keep-alive interval.
+
+            The recommended value is `3s` (i.e., keep-alive packets are sent once per second). Note that the BGP protocol does not support values lower than this.
+            By default, the parameter is set to `90s` (i.e., keep-alive packets are sent every 30 seconds).
+        node-selector:
+          type: object
+          description: |
+            The additional pseudo-selector implemented by the speaker application. It selects nodes that are allowed to connect to external BGP routers. Do not confuse it with `speaker.nodeSelector` and  `nodeSelector`.
+
+            An optional parameter.
+
+            The format is [`matchLabels` or `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+          properties:
+            matchExpressions:
+              type: array
+              items:
+                oneOf:
+                  - properties:
+                      operator:
+                        enum: [Exists, DoesNotExist]
+                    required: [key, operator]
+                    not:
+                      required: [values]
+                  - properties:
+                      operator:
+                        enum: [In, NotIn]
+                    required: [key, operator, values]
+                type: object
+                properties:
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                  values:
+                    items:
+                      type: string
+                    type: array
+            matchLabels:
+              additionalProperties:
+                type: string
+              type: object
+        password:
+          type: string
+          description: |
+            Authentication password for BGP-routers enforcing TCP MD5 authenticated sessions.
+  addressPools:
+    type: array
+    default: []
+    description: |
+      A list of IP ranges to assign to services.
+
+      Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+    items:
+      type: object
+      required: ["protocol", "name", "addresses"]
+      properties:
+        name:
+          type: string
+          description: |
+            The name of the pool. It should conform to RFC 1123: dot-separated parts in lowercase, consists of alphanumeric characters, '-'. Each part must start and end with an alphanumeric character.
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        protocol:
+          type: string
+          description: |
+            The protocol used by the speaker to announce services.
+          enum:
+            - bgp
+            - layer2
+        addresses:
+          type: array
+          description: |
+            A list of ranges, where each range can look like a subnet/mask or a numeric address range (with "-" as a delimiter).
+          items:
+            type: string
+            oneOf:
+              - pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+              - pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}-([0-9]{1,3}\.){3}[0-9]{1,3}$'
+        auto-assign:
+          type: boolean
+          default: true
+          description: |
+            Auto-assign flag used to prevent metallb from automatic allocation for a pool.
+        avoid-buggy-ips:
+          type: boolean
+          default: false
+          description: |
+            Prevents addresses ending with `.0` and `.255` to be used by a pool.
+        bgp-advertisements:
+          type: array
+          description: |
+            Defines BGP advertisements.
+          items:
+            type: object
+            properties:
+              aggregation-length:
+                type: integer
+                default: 32
+                description: |
+                  The aggregation-length advertisement option lets you “roll up” prefix into a larger one.
+
+                  Works for IPv4 addresses.
+                minimum: 1
+              localpref:
+                type: integer
+                description: |
+                  The `BGP LOCAL_PREF` attribute which is used by BGP best path algorithm.
+
+                  Path with higher localpref is preferred over one with lower localpref.
+              communities:
+                type: array
+                description: |
+                  Keys from the [bgpCommunities](#parameters-bgpcommunities) parameter to be associated with the announcement.
+                items:
+                  type: string
+                x-doc-example: [["no-advertise"]]
+  bgpCommunities:
+    type: object
+    description: |
+      The BGP communities list.
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
+    x-doc-example:
+      no-advertise: "65535:65282"
+    additionalProperties:
+      type: string
+      description: |
+        Map of `key: value` pairs.
+x-examples:
+  - bgpPeers:
+      - peer-address: 192.168.1.1
+        peer-asn: 1111
+        my-asn: 2222
+        source-address: 192.168.1.2
+        hold-time: 10s
+        node-selector:
+          matchLabels:
+            node: test
+    addressPools:
+      - name: my-pool-bgp
+        protocol: bgp
+        addresses:
+          - 192.168.100.1-192.168.100.10
+          - 192.168.101.0/24
+        bgp-advertisements:
+          - aggregation-length: 32
+            localpref: 100
+            communities:
+              - no-advertise
+    bgpCommunities:
+      no-advertise: 65535:65282
+    speaker:
+      nodeSelector:
+        mylabel: "speaker"

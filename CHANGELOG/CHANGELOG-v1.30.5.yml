@@ -1,0 +1,5 @@
+registry-packages:
+  fixes:
+    - description: 'Fix build of nginx package for Ubuntu 16 (Fix #719)'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/729
+

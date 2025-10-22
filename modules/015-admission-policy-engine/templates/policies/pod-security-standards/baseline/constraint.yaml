@@ -1,0 +1,39 @@
+{{- $context := . }}
+
+{{- $knownList := list }} # Host Networking
+{{- if .Values.admissionPolicyEngine.podSecurityStandards.policies }}
+  {{- range $known := .Values.admissionPolicyEngine.podSecurityStandards.policies.hostPorts.knownRanges }}
+    {{- $knownList = append $knownList $known }}
+  {{- end }}
+{{- end }}
+
+{{- range $enforcementAction := .Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions }}
+
+  {{- $parameters := dict "ranges" $knownList "allowHostNetwork" false }}
+  {{- include "pod_security_standard_baseline" (list $context "D8HostNetwork" $enforcementAction $parameters) }}
+
+  {{- include "pod_security_standard_baseline" (list $context "D8HostProcesses" $enforcementAction) }} # Host Processes
+
+  {{- $parameters := dict "allowedProfiles" (list "runtime/default" "localhost/*") }} # App Armor
+  {{- include "pod_security_standard_baseline" (list $context "D8AppArmor" $enforcementAction $parameters) }}
+
+  {{- $parameters := dict "allowedCapabilities" (list "AUDIT_WRITE" "CHOWN" "DAC_OVERRIDE" "FOWNER" "FSETID" "KILL" "MKNOD" "NET_BIND_SERVICE" "SETFCAP" "SETGID" "SETPCAP" "SETUID" "SYS_CHROOT") }} # Capabilities
+  {{- include "pod_security_standard_baseline" (list $context "D8AllowedCapabilities" $enforcementAction $parameters) }}
+
+  {{- include "pod_security_standard_baseline" (list $context "D8AllowedHostPaths" $enforcementAction) }} # Host Path
+
+  {{- include "pod_security_standard_baseline" (list $context "D8PrivilegedContainer" $enforcementAction) }} # Privileged Container
+
+  {{- $parameters := dict "allowedProcMount" "Default" }} # Proc Mount
+  {{- include "pod_security_standard_baseline" (list $context "D8AllowedProcMount" $enforcementAction $parameters)}}
+
+  {{- $parameters := dict "allowedSELinuxOptions" (list (dict "type" "") (dict "type" "container_t") (dict "type" "container_init_t") (dict "type" "container_kvm_t") (dict "type" "container_engine_t")) }} # Selinux
+  {{- include "pod_security_standard_baseline" (list $context "D8SeLinux" $enforcementAction $parameters) }}
+
+  {{- $parameters := dict "allowedSysctls" (list "kernel.shm_rmid_forced" "net.ipv4.ip_local_port_range" "net.ipv4.ip_unprivileged_port_start" "net.ipv4.tcp_syncookies" "net.ipv4.ping_group_range" "net.ipv4.ip_local_reserved_ports" "net.ipv4.tcp_keepalive_time" "net.ipv4.tcp_fin_timeout" "net.ipv4.tcp_keepalive_intvl" "net.ipv4.tcp_keepalive_probes") }} # Sysctls
+  {{- include "pod_security_standard_baseline" (list $context "D8AllowedSysctls" $enforcementAction $parameters) }}
+
+  {{- $parameters := dict "allowedProfiles" (list "RuntimeDefault" "Localhost" "" "undefined") "allowedLocalhostFiles" (list "*") }} # Seccomp Profiles
+  {{- include "pod_security_standard_baseline" (list $context "D8AllowedSeccompProfiles" $enforcementAction $parameters) }}
+
+{{- end }}

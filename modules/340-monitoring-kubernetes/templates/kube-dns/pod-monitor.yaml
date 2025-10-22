@@ -1,0 +1,38 @@
+{{- if eq .Values.monitoringKubernetes.internal.clusterDNSImplementation "kube-dns" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-dns
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: k8s-app
+  podMetricsEndpoints:
+  - targetPort: 10055
+    relabelings:
+    - regex: endpoint|namespace
+      action: labeldrop
+    - targetLabel: scrape_endpoint
+      replacement: skydns
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+  - targetPort: 10054
+    relabelings:
+    - regex: endpoint|namespace
+      action: labeldrop
+    - targetLabel: scrape_endpoint
+      replacement: dnsmasq
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  namespaceSelector:
+    matchNames:
+    - kube-system
+{{- end }}

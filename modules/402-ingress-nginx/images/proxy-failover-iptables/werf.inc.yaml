@@ -1,0 +1,46 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: builder/src
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/failover/
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/*.sum'
+    - '**/*.mod'
+---
+image: {{ .ModuleName }}/failover-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+  - chown -R 0:0 failover
+  - chmod 0700 failover
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+fromCacheVersion: "2025-09-18-1"
+import:
+- image: {{ .ModuleName }}/failover-artifact
+  add: /src/failover
+  to: /failover
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/failover"]

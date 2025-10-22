@@ -1,0 +1,15 @@
+---
+# base artifact to do relocate
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/alt
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y glibc-utils

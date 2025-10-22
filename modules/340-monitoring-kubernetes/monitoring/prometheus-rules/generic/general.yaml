@@ -1,0 +1,60 @@
+- name: coreos.general
+  rules:
+  - alert: DeadMansSwitch
+    expr: vector(1)
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Alerting dead man's switch.
+      description: This is a dead man's switch meant to ensure that the entire Alerting pipeline is functional.
+
+  - record: fd_utilization
+    expr: process_open_fds / process_max_fds
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod!=""}[1h], 3600 * 4)) BY (job, namespace, pod) > 1
+    for: 10m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      summary: |
+        File descriptors for `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` are exhausting soon.
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
+
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod=""}[1h], 3600 * 4)) BY (job, instance) > 1
+    for: 10m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      summary: |
+        File descriptors for `{{ $labels.job }}: {{ $labels.instance }}` are exhausting soon.
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next 4 hours.
+      
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod!=""}[10m], 3600)) BY (job, namespace, pod) > 1
+    for: 10m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      summary: |
+        File descriptors for `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` are almost exhausted.
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }}` is expected to exhaust its available file/socket descriptors within the next hour.
+      
+  - alert: FdExhaustionClose
+    expr: max(predict_linear(fd_utilization{pod=""}[10m], 3600)) BY (job, instance) > 1
+    for: 10m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      summary: |
+        File descriptors for `{{ $labels.job }}: {{ $labels.instance }}` are almost exhausted.
+      description: |
+        The instance `{{ $labels.job }}: {{ $labels.instance }}` is expected to exhaust its available file/socket descriptors within the next hour.

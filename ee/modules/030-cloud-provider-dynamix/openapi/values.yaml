@@ -1,0 +1,322 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      providerClusterConfiguration:
+        type: object
+        additionalProperties: false
+        description: |
+          Describes the configuration of a cloud cluster in Dynamix.
+
+          Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+          Run the following command to change the configuration in a running cluster:
+
+          ```shell
+          d8 platform edit provider-cluster-configuration
+          ```
+        x-doc-search: |
+          ProviderClusterConfiguration
+        x-unsafe-rules: [ deleteZones ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: DynamixClusterConfiguration
+          layout: StandardWithInternalNetwork
+          sshPublicKey: "ssh-rsa AAAA"
+          location: dynamix
+          account: acc_user
+          nodeNetworkCIDR: "10.241.32.0/24"
+          nameservers: ["10.0.0.10"]
+          provider:
+            controllerUrl: "<controller url>"
+            oAuth2Url: "<oAuth2 url>"
+            appId: "<app id>"
+            appSecret: "<app secret>"
+            insecure: true
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              numCPUs: 6
+              memory: 16384
+              rootDiskSizeGb: 50
+              imageName: "<image name>"
+              storageEndpoint: "<storage endpoint>"
+              pool: "<pool>"
+              externalNetwork: "<external network>"
+          nodeGroups:
+          - name: worker
+            replicas: 1
+            instanceClass:
+              numCPUs: 6
+              memory: 16384
+              rootDiskSizeGb: 50
+              imageName: "<image name>"
+              externalNetwork: "<external network>"
+        required: [ apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, layout, provider ]
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ DynamixClusterConfiguration ]
+          sshPublicKey:
+            type: string
+            description: a public key for accessing nodes.
+          location:
+            type: string
+            description: The name of the location to install the cluster.
+          account:
+            type: string
+            description: Account name.
+          masterNodeGroup:
+            type: object
+            additionalProperties: false
+            required: [ replicas, instanceClass ]
+            description: |
+              The definition of the master's NodeGroup.
+
+              > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+            x-unsafe-rules: [ updateMasterImage ]
+            properties:
+              replicas:
+                type: integer
+                minimum: 1
+                description: |
+                  The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+                x-unsafe-rules: [ updateReplicas ]
+              instanceClass:
+                type: object
+                additionalProperties: false
+                required: [ numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork ]
+                description: |
+                  Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
+                properties: &instanceClassProperties
+                  numCPUs:
+                    type: integer
+                    description: |
+                      Number of vCPUs to allocate to the VM.
+                    minimum: 1
+                    example: 2
+                  memory:
+                    type: integer
+                    description: |
+                      Memory in MiB to allocate to the VM.
+                    minimum: 1
+                    example: 8192
+                  rootDiskSizeGb:
+                    description: |
+                      Root disk size in GiB to use in Dynamix VirtualMachines.
+                    example: 50
+                    default: 50
+                    type: integer
+                  etcdDiskSizeGb:
+                    description: |
+                      Etcd disk size in GiB.
+                    example: 15
+                    default: 15
+                    type: integer
+                  imageName:
+                    type: string
+                    description: |
+                      OS image name to use for VM deployment.
+                    example: 1
+                  storageEndpoint:
+                    type: string
+                    description: |
+                      Storage name.
+                    example: SharedTatlin_G1_SEP
+                  pool:
+                    type: string
+                    description: |
+                      Storage pool name.
+                    example: pool_a
+                  externalNetwork:
+                    type: string
+                    description: |
+                      External network name.
+                    example: extnet_vlan_1700
+          nodeGroups:
+            type: array
+            description: |
+              An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+            items:
+              type: object
+              required: [ name, replicas, instanceClass ]
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the NodeGroup to use for generating node names.
+                replicas:
+                  type: integer
+                  description: |
+                    The number of nodes to create.
+                nodeTemplate:
+                  description: |
+                    Parameters of Node objects in Kubernetes to add after registering the node.
+                  properties:
+                    labels:
+                      type: object
+                      description: |
+                        A list of labels to attach to cluster resources.
+
+                        The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                        - environment: production
+                          app: warp-drive-ai
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |
+                        The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                        - ai.fleet.com/discombobulate: "true"
+                      additionalProperties:
+                        type: string
+                    taints:
+                      type: array
+                      description: |
+                        The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                        > Available fields: `effect`, `key`, and `values`.
+                      x-examples:
+                        - - effect: NoExecute
+                            key: ship-class
+                            value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum: [ NoSchedule, PreferNoSchedule, NoExecute ]
+                          key:
+                            type: string
+                          value:
+                            type: string
+                instanceClass:
+                  type: object
+                  additionalProperties: false
+                  required: [ numCPUs, memory, imageName, externalNetwork ]
+                  description: |
+                    Partial contents of the fields of the.
+                  properties:
+                    <<: *instanceClassProperties
+          nodeNetworkCIDR:
+            type: string
+            description: |
+              IP CIDR to be assigned to the internal segment of this ViNS.
+            x-unsafe: true
+          nameservers:
+            type: array
+            description: |
+              A list of IP addresses of the DNS servers.
+            items:
+              type: string
+            default: []
+            x-unsafe: true
+          layout:
+            type: string
+            description: |
+              The way resources are located in the cloud.
+
+              Read [more](https://deckhouse.io/modules/cloud-provider-dynamix/layouts.html) about possible provider layouts.
+            x-unsafe: true
+          provider:
+            type: object
+            additionalProperties: false
+            description: Parameters for connecting to the Dynamix.
+            properties:
+              controllerUrl:
+                type: string
+                description: The URL to the Dynamix API endpoint.
+              oAuth2Url:
+                type: string
+                description: The URL to the SSO Dynamix API endpoint.
+              appId:
+                type: string
+                description: App Id.
+              appSecret:
+                type: string
+                description: App Secret.
+              insecure:
+                type: boolean
+                description: Set to `true` if Dynamix has a self-signed certificate.
+                default: false
+                x-doc-default: false
+            required:
+              - controllerUrl
+              - oAuth2Url
+              - appId
+              - appSecret
+        oneOf:
+        - required: [layout, nodeNetworkCIDR]
+          properties:
+            layout:
+              enum:
+              - StandardWithInternalNetwork
+              type: string
+        - required: [layout]
+          properties:
+            layout:
+              enum:
+              - Standard
+              type: string
+      providerDiscoveryData:
+        type: object
+        additionalProperties: false
+        required: [ apiVersion, kind ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: DynamixCloudProviderDiscoveryData
+          storageEndpoints:
+          - name: Default
+        properties:
+          apiVersion:
+            type: string
+            enum: [ deckhouse.io/v1 ]
+          kind:
+            type: string
+            enum: [ DynamixCloudProviderDiscoveryData ]
+          zones:
+            type: array
+            items:
+              type: string
+          storageEndpoints:
+            type: array
+            items:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                pools:
+                  type: array
+                  items:
+                    type: string
+                isEnabled:
+                  type: boolean
+                isDefault:
+                  type: boolean
+            description: List of storage classes.
+      cniSecretData:
+        type: string
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            storageEndpoint:
+              type: string
+            pool:
+              type: string
+            allowVolumeExpansion:
+              type: boolean

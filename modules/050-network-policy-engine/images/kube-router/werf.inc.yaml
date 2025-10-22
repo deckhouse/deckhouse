@@ -1,0 +1,59 @@
+{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /usr/sbin/ipset /usr/sbin/ip /usr/sbin/conntrack" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get install -y ipset conntrack-tools
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v2.0.1 $(cat /run/secrets/SOURCE_REPO)/cloudnativelabs/kube-router.git /src
+  - cd /src
+  - git describe --tags --dirty > GIT_COMMIT
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/kube-router-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+fromImage: builder/golang-alpine
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GIT_COMMIT=$(cat GIT_COMMIT)
+  - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: {{ .ModuleName }}/kube-router-artifact
+  add: /src/kube-router
+  to: /opt/bin/kube-router
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/opt/bin/kube-router"]

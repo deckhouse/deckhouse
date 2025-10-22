@@ -1,0 +1,940 @@
+{
+  "format_version": "0.1",
+  "terraform_version": "0.14.8",
+  "variables": {
+    "cloudConfig": {
+      "value": ""
+    },
+    "clusterConfiguration": {
+      "value": {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "cloud": {
+          "prefix": "kube",
+          "provider": "Yandex"
+        },
+        "clusterDomain": "cluster.local",
+        "clusterType": "Cloud",
+        "defaultCRI": "Containerd",
+        "kind": "ClusterConfiguration",
+        "kubernetesVersion": "1.29",
+        "podSubnetCIDR": "10.244.0.0/16",
+        "podSubnetNodeCIDRPrefix": "24",
+        "serviceSubnetCIDR": "192.168.0.0/16"
+      }
+    },
+    "clusterUUID": {
+      "value": "00000000-ed62-4723-9814-a686e1cd6ece"
+    },
+    "network_types": {
+      "value": {
+        "SoftwareAccelerated": "software_accelerated",
+        "Standard": "standard"
+      }
+    },
+    "nodeIndex": {
+      "value": 0
+    },
+    "providerClusterConfiguration": {
+      "value": {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "existingNetworkID": "test",
+        "kind": "YandexClusterConfiguration",
+        "layout": "WithNATInstance",
+        "masterNodeGroup": {
+          "instanceClass": {
+            "cores": 4,
+            "diskSizeGB": 45,
+            "imageID": "test",
+            "memory": 8192
+          },
+          "replicas": 3
+        },
+        "nodeNetworkCIDR": "10.233.0.0/22",
+        "provider": {
+          "cloudID": "test",
+          "folderID": "test",
+          "serviceAccountJSON": ""
+        },
+        "sshPublicKey": "",
+        "withNATInstance": {
+          "internalSubnetID": "test",
+          "natInstanceExternalAddress": "130.193.51.24",
+          "natInstanceInternalAddress": "10.133.1.34"
+        }
+      }
+    }
+  },
+  "planned_values": {
+    "outputs": {
+      "kubernetes_data_device_path": {
+        "sensitive": false,
+        "value": "/dev/disk/by-id/virtio-kubernetes-data"
+      },
+      "master_ip_address_for_ssh": {
+        "sensitive": false
+      },
+      "node_internal_ip_address": {
+        "sensitive": false
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "yandex_compute_disk.kubernetes_data",
+          "mode": "managed",
+          "type": "yandex_compute_disk",
+          "name": "kubernetes_data",
+          "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+          "schema_version": 0,
+          "values": {
+            "created_at": "2021-02-26T09:40:42Z",
+            "description": "volume for etcd and kubernetes certs",
+            "folder_id": "test",
+            "id": "test",
+            "image_id": "",
+            "labels": {},
+            "name": "kube-kubernetes-data-0",
+            "product_ids": [],
+            "size": 10,
+            "snapshot_id": "",
+            "status": "ready",
+            "timeouts": null,
+            "type": "network-ssd",
+            "zone": "ru-central1-a"
+          }
+        },
+        {
+          "address": "yandex_compute_instance.master",
+          "mode": "managed",
+          "type": "yandex_compute_instance",
+          "name": "master",
+          "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+          "schema_version": 1,
+          "values": {
+            "allow_stopping_for_update": true,
+            "boot_disk": [
+              {
+                "auto_delete": true,
+                "initialize_params": [
+                  {
+                    "image_id": "test",
+                    "size": 45,
+                    "type": "network-ssd"
+                  }
+                ]
+              }
+            ],
+            "description": null,
+            "hostname": "kube-master-0",
+            "labels": null,
+            "metadata": {
+              "node-network-cidr": "10.233.0.0/22",
+              "ssh-keys": "",
+              "user-data": ""
+            },
+            "name": "kube-master-0",
+            "network_acceleration_type": "standard",
+            "network_interface": [
+              {
+                "ipv4": true,
+                "nat": false,
+                "subnet_id": "test"
+              }
+            ],
+            "platform_id": "standard-v2",
+            "resources": [
+              {
+                "core_fraction": 100,
+                "cores": 4,
+                "gpus": null,
+                "memory": 8
+              }
+            ],
+            "secondary_disk": [
+              {
+                "auto_delete": false,
+                "device_name": "kubernetes-data",
+                "disk_id": "test",
+                "mode": "READ_WRITE"
+              }
+            ],
+            "timeouts": null,
+            "zone": "ru-central1-a"
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "yandex_compute_disk.kubernetes_data",
+      "mode": "managed",
+      "type": "yandex_compute_disk",
+      "name": "kubernetes_data",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2021-02-26T09:40:42Z",
+          "description": "volume for etcd and kubernetes certs",
+          "folder_id": "test",
+          "id": "test",
+          "image_id": "",
+          "labels": {},
+          "name": "kube-kubernetes-data-0",
+          "product_ids": [],
+          "size": 10,
+          "snapshot_id": "",
+          "status": "ready",
+          "timeouts": null,
+          "type": "network-ssd",
+          "zone": "ru-central1-a"
+        },
+        "after": {
+          "created_at": "2021-02-26T09:40:42Z",
+          "description": "volume for etcd and kubernetes certs",
+          "folder_id": "test",
+          "id": "test",
+          "image_id": "",
+          "labels": {},
+          "name": "kube-kubernetes-data-0",
+          "product_ids": [],
+          "size": 10,
+          "snapshot_id": "",
+          "status": "ready",
+          "timeouts": null,
+          "type": "network-ssd",
+          "zone": "ru-central1-a"
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "yandex_compute_instance.master",
+      "mode": "managed",
+      "type": "yandex_compute_instance",
+      "name": "master",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "delete",
+          "create"
+        ],
+        "before": {
+          "allow_stopping_for_update": true,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "device_name": "test",
+              "disk_id": "test",
+              "initialize_params": [
+                {
+                  "description": "",
+                  "image_id": "test",
+                  "name": "test",
+                  "size": 35,
+                  "snapshot_id": "",
+                  "type": "network-ssd"
+                }
+              ],
+              "mode": "READ_WRITE"
+            }
+          ],
+          "created_at": "2021-02-26T09:40:46Z",
+          "description": "",
+          "folder_id": "test",
+          "fqdn": "kube-master-0.ru-central1.internal",
+          "hostname": "kube-master-0",
+          "id": "test",
+          "labels": {},
+          "metadata": {
+            "ssh-keys": "",
+            "user-data": ""
+          },
+          "name": "kube-master-0",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "index": 0,
+              "ip_address": "10.233.0.18",
+              "ipv4": true,
+              "ipv6": false,
+              "ipv6_address": "",
+              "mac_address": "00:00:00:00:00:00",
+              "nat": false,
+              "nat_ip_address": "",
+              "nat_ip_version": "",
+              "security_group_ids": [],
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 4,
+              "gpus": 0,
+              "memory": 8
+            }
+          ],
+          "scheduling_policy": [
+            {
+              "preemptible": false
+            }
+          ],
+          "secondary_disk": [
+            {
+              "auto_delete": false,
+              "device_name": "kubernetes-data",
+              "disk_id": "test",
+              "mode": "READ_WRITE"
+            }
+          ],
+          "service_account_id": "",
+          "status": "running",
+          "timeouts": null,
+          "zone": "ru-central1-a"
+        },
+        "after": {
+          "allow_stopping_for_update": true,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "initialize_params": [
+                {
+                  "image_id": "test",
+                  "size": 45,
+                  "type": "network-ssd"
+                }
+              ]
+            }
+          ],
+          "description": null,
+          "hostname": "kube-master-0",
+          "labels": null,
+          "metadata": {
+            "node-network-cidr": "10.233.0.0/22",
+            "ssh-keys": "",
+            "user-data": ""
+          },
+          "name": "kube-master-0",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "ipv4": true,
+              "nat": false,
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 4,
+              "gpus": null,
+              "memory": 8
+            }
+          ],
+          "secondary_disk": [
+            {
+              "auto_delete": false,
+              "device_name": "kubernetes-data",
+              "disk_id": "test",
+              "mode": "READ_WRITE"
+            }
+          ],
+          "timeouts": null,
+          "zone": "ru-central1-a"
+        },
+        "after_unknown": {
+          "boot_disk": [
+            {
+              "device_name": true,
+              "disk_id": true,
+              "initialize_params": [
+                {
+                  "description": true,
+                  "name": true,
+                  "snapshot_id": true
+                }
+              ],
+              "mode": true
+            }
+          ],
+          "created_at": true,
+          "folder_id": true,
+          "fqdn": true,
+          "id": true,
+          "metadata": {},
+          "network_interface": [
+            {
+              "index": true,
+              "ip_address": true,
+              "ipv6": true,
+              "ipv6_address": true,
+              "mac_address": true,
+              "nat_ip_address": true,
+              "nat_ip_version": true,
+              "security_group_ids": true
+            }
+          ],
+          "resources": [
+            {}
+          ],
+          "scheduling_policy": true,
+          "secondary_disk": [
+            {}
+          ],
+          "service_account_id": true,
+          "status": true
+        }
+      }
+    }
+  ],
+  "output_changes": {
+    "kubernetes_data_device_path": {
+      "actions": [
+        "create"
+      ],
+      "before": null,
+      "after": "/dev/disk/by-id/virtio-kubernetes-data",
+      "after_unknown": false
+    },
+    "master_ip_address_for_ssh": {
+      "actions": [
+        "create"
+      ],
+      "before": null,
+      "after_unknown": true
+    },
+    "node_internal_ip_address": {
+      "actions": [
+        "create"
+      ],
+      "before": null,
+      "after_unknown": true
+    }
+  },
+  "prior_state": {
+    "format_version": "0.1",
+    "terraform_version": "0.14.8",
+    "values": {
+      "outputs": {
+        "kubernetes_data_device_path": {
+          "sensitive": false,
+          "value": "/dev/disk/by-id/virtio-kubernetes-data"
+        },
+        "master_ip_address_for_ssh": {
+          "sensitive": false,
+          "value": "10.233.0.18"
+        },
+        "node_internal_ip_address": {
+          "sensitive": false,
+          "value": "10.233.0.18"
+        }
+      },
+      "root_module": {
+        "resources": [
+          {
+            "address": "data.yandex_vpc_subnet.kube_a",
+            "mode": "data",
+            "type": "yandex_vpc_subnet",
+            "name": "kube_a",
+            "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+            "schema_version": 0,
+            "values": {
+              "created_at": "2020-09-04T16:19:53Z",
+              "description": "",
+              "dhcp_options": [],
+              "folder_id": "test",
+              "id": "test",
+              "labels": {},
+              "name": "kube-a",
+              "network_id": "test",
+              "route_table_id": "test",
+              "subnet_id": "test",
+              "v4_cidr_blocks": [
+                "10.233.0.0/24"
+              ],
+              "v6_cidr_blocks": [],
+              "zone": "ru-central1-a"
+            }
+          },
+          {
+            "address": "data.yandex_vpc_subnet.kube_b",
+            "mode": "data",
+            "type": "yandex_vpc_subnet",
+            "name": "kube_b",
+            "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+            "schema_version": 0,
+            "values": {
+              "created_at": "2020-09-04T16:20:01Z",
+              "description": "",
+              "dhcp_options": [],
+              "folder_id": "test",
+              "id": "test",
+              "labels": {},
+              "name": "kube-b",
+              "network_id": "test",
+              "route_table_id": "test",
+              "subnet_id": "test",
+              "v4_cidr_blocks": [
+                "10.233.1.0/24"
+              ],
+              "v6_cidr_blocks": [],
+              "zone": "ru-central1-b"
+            }
+          },
+          {
+            "address": "data.yandex_vpc_subnet.kube_c",
+            "mode": "data",
+            "type": "yandex_vpc_subnet",
+            "name": "kube_c",
+            "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+            "schema_version": 0,
+            "values": {
+              "created_at": "2020-09-04T16:19:56Z",
+              "description": "",
+              "dhcp_options": [],
+              "folder_id": "test",
+              "id": "test",
+              "labels": {},
+              "name": "kube-c",
+              "network_id": "test",
+              "route_table_id": "test",
+              "subnet_id": "test",
+              "v4_cidr_blocks": [
+                "10.233.2.0/24"
+              ],
+              "v6_cidr_blocks": [],
+              "zone": "ru-central1-c"
+            }
+          },
+          {
+            "address": "yandex_compute_disk.kubernetes_data",
+            "mode": "managed",
+            "type": "yandex_compute_disk",
+            "name": "kubernetes_data",
+            "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+            "schema_version": 0,
+            "values": {
+              "created_at": "2021-02-26T09:40:42Z",
+              "description": "volume for etcd and kubernetes certs",
+              "folder_id": "test",
+              "id": "fhm1bgsm68j8t65v6kdo",
+              "image_id": "",
+              "labels": {},
+              "name": "kube-kubernetes-data-0",
+              "product_ids": [],
+              "size": 10,
+              "snapshot_id": "",
+              "status": "ready",
+              "timeouts": null,
+              "type": "network-ssd",
+              "zone": "ru-central1-a"
+            },
+            "depends_on": [
+              "data.yandex_vpc_subnet.kube_a",
+              "data.yandex_vpc_subnet.kube_b",
+              "data.yandex_vpc_subnet.kube_c"
+            ]
+          },
+          {
+            "address": "yandex_compute_instance.master",
+            "mode": "managed",
+            "type": "yandex_compute_instance",
+            "name": "master",
+            "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+            "schema_version": 1,
+            "values": {
+              "allow_stopping_for_update": true,
+              "boot_disk": [
+                {
+                  "auto_delete": true,
+                  "device_name": "test",
+                  "disk_id": "test",
+                  "initialize_params": [
+                    {
+                      "description": "",
+                      "image_id": "test",
+                      "name": "test",
+                      "size": 35,
+                      "snapshot_id": "",
+                      "type": "network-ssd"
+                    }
+                  ],
+                  "mode": "READ_WRITE"
+                }
+              ],
+              "created_at": "2021-02-26T09:40:46Z",
+              "description": "",
+              "folder_id": "test",
+              "fqdn": "kube-master-0.ru-central1.internal",
+              "hostname": "kube-master-0",
+              "id": "test",
+              "labels": {},
+              "metadata": {
+                "ssh-keys": "",
+                "user-data": ""
+              },
+              "name": "kube-master-0",
+              "network_acceleration_type": "standard",
+              "network_interface": [
+                {
+                  "index": 0,
+                  "ip_address": "10.233.0.18",
+                  "ipv4": true,
+                  "ipv6": false,
+                  "ipv6_address": "",
+                  "mac_address": "00:00:00:00:00:00",
+                  "nat": false,
+                  "nat_ip_address": "",
+                  "nat_ip_version": "",
+                  "security_group_ids": [],
+                  "subnet_id": "test"
+                }
+              ],
+              "platform_id": "standard-v2",
+              "resources": [
+                {
+                  "core_fraction": 100,
+                  "cores": 4,
+                  "gpus": 0,
+                  "memory": 8
+                }
+              ],
+              "scheduling_policy": [
+                {
+                  "preemptible": false
+                }
+              ],
+              "secondary_disk": [
+                {
+                  "auto_delete": false,
+                  "device_name": "kubernetes-data",
+                  "disk_id": "test",
+                  "mode": "READ_WRITE"
+                }
+              ],
+              "service_account_id": "",
+              "status": "running",
+              "timeouts": null,
+              "zone": "ru-central1-a"
+            },
+            "depends_on": [
+              "data.yandex_vpc_subnet.kube_a",
+              "data.yandex_vpc_subnet.kube_b",
+              "data.yandex_vpc_subnet.kube_c",
+              "yandex_compute_disk.kubernetes_data"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "configuration": {
+    "provider_config": {
+      "yandex": {
+        "name": "yandex",
+        "expressions": {
+          "cloud_id": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          },
+          "folder_id": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          },
+          "service_account_key_file": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          }
+        }
+      }
+    },
+    "root_module": {
+      "outputs": {
+        "kubernetes_data_device_path": {
+          "expression": {
+            "constant_value": "/dev/disk/by-id/virtio-kubernetes-data"
+          }
+        },
+        "master_ip_address_for_ssh": {
+          "expression": {
+            "references": [
+              "yandex_compute_instance.master",
+              "yandex_compute_instance.master",
+              "yandex_compute_instance.master"
+            ]
+          }
+        },
+        "node_internal_ip_address": {
+          "expression": {
+            "references": [
+              "yandex_compute_instance.master",
+              "local.master_internal_ip_iface_index"
+            ]
+          }
+        }
+      },
+      "resources": [
+        {
+          "address": "yandex_compute_disk.kubernetes_data",
+          "mode": "managed",
+          "type": "yandex_compute_disk",
+          "name": "kubernetes_data",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "description": {
+              "constant_value": "volume for etcd and kubernetes certs"
+            },
+            "labels": {
+              "references": [
+                "local.additional_labels"
+              ]
+            },
+            "name": {
+              "references": [
+                "local.prefix",
+                "var.nodeIndex"
+              ]
+            },
+            "size": {
+              "constant_value": 10
+            },
+            "type": {
+              "constant_value": "network-ssd"
+            },
+            "zone": {
+              "references": [
+                "local.internal_subnet"
+              ]
+            }
+          },
+          "schema_version": 0
+        },
+        {
+          "address": "yandex_compute_instance.master",
+          "mode": "managed",
+          "type": "yandex_compute_instance",
+          "name": "master",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "allow_stopping_for_update": {
+              "constant_value": true
+            },
+            "boot_disk": [
+              {
+                "initialize_params": [
+                  {
+                    "image_id": {
+                      "references": [
+                        "local.image_id"
+                      ]
+                    },
+                    "size": {
+                      "references": [
+                        "local.disk_size_gb"
+                      ]
+                    },
+                    "type": {
+                      "constant_value": "network-ssd"
+                    }
+                  }
+                ]
+              }
+            ],
+            "hostname": {
+              "references": [
+                "local.prefix",
+                "var.nodeIndex"
+              ]
+            },
+            "labels": {
+              "references": [
+                "local.additional_labels"
+              ]
+            },
+            "metadata": {
+              "references": [
+                "local.ssh_public_key",
+                "var.cloudConfig",
+                "local.node_network_cidr"
+              ]
+            },
+            "name": {
+              "references": [
+                "local.prefix",
+                "var.nodeIndex"
+              ]
+            },
+            "network_acceleration_type": {
+              "references": [
+                "local.network_type"
+              ]
+            },
+            "network_interface": [
+              {
+                "nat": {
+                  "references": [
+                    "local.assign_external_ip_address"
+                  ]
+                },
+                "nat_ip_address": {
+                  "references": [
+                    "local.assign_external_ip_address",
+                    "local.external_ip_address"
+                  ]
+                },
+                "subnet_id": {
+                  "references": [
+                    "local.internal_subnet"
+                  ]
+                }
+              }
+            ],
+            "platform_id": {
+              "references": [
+                "local.platform"
+              ]
+            },
+            "resources": [
+              {
+                "cores": {
+                  "references": [
+                    "local.cores"
+                  ]
+                },
+                "memory": {
+                  "references": [
+                    "local.memory"
+                  ]
+                }
+              }
+            ],
+            "secondary_disk": [
+              {
+                "auto_delete": {
+                  "constant_value": "false"
+                },
+                "device_name": {
+                  "constant_value": "kubernetes-data"
+                },
+                "disk_id": {
+                  "references": [
+                    "yandex_compute_disk.kubernetes_data"
+                  ]
+                }
+              }
+            ],
+            "zone": {
+              "references": [
+                "local.internal_subnet"
+              ]
+            }
+          },
+          "schema_version": 1
+        },
+        {
+          "address": "yandex_vpc_address.addr",
+          "mode": "managed",
+          "type": "yandex_vpc_address",
+          "name": "addr",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "external_ipv4_address": [
+              {
+                "zone_id": {
+                  "references": [
+                    "local.internal_subnet"
+                  ]
+                }
+              }
+            ],
+            "name": {
+              "references": [
+                "local.prefix",
+                "var.nodeIndex"
+              ]
+            }
+          },
+          "schema_version": 0,
+          "count_expression": {
+            "references": [
+              "local.external_ip_addresses",
+              "local.external_ip_addresses",
+              "var.nodeIndex"
+            ]
+          }
+        },
+        {
+          "address": "data.yandex_vpc_subnet.kube_a",
+          "mode": "data",
+          "type": "yandex_vpc_subnet",
+          "name": "kube_a",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "name": {
+              "references": [
+                "local.prefix"
+              ]
+            }
+          },
+          "schema_version": 0
+        },
+        {
+          "address": "data.yandex_vpc_subnet.kube_b",
+          "mode": "data",
+          "type": "yandex_vpc_subnet",
+          "name": "kube_b",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "name": {
+              "references": [
+                "local.prefix"
+              ]
+            }
+          },
+          "schema_version": 0
+        },
+        {
+          "address": "data.yandex_vpc_subnet.kube_c",
+          "mode": "data",
+          "type": "yandex_vpc_subnet",
+          "name": "kube_c",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "name": {
+              "references": [
+                "local.prefix"
+              ]
+            }
+          },
+          "schema_version": 0
+        }
+      ],
+      "variables": {
+        "cloudConfig": {
+          "default": ""
+        },
+        "clusterConfiguration": {},
+        "clusterUUID": {},
+        "network_types": {
+          "default": {
+            "SoftwareAccelerated": "software_accelerated",
+            "Standard": "standard"
+          }
+        },
+        "nodeIndex": {
+          "default": 0
+        },
+        "providerClusterConfiguration": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,54 @@
+type: object
+properties:
+  podSecurityStandards:
+    description: "Настройки политик Pod Security Standards (PSS)."
+    properties:
+      defaultPolicy:
+        description: |
+          Определяет политику [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) по умолчанию для всех **несистемных** пространств имен:
+          - `Privileged` — политика без ограничений. Данная политика допускает эскалацию привилегий;
+          - `Baseline` — политика с минимальными ограничениями, ограничивающая использование эскалаций привилегий;
+          - `Restricted` — политика с максимальными ограничениями, соотвествущая актуальным рекомендациям по безопасному запуску приложений в кластере.
+
+          По умолчанию:
+          - `Baseline` — при первичной установке Deckhouse версии v1.55 и выше;
+          - `Privileged` — при первичной установке Deckhouse версии ниже v1.55 (обновление Deckhouse в кластере на версию v1.55 и выше **не меняет** политику по умолчанию на `Baseline`).
+      enforcementAction:
+        description: |
+          Действие, которое будет выполнено по результатам проверки ограничений:
+          - Deny — запрет;
+          - Dryrun — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana или консоли с помощью kubectl;
+          - Warn — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
+      policies:
+        description: "Определяет дополнительные параметры политик"
+        properties:
+          hostPorts:
+            description: "Настройки ограничения HostPort."
+            properties:
+              knownRanges:
+                description: "Список диапазонов портов, которые будут разрешены в привязке hostPort."
+
+  denyVulnerableImages:
+    description: |
+      Настройки trivy-провайдера.
+
+      Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
+    properties:
+      storageClass:
+        description: |-
+          Имя StorageClass для использования `trivy_provider`.
+          
+          Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+         
+          Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+          
+          **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+
+          Если указать `false`, будет принудительно использоваться `emptyDir`.
+      enabled:
+        description: "Включить trivy-провайдер."
+      registrySecrets:
+        description: |
+          Список дополнительных секретов приватных регистри.
+
+          По умолчанию для загрузки образов для сканирования используется секрет `deckhouse-registry`.

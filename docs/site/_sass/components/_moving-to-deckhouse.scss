@@ -1,0 +1,25 @@
+.moving-to-deckhouse-intro {
+  & .intro__wrap {
+    display: flex;
+  }
+
+  & .intro__content {
+    min-width: 65%;
+  }
+
+  & .intro__row > div {
+    width: 75%;
+  }
+
+  & .button_default {
+    margin-left: 30px;
+  }
+
+  & .intro__pic {
+    margin-top: 36px;
+  }
+}
+
+.moving-to-deckhouse__after-moving ul p {
+  margin-bottom: 30px;
+}

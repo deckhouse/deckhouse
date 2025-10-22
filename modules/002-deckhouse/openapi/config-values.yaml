@@ -1,0 +1,466 @@
+type: object
+properties:
+
+  logLevel:
+    type: string
+    enum: ["Debug", "Info", "Error"]
+    x-examples: ["Info"]
+    description: |
+      Deckhouse logging level.
+    default: "Info"
+
+  bundle:
+    type: string
+    enum: ["Default", "Minimal", "Managed"]
+    x-examples: ["Default"]
+    description: |
+      The Deckhouse [bundle](../../#module-bundles) defines a set of modules enabled by default.
+      - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs.
+      - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
+      - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
+    default: "Default"
+
+  releaseChannel:
+    type: string
+    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
+    x-examples: ["Stable"]
+    description: |
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
+
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+
+  update:
+    type: object
+    description: Settings of the Deckhouse update mode and windows.
+    x-examples:
+      - windows:
+          - from: "8:00"
+            to: "15:00"
+            days:
+              - Tue
+              - Sat
+        disruptionApprovalMode: Manual
+        notification:
+          webhook: https://release-webhook.mydomain.com
+          minimalNotificationTime: 6h
+          auth:
+            basic:
+              username: user
+              password: password
+    properties:
+      mode:
+        type: string
+        default: 'AutoPatch'
+        description: |
+          Update mode of Deckhouse on the selected [release channel](#parameters-releasechannel).
+
+          - `AutoPatch` — automatic update mode for patch releases.
+
+            To change a minor version (for example, from `v1.69.*` to `v1.70.*`), confirmation is required.
+
+            A patch version update (for example, from `v1.70.1` to `v1.70.2`) is applied taking into account the [update windows](#parameters-update-windows), if they are set.
+          - `Auto` — automatic update mode for all versions.
+
+            A minor version updates (for example, from `v1.69.*` to `v1.70.*`) and patch version updates (for example, from `v1.70.1` to `v1.70.2`) are applied taking into account the [update windows](#parameters-update-windows), if they are set.
+          - `Manual` — manual update mode for all versions.
+
+            Confirmation is required for updating both minor and patch versions.
+
+          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+        enum:
+          - 'AutoPatch'
+          - 'Auto'
+          - 'Manual'
+      disruptionApprovalMode:
+        type: string
+        default: 'Auto'
+        enum:
+          - 'Auto'
+          - 'Manual'
+        x-doc-deprecated: true
+        description: |
+          Update mode for disruptive Deckhouse releases:
+          - `Auto` — a disruptive release is approved automatically.
+          - `Manual` — requires a manual release confirmation (set the `release.deckhouse.io/disruption-approved=true` annotation on the appropriate [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource to apply the update).
+      windows:
+        type: array
+        description: |
+          List of update windows during the day.
+        items:
+          type: object
+          required:
+            - from
+            - to
+          properties:
+            from:
+              type: string
+              pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+              example: '13:00'
+              description: |
+                Start time of the update window (UTC timezone).
+
+                Should be less than the end time of the update window.
+            to:
+              type: string
+              pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+              example: '18:30'
+              description: |
+                End time of the update window (UTC timezone).
+
+                Should be more than the start time of the update window.
+            days:
+              type: array
+              description: The days of the week on which the update window is applied.
+              example: ["Mon", "Wed"]
+              items:
+                type: string
+                description: Day of the week.
+                x-examples: [Mon]
+                enum:
+                  - Mon
+                  - Tue
+                  - Wed
+                  - Thu
+                  - Fri
+                  - Sat
+                  - Sun
+      notification:
+        type: object
+        description: |
+          Settings for notifications of scheduled Deckhouse updates.
+
+          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set.
+        x-examples:
+        - webhook: https://release-webhook.mydomain.com
+          minimalNotificationTime: 8h
+          retryMinTime: 2s
+        properties:
+          webhook:
+            type: string
+            pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+            x-doc-example: 'https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa'
+            description: |
+              URL for an external webhook handler.
+
+              The POST request will be sent to the webhook URL after a new minor version of Deckhouse appears on the release channel before it is applied to the cluster.
+
+              > **Caution!**
+              > If you specify an invalid webhook address, Deckhouse update will be blocked.
+
+              > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
+
+              Example of the POST request payload (`Content-Type: application/json`):
+
+              ```json
+              {
+                "subject":"Deckhouse",
+                "version": "1.36.0",
+                "requirements":  {"k8s": "1.20.0"},
+                "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
+                "applyTime": "2023-01-01T14:30:00Z00:00",
+                "message": "New Deckhouse Release 1.36.0 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
+              }
+              ```
+
+              Description of POST request fields:
+              - `subject` — string, the update event type. Possible values: `Deckhouse`, `Module`;
+              - `moduleName` — string, the name of the module. Set only if `subject: Module`.
+              - `version` - string, x.y.z (semantic versioning);
+              - `requirements` - object, version requirements;
+              - `changelogLink` - string, a URL to the minor version changelog;
+              - `applyTime` - string, date and time of the scheduled update (taking into account the configured update windows) in RFC3339 format;
+              - `message` - string, a text message about the availability of the new minor version and the scheduled update time.
+          tlsSkipVerify:
+            type: boolean
+            default: false
+            description: Skip TLS certificate verification while webhook request.
+          minimalNotificationTime:
+            type: string
+            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
+            x-doc-example: '6h'
+            description: |
+              The minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
+
+              It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+              The update mechanism ensures that Deckhouse will not be updated until a specified period of time has passed.
+
+              When using update windows, the Deckhouse update will happen at the nearest possible update window but not before the time specified in `minimalNotificationTime` expires.
+          retryMinTime:
+            type: string
+            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m|[0-9]+s)$'
+            x-doc-example: '2s'
+            description: |
+              The minimum time between webhook retry attempts when the webhook request fails.
+
+              It is specified as a string containing the time unit in hours, minutes, or seconds: 30s, 1m, 2m30s, 1h, 2h30m.
+
+              The retry mechanism uses exponential backoff: each subsequent retry attempt waits twice as long as the previous one.
+              For example, if `retryMinTime` is set to `2s`, the retry delays will be: 2s, 4s, 8s, 16s, 32s.
+
+              Default value is 2 seconds if not specified.
+          auth:
+            type: object
+            oneOf:
+              - required: [ basic ]
+              - required: [ bearerToken ]
+            description: |
+              Authentication settings for the webhook.
+
+              If the parameter is omitted, the webhook will be called without authentication.
+            properties:
+              basic:
+                type: object
+                description: |
+                  Basic authentication settings for the webhook.
+
+                  If the parameter is omitted, the webhook will be called without authentication.
+                required:
+                  - username
+                  - password
+                properties:
+                  username:
+                    type: string
+                    description: |
+                      The username for the webhook.
+
+                      The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+                  password:
+                    type: string
+                    description: |
+                        The password for the webhook.
+
+                        The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+              bearerToken:
+                type: string
+                description: |
+                    The token for the webhook.
+
+                    The token will be sent in the `Authorization` header in the format `Bearer <token>`.
+          releaseType:
+            type: string
+            description: |
+              Defines the type of version for which the notification will be sent:
+              - `Minor` — only for updating the minor version.
+              - `All` — for any updates, including updating a patch version.
+            x-examples: ["All"]
+            enum:
+              - "All"
+              - "Minor"
+            default: "Minor"
+
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+
+      **Caution!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
+
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+
+      **Caution!**  Deckhouse will stop working if `tolerations` specified are incorrect. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  allowExperimentalModules:
+    type: boolean
+    x-examples: [false]
+    description: |
+      Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
+
+      Experimental modules can be unstable and are not supported under the Deckhouse SLA. Use them with caution.
+
+  license:
+    type: object
+    description: |
+      Edition settings of the Deckhouse Kubernetes Platform.
+    properties:
+      edition:
+        type: string
+        x-examples: ["CE"]
+        description: |
+          Edition of the Deckhouse Kubernetes Platform:
+
+          - `CE` — Community Edition.
+          - `BE` - Basic edition.
+          - `EE` — Enterprise Edition.
+          - `SE` — Standard Edition.
+          - `SE-plus` — Standard Edition+.
+        default: "CE"
+
+  registry:
+    type: object
+    default: {}
+    x-doc-search: "registry, docker, container, images, credentials, private registry"
+    description: |
+      Settings for accessing the container registry with Deckhouse images.
+
+      This parameter allows you to configure how Deckhouse connects to the container registry to pull its own component images.
+      You can either rely on pre-configured access on cluster nodes (`Unmanaged` mode) or provide Deckhouse with direct access credentials (`Direct` mode).
+    x-examples:
+      - mode: Unmanaged
+      - mode: Unmanaged
+        unmanaged:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "DECKHOUSE_LICENSE_KEY"
+      - mode: Direct
+        direct:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "DECKHOUSE_LICENSE_KEY"
+    properties:
+      mode:
+        type: string
+        description: |
+          The mode for accessing the container registry with Deckhouse images.
+
+          - `Unmanaged` — the default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. In clusters not supported by the `registry` module, configuration is done manually using the `change-registry` helper script. **Important:** changing the registry in Unmanaged mode will result in a full restart of all Deckhouse components.
+          - `Direct` — a mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important:** the first switch to `Direct` mode will result in a full restart of all Deckhouse components.
+        enum: [Unmanaged, Direct]
+        default: Unmanaged
+        x-doc-default: Direct
+      direct:
+        type: object
+        description: |
+          Parameters for the `Direct` access mode.
+          These parameters are required when `mode` is set to `Direct`.
+        x-examples:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "DECKHOUSE_LICENSE_KEY"
+          - imagesRepo: "my-private-registry.com/deckhouse"
+            username: "user"
+            password: "password"
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              MIIC...
+              -----END CERTIFICATE-----
+        properties: &registryDirectProperties
+          imagesRepo:
+            type: string
+            x-doc-required: true
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+            description: |
+              The address of the container registry repository where Deckhouse images are stored.
+
+              In firewalled environments, this might be a private registry address that mirrors the public one.
+            minLength: 1
+            x-examples:
+            - registry.deckhouse.io/deckhouse/ee
+            - private-registry:5000/deckhouse/ce
+          license:
+            type: string
+            description: |
+              The license key for accessing the Deckhouse container registry.
+              This key is used as a password with the username `license-token`.
+              This field is mutually exclusive with `username`/`password`.
+            x-examples:
+              - "DECKHOUSE_LICENSE_KEY"
+          username:
+            type: string
+            description: |
+              The username for authenticating with the container registry.
+              This field is required if `license` is not provided.
+            x-examples:
+              - "registry-user"
+          password:
+            type: string
+            description: |
+              The password for authenticating with the container registry.
+              This field is required if `license` is not provided.
+            x-examples:
+              - "registry-password"
+          scheme:
+            type: string
+            description: |
+              The protocol to use for connecting to the registry.
+
+              Use `HTTP` only for insecure, trusted registries (e.g., in a firewalled environment). Defaults to `HTTPS` for secure communication.
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+            x-examples:
+              - HTTPS
+          ca:
+            type: string
+            description: |
+              The root CA certificate (in PEM format) for validating the container registry's server certificate.
+              This is necessary if the registry uses a self-signed certificate or a certificate issued by a private Certificate Authority.
+              If not provided, the system's trusted root CAs will be used.
+          checkMode:
+            type: string
+            description: |
+              Mode for checking the container registry:
+
+              - `Default — checks for the presence of all critical components in the container registry.
+              - `Relax` — checks only for the presence of the Deckhouse image tag in the container registry (used for switching between Deckhouse editions).
+            enum: [Default, Relax]
+            default: Default
+
+      unmanaged:
+        type: object
+        description: |
+          Parameters for the `Unmanaged` access mode.
+        x-examples:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "DECKHOUSE_LICENSE_KEY"
+          - imagesRepo: "my-private-registry.com/deckhouse"
+            username: "user"
+            password: "password"
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              MIIC...
+              -----END CERTIFICATE-----
+        properties:
+          <<: *registryDirectProperties
+
+x-deckhouse-validations:
+- expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) : true"
+  message: "When mode is 'Direct', 'direct' section must be specified."
+- expression: "self.registry.mode == 'Direct' ? !has(self.registry.unmanaged) : true"
+  message: "When mode is 'Direct', 'unmanaged' section must be omitted."
+- expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.direct) : true"
+  message: "When mode is 'Unmanaged', 'direct' section must be omitted."
+- expression: "has(self.registry.direct) ? has(self.registry.direct.imagesRepo) : true"
+  message: "'imagesRepo' is required when 'direct' section is specified."
+- expression: "has(self.registry.direct) ? (has(self.registry.direct.username) ? has(self.registry.direct.password) : true) : true"
+  message: "'password' is required when 'username' is provided in the 'direct' section."
+- expression: "has(self.registry.direct) ? (has(self.registry.direct.password) ? has(self.registry.direct.username) : true) : true"
+  message: "'username' is required when 'password' is provided in the 'direct' section."
+- expression: "has(self.registry.direct) ? !(has(self.registry.direct.license) && (has(self.registry.direct.username) || has(self.registry.direct.password))) : true"
+  message: "'license' and 'username'/'password' are mutually exclusive in the 'direct' section."
+- expression: "has(self.registry.unmanaged) ? has(self.registry.unmanaged.imagesRepo) : true"
+  message: "'imagesRepo' is required when 'unmanaged' section is specified."
+- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.username) ? has(self.registry.unmanaged.password) : true) : true"
+  message: "'password' is required when 'username' is provided in the 'unmanaged' section."
+- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.password) ? has(self.registry.unmanaged.username) : true) : true"
+  message: "'username' is required when 'password' is provided in the 'unmanaged' section."
+- expression: "has(self.registry.unmanaged) ? !(has(self.registry.unmanaged.license) && (has(self.registry.unmanaged.username) || has(self.registry.unmanaged.password))) : true"
+  message: "'license' and 'username'/'password' are mutually exclusive in the 'unmanaged' section."

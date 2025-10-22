@@ -1,0 +1,50 @@
+- name: d8.cni-check
+  rules:
+    - alert: D8CNIEnabledMoreThanOne
+      expr: sum by (pod) (d8_telemetry_cni_plugin) > 1
+      for: 5m
+      labels:
+        severity_level: "2"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: More than one CNI is enabled in the cluster.
+        description: |
+          Deckhouse has detected that multiple CNIs are enabled in the cluster.
+          For the cluster to work correctly, only one CNI must be enabled.
+
+          To resolve this issue, disable any unnecessary CNI.
+
+    - alert: D8CNIMisconfigured
+      expr: max(cniMisconfigured{}) by(cni, module) == 1
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIMisconfiguration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIMisconfiguration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: The parameters specified in `ModuleConfig` of `{{ $labels.cni }}` do not match the ones that are actually being used in the cluster.
+        description: |
+          This happened because there were several sources for configuring CNI parameters in the cluster, and ModuleConfig did not have the highest priority previously.
+
+          To resolve this issue, the following steps should be taken:
+
+          1. Find the ConfigMap `d8-system/desired-cni-moduleconfig` in the cluster, which contains the actual ModuleConfig settings.
+
+             ```bash
+             d8 k -n d8-system get configmap desired-cni-moduleconfig -o yaml
+             ```
+
+          2. Apply this prepared ModuleConfig to the cluster. This will not cause any actual reconfigurations in the cluster and is completely safe.
+
+          3. Once the parameters in "ModuleConfig" match those used in the cluster:
+               - this alert will be resolved,
+               - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source of truth.
+
+          4. After that, you can add the desired parameters to the ModuleConfig CNI and they will be applied immediately.

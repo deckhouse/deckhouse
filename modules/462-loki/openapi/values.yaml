@@ -1,0 +1,32 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
+            enum: [false]
+      grafanaToken:
+        type: string
+        default: ""
+      logShipperToken:
+        type: string
+        default: ""
+      pvcSize:
+        type: integer
+        format: int64
+        default: 0
+      stsStorageSize:
+        type: integer
+        format: int64
+        default: 0
+      cleanupThreshold:
+        type: integer
+        format: int64
+        default: 0

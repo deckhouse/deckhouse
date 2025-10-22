@@ -1,0 +1,46 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/coredns
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /coredns-helper
+  to: /coredns-helper
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/coredns" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /coredns-helper main.go
+  - chmod 0700 /coredns-helper

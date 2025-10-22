@@ -1,0 +1,274 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: yandexinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-yandex
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
+
+            The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - cores
+                - memory
+              properties:
+                cores:
+                  description: |
+                    Amount of CPU cores to provision on a Yandex Compute Instance.
+                  x-doc-examples: [4]
+                  type: integer
+                coreFraction:
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  x-doc-examples: [20]
+                  x-doc-default: 100
+                  enum: [ 5,20,50,100 ]
+                  type: integer
+                gpus:
+                  description: |
+                    Number of GPUs on a Yandex Compute Instance.
+                  x-doc-examples: [4]
+                  x-doc-default: 0
+                  type: integer
+                memory:
+                  description: |
+                    Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  x-doc-examples: [8192]
+                  type: integer
+                imageID:
+                  description: |
+                    Image ID to use while provisioning Yandex Compute Instances.
+
+                    The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
+                  x-doc-examples: ['fd85m9q2qspfnsv055rh']
+                  type: string
+                platformID:
+                  description: |
+                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                  x-doc-default: standard-v2
+                  type: string
+                preemptible:
+                  description: |
+                    Should a provisioned Yandex Compute Instance be preemptible.
+
+                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
+                  type: boolean
+                  x-doc-default: false
+                diskType:
+                  description: |
+                    Instance disk type.
+
+                    Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
+
+                    For more information about possible disk types, read the [provider's documentation](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+                  x-doc-examples: ["network-hdd"]
+                  x-doc-default: "network-hdd"
+                  type: string
+                  enum:
+                  - "network-ssd"
+                  - "network-hdd"
+                  - "network-ssd-nonreplicated"
+                diskSizeGB:
+                  description: |
+                    Yandex Compute Instance disk size in gibibytes.
+                  x-doc-examples: [50]
+                  x-doc-default: 20
+                  type: integer
+                assignPublicIPAddress:
+                  description: |
+                    Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  x-doc-examples: [false]
+                  x-doc-default: false
+                  type: boolean
+                mainSubnet:
+                  description: |
+                    Subnet ID that VirtualMachines' primary NIC will connect to.
+
+                    If the parameter is not specified, the main network is determined automatically according to the following logic: if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter, then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
+                  x-doc-examples: ['e9bnc7g9mu9mper9clk4']
+                  type: string
+                additionalSubnets:
+                  description: |
+                    Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  x-doc-examples:
+                  - - b0csh41c1or82vuch89v
+                    - e2lgddi5svochh5fbq96
+                  type: array
+                  items:
+                    type: string
+                additionalLabels:
+                  type: object
+                  description: |
+                    Additional labels.
+                  x-doc-examples:
+                  - project: cms-production
+                    severity: critical
+                  x-kubernetes-preserve-unknown-fields: true
+                  additionalProperties:
+                    type: string
+                networkType:
+                  type: string
+                  enum:
+                  - STANDARD
+                  - SOFTWARE_ACCELERATED
+                  default: STANDARD
+                  description: |
+                    Network type: STANDARD or SOFTWARE_ACCELERATED
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
+
+            The `NodeGroup` resource of the `node-manager` module [refers](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - cores
+                - memory
+              properties:
+                cores:
+                  description: |
+                    Amount of CPU cores to provision on a Yandex Compute Instance.
+                  x-doc-examples: [4]
+                  type: integer
+                coreFraction:
+                  description: |
+                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  x-doc-examples: [20]
+                  x-doc-default: 100
+                  enum: [ 5,20,50,100 ]
+                  type: integer
+                gpus:
+                  description: |
+                    Number of GPUs on a Yandex Compute Instance.
+                  x-doc-examples: [4]
+                  x-doc-default: 0
+                  type: integer
+                memory:
+                  description: |
+                    Amount of primary memory in MB provision on a Yandex Compute Instance.
+                  x-doc-examples: [8192]
+                  type: integer
+                imageID:
+                  description: |
+                    Image ID to use while provisioning Yandex Compute Instances.
+
+                    The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
+                  x-doc-examples: ['fd85m9q2qspfnsv055rh']
+                  type: string
+                platformID:
+                  description: |
+                    Paltform ID. [List of available platforms...](https://cloud.yandex.com/en-ru/docs/compute/concepts/vm-platforms)
+                  x-doc-default: standard-v3
+                  type: string
+                preemptible:
+                  description: |
+                    Should a provisioned Yandex Compute Instance be preemptible.
+
+                    For more information about preemptible virtual machines, read the [provider's documentation](https://cloud.yandex.com/en/docs/compute/concepts/preemptible-vm).
+                  type: boolean
+                  x-doc-default: false
+                diskType:
+                  description: |
+                    Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+
+                    Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
+                  x-doc-examples: ["network-hdd"]
+                  x-doc-default: "network-hdd"
+                  type: string
+                  enum:
+                    - "network-ssd"
+                    - "network-hdd"
+                    - "network-ssd-nonreplicated"
+                    - "network-ssd-io-m3"
+                diskSizeGB:
+                  description: |
+                    Yandex Compute Instance disk size in gibibytes.
+                  x-doc-examples: [20]
+                  x-doc-default: 50
+                  type: integer
+                assignPublicIPAddress:
+                  description: |
+                    Should a public external IPv4 address be assigned to a provisioned Yandex Compute Instance.
+                  x-doc-examples: [false]
+                  x-doc-default: false
+                  type: boolean
+                mainSubnet:
+                  description: |
+                    Subnet ID that VirtualMachines' primary NIC will connect to.
+
+                    If the parameter is not specified, the main network is determined automatically according to the following logic: if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter, then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
+                  x-doc-examples: ['e9bnc7g9mu9mper9clk4']
+                  type: string
+                additionalSubnets:
+                  description: |
+                    Subnet IDs that VirtualMachines' secondary NICs will connect to. Each subnet listed here translates into one additional network interface.
+                  x-doc-examples:
+                  - - b0csh41c1or82vuch89v
+                    - e2lgddi5svochh5fbq96
+                  type: array
+                  items:
+                    type: string
+                additionalLabels:
+                  type: object
+                  description: |
+                    Additional labels.
+                  x-doc-examples:
+                  - project: cms-production
+                    severity: critical
+                  x-kubernetes-preserve-unknown-fields: true
+                  additionalProperties:
+                    type: string
+                networkType:
+                  type: string
+                  enum:
+                    - Standard
+                    - SoftwareAccelerated
+                  default: Standard
+                  description: |
+                    Network type: `Standard` or [`SoftwareAccelerated`](https://cloud.yandex.com/en/docs/vpc/concepts/software-accelerated-network).
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: yandexinstanceclasses
+    singular: yandexinstanceclass
+    kind: YandexInstanceClass
+    categories:
+      - cloudinstanceclasses

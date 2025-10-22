@@ -1,0 +1,188 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      exclusiveCNIPlugin:
+        type: boolean
+        default: false
+        description: |
+          The switch indicates whether cni-exclusive feature of cilium agent must be enabled in the cluster.
+      minimalRequiredKernelVersionConstraint:
+        type: string
+        description: |
+          The minimal Linux kernel version constraint required for normal operation of the module.
+        default: ">= 5.8"
+      mode:
+        type: string
+        enum: ["Direct", "DirectWithNodeRoutes", "VXLAN"]
+        default: "Direct"
+        description: |
+          Cilium work mode.
+
+          * - `Direct` - without any packet encapsulation, routes on external router.
+          * - `DirectWithNodeRoutes` - without any packet encapsulation,
+               create routes to Pods on other Nodes.
+               All Nodes must be located in the same L2 domain.
+          * - `VXLAN` - VxLAN encapsulation.
+      tunnelPortVXLAN:
+        type: number
+      masqueradeMode:
+        type: string
+        enum: ["Netfilter", "BPF"]
+        default: "BPF"
+        description: |
+          Cilium masquerade work mode.
+
+          * - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
+          * - `BPF` - use cilium BPF.
+      vmCIDRs:
+        type: array
+        description: |
+          List of CIDRs used to allocate static IP addresses for Virtual Machines from virtualization module.
+          These CIDRs will be passed to ip-masq-agent to not masquerade trafic to them.
+        x-examples:
+        - ["10.10.10.0/24", "10.10.20.0/24"]
+        items:
+          type: string
+      isIstioCNIEnabled:
+        type: boolean
+        default: false
+        description: |
+          The switch indicates whether istio-cni is enabled in the cluster and
+          whether it is necessary to enable the compatibility mode for istio-cni.
+          (cni-exclusive: false)
+      hubble:
+        type: object
+        default: {}
+        properties:
+          certs:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: object
+                default: {}
+                properties:
+                  cert:
+                    type: string
+                    x-examples: ["---CERT PEM---"]
+                  key:
+                    type: string
+                    x-examples: ["---KEY PEM---"]
+              server:
+                type: object
+                default: {}
+                properties:
+                  cert:
+                    type: string
+                    x-examples: ["---CERT PEM---"]
+                  key:
+                    type: string
+                    x-examples: ["---KEY PEM---"]
+                  ca:
+                    type: string
+                    x-examples: ["---ROOT PEM---"]
+      egressGatewaysMap:
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            name:
+              type: string
+            nodeSelector:
+              type: object
+              additionalProperties:
+                type: string
+            sourceIP:
+              type: object
+              properties:
+                mode:
+                  type: string
+                virtualIPAddress:
+                  type: object
+                  properties:
+                    ip:
+                      type: string
+                    routingTableName:
+                      type: string
+                primaryIPFromEgressGatewayNodeInterface:
+                  type: object
+                  properties:
+                    interfaceName:
+                      type: string
+      egressGatewayPolicies:
+        type: ['null', array]
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            egressGatewayName:
+              type: string
+            selectors:
+              type: array
+              items:
+                type: object
+                required:
+                  - podSelector
+                properties:
+                  podSelector:
+                    description: |-
+                      A label selector is a label query over a set of resources. The result of matchLabels and
+                      matchExpressions are ANDed. An empty label selector matches all objects. A null
+                      label selector matches no objects.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                            - key
+                            - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+            destinationCIDRs:
+              type: array
+              items:
+                type: string
+            excludedCIDRs:
+              type: array
+              items:
+                type: string

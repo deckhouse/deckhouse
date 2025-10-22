@@ -1,0 +1,39 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: statefulsetmetrics.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus-metrics-adapter
+spec:
+  group: deckhouse.io
+  scope: Namespaced
+  names:
+    plural: statefulsetmetrics
+    singular: statefulsetmetric
+    kind: StatefulSetMetric
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: 'StatefulSetMetric is handy interface for configuring custom StatefulSet-related metrics in prometheus-metrics-adapter.'
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: |
+                    PromQL-query which returns unambiguous value for your metric. Use grouping operators like sum() by(), max() by() etc. Also use keywords: <<.LabelMatchers>> with your optional applied comma-separated labels as label selector and <<.GroupBy>> as group-by-labels. Example: max(mymetric{<<.LabelMatchers>>,queue="messages"}) by(<<.GroupBy>>)
+    - name: v1beta1
+      served: true
+      storage: false
+      schema: *schema

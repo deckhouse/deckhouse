@@ -1,0 +1,137 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modulesources.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modulesources
+    singular: modulesource
+    kind: ModuleSource
+    shortNames:
+      - ms
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration of a source of Deckhouse modules.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleSource
+              metadata:
+                name: example
+              spec:
+                registry:
+                  repo: registry.example.io/modules-source
+                  dockerCfg: <base64 encoded credentials>
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - registry
+              properties:
+                releaseChannel:
+                  type: string
+                  description: Desirable default release channel for modules in the current source.
+                  x-doc-deprecated: true
+                registry:
+                  type: object
+                  required:
+                    - repo
+                  properties:
+                    scheme:
+                      type: string
+                      default: "HTTPS"
+                      description: Protocol to access the registry.
+                      enum:
+                        - HTTP
+                        - HTTPS
+                    repo:
+                      type: string
+                      description: URL of the container registry.
+                      x-doc-examples: ['registry.example.io/deckhouse/modules']
+                    dockerCfg:
+                      type: string
+                      description: Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
+                    ca:
+                      type: string
+                      description: |
+                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+                        > Creating a ModuleSource resource with the CA certificate spec will cause the container to restart on all nodes.
+            status:
+              type: object
+              properties:
+                syncTime:
+                  type: string
+                  description: When the repository was synchronized.
+                phase:
+                  type: string
+                  description: The current phase.
+                  enum:
+                    - Active
+                    - Terminating
+                modulesCount:
+                  type: integer
+                  description: The number of modules available.
+                modules:
+                  type: array
+                  description: The list of modules available from the source and their update policies.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: The module name.
+                      version:
+                        type: string
+                        description: The module version.
+                      checksum:
+                        type: string
+                        description: The module checksum.
+                      pullError:
+                        type: string
+                        description: The module pull error.
+                      error:
+                        type: string
+                        description: The module processing error.
+                      policy:
+                        type: string
+                        description: The module policy name.
+                      overridden:
+                        type: boolean
+                        description: If ModulePullOverride for this module exists.
+                message:
+                  type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: count
+          type: integer
+          jsonPath: .status.modulesCount
+          description: The number of modules available.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: The current phase.
+        - name: sync
+          type: date
+          jsonPath: .status.syncTime
+          format: date-time
+          description: When the repository was synchronized.
+        - name: msg
+          type: string
+          jsonPath: .status.message
+          description: The error message if exists.

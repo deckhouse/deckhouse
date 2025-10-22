@@ -1,0 +1,199 @@
+# Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
+# and ee/candi/cloud-providers/*/terraform-modules/versions.tf
+
+terraform: 0.14.8
+
+opentofu: 1.9.4
+
+aws:
+  namespace: hashicorp
+  cloudName: AWS
+  type: aws
+  version: 5.83.1
+  # artifact name with provider binary
+  artifact: terraform-provider-aws
+  # provider binary name with artifact and destination image
+  artifactBinary: terraform-provider-aws
+  # provider binary name with destination image
+  destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+azure:
+  namespace: hashicorp
+  cloudName: Azure
+  type: azurerm
+  version: 3.117.1
+  artifact: terraform-provider-azure
+  artifactBinary: terraform-provider-azurerm
+  destinationBinary: terraform-provider-azurerm
+  vmResourceType: azurerm_linux_virtual_machine
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+gcp:
+  namespace: hashicorp
+  cloudName: GCP
+  type: google
+  version: 3.48.0
+  artifact: terraform-provider-gcp
+  artifactBinary: terraform-provider-gcp
+  destinationBinary: terraform-provider-google
+  vmResourceType: google_compute_instance
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+openstack:
+  namespace: terraform-provider-openstack
+  cloudName: OpenStack
+  type: openstack
+  version: 1.54.1
+  artifact: terraform-provider-openstack
+  artifactBinary: terraform-provider-openstack
+  destinationBinary: terraform-provider-openstack
+  vmResourceType: openstack_blockstorage_volume_v3
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+ovirt:
+  namespace: terraform-provider-ovirt
+  cloudName: Zvirt
+  type: ovirt
+  version: 2.1.5
+  artifact: terraform-provider-ovirt
+  artifactBinary: terraform-provider-ovirt
+  destinationBinary: terraform-provider-ovirt
+  vmResourceType: ovirt_vm
+  useOpentofu: true
+
+vsphere:
+  namespace: hashicorp
+  cloudName: vSphere
+  type: vsphere
+  version: 2.0.2
+  artifact: terraform-provider-vsphere
+  artifactBinary: terraform-provider-vsphere
+  destinationBinary: terraform-provider-vsphere
+  vmResourceType: vsphere_virtual_machine
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+vcd:
+  namespace: vmware
+  cloudName: VCD
+  type: vcd
+  versions: ["3.10.0", "3.14.1"]
+  artifact: terraform-provider-vcd-artifact
+  artifactBinary: terraform-provider-vcd
+  destinationBinary: terraform-provider-vcd
+  vmResourceType: vcd_vapp_vm
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  # after migration, please remove this comment
+  useOpentofu: false
+
+yandex:
+  namespace: yandex-cloud
+  cloudName: Yandex
+  type: yandex
+  version: 0.83.0
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
+  useOpentofu: true
+
+decort:
+  namespace: terraform-provider-decort
+  cloudName: Dynamix
+  type: decort
+  version: 4.7.3
+  artifact: terraform-provider-decort
+  artifactBinary: terraform-provider-decort
+  destinationBinary: terraform-provider-decort
+  vmResourceType: decort_kvmvm
+  useOpentofu: true
+
+huaweicloud:
+  namespace: terraform-provider-huaweicloud
+  cloudName: Huaweicloud
+  type: huaweicloud
+  version: 1.69.0
+  artifact: terraform-provider-huaweicloud
+  artifactBinary: terraform-provider-huaweicloud
+  destinationBinary: terraform-provider-huaweicloud
+  vmResourceType: huaweicloud_compute_instance
+  # Attention! For migrate to opentofu we need some manual actions.
+  # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+  # But we need enable automigrator and terraform state metrics hook. We can add global hook
+  # for autodiscovery terraform versions file, but we think that this attention will be enough.
+  # So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+  # 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+  #    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+  # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+  #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+  useOpentofu: false
+
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: 2.35.1
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true

@@ -1,0 +1,85 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /discoverer
+  to: /discoverer
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /go_lib/cloud-data
+  to: /src/go_lib/cloud-data
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /go_lib/dependency/vsphere
+  to: /src/go_lib/dependency/vsphere
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /pkg/log
+  to: /src/pkg/log
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/dependency/vsphere# /src/go_lib/dependency/vsphere#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+  - chown 64535:64535 /discoverer
+  - chmod 0755 /discoverer

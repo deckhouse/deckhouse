@@ -1,0 +1,46 @@
+# calculate base image for terraform-auto-exporter and terraform-auto-converger
+# . is dict with keys:
+#   TF - TF from werf.yaml
+#   providerName - from terraform_versions.yaml key in root like azure or decort for example
+
+{{- define "infrastructure_manager_base_image" }}
+{{- $context := . -}}
+{{- if hasKey $context.TF $context.providerName -}}
+  {{- $provider := get $context.TF $context.providerName -}}
+  {{- if $provider.useOpentofu -}}
+terraform-manager/base-terraform-manager-opentofu
+  {{- else -}}
+terraform-manager/base-terraform-manager
+  {{- end -}}
+{{- else }}
+    {{- fail (printf "provider %s not found" $context.providerName) -}}
+{{- end }}
+{{- end }}
+
+# calculate plugins dir for terraform-auto-exporter and terraform-auto-converger
+# . is dict with keys:
+#   TF - TF from werf.yaml
+#   providerName - from terraform_versions.yaml key in root like azure or decort for example
+
+{{- define "infrastructure_manager_plugin_dir" }}
+{{- $context := . -}}
+{{- if hasKey $context.TF $context.providerName -}}
+  {{- $provider := get $context.TF $context.providerName -}}
+  {{- if $provider.useOpentofu -}}
+registry.opentofu.org
+  {{- else -}}
+registry.terraform.io
+  {{- end -}}
+{{- else }}
+    {{- fail (printf "provider %s not found" $context.providerName) -}}
+{{- end }}
+{{- end }}
+
+# add image spec for infrastructure manager image
+# . any value. does not use
+
+{{- define "image_spec_for_infrastructure_manager" }}
+imageSpec:
+  config:
+    entrypoint: ["/dhctl"]
+{{- end }}

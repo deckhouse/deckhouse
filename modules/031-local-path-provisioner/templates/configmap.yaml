@@ -1,0 +1,42 @@
+{{- $context := . }}
+{{- range $localPathProvisioner := $context.Values.localPathProvisioner.internal.localPathProvisioners }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ $context.Chart.Name }}-{{ $localPathProvisioner.name }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | nindent 2 }}
+data:
+  config.json: |-
+    {
+            "nodePathMap":[
+            {
+                    "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                    "paths":["{{ $localPathProvisioner.spec.path }}"]
+            }
+            ],
+            "setupCommand": "/manager",
+            "teardownCommand": "/manager"
+    }
+
+  # we do not use deckhouse user here because root of sc directory was created by root
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+      - name: helper-pod
+        image: {{ include "helm_lib_module_image" (list $context "helper") }}
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          readOnlyRootFilesystem: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+{{- end }}

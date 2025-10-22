@@ -1,0 +1,85 @@
+type: object
+properties:
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        x-examples:
+        - ["pd-standard.*", "pd-ssd-replicated"]
+      default:
+        type: string
+        deprecated: true
+        x-doc-deprecated: true
+        description: |-
+          The name of StorageClass that will be used in the cluster by default.
+
+          If the parameter is omitted, the default StorageClass is either:
+
+          * existing StorageClass present in the cluster that has the default annotation;
+          * the first (in lexicographic order) StorageClass created by the module.
+
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+        x-examples:
+        - "pd-ssd-not-replicated"
+      provision:
+        description: |
+          Defines additional StorageClasses for Azure ultra disks.
+        type: array
+        items:
+          type: object
+          required: ["name", "type", "diskIOPSReadWrite", "diskMBpsReadWrite"]
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the class to create.
+            type:
+              type: string
+              enum:
+                - UltraSSD_LRS
+              description: |
+                Azure disk storage account type.
+
+                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-overview#types-of-storage-accounts) for more information.
+            cachingMode:
+              type: string
+              enum:
+                - None
+                - ReadOnly
+                - ReadWrite
+              description: |
+                String value that corresponds to the desired caching mode. If expected disk size is more than 4 TiB, you have to set `cachineMode: None`.
+
+                Check out [Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/premium-storage-performance#disk-caching) for more information.
+            diskIOPSReadWrite:
+              type: number
+              description: |
+                Disk IOPS (limit of 300 IOPS/GiB, up to a maximum of 160 K IOPS per disk).
+            diskMBpsReadWrite:
+              type: number
+              description: |
+                Disk throughput in `MBps` (limit of a single disk is 256 KiB/s for each provisioned IOPS).
+            tags:
+              type: array
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    pattern: '^[A-Za-z0-9][-A-Za-z0-9_.]*$'
+                  value:
+                    type: string
+                    pattern: '^[A-Za-z0-9][-A-Za-z0-9_.]*$'
+              x-examples:
+                -
+                  - key: key1
+                    value: val1
+                  - key: key2
+                    value: val2
+              description: |
+                Azure disk [tags](https://cloud-provider-azure.sigs.k8s.io/topics/tagging-resources/).

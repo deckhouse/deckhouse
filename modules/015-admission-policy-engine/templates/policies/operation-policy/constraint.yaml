@@ -1,0 +1,381 @@
+{{- $context := . }}
+
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+
+{{- range $cr := .Values.admissionPolicyEngine.internal.operationPolicies }}
+  {{- if hasKey $cr.spec.policies "allowedRepos" }}
+    {{- include "allowed_repos_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "requiredResources" }}
+    {{- include "required_resources_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "disallowedImageTags" }}
+    {{- include "disallowed_tags_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "requiredLabels"}}
+    {{- include "required_labels_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "requiredAnnotations"}}
+    {{- include "required_annotations_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "requiredProbes"}}
+    {{- include "required_probes_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "maxRevisionHistoryLimit" }}
+    {{- include "revision_history_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "imagePullPolicy" }}
+    {{- include "image_pull_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "priorityClassNames" }}
+    {{- include "priority_class_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "ingressClassNames" }}
+    {{- include "ingress_class_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "storageClassNames" }}
+    {{- include "storage_class_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "checkHostNetworkDNSPolicy" }}
+    {{- include "dns_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "checkContainerDuplicates" }}
+    {{- include "container_duplicates_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "replicaLimits" }}
+    {{- include "replica_limits_policy" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "disallowedTolerations" }}
+    {{- include "disallowed_tolerations_policy" (list $context $cr) }}
+  {{- end }}
+{{- end }}
+
+{{- end }} # end if bootstrapped
+
+{{- define "allowed_repos_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedRepos
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    repos:
+      {{- $cr.spec.policies.allowedRepos | toYaml | nindent 6 }}
+{{- end }}
+
+
+{{- define "required_resources_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8RequiredResources
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if $cr.spec.policies.requiredResources.limits }}
+    limits:
+      {{- $cr.spec.policies.requiredResources.limits | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if $cr.spec.policies.requiredResources.requests }}
+    requests:
+      {{- $cr.spec.policies.requiredResources.requests | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+
+{{- define "disallowed_tags_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DisallowedTags
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    tags:
+      {{- $cr.spec.policies.disallowedImageTags | toYaml | nindent 6 }}
+{{- end }}
+
+
+{{- define "required_labels_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8RequiredLabels
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      {{- range $cr.spec.policies.requiredLabels.watchKinds }}
+      {{ $arrk := regexSplit "/" . -1 }}
+      - apiGroups: [{{ index $arrk 0 | default "\"\"" }}]
+        kinds: [{{ index $arrk 1 }}]
+      {{- end }}
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    labels:
+      {{- $cr.spec.policies.requiredLabels.labels | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "required_annotations_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8RequiredAnnotations
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      {{- range $cr.spec.policies.requiredAnnotations.watchKinds }}
+      {{ $arrk := regexSplit "/" . -1 }}
+      - apiGroups: [{{ index $arrk 0 | default "\"\"" }}]
+        kinds: [{{ index $arrk 1 }}]
+      {{- end }}
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    annotations:
+      {{- $cr.spec.policies.requiredAnnotations.annotations | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "required_probes_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8RequiredProbes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    probes:
+      {{- $cr.spec.policies.requiredProbes | toYaml | nindent 6 }}
+{{- end }}
+
+
+{{- define "revision_history_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8RevisionHistoryLimit
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["DaemonSet", "Deployment"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    limit: {{ $cr.spec.policies.maxRevisionHistoryLimit }}
+{{- end }}
+
+
+
+{{- define "image_pull_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8ImagePullPolicy
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    policy: {{$cr.spec.policies.imagePullPolicy | quote }}
+{{- end }}
+
+
+{{- define "priority_class_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PriorityClass
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    priorityClassNames:
+      {{- $cr.spec.policies.priorityClassNames | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "ingress_class_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8IngressClass
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["Ingress"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    ingressClassNames:
+      {{- $cr.spec.policies.ingressClassNames | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "storage_class_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8StorageClass
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PersistentVolumeClaim"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    storageClassNames:
+      {{- $cr.spec.policies.storageClassNames | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "dns_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DNSPolicy
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "container_duplicates_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8ContainerDuplicates
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "replica_limits_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8ReplicaLimits
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    ranges:
+      - {{- $cr.spec.policies.replicaLimits | toYaml | nindent 8 }}
+{{- end }}
+
+{{- define "disallowed_tolerations_policy" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+  {{- $tolerations := $cr.spec.policies.disallowedTolerations }}
+  {{- if gt (len $tolerations) 0 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DisallowedTolerations
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    tolerations:
+      {{- $tolerations | toYaml | nindent 6 }}
+  {{- end }}
+{{- end }}

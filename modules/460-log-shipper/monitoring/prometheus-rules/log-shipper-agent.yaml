@@ -1,0 +1,147 @@
+# Even log-shipper metrics are counters because the metrics expiration logic in agents using the rate function is impossible.
+# Metrics in log-shipper are expired if not collected.
+# For example, if there are no errors, the value of the vector_component_errors_total metric will not be changed,
+# which means the next scrape this metric will be deleted.
+#
+# Example:
+#   vector_component_errors_total 7 - 7 errors occurred between scrapes
+#   vector_component_errors_total 7
+#   vector_component_errors_total 7
+#   -                               - expiration was triggered
+#   -
+#   -
+#   vector_component_errors_total 3 - 3 errors occurred between scrapes
+#
+# This behavior makes the result of the rate function equal to zero.
+#
+#
+# We ignore error_code="annotation_failed" errors, because this is the expected behavior of the vector and we can't do anything about it.
+#
+# It works something like this:
+# 1. Vector collects metadata from pods while they are running.
+# 2. Vector collects logs from pods, enriching them with metadata.
+# 3. The pods go to Completed, Error, and Termination state.
+# 4. Vector no longer holds metadata.
+# 5. Vector has enrichment problems. Logs start shipping without metadata.
+#
+# If the cluster has frequent restarts, creation or deletion of pods, then these errors are expected behavior.
+
+- name: log-shipper-agent
+  rules:
+  - alert: D8LogShipperAgentNotScheduledInCluster
+    for: 15m
+    expr: |
+      kube_daemonset_status_desired_number_scheduled{daemonset="log-shipper-agent", namespace="d8-log-shipper", job="kube-state-metrics"}
+      -
+      kube_daemonset_status_number_available{daemonset="log-shipper-agent", namespace="d8-log-shipper", job="kube-state-metrics"}
+      > 0
+    labels:
+      severity_level: "7"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The `log-shipper-agent` pods can't be scheduled in the cluster.
+      description: |
+        Deckhouse has detected that a number of `log-shipper-agent` pods are not scheduled.
+
+        To resolve this issue, do the following:
+
+        1. Check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
+
+           ```shell
+           d8 k -n d8-log-shipper get daemonsets --selector=app=log-shipper
+           ```
+
+        1. Check the state of the `d8-log-shipper/log-shipper-agent` pods:
+
+           ```shell
+           d8 k -n d8-log-shipper get pods --selector=app=log-shipper-agent
+           ```
+
+        1. If you know where the DaemonSet should be scheduled, run the following command to identify the problematic nodes:
+
+           ```shell
+           d8 k -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           ```
+
+  - alert: D8LogShipperDestinationErrors
+    for: 10m
+    expr: |
+      sum by (error_type, stage, component_id, component_type, host, node) (
+        vector_component_errors_total{component_kind="sink", job="log-shipper-agent"}
+      ) > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `log-shipper-agent` pods can't send logs to `{{ $labels.component_id }}` on the `{{ $labels.node }}` node.
+      description: |
+        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the {{ $labels.node }} node has failed to send a log for more than 10 minutes.
+
+        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while sending logs to `{{ $labels.component_type }}`.
+
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        ```
+
+  - alert: D8LogShipperCollectLogErrors
+    for: 10m
+    expr: |
+      sum by (error_type, stage, component_id, component_type, host, node) (
+        vector_component_errors_total{component_kind="source", error_code!="annotation_failed", job="log-shipper-agent"}
+      ) > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `log-shipper-agent` pods can't collect logs to `{{ $labels.component_id }}` on the `{{ $labels.node }}` node.
+      description: |
+        Deckhouse has detected that the {{ $labels.host }} `log-shipper-agent` on the `{{ $labels.node }}` node has failed to collect metrics for more than 10 minutes.
+
+        This is caused by the `{{ $labels.error_type }}` errors occurred during the `{{ $labels.stage }}` stage while reading `{{ $labels.component_type }}`.
+
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        ```
+
+  - alert: D8LogShipperLogsDroppedByRateLimit
+    for: 10m
+    expr: |
+      sum by (node, component_id) (
+        vector_events_discarded_total{job="log-shipper-agent", component_type="throttle"} * on (node) group_left() (abs(kube_node_spec_unschedulable - 1))
+      )
+      > 0
+    labels:
+      severity_level: "4"
+      d8_module: log-shipper
+      d8_component: agent
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__malfunctioning: "D8LogShipperMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The `log-shipper-agent` pods are dropping logs to `{{ $labels.component_id }}` on the `{{ $labels.node }}` node.
+      description: |
+        Rate-limiting rules have been applied, and the `log-shipper-agent` on the `{{ $labels.node }}` node has been dropping logs for more than 10 minutes.
+
+        To resolve this, check the pod logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
+        ```

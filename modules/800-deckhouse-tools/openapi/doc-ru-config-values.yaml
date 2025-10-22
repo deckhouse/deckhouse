@@ -1,0 +1,75 @@
+type: object
+properties:
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера веб-интерфейса модуля.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  auth:
+    description: |
+      Параметры для аутентификации и авторизации доступа к веб-интерфейсу модуля.
+    properties:
+      externalAuthentication:
+        description: |
+          Параметры для включения внешней аутентификации на основе NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) механизма, использующего Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > Внешняя аутентификация включена по умолчанию, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+        properties:
+          authURL:
+            description: |
+              URL-адрес сервиса аутентификации.
+
+              Если пользователь прошел аутентификацию, сервис должен вернуть код ответа HTTP 200.
+          authSignInURL:
+            description: |
+              URL-адрес для перенаправления пользователя на проверку аутентификации (если служба аутентификации вернула код ответа HTTP, отличный от 200).
+      allowedUserEmails:
+        description: |
+          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+      allowedUserGroups:
+        description: |
+          Массив из групп, пользователи которых имеют доступ к веб-интерфейсу модуля.
+
+          Этот параметр используется, если включен модуль `user-authn` или установлен параметр `externalAuthentication`.
+
+          > **Внимание!** Эти группы необходимо добавить в соответствующее поле в конфигурации `DexProvider`, если этот модуль используется вместе с модулем `user-authn`.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед веб-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS, и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+      certManager:
+        description: Настройки для cert-manager.
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (доступны `letsencrypt`, `letsencrypt-staging` и `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для веб-интерфейса модуля.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

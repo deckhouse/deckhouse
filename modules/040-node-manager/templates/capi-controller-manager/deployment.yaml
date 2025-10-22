@@ -1,0 +1,193 @@
+{{- define "capi_controller_resources" }}
+cpu: 10m
+memory: 50Mi
+{{- end }}
+
+{{- if include "capi_controller_manager_enabled" . }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: capi-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "capi-controller-manager"
+      minAllowed:
+        {{- include "capi_controller_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 70Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: capi-controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: capi-controller-manager
+      cluster.x-k8s.io/provider: cluster-api
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        node-manager.deckhouse.io/force-rollout-v1-72-5: ""
+      labels:
+        app: capi-controller-manager
+        cluster.x-k8s.io/provider: cluster-api
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capi-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: capi-controller-manager
+      terminationGracePeriodSeconds: 10
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - image: {{ include "helm_lib_module_image" (list . "capiControllerManager") }}
+        name: capi-controller-manager
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        command:
+        - /capi-controller-manager
+        args:
+        - --leader-elect
+        # Todo remove after rewrite caps
+        - --leader-elect-lease-duration=1m
+        - --leader-elect-renew-deadline=50s
+        - --leader-elect-retry-period=5s
+        - --diagnostics-address=127.0.0.1:4211
+        - --insecure-diagnostics
+        - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
+        - --health-addr=127.0.0.1:9442
+        - --webhook-port=4200
+        - --skip-crd-migration-phases=StorageVersionMigration,CleanupManagedFields # disabled for now
+        - -v=3
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            host: 127.0.0.1
+            port: 9442
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            host: 127.0.0.1
+            port: 9442
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "capi_controller_resources" . | nindent 12 }}
+  {{- end }}
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4200
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4211"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:4211/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-cloud-instance-manager
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: capi-controller-manager
+        ports:
+        - containerPort: 4211
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4211
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4211
+            scheme: HTTPS
+        resources:
+          requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      - name: cert
+        secret:
+          secretName: capi-webhook-tls
+{{- end }}

@@ -1,0 +1,18 @@
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubeconfig-generator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 5555
+    targetPort: http
+    name: http
+  selector:
+    app: kubeconfig-generator
+{{- end }}

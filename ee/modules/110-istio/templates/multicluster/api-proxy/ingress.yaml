@@ -1,0 +1,60 @@
+{{- if .Values.istio.multicluster.enabled }}
+  {{- if .Values.global.modules.publicDomainTemplate }}
+    {{- if eq (include "helm_lib_module_https_mode" .) "Disabled" }}
+      {{- fail "HTTPS is mandatory for api proxy." }}
+    {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 2m
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: api-proxy
+            port:
+              name: https
+        path: /
+        pathType: ImplementationSpecific
+    {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-ingress-tls") }}
+    {{- end }}
+---
+    {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "istio-api-proxy") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+    {{- end }}
+  {{- end }}
+{{- end }}

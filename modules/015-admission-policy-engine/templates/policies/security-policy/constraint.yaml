@@ -1,0 +1,567 @@
+{{- $context := . }}
+
+{{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+
+{{- range $cr := .Values.admissionPolicyEngine.internal.securityPolicies }}
+  {{- if not $cr.spec.policies.allowPrivileged }}
+    {{- include "allow_privileged" (list $context $cr) }}
+  {{- end }}
+  {{- if not $cr.spec.policies.allowPrivilegeEscalation }}
+    {{- include "allow_privilege_escalation" (list $context $cr) }}
+  {{- end }}
+  {{- if or (not $cr.spec.policies.allowHostPID) (not $cr.spec.policies.allowHostIPC) }}
+    {{- include "allow_host_processes" (list $context $cr) }}
+  {{- end }}
+  {{- if or (not $cr.spec.policies.allowHostNetwork) (hasKey $cr.spec.policies "allowedHostPorts") }}
+    {{- include "allow_host_network" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "readOnlyRootFilesystem" }}
+    {{- include "read_only_root_filesystem" (list $context $cr) }}
+  {{- end }}
+  {{- if not $cr.spec.policies.automountServiceAccountToken }}
+    {{- include "automount_service_account_token" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowRbacWildcards" }}
+  {{- if not $cr.spec.policies.allowRbacWildcards }}
+    {{- include "allow_rbac_wildcards" (list $context $cr) }}
+  {{- end }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedClusterRoles" }}
+    {{- include "allowed_cluster_roles" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedFlexVolumes" }}
+    {{- include "allowed_flex_volumes" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedVolumes" }}
+    {{- include "allowed_volumes" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedHostPaths" }}
+    {{- include "allowed_host_paths" (list $context $cr) }}
+  {{- end }}
+  {{- if or (hasKey $cr.spec.policies "allowedCapabilities") (hasKey $cr.spec.policies "requiredDropCapabilities") }}
+    {{- include "allowed_capabilities" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedAppArmor" }}
+    {{- include "allowed_apparmor" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedProcMount" }}
+    {{- include "allowed_proc_mount" (list $context $cr) }}
+  {{- end }}
+  {{- if or (hasKey $cr.spec.policies "fsGroup") (hasKey $cr.spec.policies "runAsUser") (hasKey $cr.spec.policies "runAsGroup") (hasKey $cr.spec.policies "supplementalGroups") }}
+    {{- include "allowed_users" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "seLinux" }}
+    {{- include "selinux" (list $context $cr) }}
+  {{- end }}
+  {{- if or (hasKey $cr.spec.policies "allowedUnsafeSysctls") (hasKey $cr.spec.policies "forbiddenSysctls") }}
+    {{- include "allowed_sysctls" (list $context $cr) }}
+  {{- end }}
+  {{- if $cr.spec.policies.seccompProfiles }}
+    {{- include "seccomp_profiles" (list $context $cr) }}
+  {{- end }}
+  {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
+    {{- include "verify_image_signatures" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    {{- include "verify_service_type" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+  {{- if $cr.spec.policies.blockWildcardDomains }}
+    {{- include "verify_ingresses" (list $context $cr) }}
+  {{- end }}
+  {{- end }}  
+{{- end }}
+
+{{- end }} # end if bootstrapped
+
+{{- define "allow_privileged" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8PrivilegedContainer
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allow_privilege_escalation" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowPrivilegeEscalation
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allow_host_processes" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8HostProcesses
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowHostPID: {{ $cr.spec.policies.allowHostPID | default false }}
+    allowHostIPC: {{ $cr.spec.policies.allowHostIPC | default false }}
+{{- end }}
+
+{{- define "allow_host_network" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8HostNetwork
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowHostNetwork: {{ $cr.spec.policies.allowHostNetwork | default false }}
+    {{- if hasKey $cr.spec.policies "allowedHostPorts" }}
+    ranges:
+      {{- $cr.spec.policies.allowedHostPorts | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "read_only_root_filesystem" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8ReadOnlyRootFilesystem
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "automount_service_account_token" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AutomountServiceAccountTokenPod
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "allowed_cluster_roles" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedClusterRoles
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["RoleBinding"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedClusterRoles:
+      {{- $cr.spec.policies.allowedClusterRoles | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "allowed_flex_volumes" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedFlexVolumes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedFlexVolumes:
+      {{- $cr.spec.policies.allowedFlexVolumes | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "allowed_volumes" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedVolumeTypes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    volumes:
+      {{- $cr.spec.policies.allowedVolumes | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "allowed_host_paths" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedHostPaths
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedHostPaths:
+      {{- $cr.spec.policies.allowedHostPaths | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "allowed_capabilities" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedCapabilities
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedCapabilities" }}
+    allowedCapabilities:
+      {{- $cr.spec.policies.allowedCapabilities | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies "requiredDropCapabilities" }}
+    requiredDropCapabilities:
+      {{- $cr.spec.policies.requiredDropCapabilities | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "allowed_apparmor" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AppArmor
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedAppArmor" }}
+    allowedProfiles:
+      {{- $cr.spec.policies.allowedAppArmor | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "allowed_proc_mount" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedProcMount
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedProcMount" }}
+    allowedProcMount:
+      {{- $cr.spec.policies.allowedProcMount | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "allowed_users" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedUsers
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "fsGroup" }}
+    fsGroup:
+      {{- $cr.spec.policies.fsGroup | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies "runAsUser" }}
+    runAsUser:
+      {{- $cr.spec.policies.runAsUser | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies "runAsGroup" }}
+    runAsGroup:
+      {{- $cr.spec.policies.runAsGroup | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies "supplementalGroups" }}
+    supplementalGroups:
+      {{- $cr.spec.policies.supplementalGroups | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "selinux" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8SeLinux
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    allowedSELinuxOptions:
+      {{- $cr.spec.policies.seLinux | toYaml | nindent 6 }}
+{{- end }}
+
+{{- define "allowed_sysctls" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedSysctls
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedUnsafeSysctls" }}
+    allowedSysctls:
+      {{- $cr.spec.policies.allowedUnsafeSysctls | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies "forbiddenSysctls" }}
+    forbiddenSysctls:
+      {{- $cr.spec.policies.forbiddenSysctls | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "seccomp_profiles" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedSeccompProfiles
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies.seccompProfiles "allowedProfiles" }}
+    allowedProfiles:
+      {{- $cr.spec.policies.seccompProfiles.allowedProfiles | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $cr.spec.policies.seccompProfiles "allowedLocalhostFiles" }}
+    allowedLocalhostFiles:
+      {{- $cr.spec.policies.seccompProfiles.allowedLocalhostFiles | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_image_signatures" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8VerifyImageSignatures
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    references:
+    {{- range $policy := $cr.spec.policies.verifyImageSignatures }}
+    - {{ printf "^%s$" ($policy.reference | replace "*" ".*") }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_service_type" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedServiceTypes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Service"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    allowedServiceTypes:
+      {{- $cr.spec.policies.allowedServiceTypes | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_ingresses" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedIngresses
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: ["networking.k8s.io"]
+      kinds: ["Ingress"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+    blockWildcardDomains: {{ $cr.spec.policies.blockWildcardDomains }}
+    {{- end }}
+{{- end }}
+
+{{- define "allow_rbac_wildcards" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowRbacWildcards
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+

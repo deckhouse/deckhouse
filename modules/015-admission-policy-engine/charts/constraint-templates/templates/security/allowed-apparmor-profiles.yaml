@@ -1,0 +1,98 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8apparmor
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "App Armor"
+    description: >-
+      Configures an allow-list of AppArmor profiles for use by containers.
+      This corresponds to specific annotations applied to a PodSecurityPolicy.
+      For information on AppArmor, see
+      https://kubernetes.io/docs/tutorials/clusters/apparmor/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AppArmor
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Configures an allow-list of AppArmor profiles for use by containers.
+            This corresponds to specific annotations applied to a PodSecurityPolicy.
+            For information on AppArmor, see
+            https://kubernetes.io/docs/tutorials/clusters/apparmor/
+          properties:
+            allowedProfiles:
+              description: "An array of AppArmor profiles. Examples: `runtime/default`, `unconfined`."
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+            container := input_containers[_]
+            not input_apparmor_allowed(input.review.object, container)
+            msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v", [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles])
+        }
+
+        input_apparmor_allowed(pod, container) {
+            glob.match(input.parameters.allowedProfiles[_], [], get_apparmor_profile(pod, container))
+        }
+
+        input_containers[c] {
+            c := input.review.object.spec.containers[_]
+        }
+        input_containers[c] {
+            c := input.review.object.spec.initContainers[_]
+        }
+        input_containers[c] {
+            c := input.review.object.spec.ephemeralContainers[_]
+        }
+
+        get_apparmor_profile(_, container) = out {
+            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+            profile != null
+            out := canonicalize_apparmor_profile(profile)
+        }
+
+        get_apparmor_profile(pod, container) = out {
+            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+            profile == null
+            out := pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
+        }
+
+        get_apparmor_profile(pod, container) = out {
+            profile := object.get(container, ["securityContext", "appArmorProfile"], null)
+            profile == null
+            not pod.metadata.annotations[sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])]
+            out := canonicalize_apparmor_profile(object.get(pod, ["spec", "securityContext", "appArmorProfile"], null))
+        }
+
+        canonicalize_apparmor_profile(profile) = out {
+            profile.type == "RuntimeDefault"
+            out := "runtime/default"
+        }
+
+        canonicalize_apparmor_profile(profile) = out {
+            profile.type == "Unconfined"
+            out := "unconfined"
+        }
+
+        canonicalize_apparmor_profile(profile) = out {
+            profile.type = "Localhost"
+            out := sprintf("localhost/%s", [profile.localhostProfile])
+        }
+
+        canonicalize_apparmor_profile(profile) = out {
+            profile == null
+            out := "runtime/default"
+        }

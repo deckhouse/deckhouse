@@ -1,0 +1,14 @@
+{{- if .Values.kubeDns.clusterDomainAliases }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: d8-kube-dns-sts-pods-hosts-appender-webhook
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: sts-pods-hosts-appender-webhook
+{{- end }}

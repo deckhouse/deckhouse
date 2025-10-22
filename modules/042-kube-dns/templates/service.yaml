@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: {{ .Values.global.discovery.clusterDNSAddress }}
+  selector:
+    k8s-app: kube-dns
+  ports:
+  - name: dns
+    port: 53
+    targetPort: dns
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    targetPort: dns-tcp
+    protocol: TCP
+---
+#TODO: remove the service in future releases
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-kube-dns-redirect
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "coredns-redirect")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  selector:
+    k8s-app: kube-dns
+  ports:
+  - name: dns
+    port: 53
+    targetPort: dns
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    targetPort: dns-tcp
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+spec:
+  type: ExternalName
+  externalName: d8-kube-dns.kube-system.svc.{{ .Values.global.discovery.clusterDomain }}

@@ -1,0 +1,491 @@
+type: object
+properties:
+  globalVersion:
+    description: Явно заданная версия control plane Istio, который обслуживает data plane по умолчанию (namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`).
+  additionalVersions:
+    description: Дополнительные версии control plane Istio, которые будут установлены. Они будут обслуживать namespace'ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
+  outboundTrafficPolicyMode:
+    description: |
+      Как поступать с запросами в сторону внешних, то есть не учтенных в mesh'е сервисов:
+      - `AllowAny` — пропускать;
+      - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для Kiali, metadata-exporter и api-proxy.
+
+      Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
+  federation:
+    description: Параметры федерации с другими кластерами.
+    properties:
+      enabled:
+        description: Обозначить данный кластер как участник федерации (см. [Включение федерации](./#включение-федерации)).
+  multicluster:
+    description: Параметры мультикластерной инсталляции.
+    properties:
+      enabled:
+        description: Обозначить данный кластер как участник мультикластера (см. [Включение мультикластера](./#включение-мультикластера)).
+  alliance:
+    description: Общие настройки для федерации и мультикластера.
+    properties:
+      ingressGateway:
+        description: Параметры для ingressgateway.
+        properties:
+          advertise:
+            description: Фактические адреса, которые будут объявлены удаленным кластерам для организации межкластерных запросов приложений. Если не указано, адреса будут выявлены автоматически.
+          inlet:
+            description: |
+              Способ публикации ingressgateway:
+              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB;
+              - `NodePort` — для площадок без LB.
+          nodePort:
+            description: Специальные настройки для ingressgateway с инлетом `NodePort`.
+            properties:
+              port:
+                type: integer
+                description: Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
+          serviceAnnotations:
+            description: |
+              Дополнительные аннотации для сервиса ingressgateway.
+
+              Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+          nodeSelector:
+            description: |
+              Селектор для DaemonSet'а ingressgateway.
+
+              Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+          tolerations:
+            description: |
+              tolerations для DaemonSet'а ingressgateway.
+
+              Структура, аналогичная `spec.tolerations` пода Kubernetes.
+  tracing:
+    description: Параметры трассировки.
+    properties:
+      enabled:
+        description: Включить отправку трейсов в коллектор и интегрировать их отображение в Kiali.
+      sampling:
+        description: |
+          Параметр sampling используется для определения процента запросов, которые передаются в систему трассировки.
+
+          Этот параметр должен быть настроен в зависимости от трафика в сети и количества данных трассировки, которые необходимо собрать.
+
+          Параметр можно переопределить для каждого пода индивидуально с помощью следующей аннотации:
+
+          ```yaml
+          proxy.istio.io/config: |
+            tracing:
+              sampling: 100.0
+          ```
+      collector:
+        description: Параметры отправки трейсов в коллектор.
+        properties:
+          zipkin:
+            description: |
+              Параметры протокола zipkin, который использует Istio для отправки трейсов.
+
+              Jaeger поддерживает этот протокол.
+            properties:
+              address:
+                description: Сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
+      kiali:
+        description: |
+          Настройки отображения span'ов в Kiali.
+
+          Если настройки не предоставлены, Kiali не будет отображать трассировку.
+        properties:
+          jaegerURLForUsers:
+            description: |
+              Адрес UI Jaeger, доступный пользователю в формате `<proto>://<fqdn>[:port]/<base path>`.
+
+              Обязательный параметр.
+          jaegerGRPCEndpoint:
+            description: |
+              Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
+
+              Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+  sidecar:
+    description: Настройки для перехвата сетевого трафика в istio-sidecar.
+    properties:
+      includeOutboundIPRanges:
+        description: |
+          Трафик в сторону этих диапазонов IP безоговорочно заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/includeOutboundIPRanges`.
+      excludeOutboundIPRanges:
+        description: |
+          Трафик в сторону этих диапазонов IP гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundIPRanges`.
+      excludeInboundPorts:
+        description: |
+          Диапазоны входящих портов, чей трафик гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeInboundPorts`.
+      excludeOutboundPorts:
+        description: |
+          Диапазоны исходящих портов, чей трафик гарантированно не заворачивается через Istio.
+
+          Можно переопределить этот параметр для отдельного пода с помощью аннотации `traffic.sidecar.istio.io/excludeOutboundPorts`.
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+      resourcesManagement:
+        description: |
+          Управляет ресурсами sidecar-контейнера Istio.
+
+          **Внимание!** Настройка применяется только для новых подов с `istio-proxy`.
+        properties:
+          mode:
+            description: |
+              Режим управления ресурсами:
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-sidecar-resourcesmanagement-static);
+          static:
+            description: |
+              Настройка управления ресурсами в режиме `Static`.
+            properties:
+              requests:
+                description: |
+                  Настройки запросов ресурсов (requests) подов.
+                properties:
+                  cpu:
+                    description: |
+                      Настройка запроса CPU (CPU requests).
+                  memory:
+                    description: |
+                      Настройка запроса памяти (memory requests).
+              limits:
+                description: |
+                  Настройка ограничений (limits) использования CPU и памяти.
+                properties:
+                  cpu:
+                    description: |
+                      Настройка ограничений использования CPU (CPU limits).
+                  memory:
+                    description: |
+                      Настройка ограничений использования памяти (memory limits).
+  ca:
+    description: Явно заданный корневой сертификат, который будет использован для подписывания индивидуальных сертификатов сервисов в случае включения MTLS.
+    properties:
+      cert:
+        description: Корневой или промежуточный сертификат в формате PEM.
+      key:
+        description: Ключ корневого сертификата в формате PEM.
+      chain:
+        description: Цепочка сертификатов в формате PEM на случай, если `cert` — промежуточный сертификат.
+      root:
+        description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
+  controlPlane:
+    description: Настройки для компонента istiod.
+    properties:
+      nodeSelector:
+        description: |
+          Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      tolerations:
+        description: |
+          Опциональные tolerations для компонента istiod.
+
+          Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      replicasManagement:
+        description: |
+          Настройки управления репликами и горизонтальным масштабированием istiod.
+        properties:
+          mode:
+            description: |
+              Режим работы с репликами:
+              - `Standard` — режим управления репликами и масштабированием в соответствии с глобальным режимом отказоустойчивости (параметр [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability));
+              - `Static` — режим, где количество реплик указывается явно (параметр [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas));
+              - `HPA` — режим, где количество реплик рассчитывается автоматически с помощью [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) на основе загрузки CPU. Настраивается в секции параметров [hpa](#parameters-controlplane-replicasmanagement-hpa).
+          static:
+            description: |
+              Параметры управления репликами и масштабированием в режиме Static.
+            properties:
+              replicas:
+                description: |
+                  Желаемое количество реплик.
+          hpa:
+            description: |
+              Параметры управления репликами и масштабированием в режиме HPA.
+            properties:
+              minReplicas:
+                description: |
+                  Минимальное количество реплик, которое может быть установлено HPA.
+              maxReplicas:
+                description: |
+                  Максимальное количество реплик, которое может быть установлено HPA. Не может быть меньше `minReplicas`.
+              metrics:
+                description: |
+                  HPA будет основываться на этих метриках при принятии решения об увеличении или уменьшении количества реплик.
+                items:
+                  properties:
+                    type:
+                      description: |
+                        Тип метрики.
+                    targetAverageUtilization:
+                      description: |
+                        Целевое значение средней загрузки CPU во всех репликах. Задается в процентах от `Requests CPU`.
+      resourcesManagement:
+        description: |
+          Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами istiod.
+        properties:
+          mode:
+            description: |
+              Режим управления ресурсами:
+              - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-controlplane-resourcesmanagement-static);
+              - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-controlplane-resourcesmanagement-vpa).
+          vpa:
+            description: |
+              Параметры управления ресурсами в режиме VPA.
+            properties:
+              mode:
+                description: |
+                  Режим работы VPA.
+              cpu:
+                description: |
+                  Настройки VPA при работе с CPU.
+                properties:
+                  min:
+                    description: |
+                      Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                  max:
+                    description: |
+                      Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                  limitRatio:
+                    description: |
+                      Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                      Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                      Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+              memory:
+                description: |
+                  Настройки VPA при работе с памятью.
+                properties:
+                  min:
+                    description: |
+                      Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                  max:
+                    description: |
+                      Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                  limitRatio:
+                    description: |
+                      Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                      Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                      Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+          static:
+            description: |
+              Настройка управления ресурсами в режиме `Static`.
+            properties:
+              requests:
+                description: |
+                  Настройки запросов ресурсов (requests) подов.
+                properties:
+                  cpu:
+                    description: |
+                      Настройка запроса CPU (CPU requests).
+                  memory:
+                    description: |
+                      Настройка запроса памяти (memory requests).
+              limits:
+                description: |
+                  Настройка ограничений (limits) использования CPU и памяти.
+                properties:
+                  cpu:
+                    description: |
+                      Настройка ограничений использования CPU (CPU limits).
+                  memory:
+                    description: |
+                      Настройка ограничений использования памяти (memory limits).
+  dataPlane:
+    properties:
+      trafficRedirectionSetupMode:
+        description: |
+          Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.
+          - `CNIPlugin` — в этом режиме настройку осуществляет CNI plugin при создании пода на узле. Этот режим не требует дополнительных прав для пода и является рекомендуемым. Режим имеет [ограничения](./examples.html#ограничения-режима-перенаправления-прикладного-трафика-cniplugin) при использовании прикладных init-контейнеров, которые осуществляют сетевое взаимодействие с другими сервисами.
+          - `InitContainer` — классический режим, при котором каждый под автоматически снабжается специальным init-контейнером, который осуществляет настройку сетевого окружения пода. Для того, чтобы осуществить эту настройку, контейнеру выдаются дополнительные права, что может не соответствовать требованиям безопасности в отдельных инсталляциях.
+      enableHTTP10:
+        description: |
+          Обрабатывать ли HTTP/1.0-запросы в sidecar-контейнерах или отвергать их с кодом ответа `426 Upgrade Required`.
+      proxyConfig:
+        description: |
+          Централизованная настройка [ProxyConfig](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+        properties:
+          holdApplicationUntilProxyStarts:
+            description: |
+              Этот параметр заставляет sidecar-injector вставлять sidecar-контейнер на первое место в списке контейнеров пода. Также он добавляет postStart-хук для того, чтобы убедиться, что Envoy инициализировался раньше самого приложения. Это позволит избежать сетевых ошибок при старте пода.
+
+              Этот глобальный параметр может быть переопределен на уровне пода аннотацией `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+          idleTimeout:
+            description: |
+              Тайм-аут для соединений без прикладной активности, которые установлены между istio-сайдкаром клиента и сервисом. По истечении тайм-аута, соединение между сайдкаром и сервисом закрывается, но между приложением и сайдкаром — не закрывается. Если установить значение `0s`, то тайм-аут будет отключен.
+              Этот глобальный параметр может быть переопределен на уровне пода аннотацией:
+                ```yaml
+                  proxy.istio.io/config: |-
+                    proxyMetadata:
+                      ISTIO_META_IDLE_TIMEOUT: "12h"
+                ```
+              > **Внимание!** Отключение этого таймаута (значение `0s`) с большой вероятностью может привести к утечке соединений из-за потери пакетов TCP FIN и т.п.
+              > **Внимание!** После изменения настройки необходим рестарт клиентских подов.
+      ztunnel:
+        description: |
+          Настройки для компонента ztunnel.
+        x-experimental: true
+        properties:
+          resourcesManagement:
+            description: |
+              Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами istiod.
+            properties:
+              mode:
+                description: |
+                  Режим управления ресурсами:
+                  - `Static` — с помощью прямого указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-dataplane-ztunnel-resourcesmanagement-static);
+                  - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-dataplane-ztunnel-resourcesmanagement-vpa).
+              vpa:
+                description: |
+                  Параметры управления ресурсами в режиме VPA.
+                properties:
+                  mode:
+                    description: |
+                      Режим работы VPA.
+                  cpu:
+                    description: |
+                      Настройки VPA при работе с CPU.
+                    properties:
+                      min:
+                        description: |
+                          Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                      max:
+                        description: |
+                          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+                      limitRatio:
+                        description: |
+                          Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                          Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                          Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+                  memory:
+                    description: |
+                      Настройки VPA при работе с памятью.
+                    properties:
+                      min:
+                        description: |
+                          Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                      max:
+                        description: |
+                          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+                      limitRatio:
+                        description: |
+                          Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                          Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                          Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+              static:
+                description: |
+                  Настройка управления ресурсами в режиме `Static`.
+                properties:
+                  requests:
+                    description: |
+                      Настройки запросов ресурсов (requests) подов.
+                    properties:
+                      cpu:
+                        description: |
+                          Настройка запроса CPU (CPU requests).
+                      memory:
+                        description: |
+                          Настройка запроса памяти (memory requests).
+                  limits:
+                    description: |
+                      Настройка ограничений (limits) использования CPU и памяти.
+                    properties:
+                      cpu:
+                        description: |
+                          Настройка ограничений использования CPU (CPU limits).
+                      memory:
+                        description: |
+                          Настройка ограничений использования памяти (memory limits).
+  nodeSelector:
+    description: |
+      Опциональный селектор для компонентов istio-operator, metadata-exporter и Kiali.
+
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Опциональные tolerations для компонентов istio-operator, metadata-exporter и Kiali.
+
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  https:
+    description: |
+      Тип сертификата, используемого для публичных веб-интерфейсов модуля.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer заданном в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS, используя сертификат из namespace `d8-system`.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+
+          **Важно!** В отличие от остальных модулей, istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в namespace `d8-system`, который будет использоваться для Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+  auth:
+    description: Опции, связанные с аутентификацией или авторизацией в приложении.
+    properties:
+      externalAuthentication:
+        description: |
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+        properties:
+          authURL:
+            description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+          authSignInURL:
+            description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+      allowedUserEmails:
+        description: |
+          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+      allowedUserGroups:
+        description: |
+          Массив групп, пользователям которых разрешён доступ в публичные веб-интерфейсы модуля.
+
+          Используется, если включен модуль [user-authn](https://deckhouse.ru/modules/user-authn/) или параметр `externalAuthentication`.
+
+          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider) DexProvider.
+      whitelistSourceRanges:
+        description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
+      satisfyAny:
+        description: |
+          Разрешает пройти только одну из аутентификаций.
+
+          В комбинации с опцией `whitelistSourceRanges` позволяет считать авторизованными всех пользователей из указанных сетей без ввода логина и пароля.

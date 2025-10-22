@@ -1,0 +1,36 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v3.45.4 $(cat /run/secrets/SOURCE_REPO)/go-task/task .
+  - rm -rf .git website
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go test ./... -v
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /task cmd/task/task.go
+  - chown 64535:64535 /task
+  - chmod 0755 /task

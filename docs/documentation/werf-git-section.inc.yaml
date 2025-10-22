@@ -1,0 +1,59 @@
+# werf git section for documentation build
+- add: /candi/version_map.yml
+  to: /srv/jekyll-data/documentation/_data/version_map.yml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /editions.yaml
+  to: /srv/jekyll-data/documentation/_data/editions-repo-data.yaml
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /dhctl/pkg/config/base.go
+  to: /srv/jekyll-data/documentation/_data/dhctl-base.go
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /global-hooks/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml','conversions/v*.yml','conversions/v*.yaml']
+- add: /candi/openapi
+  to: /src/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /src/global/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+- add: /candi/openapi/dhctl
+  to: /src/global/crds
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
+- add: /
+  to: /src/modules-metadata
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  excludePaths:
+    - docs
+    - candi
+  includePaths:
+    - '**/docs/README.md'
+    - '**/docs/readme.md'
+    - '**/oss.yaml'

@@ -1,0 +1,42 @@
+properties:
+  nodeSelector:
+    description: |
+      Cелектор, который идентифицирует узлы, на которых будут настроены правила iptables и на которых будет работать DHCP-сервер.
+
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes. Поды инстанса унаследуют это поле как есть.
+  tolerations:
+    description: |
+      Toleration'ы для подов c DHCP и с настройщиками iptables.
+
+      Стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+  subnet:
+    description: |
+      Адрес локальной подсети, которую должен обслуживать шлюз.
+
+      На основе этого адреса будут сформированы DHCP-опции для выдачи клиентам:
+      * пул адресов — номера с 50 по последний;
+      * роутер — первый адрес в подсети.
+  publicAddress:
+    description: Адрес, на который будет заменен src-адрес исходящих из локальной сети пакетов.
+  disableDHCP:
+    description: Отключает DHCP-сервер.
+  dns:
+    description: Настройки, которые будут переданы клиентам через DHCP.
+    properties:
+      servers:
+        description: Список DNS-серверов.
+      search:
+        description: Список search-доменов.
+  storageClass:
+    description: |-
+      Имя StorageClass, который будет использоваться для хранения DHCP lease.
+
+      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
+
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
+
+      Dnsmasq, используемый DHCP-сервером, включает механизмы защиты от дублирования IP-адресов при утере базы lease'ов, но лучше избегать ее потери.

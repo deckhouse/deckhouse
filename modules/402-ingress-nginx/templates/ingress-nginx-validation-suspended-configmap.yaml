@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-nginx-validation-suspended
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  description: |
+    This ConfigMap is created to ensure that the hook 'set_annotation_validation_suspended.go'
+    runs only once to suspend ingress NGINX validation.

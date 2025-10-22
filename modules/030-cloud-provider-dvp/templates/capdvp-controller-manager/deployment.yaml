@@ -1,0 +1,111 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderDvp.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- define "dvp_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: capdvp-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: capdvp-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "capdvp-controller-manager"
+      minAllowed:
+        {{- include "dvp_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: capdvp-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: capdvp-controller-manager
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capdvp-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: capdvp-controller-manager
+      cluster.x-k8s.io/provider: infrastructure-dvp
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: capdvp-controller-manager
+        cluster.x-k8s.io/provider: infrastructure-dvp
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capdvp-controller-manager")) | nindent 6 }}
+      serviceAccountName: capdvp-controller-manager
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: capdvp-controller-manager
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "capdvpControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--leader-elect"
+        env:
+          - name: DVP_KUBERNETES_CONFIG_BASE64
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials-capdvp
+                key: kubernetesConfigBase64
+          - name: DVP_NAMESPACE
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials-capdvp
+                key: namespace
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- include "dvp_controller_manager_resources" . | nindent 12 }}
+{{- end }}

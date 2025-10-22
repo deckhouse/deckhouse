@@ -1,0 +1,27 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+  - test-splunk-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-splunk-dest
+spec:
+  type: Splunk
+  splunk:
+    endpoint: "192.168.1.1:9200"
+    token: "test-token"
+    index: '{{ test }}'
+    tls:
+      verifyCertificate: false
+      verifyHostname: false
+  extraLabels:
+    app: "{{ pod_labels.app }}"

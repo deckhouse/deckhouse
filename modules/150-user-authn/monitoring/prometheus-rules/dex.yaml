@@ -1,0 +1,14 @@
+- name: d8.dex.availability
+  rules:
+  - alert: D8DexAllTargetsDown
+    expr: sum(up{job="dex", namespace="d8-user-authn"}) == 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: dex
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Prometheus is unable to scrape Dex metrics.

@@ -1,0 +1,19 @@
+# The main part of the manifest can be found in the file daemonset-agent.yaml.tpl
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: agent
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "cilium-agent" .Values.cniCilium.resourcesManagement ) | nindent 2}}
+  {{- if (eq .Values.cniCilium.resourcesManagement.mode "VPA") }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+{{ $agent_daemonset_generation := include "agent_daemonset_template" (list . "undefined" ) | sha256sum }}
+
+{{- include "agent_daemonset_template" (list . $agent_daemonset_generation ) }}

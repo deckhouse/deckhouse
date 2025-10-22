@@ -1,0 +1,80 @@
+positive:
+  configValues:
+    - bgpPeers:
+        - peer-address: 192.168.1.1
+          peer-asn: 1111
+          my-asn: 2222
+          source-address: 192.168.1.2
+          hold-time: 10s
+      addressPools:
+        - name: my-pool
+          protocol: bgp
+          addresses:
+            - 192.168.100.1-192.168.100.10
+            - 192.168.101.0/24
+negative:
+  configValues:
+    # Network in peer-address is not allowed.
+    - bgpPeers:
+        - peer-address: 192.168.1.1/24
+          peer-asn: 1111
+          my-asn: 2222
+          source-address: 192.168.1.2
+          hold-time: 10s
+      addressPools:
+        - name: myPool
+          protocol: bgp
+          addresses:
+            - 192.168.100.1-192.168.100.10
+            - 192.168.101.0/24
+    # Peer AS number should be all numeric.
+    - bgpPeers:
+        - peer-address: 192.168.1.1
+          peer-asn: as1111
+          my-asn: 2222
+          source-address: 192.168.1.2
+          hold-time: 10s
+      addressPools:
+        - name: myPool
+          protocol: bgp
+          addresses:
+            - 192.168.100.1-192.168.100.10
+            - 192.168.101.0/24
+    # AS number should be all numeric.
+    - bgpPeers:
+        - peer-address: 192.168.1.1
+          peer-asn: 1111
+          my-asn: as2222
+          source-address: 192.168.1.2
+          hold-time: 10s
+      addressPools:
+        - name: myPool
+          protocol: bgp
+          addresses:
+            - 192.168.100.1-192.168.100.10
+            - 192.168.101.0/24
+    # Network in source-address is not allowed.
+    - bgpPeers:
+        - peer-address: 192.168.1.1
+          peer-asn: 1111
+          my-asn: 2222
+          source-address: 192.168.1.2/23
+          hold-time: 10s
+      addressPools:
+        - name: myPool
+          protocol: bgp
+          addresses:
+            - 192.168.100.1-192.168.100.10
+            - 192.168.101.0/24
+    # Range of networks is not allowed.
+    - bgpPeers:
+        - peer-address: 192.168.1.1
+          peer-asn: 1111
+          my-asn: 2222
+          source-address: 192.168.1.2/23
+          hold-time: 10s
+      addressPools:
+        - name: myPool
+          protocol: bgp
+          addresses:
+            - 192.168.101.0/24-192.168.105.0/24

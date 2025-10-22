@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+  name: d8:manage:permission:module:user-authz:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterauthorizationrules
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - user-authz
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

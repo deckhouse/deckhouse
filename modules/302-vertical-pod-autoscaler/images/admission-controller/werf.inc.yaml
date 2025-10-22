@@ -1,0 +1,14 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+  add: /admission-controller
+  to: /admission-controller
+  before: setup
+git:  
+{{- include "image mount points" . }}  
+imageSpec:
+  config:
+    entrypoint: ["/admission-controller"]
+    cmd: ["--v=4", "--stderrthreshold=info"]

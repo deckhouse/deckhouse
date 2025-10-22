@@ -1,0 +1,13 @@
+{{- if .Values.nodeManager.internal.upmeterDiscovery}}
+  {{- if len .Values.nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: upmeter-discovery-cloud-ephemeral-nodegroups
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2}}
+data:
+  names: |
+    {{ .Values.nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames | toJson }}
+  {{- end}}
+{{- end}}

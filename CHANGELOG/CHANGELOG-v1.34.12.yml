@@ -1,0 +1,10 @@
+node-manager:
+  fixes:
+    - summary: Fix undefined src variable in bashible-api-server
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2195
+    - summary: Remove bashible-apiserver deployment to avoid race condition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2191
+    - summary: Remove race condition while updating `bashible-apiserver`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2185
+      impact: '`bashible-apiserver` will restart.'
+

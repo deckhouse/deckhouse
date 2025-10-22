@@ -1,0 +1,62 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:{{ .Chart.Name }}:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  - serviceentries
+  - gateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  - authorizationpolicies
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+  name: d8:user-authz:{{ .Chart.Name }}:editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  - serviceentries
+  - gateways
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  - authorizationpolicies
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

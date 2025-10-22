@@ -1,0 +1,43 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /app/alerts-receiver
+  to: /alerts-receiver
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/alerts-receiver" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /app
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /app
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o alerts-receiver
+  - chown -R 64535:64535 /app/
+  - chmod 0700 /app/alerts-receiver

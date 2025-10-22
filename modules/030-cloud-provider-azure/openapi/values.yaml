@@ -1,0 +1,20 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      cniSecretData:
+        type: string
+      storageClasses:
+        type: array
+        additionalProperties:
+          type: string
+        x-examples:
+        - [{"name": "test", "type": "test"}]
+      providerClusterConfiguration:
+        $ref: '/deckhouse/candi/cloud-providers/azure/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+      providerDiscoveryData:
+        $ref: '/deckhouse/candi/cloud-providers/azure/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'

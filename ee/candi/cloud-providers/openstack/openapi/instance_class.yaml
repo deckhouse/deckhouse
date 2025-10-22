@@ -1,0 +1,152 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: openstackinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of OpenStack servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - flavorName
+              properties:
+                flavorName:
+                  description: |
+                    Flavor of OpenStack servers.
+
+                    Get a list of all available flavors: `openstack flavor list`.
+
+                    For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+
+                    Flavor create example: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
+
+                  x-doc-examples: ['m1.medium']
+                  type: string
+                capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
+                  type: object
+                  description: |
+                    Deprecated: the parameter is no longer used. Deckhouse is using parameters from the cloud for passed instance type.
+
+                    Instance capacity for *non-standard* instance types (the `flavorName` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`m1.medium`, `m1.large`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1000m"]
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1500Mi"]
+                imageName:
+                  description: |
+                    Image to use while provisioning OpenStack servers.
+
+                    Use this command to get a list of available images: `openstack image list`.
+
+                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+
+                    **By default:** either `OpenStackCloudDiscoveryData` value or `instances.imageName` is used.
+                  x-doc-required: false
+                  x-doc-examples: ['ubuntu-18-04-cloud-amd64']
+                  type: string
+                rootDiskSize:
+                  description: |
+                    The size of a root disk (in gigabytes).
+                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/modules/cloud-provider-openstack/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                  x-doc-examples: [20]
+                  type: integer
+                  x-doc-required: false
+                mainNetwork:
+                  description: |
+                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+
+                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
+                  x-doc-examples: ['k8s-msk-178']
+                  type: string
+                  x-doc-required: false
+                additionalNetworks:
+                  description: |
+                    Paths to networks that VirtualMachines' secondary NICs will connect to.
+
+                    **By default:** the value from `OpenStackCloudDiscoveryData` is used.
+                  x-doc-examples:
+                  - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
+                  type: array
+                  items:
+                    type: string
+                additionalSecurityGroups:
+                  description: |
+                    Security groups that will be applied to VM's network ports. Default group should also be added to this list.
+
+                    They allow you to set firewall rules for provisioned instances.
+
+                    The `SecurityGroups` may not be supported by the cloud provider.
+                  x-doc-examples:
+                    - ["security-group-1", "security-group-2"]
+                  type: array
+                  items:
+                    type: string
+                additionalTags:
+                  description: |
+                    The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+                  x-doc-examples:
+                  - project: cms-production
+                    severity: critical
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: openstackinstanceclasses
+    singular: openstackinstanceclass
+    kind: OpenStackInstanceClass
+    categories:
+      - cloudinstanceclasses

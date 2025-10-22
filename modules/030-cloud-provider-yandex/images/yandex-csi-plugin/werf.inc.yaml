@@ -1,0 +1,68 @@
+{{- $version := "v0.15.0" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /go/bin/yandex-csi-driver
+  to: /bin/yandex-csi-driver
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+imageSpec:
+  config:
+    entrypoint: ["/bin/yandex-csi-driver"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-csi-driver.git /go/src/app
+    - cd /go/src/app
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /go/src/app
+    to: /go/src/app
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /go/src/app
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /go/src/app
+    - |
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+      -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $version }}' \
+      -o /go/bin/yandex-csi-driver \
+      github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+    - chown 64535:64535 /go/bin/yandex-csi-driver
+    - chmod 0755 /go/bin/yandex-csi-driver
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+    - apt-get update -y
+    - apt-get install -y e2fsprogs xfsprogs parted
+  install:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

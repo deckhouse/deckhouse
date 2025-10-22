@@ -1,0 +1,4 @@
+cloud-providers/*
+capi/*
+templates/*
+monitoring/*

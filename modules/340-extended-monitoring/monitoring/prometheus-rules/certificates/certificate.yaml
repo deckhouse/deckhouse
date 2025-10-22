@@ -1,0 +1,67 @@
+- name: kubernetes.certmanager.certificate
+  rules:
+  - alert: CertificateSecretExpiredSoon
+    expr: |
+      max by (secret_name, secret_namespace) (
+        x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 1209600
+      ) * on (secret_namespace) group_left() max by (secret_namespace) (label_replace(extended_monitoring_enabled, "secret_namespace", "$1", "namespace", "(.+)"))
+    for: 1h
+    labels:
+      severity_level: "8"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Certificate is expiring soon.
+      description: |
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` will expire in less than two weeks.
+
+        Ways to resolve:
+
+        - If the certificate is managed manually, upload a new certificate.
+        - If the certificate is managed by the `cert-manager` module, inspect the certificate resource:
+          1. Retrieve the certificate name from the Secret:
+
+             ```bash
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             ```
+
+          2. Check the certificate status and investigate why it hasn't been updated:
+
+             ```bash
+             d8 k describe cert -n {{$labels.secret_namespace}} "$cert"
+             ```
+
+  - alert: CertificateSecretExpired
+    expr: |
+      max by (secret_name, secret_namespace) (
+        x509_cert_not_after{job="x509-certificate-exporter", secret_key!="ca.crt"} - time() < 0
+      ) * on (secret_namespace) group_left() max by (secret_namespace) (label_replace(extended_monitoring_enabled, "secret_namespace", "$1", "namespace", "(.+)"))
+    for: 1h
+    labels:
+      severity_level: "8"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__certificate_secret_expiration: "CertificateSecretExpiration,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Certificate has expired.
+      description: |
+        A certificate in Secret `{{$labels.secret_namespace}}/{{$labels.secret_name}}` has expired.
+
+        Ways to resolve:
+
+        - If the certificate is managed manually, upload a new certificate.
+        - If the certificate is managed by the `cert-manager` module, inspect the certificate resource:
+          1. Retrieve the certificate name from the Secret:
+
+             ```bash
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             ```
+
+          2. Check the certificate status and investigate why it hasn't been updated:
+
+             ```bash
+             d8 k describe cert -m {{$labels.secret_namespace}} "$cert"
+             ```

@@ -1,0 +1,107 @@
+kind: OpenStackCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1alpha1
+  openAPISpec:
+    type: object
+    description: |
+      Contains information about data discovered from the cloud.
+    required:
+      - apiVersion
+      - kind
+      - mainNetwork
+      - additionalNetworks
+      - additionalSecurityGroups
+      - defaultImageName
+      - images
+      - volumeTypes
+      - flavors
+      - zones
+    properties:
+      apiVersion:
+        type: string
+        enum:
+          - deckhouse.io/v1alpha1
+      kind:
+        type: string
+        enum:
+          - OpenStackCloudProviderDiscoveryData
+      mainNetwork:
+        type: string
+        description: |
+          The path to the network that will serve as the primary network (the default gateway) for connecting to the virtual machine.
+      additionalNetworks:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        description: |
+          Paths to networks that VirtualMachines secondary NICs will connect to.
+        uniqueItems: true
+      additionalSecurityGroups:
+        type: array
+        description: |
+          Security groups that will be applied to VM's network ports. Default group should also be added to this list.
+
+          They allow you to set firewall rules for provisioned instances.
+
+          The `SecurityGroups` may not be supported by the cloud provider.
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+      defaultImageName:
+        type: string
+        description: Virtual machine image name used by default.
+      images:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        description: List of virtual machine images.
+        uniqueItems: true
+      volumeTypes:
+        description: List of available volume types.
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          required:
+            - name
+            - id
+          properties:
+            name:
+              type: string
+              description: Volume name.
+            id:
+              type: string
+              description: Volume id.
+            description:
+              type: string
+              description: Volume description.
+            extraSpecs:
+              type: object
+              additionalProperties: true
+              description: Volume extra specs.
+            isPublic:
+              type: boolean
+              description: Volume is public.
+            qosSpecID:
+              type: string
+              description: Volume qos spec id.
+      flavors:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        description: List of flavors.
+        uniqueItems: true
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        description: Availability zones.
+        uniqueItems: true

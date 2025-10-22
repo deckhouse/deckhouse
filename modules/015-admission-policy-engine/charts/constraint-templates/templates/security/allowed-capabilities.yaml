@@ -1,0 +1,106 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedcapabilities
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "The allowed capabilities"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls Linux capabilities on containers. Corresponds to the
+      `allowedCapabilities` in a PodSecurityPolicy. For more information, see
+      https://kubernetes.io/docs/concepts/security/pod-security-standards/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedCapabilities
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls Linux capabilities on containers. Corresponds to the
+            `allowedCapabilities` in a PodSecurityPolicy. For more information, see
+            https://kubernetes.io/docs/concepts/security/pod-security-standards/
+          properties:
+            allowedCapabilities:
+              type: array
+              description: "A list of Linux capabilities that can be added to a container."
+              items:
+                type: string
+            requiredDropCapabilities:
+              type: array
+              description: "A list of Linux capabilities that are required to be dropped from a container."
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          has_disallowed_capabilities(container)
+          msg := sprintf("container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          missing_drop_capabilities(container)
+          msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.initContainers[_]
+          has_disallowed_capabilities(container)
+          msg := sprintf("init container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.initContainers[_]
+          missing_drop_capabilities(container)
+          msg := sprintf("init container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.ephemeralContainers[_]
+          has_disallowed_capabilities(container)
+          msg := sprintf("ephemeral container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.ephemeralContainers[_]
+          missing_drop_capabilities(container)
+          msg := sprintf("ephemeral container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
+        }
+
+        has_disallowed_capabilities(container) {
+          allowed := {c | c := lower(input.parameters.allowedCapabilities[_])}
+          not allowed["ALL"]
+          capabilities := {c | c := lower(container.securityContext.capabilities.add[_])}
+
+          count(capabilities - allowed) > 0
+        }
+
+        missing_drop_capabilities(container) {
+          must_drop := {c | c := lower(input.parameters.requiredDropCapabilities[_])}
+          all := {"all"}
+          dropped := {c | c := lower(container.securityContext.capabilities.drop[_])}
+
+          count(must_drop - dropped) > 0
+          count(all - dropped) > 0
+        }
+
+        get_default(obj, param, _default) = out {
+          out = obj[param]
+        }
+
+        get_default(obj, param, _default) = out {
+          not obj[param]
+          not obj[param] == false
+          out = _default
+        }

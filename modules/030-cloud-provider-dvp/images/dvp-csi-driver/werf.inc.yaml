@@ -1,0 +1,95 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+git:
+{{- include "image mount points" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dvp-csi-driver
+  to: /dvp-csi-driver
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev/scsi_id
+  before: setup
+- image: tools/util-linux
+  add: /bin/lsblk
+  to: /bin/lsblk
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dvp-csi-driver"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/dvp-common
+  to:  /src/dvp-common
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# ../../dvp-common# /src/dvp-common#g' go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dvp-csi-driver cmd/dvp-csi-driver/main.go
+  - chown 64535:64535 /dvp-csi-driver
+  - chmod 0755 /dvp-csi-driver
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
+  install:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+

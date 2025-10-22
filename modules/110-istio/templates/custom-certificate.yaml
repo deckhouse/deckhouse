@@ -1,0 +1,2 @@
+{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "istio-ingress-tls") }}
+{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "api-proxy-ingress-tls") }}

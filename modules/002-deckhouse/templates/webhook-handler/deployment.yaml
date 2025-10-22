@@ -1,0 +1,152 @@
+{{- define "handler_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: webhook-handler
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: webhook-handler
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: handler
+      minAllowed:
+        {{- include "handler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 100Mi
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: webhook-handler
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: webhook-handler
+  template:
+    metadata:
+      labels:
+        app: webhook-handler
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/webhook-handler/secret.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook-handler")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: webhook-handler
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: handler
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "webhookHandler") }}
+        env:
+        - name: SHELL_OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: VALIDATING_WEBHOOK_SERVICE_NAME
+          value: validating-webhook-handler
+        - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
+          value: d8-deckhouse-validating-webhook-handler
+        - name: VALIDATING_WEBHOOK_SERVER_CERT
+          value: /certs/tls.crt
+        - name: VALIDATING_WEBHOOK_SERVER_KEY
+          value: /certs/tls.key
+        - name: VALIDATING_WEBHOOK_CA
+          value: /certs/ca.crt
+        {{- if not .Values.global.clusterIsBootstrapped }}
+        - name: VALIDATING_WEBHOOK_FAILURE_POLICY
+          value: Ignore
+        {{- end }}
+        - name: CONVERSION_WEBHOOK_SERVICE_NAME
+          value: conversion-webhook-handler
+        - name: CONVERSION_WEBHOOK_CONFIGURATION_NAME
+          value: d8-deckhouse-conversion-webhook-handler
+        - name: CONVERSION_WEBHOOK_SERVER_CERT
+          value: /certs/tls.crt
+        - name: CONVERSION_WEBHOOK_SERVER_KEY
+          value: /certs/tls.key
+        - name: CONVERSION_WEBHOOK_CA
+          value: /certs/ca.crt
+        - name: ENABLED_MODULES
+          value: "{{ $.Values.global.enabledModules | join " " }}"
+        - name: DECKHOUSE_CONFIG_MAP
+          value: deckhouse-generated-config-do-not-edit
+        {{- if (((.Values.global).clusterConfiguration).cloud) }}
+        - name: INSTANCE_CLASS_NAME
+          value: "{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"
+        {{- end }}
+        ports:
+          - containerPort: 9680
+            name: validating-http
+            protocol: TCP
+          - containerPort: 9681
+            name: conversion-http
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            port: 9680
+            path: /healthz
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "handler_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - name: certs
+          mountPath: /certs/
+          readOnly: true
+        - mountPath: /var/run
+          name: run
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /hooks
+          name: hooks
+        - mountPath: /.kube
+          name: kube
+      volumes:
+      - name: certs
+        secret:
+          secretName: webhook-handler-certs
+      - emptyDir: {}
+        name: run
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - emptyDir: {}
+        name: hooks
+      - emptyDir:
+          medium: Memory
+        name: kube

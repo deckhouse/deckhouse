@@ -1,0 +1,103 @@
+linters-settings:
+  container:
+    exclude-rules:
+      resources:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+      security-context:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+      readiness-probe:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+      liveness-probe:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+      service-port:
+        - name: d8-control-plane-apiserver
+          port: https

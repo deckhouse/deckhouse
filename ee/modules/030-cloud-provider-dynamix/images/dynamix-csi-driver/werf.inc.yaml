@@ -1,0 +1,83 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dynamix-csi-driver
+  to: /dynamix-csi-driver
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev/scsi_id
+  before: setup
+- image: tools/util-linux
+  add: /bin/lsblk
+  to: /bin/lsblk
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dynamix-csi-driver"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+fromCacheVersion: "2025-02-14.1"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - export VERSION="v0.4.0"
+  - export VERSION_COMMON="v0.5.0"
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
+  - cd /src/dynamix-common
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
+  - chown 64535:64535 /dynamix-csi-driver
+  - chmod 0755 /dynamix-csi-driver
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
+  install:
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

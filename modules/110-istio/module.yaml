@@ -1,0 +1,13 @@
+name: istio
+stage: "General Availability"
+subsystems:
+  - infrastructure
+  - networking
+namespace: d8-istio
+description: |
+  Service Mesh
+descriptions:
+  en: Service Mesh
+requirements:
+  deckhouse: ">= 1.68"
+

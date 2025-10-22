@@ -1,0 +1,35 @@
+candi:
+  fixes:
+    - summary: Added proper labels and taints on cluster bootstrap to master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1287
+cloud-provider-aws:
+  fixes:
+    - summary: The Standard layout is considered deprecated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1292
+deckhouse-web:
+  fixes:
+    - summary: Generation of a cloud provider cluster configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1289
+docs:
+  fixes:
+    - summary: >-
+        Increased maximum width of tears in openAPI schemas as the log parameters path didn't fit
+        tip's maximum width.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1299
+    - summary: Update documentation of the linstor module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1278
+    - summary: Proper display of the mandatory use of the parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1272
+    - summary: Review and fix the 'Control plane management' section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1239
+    - summary: VMware vSphere cloud provider documentation updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1194
+linstor:
+  fixes:
+    - summary: Update documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1278
+monitoring-kubernetes:
+  fixes:
+    - summary: Removed many-to-many matching case in ebpf-exporter recording rules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1273
+

@@ -1,0 +1,64 @@
+diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
+index 0c545c82..d5ad922b 100644
+--- a/pkg/vcdsdk/vapp.go
++++ b/pkg/vcdsdk/vapp.go
+@@ -552,13 +552,24 @@ func (vdc *VdcManager) AddNewMultipleVM(vapp *govcd.VApp, vmNamePrefix string, v
+ 		return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
+ 	}
+
+-	var queryVAppTemplate *types.QueryResultVappTemplateType = nil
+-	for _, template := range vAppTemplateList {
+-		if template.Name == templateName {
+-			queryVAppTemplate = template
+-			break
++	var queryVAppTemplate *types.QueryResultVappTemplateType
++
++	if govcd.IsUuid(templateName) {
++		for _, template := range vAppTemplateList {
++			if template.ID == templateName || strings.HasSuffix(template.HREF, templateName) {
++				queryVAppTemplate = template
++				break
++			}
++		}
++	} else {
++		for _, template := range vAppTemplateList {
++			if template.Name == templateName {
++				queryVAppTemplate = template
++				break
++			}
+ 		}
+ 	}
++
+ 	if queryVAppTemplate == nil {
+ 		return govcd.Task{}, fmt.Errorf("unable to get template of name [%s] in catalog [%s]",
+ 			templateName, catalogName)
+@@ -851,13 +862,24 @@ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
+ 		return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
+ 	}
+
+-	var queryVAppTemplate *types.QueryResultVappTemplateType = nil
+-	for _, template := range vAppTemplateList {
+-		if template.Name == templateName {
+-			queryVAppTemplate = template
+-			break
++	var queryVAppTemplate *types.QueryResultVappTemplateType
++
++	if govcd.IsUuid(templateName) {
++		for _, template := range vAppTemplateList {
++			if template.ID == templateName || strings.HasSuffix(template.HREF, templateName) {
++				queryVAppTemplate = template
++				break
++			}
++		}
++	} else {
++		for _, template := range vAppTemplateList {
++			if template.Name == templateName {
++				queryVAppTemplate = template
++				break
++			}
+ 		}
+ 	}
++
+ 	if queryVAppTemplate == nil {
+ 		return fmt.Errorf("unable to get template of name [%s] in catalog [%s]",
+ 			templateName, catalogName)

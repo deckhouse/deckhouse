@@ -1,0 +1,124 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                ingressGatewayClass:
+                  description: |
+                    Имя Ingress-gateway класса для обслуживания Istio ingressgateway controller.
+
+                    Значение данного параметра используется в качестве селектора лейблов ресурса [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/).
+
+                    Пример лейбла ресурса Gateway: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`
+                inlet:
+                  description: |
+                    Способ поступления трафика из внешнего мира:
+                    * `LoadBalancer` — устанавливается Ingress-контроллер и заказывается Service с типом `LoadBalancer`;
+                    * `NodePort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `NodePort`;
+                    * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `HostPort`.
+
+                    **Внимание!** На одном хосте может быть только один контроллер с данным типом инлета.
+                nodeSelector:
+                  description: |
+                    Как в `spec.nodeSelector` у подов.
+
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                tolerations:
+                  description: |
+                    Как в `spec.tolerations` у подов.
+
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                loadBalancer:
+                  description: |
+                    Секция настроек для инлета `LoadBalancer`.
+                  properties:
+                    annotations:
+                      description: |
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+                hostPort:
+                  description: |
+                    Секция настроек для инлета `HostPort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.
+                nodePort:
+                  description: |
+                    Секция настроек для инлета `NodePort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.
+                resourcesRequests:
+                  description: |
+                    Настройки максимальных значений CPU и памяти, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся значениями по умолчанию).
+                  properties:
+                    mode:
+                      description: |
+                        Режим управления реквестами ресурсов.
+                    vpa:
+                      description: |
+                        Настройки режима работы VPA.
+                      properties:
+                        mode:
+                          description: |
+                            Режим работы VPA.
+                        cpu:
+                          description: |
+                            Настройки для CPU.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение, которое может выставить VPA для реквеста к CPU.
+                            min:
+                              description: |
+                                Минимальное значение, которое может выставить VPA для реквеста к CPU.
+                        memory:
+                          description: |
+                            Значение для реквеста к памяти.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение, которое может выставить VPA для реквеста к памяти.
+                            min:
+                              description: |
+                                Минимальное значение, которое может выставить VPA для реквеста к памяти.
+                    static:
+                      description: |
+                        Настройки статического режима управления.
+                      properties:
+                        cpu:
+                          description: |
+                            Значение для реквеста к CPU.
+                        memory:
+                          description: |
+                            Значение для реквеста к памяти.

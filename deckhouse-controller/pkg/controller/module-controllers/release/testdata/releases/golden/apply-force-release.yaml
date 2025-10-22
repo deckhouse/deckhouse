@@ -1,0 +1,91 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: test
+  resourceVersion: "999"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: ""
+    repo: ""
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+    status: superseded
+  name: parca-1.2.1
+  resourceVersion: "1002"
+spec:
+  moduleName: parca
+  version: 1.2.1
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+    status: deployed
+  name: parca-1.5.2
+  resourceVersion: "1003"
+spec:
+  moduleName: parca
+  version: 1.5.2
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 9m15s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed

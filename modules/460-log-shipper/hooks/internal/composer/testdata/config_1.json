@@ -1,0 +1,90 @@
+{
+  "sources": {
+    "cluster_logging_config/testsource:baar": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "aaaa=bbbb,log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.namespace=baar,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    },
+    "cluster_logging_config/testsource:foot": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "aaaa=bbbb,log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.namespace=foot,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    }
+  },
+  "sinks": {
+    "destination/cluster/testoutput": {
+      "type": "loki",
+      "inputs": [
+        "cluster_logging_config/testsource:baar",
+        "cluster_logging_config/testsource:foot"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "buffer": {
+        "max_size": 268435488,
+        "type": "disk",
+        "when_full": "block"
+      },
+      "encoding": {
+        "only_fields": [
+          "message"
+        ],
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "endpoint": "http://testmeip:9000",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
+      "labels": {
+        "container": "{{ container }}",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
+      "remove_label_fields": true,
+      "out_of_order_action": "rewrite_timestamp"
+    }
+  }
+}

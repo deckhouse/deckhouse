@@ -1,0 +1,7 @@
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Updated requirements for Ingress Nginx controller versions. If conditions are not met, then
+        further Deckhouse upgrade is blocked.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1697
+

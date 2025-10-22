@@ -1,0 +1,176 @@
+{{ define "main" }}
+<div class="breadcrumbs-container">
+  <div class="breadcrumbs__left">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
+    </ol>
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      {{- partial "breadcrumbs" . }}
+    </ol>
+  </div>
+
+  <!--start search-->
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
+        data-search-index-path="/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        data-search-context='{{ T "search_context_modules" }}'
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
+  </div>
+  <!--end search-->
+  <!--loading search JS-->
+  <script type="text/javascript" src='/assets/js/fuse.min.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}' ></script>
+  <script type="text/javascript" src='/assets/js/search-v3.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}' ></script>
+  <!--end loading search JS-->
+
+</div>
+
+<div class="layout-sidebar layout-sidebar__tile">
+  <div class="layout-sidebar__sidebar layout-sidebar__sidebar--tile">
+    {{- partial "sidebar-filter" . }}
+  </div>
+  <div class="layout-sidebar__content layout-sidebar__content--tile">
+
+    <h1 class="tile__title">{{ .Title }}</h1>
+
+    {{.Content}}
+
+{{ $lang := .Site.Language.Lang }}
+{{ $modulesChannelsData := .Site.Data.modules.channels }}
+{{ $channelsInfo := .Site.Data.channels.info }}
+{{ $modulesList := slice }}
+{{ $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
+{{ $modulesEditions := .Site.Data.modules_all }}
+{{ $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
+{{ $ctx := $ }}
+
+{{ $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
+{{ $currentModuleName := index $_pathElements 1 }}
+{{ $currentModuleChannel := index $_pathElements 2 }}
+
+{{ range $module, $data := $modulesChannelsData }}
+  {{ $moduleTitle := "" }}
+  {{ $moduleChannel := "" }}
+  {{ $moduleDescription := "" }}
+  {{ $moduleTags := slice }}
+
+  {{/* Skip the embedded module if there is external module with the same name */}}
+  {{ $embeddedModuleWithTheSameName := (where $embeddedModulesList "module" $module) }}
+  {{ if gt ($embeddedModuleWithTheSameName | len) 0 }}
+    {{ warnf "Found embedded module %s and external modules with the same name. Use only external module." $module }}
+  {{ end }}
+
+  {{ $moduleTags = index (index $modulesEditions $module) "tags" }}
+
+  {{ range sort $channelsInfo "stability" "desc" }}
+    {{/* Skip rock-solid channel */}}
+    {{ if eq .code "rock-solid"  }}{{ continue }}{{ end }}
+    {{ if gt ( $moduleTitle | len ) 0  }}{{ continue }}{{ end }}
+    {{ $code := .code }}
+    {{ with $.GetPage ( printf "modules/%s/%s/README.md" $module .code  ) }}
+      {{ if .Params.menuTitle }}{{ $moduleTitle = .Params.menuTitle }}
+      {{ else if .LinkTitle }}{{ $moduleTitle = .LinkTitle }}
+      {{ end }}
+      {{ if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
+      {{ if not $moduleDescription }}{{ $moduleDescription = .Description }}{{ end }}
+    {{ end}}
+  {{ end}}
+
+  {{ if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
+  {{ if (not $moduleChannel ) }}{{ continue }}{{ end }}
+  {{ $modulesList = $modulesList | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "description" $moduleDescription "tags" $moduleTags "url" (printf "%s/%s/" $module $moduleChannel ) ) }}
+{{ end}}
+
+{{ warnf "Found %d modules from sources." ($modulesList | len) }}
+{{ if $embeddedModulesList }}
+  {{ warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
+  {{ $filteredEmbeddedModules := slice }}
+  {{ range $embeddedModulesList }}
+    {{ $externalModuleWithSameName := (where $modulesList "module" .module) }}
+    {{ if eq ($externalModuleWithSameName | len) 0 }}
+      {{ $filteredEmbeddedModules = $filteredEmbeddedModules | append . }}
+    {{ else }}
+      {{ warnf "Skipping embedded module %s because external module with same name exists." .module }}
+    {{ end }}
+  {{ end }}
+  {{ $modulesList = $modulesList | append $filteredEmbeddedModules }}
+{{ else }}
+  {{ warnf "No embedded modules found!" }}
+{{ end }}
+
+      <div class="block__tile">
+      {{- range (sort $modulesList "module" "asc") }}
+        <a class="button-tile" href="{{ .url }}">
+        <h2 class="button-tile__title">{{ .module }}</h2>
+        <p class="button-tile__descr">{{ if and (index . $lang) (index (index . $lang) "description") }}{{ (index (index . $lang) "description") }}{{ else }}{{ .description }}{{ end }}</p>
+          <div class="button-tile__bottom">
+            <div class="button-tile__tags">
+
+              {{/* add commercial or community edition tag */}}
+              {{ $tags := .tags }}
+
+              {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
+              {{ $editionTagTitle := "" }}
+
+              {{ $moduleEditionsData := slice }}
+
+              {{ if gt (where $embeddedModulesList "module" .module | len ) 0 }}
+                {{ $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
+                {{ if or
+                   (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                   (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                   (in (index $moduleEditionsData "editions") "ce")
+                }}
+                  {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
+                {{ end }}
+              {{ else if isset $modulesEditions .module }}
+                {{ $moduleEditionsData := index $modulesEditions .module }}
+                {{ if or
+                     (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+                     (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+                     (in (index $moduleEditionsData "editions") "ce")
+                }}
+                  {{ $editionTagTitle = T "community_edition_en" }}
+                {{ else }}
+                  {{ $editionTagTitle = T "commercial_editions_en" }}
+                {{ end }}
+              {{ end }}
+
+              {{ if gt ($editionTagTitle | len ) 0 }}
+                {{ $tags = $tags | append $editionTagTitle }}
+              {{ end }}
+
+              {{ range $tags }}
+                <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
+              {{end}}
+
+            </div>
+            {{/* <div class="button-tile__time">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="6" r="5.25" stroke="#5E6697" stroke-width="1.5"/>
+                <path d="M4.25 6H6V3.375" stroke="#5E6697" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+               <p class="button-tile__descr tile__descr--time">{{ .WordCount }} words</p>
+            </div> */}}
+          </div>
+        </a>
+      {{- end }}
+
+      </div>
+
+    <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
+    {{- if ne site.Params.mode "module" }}
+     {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
+    {{ end }}
+
+  </div>
+</div>
+{{ end }}

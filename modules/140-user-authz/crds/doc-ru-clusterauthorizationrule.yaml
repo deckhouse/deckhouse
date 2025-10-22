@@ -1,0 +1,191 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Cluster-wide-ресурс для управления настройками RBAC и авторизацией.
+
+            > Ресурс `ClusterAuthorizationRule` используется [в текущей ролевой модели](./#текущая-ролевая-модель) и не используется в экспериментальной ролевой модели.
+          properties:
+            spec:
+              properties:
+                accessLevel:
+                  description: |
+                    Уровень доступа:
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
+                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
+                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+
+                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
+                portForwarding:
+                  description: |
+                    Разрешить/запретить выполнять `port-forward`.
+                allowScale:
+                  description: |
+                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                allowAccessToSystemNamespaces:
+                  description: |
+                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                limitNamespaces:
+                  description: |
+                    Список разрешенных namespace в формате регулярных выражений.
+
+                    Политика:
+                    * Если список указан, разрешаем доступ только по нему.
+                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
+                subjects:
+                  description: |
+                    Пользователи и/или группы, которым необходимо предоставить права.
+
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+                  items:
+                    properties:
+                      kind:
+                        description: 'Тип ресурса.'
+                      name:
+                        description: 'Имя ресурса.'
+                        example: 'some-group-name'
+                      namespace:
+                        description: 'Namespace для ServiceAccount.'
+                additionalRoles:
+                  description: |
+                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
+
+                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                  items:
+                    properties:
+                      apiGroup:
+                        description: "apiGroup для пользователей."
+                      kind:
+                        description: 'Kind роли.'
+                      name:
+                        description: 'Название роли.'
+    - name: v1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          description: |
+            Управляет настройками RBAC и авторизацией по namespace.
+
+            Настройки определяют, какой уровень доступа назначен пользователю и/или группе.
+          properties:
+            spec:
+              properties:
+                accessLevel:
+                  description: |
+                    Уровень доступа:
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
+                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
+                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+
+                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (см. ниже) продолжат работать.
+                portForwarding:
+                  description: |
+                    Разрешить/запретить выполнять `port-forward`.
+                allowScale:
+                  description: |
+                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                allowAccessToSystemNamespaces:
+                  description: |
+                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                namespaceSelector:
+                  description: |
+                    Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
+
+                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
+
+                    Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
+
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                  properties:
+                    matchAny:
+                      description: |
+                        Разрешает доступ ко всем пространствам имен в кластере, включая системные.
+
+                        Не может использоваться совместно с параметром `labelSelector`.
+
+                        Так как с помощью параметра `labelSelector` можно предоставить доступ только к определенному перечню пространств имен, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем пространствам имен.
+                    labelSelector:
+                      description: |
+                        Фильтр по меткам пространств имен.
+
+                        Не может использоваться совместно с параметром `matchAny`.
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
+                      properties:
+                        matchExpressions:
+                          description: Список фильтров на основе выражений.
+                          items:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: Фильтр на основе совпадения/несовпадения меток.
+                limitNamespaces:
+                  description: |
+                    Список разрешенных namespace в формате регулярных выражений.
+
+                    Политика:
+                    * Если список указан, разрешаем доступ только по нему.
+                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+
+                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+                subjects:
+                  description: |
+                    Пользователи и/или группы, которым необходимо предоставить права.
+
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+                  items:
+                    properties:
+                      kind:
+                        description: 'Тип ресурса.'
+                      name:
+                        description: 'Имя ресурса.'
+                        example: 'some-group-name'
+                      namespace:
+                        description: 'Namespace для ServiceAccount.'
+                additionalRoles:
+                  description: |
+                    Дополнительные роли, которые необходимо выдать для заданных `subjects`.
+
+                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                  items:
+                    properties:
+                      apiGroup:
+                        description: "apiGroup для пользователей."
+                      kind:
+                        description: 'Kind роли.'
+                      name:
+                        description: 'Название роли.'

@@ -1,0 +1,8 @@
+ci:
+  features:
+    - summary: Add base images for Rust and Debian Bullseye
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1150
+  fixes:
+    - summary: support for additional repos to test CI cnahges
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1027
+

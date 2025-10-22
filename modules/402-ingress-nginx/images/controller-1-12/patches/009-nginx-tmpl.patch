@@ -1,0 +1,210 @@
+diff --git a/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua b/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
+index 8f3d57be6..5ea886093 100644
+--- a/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
++++ b/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
+@@ -1,2 +1,2 @@
+-local monitor = require("monitor")
+-monitor.call()
+\ No newline at end of file
++local monitor = require("pbmetrics")
++pbmetrics.call()
+diff --git a/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua b/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua
+index 72f6a6430..d667871c6 100644
+--- a/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua
++++ b/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua
+@@ -1,5 +1,5 @@
+ local balancer = require("balancer")
+-local monitor = require("monitor")
++local pbmetrics = require("pbmetrics")
+ 
+ local luaconfig = ngx.shared.luaconfig
+ local enablemetrics = luaconfig:get("enablemetrics")
+@@ -7,5 +7,5 @@ local enablemetrics = luaconfig:get("enablemetrics")
+ balancer.log()
+ 
+ if enablemetrics then
+-    monitor.call()
+-end
+\ No newline at end of file
++    pbmetrics.call()
++end
+diff --git a/rootfs/etc/nginx/lua/ngx_conf_init.lua b/rootfs/etc/nginx/lua/ngx_conf_init.lua
+index 9789386ac..25bdc7939 100644
+--- a/rootfs/etc/nginx/lua/ngx_conf_init.lua
++++ b/rootfs/etc/nginx/lua/ngx_conf_init.lua
+@@ -35,11 +35,11 @@ else
+   balancer = res
+ end
+ if configfile.enable_metrics then
+-    ok, res = pcall(require, "monitor")
++    ok, res = pcall(require, "pbmetrics")
+     if not ok then
+         error("require failed: " .. tostring(res))
+     else
+-        monitor = res
++        pbmetrics = res
+     end
+ end
+ ok, res = pcall(require, "certificate")
+@@ -50,4 +50,4 @@ else
+   if configfile.enable_ocsp then
+     certificate.is_ocsp_stapling_enabled = configfile.enable_ocsp
+   end
+-end
+\ No newline at end of file
++end
+diff --git a/rootfs/etc/nginx/lua/ngx_conf_init_worker.lua b/rootfs/etc/nginx/lua/ngx_conf_init_worker.lua
+index cba866136..da6c2569b 100644
+--- a/rootfs/etc/nginx/lua/ngx_conf_init_worker.lua
++++ b/rootfs/etc/nginx/lua/ngx_conf_init_worker.lua
+@@ -7,9 +7,7 @@ local configfile = cjson.decode(content)
+ 
+ local lua_ingress = require("lua_ingress")
+ local balancer = require("balancer")
+-local monitor = require("monitor")
++local pbmetrics = require("pbmetrics")
+ lua_ingress.init_worker()
+ balancer.init_worker()
+-if configfile.enable_metrics and configfile.monitor_batch_max_size then
+-  monitor.init_worker(configfile.monitor_batch_max_size)
+-end
+\ No newline at end of file
++pbmetrics.init_worker()
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index 1f17952a1..e3ff6408d 100644
+--- a/rootfs/etc/nginx/template/nginx.tmpl
++++ b/rootfs/etc/nginx/template/nginx.tmpl
+@@ -12,6 +12,9 @@
+ # setup custom paths that do not require root access
+ pid {{ .PID }};
+ 
++# enables the use of “just-in-time compilation” for the regular expressions known by the time of configuration parsing
++pcre_jit on;
++
+ {{ if $cfg.UseGeoIP2 }}
+ load_module /etc/nginx/modules/ngx_http_geoip2_module.so;
+ {{ end }}
+@@ -355,6 +358,15 @@ http {
+         {{ $reqUri }} 0;{{ end }}
+         default 1;
+     }
++    map $server_name $total_upstream_response_time {
++        default 0;
++    }
++    map $server_name $upstream_retries {
++        default 0;
++    }
++    map $server_name $formatted_status {
++        default $status;
++    }
+ 
+     {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
+     access_log off;
+@@ -554,6 +566,9 @@ http {
+ 
+         {{ buildHTTPListener  $all $redirect.From }}
+         {{ buildHTTPSListener $all $redirect.From }}
++        {{ if $cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $redirect.From }}
++        {{ end }}
+ 
+         ssl_certificate_by_lua_file /etc/nginx/lua/nginx/ngx_conf_certificate.lua;
+ 
+@@ -568,7 +583,7 @@ http {
+         }
+         {{ end }}
+ 
+-        set_by_lua_file $redirect_to /etc/nginx/lua/nginx/ngx_srv_redirect.lua {{ $redirect.To }}; 
++        set_by_lua_file $redirect_to /etc/nginx/lua/nginx/ngx_srv_redirect.lua {{ $redirect.To }};
+ 
+         return {{ $all.Cfg.HTTPRedirectCode }} $redirect_to;
+     }
+@@ -688,7 +703,7 @@ stream {
+     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;";
+ 
+     lua_shared_dict tcp_udp_configuration_data 5M;
+-    
++
+     {{ buildResolvers $cfg.Resolver $cfg.DisableIpv6DNS }}
+ 
+     init_by_lua_file /etc/nginx/lua/ngx_conf_init_stream.lua;
+@@ -819,13 +834,14 @@ stream {
+             proxy_set_header       Host               $best_http_host;
+ 
+             set $proxy_upstream_name {{ $upstreamName | quote }};
++            set $formatted_status $status;
++            set $upstream_retries "0";
++            set $total_upstream_response_time "0";
+ 
+             rewrite                (.*) / break;
+ 
+             proxy_pass            http://upstream_balancer;
+-            {{ if $enableMetrics }}
+             log_by_lua_file /etc/nginx/lua/nginx/ngx_conf_log.lua;
+-            {{ end }}
+         }
+         {{ end }}
+ {{ end }}
+@@ -870,8 +886,14 @@ stream {
+ 
+         {{ buildHTTPListener  $all $server.Hostname }}
+         {{ buildHTTPSListener $all $server.Hostname }}
++        {{ if $all.Cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $server.Hostname }}
++        {{ end }}
+ 
+         set $proxy_upstream_name "-";
++        set $formatted_status $status;
++        set $upstream_retries "0";
++        set $total_upstream_response_time "0";
+ 
+         {{ if not ( empty $server.CertificateAuth.MatchCN ) }}
+         {{ if gt (len $server.CertificateAuth.MatchCN) 0 }}
+@@ -1030,6 +1052,10 @@ stream {
+             proxy_set_header            X-Auth-Request-Redirect $request_uri;
+             {{ end }}
+ 
++            {{ if not (contains $externalAuth.AuthSnippet "proxy_connect_timeout") }}
++            proxy_connect_timeout                   15s;
++            {{ end }}
++
+             {{ if $externalAuth.AuthCacheKey }}
+             proxy_buffering                         "on";
+             {{ else }}
+@@ -1105,6 +1131,9 @@ stream {
+         {{ end }}
+ 
+         location {{ $path }} {
++            {{ if $all.Cfg.UseHTTP3 }}
++            add_header Alt-Svc 'h3=":{{ $all.ListenPorts.HTTPS }}"; ma=86400';
++            {{ end }}
+             {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
+             set $namespace      {{ $ing.Namespace | quote}};
+             set $ingress_name   {{ $ing.Rule | quote }};
+@@ -1112,6 +1141,8 @@ stream {
+             set $service_port   {{ $ing.ServicePort | quote }};
+             set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
+ 
++            set $content_kind "";
++
+             {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
+ 
+             {{ if $location.Mirror.Source }}
+@@ -1412,14 +1443,15 @@ stream {
+ 
+         {{ if eq $server.Hostname "_" }}
+         # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
+-        location {{ $all.HealthzURI }} {
++        location = {{ $all.HealthzURI }} {
+ 
+             {{ if $all.Cfg.EnableOpentelemetry }}
+             opentelemetry off;
+             {{ end }}
+ 
+             access_log off;
+-            return 200;
++            proxy_set_header D8s-External-Check "True";
++            proxy_pass http://127.0.0.1:10254;
+         }
+ 
+         # this is required to avoid error if nginx is being monitored

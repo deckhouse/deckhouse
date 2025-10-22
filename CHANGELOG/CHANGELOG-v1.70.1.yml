@@ -1,0 +1,48 @@
+candi:
+  fixes:
+    - summary: >-
+        Added a check to the bashible step for the presence of a previously created symlink and
+        where it leads to
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13865
+    - summary: bashible bb-discover-node-name use node name from kubelet certificate
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13820
+ci:
+  fixes:
+    - summary: returned the condition when the branch was not found
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13863
+    - summary: fix kubernetes version info in the release file
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13833
+cloud-provider-dvp:
+  features:
+    - summary: Add vmClassName to the config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13779
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix unexpected behavior with legacy API versions in VCD
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13681
+deckhouse-controller:
+  fixes:
+    - summary: fix deckhouse crds mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13712
+dhctl:
+  fixes:
+    - summary: Fix unexpected behavior with legacy API versions in VCD
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13681
+docs:
+  fixes:
+    - summary: Update docs about Keycloak configuration for IP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13766
+operator-trivy:
+  fixes:
+    - summary: Add support anon registry creds for bdu updater.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13855
+prometheus:
+  features:
+    - summary: Validation prometheus remotewrite ca webhook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13654
+      impact: prometheus
+user-authz:
+  fixes:
+    - summary: fix error with webhook system-roles
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13782
+

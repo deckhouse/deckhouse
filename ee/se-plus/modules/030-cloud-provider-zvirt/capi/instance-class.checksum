@@ -1,0 +1,34 @@
+{{- $options := dict -}}
+
+{{- $template := .nil }}
+{{- if .nodeGroup.instanceClass.template }}
+  {{- $template = .nodeGroup.instanceClass.template }}
+{{- end }}
+
+{{- $vnicProfileID := .nil }}
+{{- if .nodeGroup.instanceClass.vnicProfileID }}
+  {{- $vnicProfileID = .nodeGroup.instanceClass.vnicProfileID }}
+{{- end }}
+
+{{- $numCPUs := .nil }}
+{{- if .nodeGroup.instanceClass.numCPUs }}
+  {{- $numCPUs = .nodeGroup.instanceClass.numCPUs }}
+{{- end }}
+
+{{- $memory := .nil }}
+{{- if .nodeGroup.instanceClass.memory }}
+  {{- $memory = .nodeGroup.instanceClass.memory }}
+{{- end }}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
+{{- end }}
+
+{{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
+{{- $_ := set $options "vnicProfileID" .nodeGroup.instanceClass.vnicProfileID -}}
+{{- $_ := set $options "numCPUs" .nodeGroup.instanceClass.numCPUs -}}
+{{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
+{{- $_ := set $options "rootDiskSizeGb" .nodeGroup.instanceClass.rootDiskSizeGb -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

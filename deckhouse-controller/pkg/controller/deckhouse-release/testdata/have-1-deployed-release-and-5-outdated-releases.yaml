@@ -1,0 +1,59 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.28.0
+spec:
+  version: "v1.28.0"
+status:
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.27.0
+spec:
+  version: "v1.27.0"
+status:
+  phase: Superseded
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.27.1
+spec:
+  version: "v1.27.1"
+status:
+  phase: Superseded
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.27.2
+spec:
+  version: "v1.27.2"
+status:
+  phase: Superseded
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.27.3
+spec:
+  version: "v1.27.3"
+status:
+  phase: Superseded
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.27.4
+spec:
+  version: "v1.27.4"
+status:
+  phase: Superseded

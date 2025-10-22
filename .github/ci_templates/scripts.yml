@@ -1,0 +1,92 @@
+{!{ define "update_comment_on_start" }!}
+{!{- $workflowName := . -}!}
+# <template: update_comment_on_start>
+- name: Update comment on start
+  if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    retries: 3
+    script: |
+      const name = '{!{ $workflowName }!}';
+
+      const ci = require('./.github/scripts/js/ci');
+      return await ci.updateCommentOnStart({github, context, core, name})
+
+# </template: update_comment_on_start>
+{!{- end -}!}
+
+{!{/*
+Update a comment on job or workflow finish.
+
+Use statusConfig to set status source and render options.
+"job" - get status from job context
+"workflow" - calculate workflow status from needs context
+"one-line" - Report job status as one line to form one huge multiline.
+"separate" - Report job statuses on separate lines.
+"no-skipped" - do not report skipped and cancelled jobs
+"final" - restore statuses from needs context, wrap comment with details and add summary status for the workflow.
+*/}!}
+{!{ define "update_comment_on_finish" }!}
+{!{- $statusConfig := index . 0 -}!}
+{!{- $name := index . 1 -}!}
+
+# <template: update_comment_on_finish>
+- name: Update comment on finish
+  id: update_comment_on_finish
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  env:
+    NEEDS_CONTEXT: ${{ toJSON(needs) }}
+    JOB_CONTEXT: ${{ toJSON(job) }}
+    STEPS_CONTEXT: ${{ toJSON(steps) }}
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+    retries: 3
+    script: |
+      const statusConfig = '{!{ $statusConfig }!}';
+      const name = '{!{ $name }!}';
+      const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+      const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+      const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+      let jobNames = null
+      if (process.env.JOB_NAMES) {
+        jobNames = JSON.parse(process.env.JOB_NAMES);
+      }
+
+      core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+      core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+      core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+      core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+      const ci = require('./.github/scripts/js/ci');
+      return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+# </template: update_comment_on_finish>
+{!{- end -}!}
+
+{!{/* This job checks if label is set on pr or issue and return should_run output. Also, all labels are returned as JSON. */}!}
+{!{ define "check_label_job" }!}
+{!{- $labelType := index . 0 -}!}
+{!{- $labelSubject := index . 1 -}!}
+
+# <template: check_label_job>
+check_label:
+  name: Check label
+  runs-on: ubuntu-latest
+  outputs:
+    should_run: ${{ steps.check_label.outputs.should_run }}
+    labels: ${{ steps.check_label.outputs.labels }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - id: check_label
+      name: Check labels on push
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const labelType = '{!{ $labelType }!}';
+          const labelSubject = '{!{ $labelSubject }!}';
+
+          const ci = require('./.github/scripts/js/ci');
+          return await ci.checkLabel({github, context, core, labelType, labelSubject});
+# </template: check_label_job>
+{!{- end -}!}

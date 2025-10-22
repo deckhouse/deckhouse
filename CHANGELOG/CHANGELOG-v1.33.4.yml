@@ -1,0 +1,33 @@
+basic-auth:
+  fixes:
+    - summary: Allow number locations in config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1771
+candi:
+  fixes:
+    - summary: Enabled the `GracefulNodeShutdown` flag on K8s 1.20 to fix kubelet not starting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1777
+chrony:
+  fixes:
+    - summary: Chrony systemd unit on a node is added to stop list.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1776
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix error in Terraform for static nodes in setups without nested resource pools.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1785
+cni-cilium:
+  fixes:
+    - summary: The `enable_node_routes` hook now bails if a value is present in config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1792
+control-plane-manager:
+  features:
+    - summary: Added `authentication-token-webhook-cache-ttl` parameter to apiserver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1791
+prometheus:
+  fixes:
+    - summary: Enable legacy alerting system for Grafana
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1795
+snapshot-controller:
+  fixes:
+    - summary: fix snapshot-controller wasn't working because of dependency problems
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1738
+

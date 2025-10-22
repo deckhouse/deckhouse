@@ -1,0 +1,12 @@
+# Default global values section
+global:
+  # todo remove duplicate config values they should be in global-hooks/openapi/config-values.yaml only
+  # now we have strange behaviour in template tests
+  # probably, test helm render does not get defaults from global-hooks/openapi/config-values.yaml
+  modules:
+    ingressClass: nginx
+    placement: {}
+    https:
+      mode: CertManager
+      certManager:
+        clusterIssuerName: letsencrypt

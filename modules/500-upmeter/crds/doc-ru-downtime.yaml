@@ -1,0 +1,24 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описание интервалов недоступности системы.
+
+            Используется для корректировки уровня SLA.
+          properties:
+            spec:
+              items:
+                description: Интервал недоступности системы.
+                properties:
+                  startDate:
+                    description: Время начала (в формате Unix time или RFC3339, например `2020-09-07T17:24:55Z`)
+                  endDate:
+                    description: Время окончания (в формате Unix time или RFC3339, например `2020-09-07T17:24:55Z`)
+                  type:
+                    description: Тип.
+                  description:
+                    description: Подробное описание.
+                  affected:
+                    description: Список групп проб модуля, которые были недоступны.

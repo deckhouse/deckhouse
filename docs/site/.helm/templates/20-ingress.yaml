@@ -1,0 +1,329 @@
+{{- $_ := set . "Version" ( splitList "/" .Values.global.doc_version | last ) }}
+{{- $_ := set . "VersionURLNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" ) }}
+{{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
+{{- $hostEn := .Values.global.url }}
+{{- $hostRu := .Values.global.url_ru }}
+{{- $hosts := list -}}
+{{- $hosts = append $hosts (dict "Lang" "en" "URL" $hostEn) -}}
+{{- $hosts = append $hosts (dict "Lang" "ru" "URL" $hostRu) -}}
+
+{{- range $hosts }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: main-{{ .Lang }}
+  annotations:
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: '*'
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Original-URI         $request_uri;
+      ssi on;
+      ssi_silent_errors on;
+      rewrite ^/ru/(.*) https://{{ $hostRu }}/$1 permanent;
+      rewrite ^/en/(.*) https://{{ $hostEn }}/$1 permanent;
+      {{- include "rewrites" . | nindent 6 }}
+{{- if ne $.Values.web.env "web-production" }}
+    nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+    nginx.ingress.kubernetes.io/auth-url: https://{{ $.Chart.Name }}-{{ .Lang }}-dex-authenticator.deckhouse-{{ $.Values.web.env }}.svc.cluster.local/dex-authenticator/auth
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+{{- end }}
+spec:
+  ingressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
+  tls:
+  - hosts:
+      - {{ .URL }}
+{{- if eq $.Values.web.env "web-production" }}
+      - www.{{ .URL }}
+{{- end }}
+{{- if eq $.Values.web.env "web-production" }}
+    secretName: star-{{ .URL | replace "." "-" }}
+{{- else }}
+    secretName: tls-{{ .URL }}
+{{- end }}
+  rules:
+  - host: {{ .URL }}
+    http:
+      paths:
+{{- if or (eq $.Values.web.dc_name "prod-25") (hasPrefix "web-test" $.Values.web.env) }}
+{{- if eq .Lang "en" }}
+      - path: /ru
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /en
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- end }}
+      - path: /images
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /js
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /assets
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /gs
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/gs
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /presentations
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/presentations
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /guides
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/guides
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/modules
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /platform
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/platform
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /source
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/source
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_expired.html
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /license_request_success.html
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /documentation
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/documentation
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- else }}
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- end }}
+      - path: /modules
+        pathType: Prefix
+        backend:
+          service:
+            name: moduleslibrary
+            port:
+              name: http
+      - path: /includes
+        pathType: Prefix
+        backend:
+          service:
+            name: router
+            port:
+              name: http
+      - path: /downloads
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /documentation/v1
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/documentation/v1
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/code/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/guides/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/gs/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/modules/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/stronghold/gs/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+{{- if ne $.Values.web.env "web-production" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $.Chart.Name }}-{{ .Lang }}-cert
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+spec:
+  certificateOwnerRef: false
+  secretName: tls-{{ .URL }}
+  issuerRef:
+    kind: ClusterIssuer
+    name: {{ pluck $.Values.web.dc_name $.Values.certificateClusterIssuer | first | default $.Values.certificateClusterIssuer._default }}
+  commonName: {{ .URL }}
+  dnsNames:
+  - {{ .URL }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: {{ $.Chart.Name }}-{{ .Lang }}
+spec:
+  applicationDomain: {{ .URL }}
+  sendAuthorizationHeader: false
+  applicationIngressCertificateSecretName: tls-{{ .URL }}
+  applicationIngressClassName: {{ pluck $.Values.web.dc_name $.Values.ingressClass | first | default $.Values.ingressClass._default | quote }}
+  keepUsersLoggedInFor: "720h"
+{{- end }}
+---
+{{ end -}}

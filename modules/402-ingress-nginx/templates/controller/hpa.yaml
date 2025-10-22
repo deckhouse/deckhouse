@@ -1,0 +1,112 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "component" "rules")) | nindent 2 }}
+spec:
+  groups:
+    - name: prometheus-metrics-adapter.d8-ingress-nginx
+      rules:
+        - record: kube_adapter_metric_d8_ingress_nginx_ds_cpu_utilization
+          expr: avg by (controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) round(rate(container_cpu_usage_seconds_total{container!="POD"}[1m]) * 100))
+{{- end }}
+
+{{- define "ingress-controller-lb-hpa" }}
+{{- $context := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-scaler-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "hpa-scaler" "name" $name )) | nindent 2 }}
+spec:
+  minReplicas: {{ $crd.spec.minReplicas }}
+  maxReplicas: {{ $crd.spec.maxReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-scaler-{{ $name }}
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: d8_ingress_nginx_ds_cpu_utilization
+          selector:
+            matchLabels:
+              controller_name: controller-{{ $name }}
+        target:
+          type: Value
+          value: "50"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-scaler-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+spec:
+  replicas: {{ $crd.spec.minReplicas }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: hpa-scaler
+      name: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: hpa-scaler
+        name: {{ $name }}
+    spec:
+      {{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+      {{ $crd.spec.nodeSelector | toYaml | nindent 8 }}
+      {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 6 }}
+      {{- end }}
+      {{- if $crd.spec.tolerations }}
+      tolerations:
+      {{ $crd.spec.tolerations | toYaml | nindent 6 }}
+      {{- else }}
+      {{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - hpa-scaler
+                  - key: name
+                    operator: In
+                    values:
+                      - {{ $name }}
+              topologyKey: kubernetes.io/hostname
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - name: hpa-scaler
+          image: {{ include "helm_lib_module_common_image" (list $context "pause") }}
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "1Mi"
+{{- end }}
+
+
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") }}
+    {{- if ne $crd.spec.minReplicas $crd.spec.maxReplicas }}
+      {{ include "ingress-controller-lb-hpa" (list $context $crd $crd.name) }}
+    {{- end }}
+  {{- end }}
+{{- end }}

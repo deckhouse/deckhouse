@@ -1,0 +1,541 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{/*
+  Multifile generator of deploy to channel workflows.
+
+  One workflow file for each channel: deploy-alpha.yml, deploy-beta.yml, etc.
+
+  The only reason to use separate files for each channel
+  is a filtering on 'Actions' page.
+
+*/}!}
+
+{!{- range $channel := slice "alpha" "beta" "early-access" "stable" "rock-solid" -}!}
+{!{-   $ctx := dict "channel" $channel }!}
+{!{-   $outFile := printf "deploy-%s.yml" $channel }!}
+{!{-   $outPath := filepath.Join (getenv "OUTDIR") (toLower $outFile) }!}
+{!{-   tmpl.Exec "deploy_channel_workflow_template" $ctx | file.Write $outPath }!}
+{!{- end -}!}
+
+{!{- define "deploy_channel_workflow_template" -}!}
+{!{- $channel := .channel -}!}
+{!{- $workflowName := printf "Deploy to %s" $channel -}!}
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+name: '{!{ $workflowName }!}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'Id of issue where label was set'
+        required: false
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: false
+      comment_id:
+        description: 'Id of comment in issue where to put workflow run status'
+        required: false
+      editions:
+        description: 'Comma separated editions to deploy. Example: ee,fe,ce,be,se,se-plus'
+        required: false
+      cooldown:
+        description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
+        required: false
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+  DEPLOY_CHANNEL: {!{ .channel }!}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if triggered by a tag
+        run: |
+          TAG="${{ github.ref }}"
+          if [[ ! "$TAG" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Workflow can only be triggered from release tags (vX.Y.Z)!"
+            exit 1
+          fi
+  detect_editions:
+    name: Detect editions
+    runs-on: ubuntu-latest
+    needs: check_branch
+    outputs:
+      DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
+      DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
+      DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
+      DEPLOY_BE: ${{steps.detect_editions.outputs.DEPLOY_BE}}
+      DEPLOY_SE: ${{steps.detect_editions.outputs.DEPLOY_SE}}
+      DEPLOY_SE-plus: ${{steps.detect_editions.outputs.DEPLOY_SE-plus}}
+    steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          RESTRICTED=no
+
+          for edition in CE EE FE BE SE SE-plus ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE BE SE SE-plus ; do
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+            done
+          fi
+
+{!{/*
+Jobs for visual control allowed editions when approving deploy to environments.
+*/}!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+  enable_{!{$werfEnv}!}:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_{!{$werfEnv}!} == 'true' }}
+    name: Enable {!{$werfEnv}!}
+    needs:
+      - detect_editions
+    runs-on: ubuntu-latest
+    steps:
+      - run: ": Enable {!{$werfEnv}!}"
+{!{ end }!}
+
+  run_deploy:
+    name: Deploy ${{needs.git_info.outputs.ci_commit_tag}} to {!{ .channel }!}
+    environment:
+      name: {!{ .channel }!}
+    needs:
+      - git_info
+      - detect_editions
+    runs-on: [self-hosted, regular]
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
+
+      - name: Check push enabled
+        id: check_push
+        env:
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+          REPO: ${{github.repository}}
+        run: |
+          if [[ ${REPO} == "deckhouse/deckhouse" ]]; then
+            echo "enable=true" >> $GITHUB_OUTPUT
+          fi
+          if [[ ${SKIP_PUSH_FOR_DEPLOY} != "true" ]]; then
+            echo "enable=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check cooldown for release
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          CURRENT_TIMESTAMP=$(date +%s)
+          COOLDOWN_TIMESTAMP=$(date -u +%s -d "${COOLDOWN}")
+          # Check datetime format
+          if ! [[ "$COOLDOWN" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+            echo "Invalid datetime format."
+            exit 1
+          fi
+          # Check datetime is valid
+          if ! date -d "$COOLDOWN" >/dev/null 2>&1; then
+            echo "Invalid datetime."
+            exit 1
+          fi
+          # Check datetime is expired
+          if [ "$CURRENT_TIMESTAMP" -gt "$COOLDOWN_TIMESTAMP" ]; then
+            echo "The cooldown has expired"
+            exit 1
+          fi
+
+      {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+      - name: Set cooldown for release ({!{ $werfEnv }!})
+        if: ${{ github.event.inputs.cooldown }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          WERF_ENV: {!{ $werfEnv }!}
+          COOLDOWN: ${{ github.event.inputs.cooldown }}
+        run: |
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          echo "FROM ${SOURCE_RELEASE_VERSION_IMAGE}" | docker build --label cooldown="${COOLDOWN}" -t "${SOURCE_RELEASE_VERSION_IMAGE}" -
+
+          echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
+          docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
+      {!{- end }!}
+
+{!{/*
+Add 'publish' step for each edition to repuplish semver tag images to channel tag:
+  - Pull deckhouse images from dev registry.
+  - Tag with channel name and push to dev and prod registries.
+
+Images to republish:
+  - dev as deckhouse/<EDITION>:<CHANNEL>
+  - dev/install as deckhouse/install/<EDITION>:<CHANNEL>
+  - release-channel-version deckhouse/release-channel/<EDITION>:<CHANNEL>
+
+Registries:
+- DEV_REGISTRY_PATH - dev registry, main stages storage.
+- DECKHOUSE_REGISTRY_HOST - prod registry for final images.
+
+Job supports running from forked or copied repo: 'ghcr.io/owner/repo'
+is used if DECKHOUSE_REGISTRY_HOST is not set.
+*/}!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+      - name: Publish release images for {!{ $werfEnv }!}
+        if: ${{ needs.detect_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          WERF_ENV: {!{ $werfEnv }!}
+          SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function pull_push_rmi() {
+            SRC_NAME=$1
+            SRC=$2
+            DST=$3
+            echo "⚓️ 📥 [$(date -u)] Pull '${SRC_NAME}' image as ${SRC}."
+            docker pull ${SRC}
+            echo "⚓️ 🏷 [$(date -u)] Tag '${SRC_NAME}' image as ${DST}."
+            docker image tag ${SRC} ${DST}
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_DEPLOY=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -z ${CI_COMMIT_TAG} ]] ; then
+            echo "::error title=Missed variable::CI_COMMIT_TAG is not set. Probably you try to manually deploy from branch '${CI_COMMIT_BRANCH}'? Deploy allowed for tags only."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Publish {!{ $werfEnv }!} edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL={!{ $channel }!}
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing Deckhouse images for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            PROD_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish using Github Container Registry: '${PROD_REGISTRY_PATH}'"
+          fi
+
+          #   3. Prepare image names: republish CI_COMMIT_TAG tag images in dev-registry
+          #   to RELEASE_CHANNEL tag image in prod registry.
+          SOURCE_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${CI_COMMIT_TAG};
+          PROD_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL};
+          DEV_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_CHANNEL}
+
+          SOURCE_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_TAG};
+          PROD_INSTALL_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL};
+          DEV_INSTALL_IMAGE=${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_CHANNEL}
+
+          SOURCE_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${CI_COMMIT_TAG};
+          PROD_RELEASE_VERSION_IMAGE=${PROD_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL};
+
+          #   4. Publish to dev registry if DECKHOUSE_REGISTRY_HOST is set (run in the main repo).
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev' ${SOURCE_IMAGE} ${DEV_IMAGE}
+
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag ${RELEASE_CHANNEL}".
+            pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${DEV_INSTALL_IMAGE}
+          fi
+
+          #   5. Publish prod images to rw registry.
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev' ${SOURCE_IMAGE} ${PROD_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'dev/install' ${SOURCE_INSTALL_IMAGE} ${PROD_INSTALL_IMAGE}
+
+          echo "⚓️ 💫 [$(date -u)] Publish 'release-channel-version' image to rw-registry using tag ${RELEASE_CHANNEL}".
+          pull_push_rmi 'release-channel-version' ${SOURCE_RELEASE_VERSION_IMAGE} ${PROD_RELEASE_VERSION_IMAGE}
+
+          # add date label to pushed image
+          crane mutate -l io.deckhouse.releasedate="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${PROD_RELEASE_VERSION_IMAGE}
+
+          echo "⚓️  [$(date -u)] Remove local source images."
+          echo "  Delete local 'dev' source image ${SOURCE_IMAGE}"
+          docker image rmi ${SOURCE_IMAGE} || true
+
+          echo "  Delete local 'dev/install' source image ${SOURCE_INSTALL_IMAGE}"
+          docker image rmi ${SOURCE_INSTALL_IMAGE} || true
+
+          echo "  Delete local 'release-channel-version' source image ${SOURCE_RELEASE_VERSION_IMAGE}"
+          docker image rmi ${SOURCE_RELEASE_VERSION_IMAGE} || true
+
+          #   6. Report.
+          echo "Deckhouse images published:"
+          echo "  Source: ${SOURCE_IMAGE}"
+          echo "  Prod: ${PROD_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_IMAGE}"
+          fi
+          echo "Install images published:"
+          echo "  Source: ${SOURCE_INSTALL_IMAGE}"
+          echo "  Prod: ${PROD_INSTALL_IMAGE}"
+          if [[ -n "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+          echo "  Dev: ${DEV_INSTALL_IMAGE}"
+          fi
+          echo "Release version image:"
+          echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
+          echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
+
+{!{- end }!}
+
+      - name: Update release branch
+        if: ${{ success() }}
+        continue-on-error: true
+        env:
+          RELEASE_BRANCH_NAME: {!{ .channel }!}
+        run: |
+          echo "Update branch ${RELEASE_BRANCH_NAME} to SHA:${{ needs.git_info.outputs.github_sha }}. Actor is ${GITHUB_ACTOR}."
+
+          git config --global user.name ${GITHUB_ACTOR}
+          git config --global user.email ${GITHUB_ACTOR}'@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${{secrets.BOATSWAIN_GITHUB_TOKEN}}@github.com/${{ github.repository }}
+          git checkout -b "${RELEASE_BRANCH_NAME}"
+          git push --force origin "${RELEASE_BRANCH_NAME}"
+
+      - name: Send failure report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        run: |
+          WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Deploy to channel {!{ .channel }!} failed!🛑\n[URL]($WORKFLOW_URL)"
+
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
+
+{!{- $envs := yaml `
+production:
+  job: deploy_channels_cm_prod
+  job_name: Deploy channels to production
+  kubeconfig: KUBECONFIG_BASE64_PROD_25
+  werf_namespace: deckhouse-web-production
+  werf_env: web-production
+stage:
+  job: deploy_channels_cm_stage
+  job_name: Deploy channels to staging
+  kubeconfig: KUBECONFIG_BASE64_DEV
+  werf_namespace: deckhouse-web-stage
+  werf_env: web-stage
+` }!}
+
+
+  post_deploy_preparation:
+    name: Post deploy preparation
+    runs-on: [self-hosted, regular]
+    outputs:
+      STABLE_VERSION: ${{ steps.post-deploy-preparation.outputs.stable_version }}
+      LATEST_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.latest_release_id }}
+      TARGET_RELEASE_ID: ${{ steps.post-deploy-preparation.outputs.target_release_id }}
+      {!{- range $env, $env_properties := $envs }!}
+      {!{   printf "DEPLOY_%s: ${{ steps.post-deploy-preparation.outputs.DEPLOY_%s }}" $env_properties.kubeconfig $env_properties.kubeconfig -}!}
+      {!{- end }!}
+    needs:
+      - run_deploy
+    steps:
+      {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.3'
+
+      - name: Install dependencies
+        run: pip install ghapi==1.0.6 fastcore==1.7.28 kubernetes==32.0.1
+
+      - name: Prepare files to collect and deploy channels
+        run: |
+          mkdir -p publish-channels/.helm/templates
+          tee publish-channels/werf.yaml << EOF
+          project: deckhouse-channels
+          configVersion: 1
+          EOF
+
+          tee publish-channels/.helm/templates/configmap.yaml << EOF
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: release-channels-data
+          data:
+            channels.yaml: |
+          {{ $.Files.Get "channels.yaml" | indent 4 }}
+          EOF
+
+      - name: Post deploy preparation
+        id: post-deploy-preparation
+        run: python .github/scripts/python/post-deploy-preparation.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          {!{- range $env, $env_properties := $envs }!}
+          {!{   printf "%s: ${{ secrets.%s }}" $env_properties.kubeconfig $env_properties.kubeconfig }!}
+          {!{   printf "NAMESPACE_%s: \"%s\"" $env_properties.kubeconfig $env_properties.werf_namespace -}!}
+          {!{- end }!}
+
+      - name: Upload artifacts
+        uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+        with:
+          name: channels-artifact
+          path: publish-channels
+          include-hidden-files: true
+
+{!{ range $env, $env_properties := $envs }!}
+  {!{ $env_properties.job }!}:
+    if: ${{ needs.post_deploy_preparation.outputs.{!{ printf "DEPLOY_%s" $env_properties.kubeconfig }!} == 'true' }}
+    name: "{!{ $env_properties.job_name }!}"
+    runs-on: [self-hosted, regular]
+    needs:
+      - post_deploy_preparation
+    steps:
+      {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+
+      - name: Download artifacts
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+        with:
+          name: channels-artifact
+          path: publish-channels
+
+      - name: Converge
+        uses: {!{ index (ds "actions") "werf/actions/converge" }!}
+        with:
+          version: ${{env.WERF_VERSION}}
+          kube-config-base64-data: "${{ secrets.{!{ $env_properties.kubeconfig }!} }}"
+          env: {!{ $env_properties.werf_env }!}
+        env:
+          WERF_NAMESPACE: "{!{ $env_properties.werf_namespace }!}"
+          WERF_DIR: "publish-channels"
+          WERF_DEV: "true"
+
+{!{ end }!}
+  update_latest_release:
+    if: ${{ (github.ref_name == needs.post_deploy_preparation.outputs.STABLE_VERSION) && (needs.post_deploy_preparation.outputs.TARGET_RELEASE_ID != needs.post_deploy_preparation.outputs.LATEST_RELEASE_ID) }}
+    name: Update latest release
+    runs-on: [self-hosted, regular]
+    needs: post_deploy_preparation
+    permissions:
+      contents: write
+
+    steps:
+      - name: Make latest stable release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_RELEASE_ID: ${{ needs.post_deploy_preparation.outputs.TARGET_RELEASE_ID }}
+        run: |
+          set -e
+
+          url="${GITHUB_API_URL}"
+
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+
+          update_release="${url}/repos/${GITHUB_REPOSITORY}/releases/${TARGET_RELEASE_ID}"
+
+          response=$(curl -s -w "\n%{http_code}" -X PATCH ${update_release} \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -d '{"prerelease":false,"make_latest":true}') || exit $?
+
+          response_code=$(echo "$response" | tail -n1)
+          response_message=$(echo "$response" | head -n -1)
+
+          if [[ $response_code != '200' ]]; then
+              echo -e "\e[31mERROR: Unable to update release \"${TARGET_RELEASE_ID}\"!\e[0m"
+              echo -e "\e[31mURL: ${update_release}\e[0m"
+              echo -e "\e[31mResponse message: ${response_message}\e[0m"
+              exit 1
+          fi
+
+          echo -e "\e[32mRelease ${TARGET_RELEASE_ID} has been successfully marked as latest."
+{!{ end -}!}

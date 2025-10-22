@@ -1,0 +1,48 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      localPathProvisioners:
+        type: array
+        default: []
+        description: |
+          Available Local Path Provisioner resources.
+        items:
+          type: object
+          required:
+          - spec
+          description: |
+            Defines the Local Path Provisioner instances.
+          properties:
+            name:
+              type: string
+            spec:
+              type: object
+              required:
+              - path
+              properties:
+                nodeGroups:
+                  type: array
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Select node groups for local-path-provisioner storage-class allowedTopologies.
+
+                    **Format**: array of node group names.
+                path:
+                  type: string
+                  minLength: 1
+                  description: |
+                    Node root path for local-path-provisioner PV's.
+                reclaimPolicy:
+                  type: string
+                  enum: ["Retain", "Delete"]
+                  description: |
+                    Retain policy for PV's.
+        x-examples:
+          - []
+          - [{"name":"test1", "spec":{"nodeGroups": ["master","worker"], "path": "/tmp/test", reclaimPolicy: "Retain"}}, {"name":"test2", "spec":{"path": "/opt/local-path-provisioner",  reclaimPolicy: "Delete"}}]

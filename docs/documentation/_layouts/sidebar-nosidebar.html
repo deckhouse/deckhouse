@@ -1,0 +1,16 @@
+---
+layout: default
+---
+<!--#include virtual="/includes/banner.html" -->
+<div class="container">
+  {%- include nav-breadcrumbs.html %}
+  <div class="layout-sidebar">
+    {%- unless page.toc == false %}
+    {%- include toc.html %}
+    {%- endunless %}
+
+    <div>
+      {{ content }}
+    </div>
+  </div>
+</div>

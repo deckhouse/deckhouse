@@ -1,0 +1,34 @@
+<div class="breadcrumbs-container">
+  <div class="breadcrumbs__left">
+    <ol class="breadcrumbs">
+      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+    </ol>
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      <!--#include virtual="/includes/group-menu.html" -->
+      {% include nav-breadcrumbs-pagepath.html %}
+    </ol>
+  </div>
+
+  {% if page.search_bage_enabled %}
+  <!--start search-->
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+        data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json"
+        data-search-context="{{ site.data.i18n.common.search_context_only_product_docs[page.lang] }}"
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
+  </div>
+  <!--end search-->
+  <!--loading search JS-->
+  {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
+  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+  <!--end loading search JS-->
+  {%- endif %}
+</div>

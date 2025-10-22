@@ -1,0 +1,4 @@
+version: 3
+conversions:
+  - del(.accessLevel)
+  - del(.auth.allowScale) | if .auth == {} then del(.auth) end

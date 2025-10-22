@@ -1,0 +1,21 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Параметры экземпляра `local-path-provisioner`.
+        properties:
+          spec:
+            properties:
+              nodeGroups:
+                description: |
+                  nodeGroup'ы, в которых работает данный StorageClass.
+              path:
+                description: |
+                  Корневой путь на узле к директории для хранения PV.
+              reclaimPolicy:
+                description: |
+                  Сохранять ли PV после удаления PVC.

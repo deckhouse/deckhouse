@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "aws" | quote }}
+  region: {{ .Values.cloudProviderAws.internal.region | b64enc | quote }}
+  zones: {{ .Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
+
+  # AWS
+  {{- $awsValues := dict }}
+  {{- $_ := set $awsValues "providerAccessKeyId" .Values.cloudProviderAws.internal.providerAccessKeyId }}
+  {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.internal.providerSecretAccessKey }}
+  {{- $_ := set $awsValues "region" .Values.cloudProviderAws.internal.region }}
+  {{- $_ := set $awsValues "instances" dict }}
+  {{- $_ := set $awsValues.instances "ami" .Values.cloudProviderAws.internal.instances.ami }}
+  {{- $_ := set $awsValues.instances "additionalSecurityGroups" .Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}
+  {{- $_ := set $awsValues.instances "associatePublicIPAddress" .Values.cloudProviderAws.internal.instances.associatePublicIPAddress }}
+  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.internal.instances.iamProfileName }}
+  {{- $_ := set $awsValues "internal" dict }}
+  {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
+  {{- $_ := set $awsValues "loadBalancerSecurityGroup" .Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}
+  {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.internal.keyName }}
+  {{- $_ := set $awsValues "tags" .Values.cloudProviderAws.internal.tags }}
+  aws: {{ $awsValues | toJson | b64enc | quote }}

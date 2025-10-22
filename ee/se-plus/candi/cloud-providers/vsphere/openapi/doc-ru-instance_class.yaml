@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vsphereinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vsphere
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Параметры группы vSphere VirtualMachines, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                numCPUs:
+                  description: |
+                    Количество виртуальных процессорных ядер, выделяемых виртуальной машине.
+                memory:
+                  description: |
+                    Количество памяти (в мегабайтах), выделенной виртуальной машине.
+                rootDiskSize:
+                  description: |
+                    Размер (в гигабайтах) корневого диска в виртуальной машине. Если в template диск меньше, автоматически произойдет его расширение.
+                template:
+                  description: |
+                    Путь до VirtualMachine template, который будет склонирован для создания новой виртуальной машины.
+
+                    По умолчанию используется `template` из InstanceClass'а `master`.
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
+
+                    Если значение не указано, будет использовано значение указанное в `VsphereClusterConfiguration`.
+                additionalNetworks:
+                  description: |
+                    Список путей до сетей, которые будут подключены к виртуальной машине.
+                datastore:
+                  description: |
+                    Путь до Datastore (относительно датацентра), на котором будут созданы склонированные виртуальные машины.
+
+                    По умолчанию используется `datastore` из InstanceClass'а `master`.
+                disableTimesync:
+                  description: >
+                    Отключение синхронизации времени в гостевой виртуальной машине.
+
+                    > **Внимание!** Не отключает работу NTP-служб в гостевой ОС, отключает только синхронизацию времени с ESXi.
+                resourcePool:
+                  description: |
+                    Путь до Resource Pool, в котором будут созданные склонированные виртуальные машины.
+                runtimeOptions:
+                  description: |
+                    Дополнительные (опциональные) параметры виртуальных машин.
+                  properties:
+                    nestedHardwareVirtualization:
+                      description: |
+                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html) на созданных виртуальных машинах.
+                    cpuShares:
+                      description: |
+                        Относительная величина CPU Shares для создаваемых виртуальных машин.
+                    cpuLimit:
+                      description: |
+                        Верхний лимит (в MHz) потребляемой частоты процессоров для создаваемых виртуальных машин.
+                    cpuReservation:
+                      description: |
+                        Величина зарезервированной для виртуальной машины частоты CPU (в MHz).
+                    memoryShares:
+                      description: |
+                        Относительная величина Memory Shares для создаваемых виртуальных машин.
+                    memoryLimit:
+                      description: |
+                        Верхний лимит (в мегабайтах) потребляемой памяти для создаваемых виртуальных машин.
+                    memoryReservation:
+                      description: |
+                        Процент зарезервированной для виртуальной машины памяти в кластере. В процентах относительно `.spec.memory`.
+    - name: v1
+      schema: *schema
+  scope: Cluster

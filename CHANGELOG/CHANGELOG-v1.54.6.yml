@@ -1,0 +1,25 @@
+candi:
+  fixes:
+    - summary: Do not wait Instance status patch indefinitely during bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6682
+dhctl:
+  fixes:
+    - summary: Fix Deckhouse CE registry setting do not set if InitConfiguration was skipped.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6683
+    - summary: Fix releaseChannel does not get from InitConfiguration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6648
+    - summary: Remove debBranch or releaseChannel requirements from InitConfiguration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6624
+external-module-manager:
+  features:
+    - summary: Store checksums in memory.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6617
+multitenancy-manager:
+  fixes:
+    - summary: Keep projects resources during the deckhouse update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6670
+node-manager:
+  fixes:
+    - summary: Add MachineHealthCheck for CAPS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6637
+

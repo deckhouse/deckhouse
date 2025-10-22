@@ -1,0 +1,254 @@
+{
+  "columns": {
+    "en": [
+      {
+        "title": "Products",
+        "items": [
+          {
+            "title": "Kubernetes Platform",
+            "url": "/products/kubernetes-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Virtualization Platform",
+            "url": "/products/virtualization-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Observability Platform",
+            "url": "/products/observability-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Stronghold",
+            "url": "/products/stronghold/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Delivery Kit",
+            "url": "/products/delivery-kit/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Prom++",
+            "url": "/products/prompp/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "title": "Solutions",
+        "items": [
+          {
+            "title": "Technical Support",
+            "url": "/tech-support/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Security",
+            "url": "/security/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Training &amp; Consulting",
+            "url": "/services/training-and-consulting/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Deckhouse vs KaaS",
+            "url": "/deckhouse-vs-kaas/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "title": "Resources",
+        "items": [
+          {
+            "title": "Success stories",
+            "url": "/success-stories/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Community",
+            "url": "/community/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Documentation",
+            "url": "/docs/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Getting started",
+            "url": "/products/kubernetes-platform/gs/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Blog",
+            "url": "https://blog.deckhouse.io/",
+            "target": "_blank",
+            "rel": ""
+          }
+        ]
+      }
+    ],
+    "ru": [
+      {
+        "title": "Продукты",
+        "items": [
+          {
+            "title": "Kubernetes Platform",
+            "url": "/products/kubernetes-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Virtualization Platform",
+            "url": "/products/virtualization-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Observability Platform",
+            "url": "/products/observability-platform/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Observability в&nbsp;кластере",
+            "url": "/products/observability-in-cluster/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Stronghold",
+            "url": "/products/stronghold/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Delivery Kit",
+            "url": "/products/delivery-kit/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Code",
+            "url": "/products/code/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Prom++",
+            "url": "/products/prompp/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Development Platform",
+            "url": "/products/development-platform/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "title": "Партнёры",
+        "items": [
+          {
+            "title": "Стать партнёром",
+            "url": "/become-partner/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Найти партнёра",
+            "url": "/partners/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      },
+      {
+        "title": "Информация",
+        "items": [
+          {
+            "title": "Техподдержка",
+            "url": "/tech-support/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Образовательная деятельность",
+            "url": "/education-licence/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Истории успеха",
+            "url": "/success-stories/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Вакансии",
+            "url": "https://job.flant.ru/",
+            "target": "_blank",
+            "rel": ""
+          },
+          {
+            "title": "Блог",
+            "url": "https://blog.deckhouse.ru/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Новости",
+            "url": "/news/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Вебинары",
+            "url": "/webinars/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Сообщество",
+            "url": "/community/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      }
+    ]
+  }
+}

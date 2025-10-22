@@ -1,0 +1,554 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
+
+            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/modules/log-shipper/cr.html#clusterloggingconfig).
+          properties:
+            spec:
+              properties:
+                type:
+                  description: Возможные бэкенды для сохранения логов.
+                loki:
+                  properties:
+                    auth:
+                      properties:
+                        password:
+                          description: Закодированный в Base64 пароль для Basic-аутентификации.
+                        strategy:
+                          description: Используемый тип аутентификации.
+                        token:
+                          description: Токен для Bearer-аутентификации.
+                        user:
+                          description: Имя пользователя, используемое при Basic-аутентификации.
+                    tenantID:
+                      description: |
+                        ID тенанта.
+
+                        Эта опция используется только для Grafana Cloud. Для локально запущенного Loki опция ни на что не влияет.
+                    endpoint:
+                      description: |
+                        URL для подключения к Loki.
+
+                        > Агент автоматически добавляет `/loki/api/v1/push` к URL при отправке данных.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: |
+                            Проверка TLS-сертификата удаленного хоста.
+
+                            Если параметр установлен в `false`, сертификат не проверяется на наличие в списке отозванных сертификатов (Certificate Revocation Lists).
+                elasticsearch:
+                  properties:
+                    auth:
+                      properties:
+                        strategy:
+                          description: Тип аутентификации — `Basic` или `AWS`.
+                        password:
+                          description: Закодированный в Base64 пароль для Basic-аутентификации.
+                        awsAccessKey:
+                          description: Закодированный в Base64 AWS `ACCESS_KEY`.
+                        awsSecretKey:
+                          description: Закодированный в Base64 AWS `SECRET_KEY`.
+                        awsAssumeRole:
+                          description: ARN роли в IAM.
+                        user:
+                          description: Имя пользователя, используемое при Basic-аутентификации.
+                        awsRegion:
+                          description: Регион AWS для аутентификации.
+                    index:
+                      description: Имя индекса, куда будут сохранены данные. Это поле можно задать динамически.
+                    pipeline:
+                      description: Имя pipeline, который будет применен к данным перед записью в индекс.
+                    endpoint:
+                      description: URL для подключения к Elasticsearch.
+                    dataStreamEnabled:
+                      description: |
+                        Использовать Datastream для хранения логов (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
+
+                        Datastreams производительнее для хранения логов и метрик, но они существуют только в Elasticsearch >= 7.16.X.
+                    docType:
+                      description: |
+                        Использовать `doc_type` для индексов. Имеет смысл использовать только для Elasticsearch <= 6.X.
+
+                        - Для Elasticsearch >= 7.X вам не нужно использовать эту опцию, так как все работает по умолчанию.
+                        - Для Elasticsearch >= 6.X рекомендуемое значение — `_doc`, так как его использование позволит легко обновиться до Elasticsearch версии 7.X.
+                        - Для Elasticsearch < 6.X вы можете использовать любое значение, которое не начинается с `_`. Например, `logs`.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка TLS-сертификата удаленного хоста. Сертификат не будет проверен на наличие в списках отозванных сертификатов (Certificate Revocation Lists).
+                logstash:
+                  properties:
+                    endpoint:
+                      description: URL для подключения к Logstash.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
+                kafka:
+                  properties:
+                    topic:
+                      description: |
+                        Имя топика в Kafka для записи событий.
+                        Этот параметр поддерживает синтаксис шаблонов, что дает возможность динамического создания топиков.
+                    bootstrapServers:
+                      description: |
+                        Список пар адресов (хост:порт) Kafka-брокеров в кластере Kafka, к которым должны подключиться клиенты для получения метаданных (топиков и партиций).
+                    encoding:
+                      description: |
+                        В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
+                    keyField:
+                      description: |
+                        Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
+                    sasl:
+                      description: Конфигурация аутентификации SASL для взаимодействия с Kafka.
+                      properties:
+                        mechanism:
+                          description: Механизм аутентификации SASL. Поддерживаются только PLAIN и SCRAM-подобные механизмы.
+                        username:
+                          description: Имя пользователя.
+                        password:
+                          description: Пароль пользователя.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
+                splunk:
+                  properties:
+                    endpoint:
+                      description: Базовый URL для экземпляра Splunk.
+                    token:
+                      description: Токен по умолчанию для Splunk HEC. Если токен не был передан через metadata, будет использовано значение из этого поля.
+                    index:
+                      description: Имя индекса, куда будут сохранены данные. Это поле можно задать динамически.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
+                socket:
+                  properties:
+                    address:
+                      description: "Адрес сокета."
+                    encoding:
+                      description: |
+                        В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
+                    mode:
+                      descriptions: "Тип сокета, который будет использован."
+                    tcp:
+                      descriptions: "Параметры для настройки TCP-сокетов."
+                      properties:
+                        tls:
+                          description: Настройки защищенного TLS-соединения.
+                          properties:
+                            secretRef:
+                              description: |
+                                Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                                (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                                в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                                Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                                `log-shipper.deckhouse.io/watch-secret: true`.
+                              properties:
+                                name:
+                                  description: Имя секрета с TLS-сертификатами.
+                            caFile:
+                              description: Закодированный в Base64 сертификат CA в формате PEM.
+                            clientCrt:
+                              description: Конфигурация клиентского сертификата.
+                              properties:
+                                crtFile:
+                                  description: |
+                                    Закодированный в Base64 сертификат в формате PEM.
+
+                                    Также необходимо указать ключ в параметре `keyFile`.
+                                keyFile:
+                                  description: |
+                                    Закодированный в Base64 ключ в формате PEM.
+
+                                    Также необходимо указать сертификат в параметре `crtFile`.
+                                keyPass:
+                                  description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: |
+                            Проверка действия TLS-сертификата удаленного хоста.
+
+                            Если установлено значение `false`, сертификат не проверяется в списках отзыва сертификатов.
+                vector:
+                  properties:
+                    endpoint:
+                      description: Адрес для подключения к Vector. Для общения между экземплярами должен использоваться API v2.
+                    tls:
+                      description: Настройки защищенного TLS-соединения.
+                      properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
+                        caFile:
+                          description: Закодированный в Base64 сертификат CA в формате PEM.
+                        clientCrt:
+                          description: Конфигурация клиентского сертификата.
+                          properties:
+                            crtFile:
+                              description: |
+                                Закодированный в Base64 сертификат в формате PEM.
+
+                                Также необходимо указать ключ в параметре `keyFile`.
+                            keyFile:
+                              description: |
+                                Закодированный в Base64 ключ в формате PEM.
+
+                                Также необходимо указать сертификат в параметре `crtFile`.
+                            keyPass:
+                              description: Закодированный в Base64 пароль для ключа.
+                        verifyHostname:
+                          description: Проверка соответствия имени удаленного хоста и имени, указанного в TLS-сертификате удаленного хоста.
+                        verifyCertificate:
+                          description: Проверка действия TLS-сертификата удаленного хоста.
+                rateLimit:
+                  description: |
+                    Параметр ограничения потока событий, передаваемых в хранилище.
+                  properties:
+                    linesPerMinute:
+                      description: |
+                        Количество записей в минуту.
+                    keyField:
+                      description: Имя поля лога, значение которого будет хэшировано, чтобы определить, должно ли событие быть ограничено по скорости.
+                    excludes:
+                      description: |
+                        Список фильтров для keyField.
+
+                        Только логи, НЕ подпадающие под правила, будут ограничены по количеству записей.
+                      items:
+                        properties:
+                          field:
+                            description: Имя поля для фильтрации.
+                          operator:
+                            description: |
+                              Оператор, который можно применить для фильтрации:
+                              * `In` — ищет сроку или элемент в массиве;
+                              * `NotIn` — является инверсией оператора `In`;
+                              * `Regex` — пытается проверить строку в поле с использованием регулярного выражения (только логи, в которых есть поля, подпадающие под регулярное выражение, пройдут в хранилище);
+                              * `NotRegex` — является инверсией оператора `Regex` (в хранилище попадут логи, в которых нет поля или же оно не подпадает под регулярное выражение);
+                              * `Exists` — проверяет наличие поля и пропускает логи, только если поле есть;
+                              * `DoesNotExist` — проверяет наличие поля и пропускает логи, только если поле отсутствует.
+                          values:
+                            description: |
+                              Массив значений или регулярных выражений для соответствующих операций. Не работает для операций `Exists` и `DoesNotExist`.
+
+                              Можно использовать целые числа или строки. Поля с числами с плавающей запятой и поля логического типа будут преобразованы в строки при сравнении.
+                extraLabels:
+                  description: |
+                    Дополнительные label'ы, которыми будут снабжаться записи логов.
+
+                    Вы можете использовать простые шаблоны: `{{ app }}`.
+
+                    Некоторые ключи зарезервированы:
+                    - parsed_data;
+                    - pod;
+                    - pod_labels_*;
+                    - pod_ip;
+                    - namespace;
+                    - image;
+                    - container;
+                    - node;
+                    - pod_owner.
+
+                    [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                transformations:
+                  description: |
+                    Список трансформаций, которые могут применяться к логам перед отправкой.
+
+                    Возможные варианты:
+
+                      - `ReplaceKeys` — заменяет `source` на `target` в заданных ключах лейблов.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage` — преобразует поле `message` из формата, заданного в `sourceFormat`, в объект.
+                         Если это невозможно, поле `message` остается без изменений.
+
+                        Примеры:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels` — удаляет указанные лейблы.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    properties:
+                      action:
+                        description: Тип трансформации.
+                      replaceKeys:
+                        description: Рекурсивная замена всех совпадений шаблона `source` на значение `target` в заданных ключах.
+                        properties:
+                          source:
+                            description: |
+                              Шаблон для поиска совпадений.
+                              Может быть статической строкой или регулярным выражением.
+                          target:
+                            description: Значение, на которое будут заменены все совпадения шаблона.
+                          labels:
+                            description: Список лейблов, в которых будет выполняться рекурсивная замена.
+                      parseMessage:
+                        description: Преобразует поле `message` в объект.
+                        properties:
+                          sourceFormat:
+                            description: Формат сообщения для преобразования в объект.
+                          string:
+                            properties:
+                              targetField:
+                                description: Имя поля, в которое помещается структурированное сообщение.
+                          json:
+                            properties:
+                              depth:
+                                description: Глубина парсинга JSON.
+                      dropLabels:
+                        description: Удаление заданных лейблов.
+                        properties:
+                          labels:
+                            description: Список лейблов, которые необходимо удалить.
+                buffer:
+                  description: Параметры буфера.
+                  properties:
+                    type:
+                      description: Тип буфера для использования.
+                    disk:
+                      description:
+                        Параметры буфера на диске.
+                      properties:
+                        maxSize:
+                          description: |
+                            Максимальный размер буфера на диске.
+                            Должен быть не меньше ~256 МБ (268435488 байт).
+
+                            Вы можете указать размер как простое целое число или как число с одним из следующих суффиксов: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+
+                            Подробнее об указании ресурсов:
+                            - [количество kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/);
+                            - [единицы ресурсов памяти](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory).
+                    memory:
+                      properties:
+                        maxEvents:
+                          description: Максимальное количество событий в буфере.
+                    whenFull:
+                      description: Поведение при заполнении буфера.

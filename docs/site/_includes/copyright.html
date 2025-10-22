@@ -1,0 +1,16 @@
+<div class="footer__copyright">
+  <ul class="nav footer__nav">
+    {%- for item in site.data.copyright[page.lang] %}
+    <li>
+      <a {% if item.url %}href="{{ item.url }}"{% else %}href="#"{% endif %}{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>
+        {{- item.title -}}
+      </a>
+    </li>
+    {%- endfor %}
+  </ul>
+  {% if page.lang == "ru" %}
+    <span>© {{ "now" | date: "%Y" }} Флант. Все права защищены.</span>
+  {% else %}
+    <span>© {{ "now" | date: "%Y" }} Deckhouse. All rights reserved.</span>
+  {% endif %}
+</div>

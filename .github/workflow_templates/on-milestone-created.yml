@@ -1,0 +1,40 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: 'New milestone: create issue'
+
+# Create issue when milestone created with version in title.
+# Version should be in form of 'vX.Y.Z'.
+# - 'v1.30.1' is a match, create issue with title 'Release v1.30.1'.
+# - 'Release v1.30.2' is a match, create issue with title 'Release v1.30.2'.
+# - 'Hotfix v1.30.3' is a match, create issue with title 'Release v1.30.3'.
+# - 'Future tasks' is not a match, ignore creating issue.
+
+on:
+  milestone:
+    types: [created]
+
+jobs:
+  create_release_issue_for_milestone:
+    name: Create issue for milestone
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Create issue
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.createReleaseIssueForMilestone({github, context, core});

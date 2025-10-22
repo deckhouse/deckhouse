@@ -1,0 +1,20 @@
+- name: kubernetes.node.rofs
+  rules:
+  - alert: NodeFilesystemIsRO
+    expr: |-
+      max by (node, mountpoint, device, fstype) (
+        node_filesystem_readonly{mountpoint=~"(/|/mnt/kubernetes-data|/var/lib/containerd/)"}
+      ) != 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__node_filesustem_is_r_o_cluster: "NodeFilesystemIsROCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node file system is read-only.
+      description: |-
+        The file system on the node has been switched to read-only mode.
+
+        To investigate the cause, check the node logs.

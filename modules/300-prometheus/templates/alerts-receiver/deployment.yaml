@@ -1,0 +1,93 @@
+{{- define "alerts_receiver_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: alerts-receiver
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: alerts-receiver
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: alerts-receiver
+      minAllowed:
+        {{- include "alerts_receiver_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerts-receiver
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alerts-receiver")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: alerts-receiver
+  template:
+    metadata:
+      labels:
+        app: alerts-receiver
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      automountServiceAccountToken: true
+      containers:
+      - name: alerts-receiver
+        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "alertsReceiver") }}
+        env:
+        - name: PORT
+          value: "8080"
+        - name: ALERTS_QUEUE_LENGTH
+          value: "500"
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+            scheme: HTTP
+          timeoutSeconds: 5
+        volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- include "alerts_receiver_resources" . | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: alerts-receiver

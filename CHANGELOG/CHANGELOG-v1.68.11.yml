@@ -1,0 +1,9 @@
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix zvirt-csi-driver patching (token refresh fix patch)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12885
+node-manager:
+  fixes:
+    - summary: partial rollback of changes in images cluster-autoscaler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12910
+

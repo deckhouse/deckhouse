@@ -1,0 +1,31 @@
+{{- if eq ($.Values.istio.controlPlane.replicasManagement.mode) "HPA" }}
+  {{- range $version := .Values.istio.internal.versionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision"}}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+spec:
+  minReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.minReplicas }}
+  maxReplicas: {{ $.Values.istio.controlPlane.replicasManagement.hpa.maxReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istiod-{{ $revision }}
+  metrics:
+    {{- range $metric := $.Values.istio.controlPlane.replicasManagement.hpa.metrics }}
+      {{- if eq $metric.type "CPU" }}
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ $metric.targetAverageUtilization }}
+      {{- end}}
+    {{- end}}
+  {{- end}}
+{{- end}}

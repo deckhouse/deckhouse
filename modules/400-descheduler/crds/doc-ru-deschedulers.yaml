@@ -1,0 +1,346 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            Описание одного экземпляра descheduler.
+          properties:
+            apiVersion:
+            kind:
+            metadata:
+              properties:
+                name:
+            spec:
+              description: |-
+                Описывает поведение экземпляра descheduler.
+              properties:
+                deploymentTemplate:
+                  description: |-
+                    Описание шаблона Deployment’а descheduler.
+                  properties:
+                    nodeSelector:
+                      additionalProperties:
+                        properties:
+                          tolerationSeconds:
+                deschedulerPolicy:
+                  description: |-
+                    `globalParameters` и `strategies` соответствуют [документации descheduler](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
+                  properties:
+                    globalParameters:
+                      description: |-
+                        Параметры, применяемые ко всем политикам.
+                      properties:
+                        evictFailedBarePods:
+                          description: |-
+                            Позволяет вытеснять поды без `ownerReferences` и в состоянии `failed`.
+                        evictLocalStoragePods:
+                          description: |-
+                            Позволяет вытеснять поды, использующие локальное хранилище.
+                        evictSystemCriticalPods:
+                          description: |-
+                            Позволяет вытеснять поды любого приоритета (включая системные поды Kubernetes).
+                        ignorePvcPods:
+                          description: |-
+                            Предотвращает вытеснение подов с PVC (Persistent Volume Claims).
+                        maxNoOfPodsToEvictPerNamespace:
+                          description: |-
+                            Ограничивает максимальное количество подов, которые могут быть вытеснены в пределах одного пространства имен.
+                        maxNoOfPodsToEvictPerNode:
+                          description: |-
+                            Ограничивает максимальное количество подов, которые могут быть вытеснены с одного узла.
+                        nodeSelector:
+                    strategies:
+                      description: |-
+                        Список стратегий с соответствующими параметрами для данного экземпляра Descheduler.
+                      properties:
+                        highNodeUtilization:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия находит узлы с недостаточной загрузкой и вытесняет с них поды, предполагая, что эти поды будут компактно размещены на меньшем количестве узлов.
+                          properties:
+                            enabled:
+                            nodeFilter: &node-filter
+                              description: Фильтрует узлы, к которым применяется стратегия.
+                              labelSelector:
+                                properties:
+                                  matchExpressions:
+                                    description: Список выражений меток, которые должен содержать узел, чтобы соответствовать условию фильтра.
+                                    items:
+                                    properties:
+                                      key:
+                                        description: Имя метки.
+                                      operator:
+                                        description: Оператор сравнения.
+                                      values:
+                                        description: Значение метки.
+                                        items:
+                                  matchLabels:
+                                    additionalProperties:
+                            priorityFilter: &priority-filter
+                              description: |-
+                                Только поды с приоритетом ниже этого значения будут вытеснены.
+                              thresholdPriority:
+                              thresholdPriorityClassName:
+                            namespaceFilter: &namespace-filter
+                              description: |-
+                                Ограничивает пространства имен, к которым применяется эта стратегия.
+                              namespaces:
+                              properties:
+                            nodeFit: &node-fit
+                              description: |-
+                                Если установлено значение `true`, descheduler будет учитывать, смогут ли поды, соответствующие критериям вытеснения, быть размещены на других узлах перед тем, как их вытеснить.
+                        lowNodeUtilization:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия находит узлы с низкой загрузкой и, если возможно, вытесняет с других узлов поды, предполагая, что новые экземпляры вытесненных подов будут размещены на этих менее загруженных узлах.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                            enabled:
+                        removeDuplicates:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что на одном узле будет работать только один под, связанный с ReplicaSet (RS), ReplicationController (RC), StatefulSet или Job.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removeFailedPods:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия вытесняет поды, находящиеся в статусе `failed`.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removePodsHavingTooManyRestarts:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что поды с слишком большим количеством перезапусков будут удалены с узлов.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removePodsViolatingInterPodAntiAffinity:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что поды, которые не могут располагаться рядом с другими подами по определённым условиям, будут удалены с узлов.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removePodsViolatingNodeAffinity:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что все поды которые не могут быть размещены на определённых узлах, в конечном итоге будут удалены с узлов.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removePodsViolatingNodeTaints:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что поды, нарушающие taint-метки с правилом `NoSchedule` на узлах, будут удалены.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                        removePodsViolatingTopologySpreadConstraint:
+                          required: [ enabled ]
+                          description: |-
+                            Эта стратегия гарантирует, что поды, нарушающие ограничения распределения по топологии (topology spread constraints), будут вытеснены с узлов.
+                          properties:
+                            enabled:
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: Описание одного экземпляра descheduler
+          properties:
+            apiVersion:
+            kind:
+            metadata:
+              properties:
+                name:
+            spec:
+              description: Описывает поведение экземпляра descheduler.
+              properties:
+                nodeSelector:
+                  description: |-
+                    Ограничение подов, которые обрабатываются для вытеснения, с учетом меток в формате, основанном на равенстве (equality-based representation).
+                    Используется для обеспечения совместимости с предыдущими версиями.
+                    Если значение установлено, не используйте `nodeLabelSelector`.
+                nodeLabelSelector:
+                  description: |-
+                    Ограничение обрабатываемых подов для соответствия вытесненным подам по меткам в представлении множества (set representation).
+                    Если значение установлено, не используйте `nodeSelector`.
+                  properties:
+                      matchExpressions:
+                        description: Список выражений меток, которые должен иметь узел, чтобы удовлетворить условию фильтра.
+                        items:
+                          properties:
+                            key:
+                              description: Имя метки.
+                            operator:
+                              description: Оператор сравнения.
+                            values:
+                              description: Значение метки.
+                              items:
+                        matchLabels:
+                        additionalProperties:
+                podLabelSelector:
+                  description: Ограничение обработки подов по меткам.
+                  properties:
+                    matchExpressions:
+                      description: Список выражений меток, которые должен иметь узел, чтобы удовлетворить условию фильтра.
+                      items:
+                        properties:
+                          key:
+                            description: Имя метки.
+                          operator:
+                            description: Оператор сравнения.
+                          values:
+                            description: Значение метки.
+                            items:
+                    matchLabels:
+                      additionalProperties:
+                namespaceLabelSelector:
+                  description: Ограничение обработки подов с помощью меток пространства имен.
+                  properties:
+                    matchExpressions:
+                      description: Список выражений меток, которые должен иметь узел, чтобы удовлетворить условию фильтра.
+                      items:
+                        properties:
+                          key:
+                            description: Имя метки.
+                          operator:
+                            description: Оператор сравнения.
+                          values:
+                            description: Значение метки.
+                            items:
+                      matchLabels:
+                      additionalProperties:
+                priorityClassThreshold:
+                  description: |-
+                    Ограничение обработки подов по классу приоритета. Только поды, чей приоритет ниже установленного значения, могут быть вытеснены.
+
+                    Можно указать **либо** название класса приоритета ([priorityClassThreshold.name](#descheduler-v1alpha2-spec-priorityclassthreshold-name)), **либо** непосредственно значение класса приоритета ([priorityThreshold.value](#descheduler-v1alpha2-spec-priorityclassthreshold-value)).
+
+                    По умолчанию это значение установлено на класс приоритета `system-cluster-critical`.
+                  properties:
+                    name:
+                      description: Имя класса приоритета.
+                    value:
+                      description: Значение класса приоритета.
+                evictLocalStoragePods:
+                  description: Позволяет вытеснять поды, использующие локальное хранилище.
+                strategies:
+                  description:
+                    Настройки стратегий данного экземпляра ресурса Descheduler.
+                  properties:
+                    lowNodeUtilization:
+                      description: |-
+                        Стратегия выявляет *недостаточно нагруженные узлы* и вытесняет поды с других, *избыточно нагруженных узлов*. Стратегия предполагает, что пересоздание вытесненных подов произойдет на недостаточно нагруженных узлах (при обычном поведении планировщика).
+
+                        **Недостаточно нагруженный узел** — узел, использование ресурсов которого меньше **всех** пороговых значений, заданных в секции параметров [thresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds).
+
+                        **Избыточно нагруженный узел** — узел, использование ресурсов которого больше **хотя бы одного** из пороговых значений, заданных в секции параметров [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds).
+
+                        Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
+                      properties:
+                        enabled:
+                          description: Делает стратегию активной.
+                        thresholds:
+                          description: |-
+                            Устанавливает пороговые значения для определения недостаточно нагруженных узлов.
+
+                            Если использование ресурсов узла меньше **всех** пороговых значений, то узел считается недостаточно нагруженным.
+                          properties:
+                            cpu:
+                              description: Процент отношения запрошенных ресурсов по CPU на узле к доступным.
+                            memory:
+                              description: Процент отношения запрошенных ресурсов по памяти на узле к доступным.
+                            pods:
+                              description: Процент количества подов от установленной емкости узла.
+                        targetThresholds:
+                          description: |-
+                            Устанавливает пороговые значения для определения избыточно нагруженных узлов.
+
+                            Если использование ресурсов узла больше **хотя бы одного** из пороговых значений, то узел считается избыточно нагруженным.
+                          properties:
+                            cpu:
+                              description: Процент отношения запрошенных ресурсов по CPU на узле к доступным.
+                            memory:
+                              description: Процент отношения запрошенных ресурсов по памяти на узле к доступным.
+                            pods:
+                              description: Процент количества подов от установленной емкости узла.
+                    highNodeUtilization:
+                      description: |-
+                        Стратегия определяет недостаточно нагруженные узлы и вытесняет с них поды, чтобы распределить их компактнее, на меньшем числе узлов.
+
+                        Недостаточно нагруженный узел — узел, использование ресурсов которого меньше **всех** пороговых значений, заданных в секции параметров [thresholds](#descheduler-v1alpha2-spec-strategies-highnodeutilization-thresholds).
+
+                        Стратегия предназначена для использования совместно с авто-масштабированием, чтобы сокращать количество недостаточно нагруженных узлов. При использовании стратегии необходимо также настроить стратегию оценки планировщика как `MostAllocated`.
+
+                        > В GKE нельзя настроить конфигурацию планировщика по умолчанию, но можно использовать стратегию `optimize-utilization` или развернуть второй пользовательский планировщик.
+
+                        Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов, а не фактическом потреблении.
+                      properties:
+                        enabled:
+                          description: Делает стратегию активной.
+                        thresholds:
+                          description: |-
+                            Устанавливает пороговые значения для определения недостаточно нагруженных узлов.
+
+                            Если использование ресурсов узла меньше **всех** пороговых значений, то узел считается недостаточно нагруженным.
+                          properties:
+                            cpu:
+                              description: Процент отношения запрошенных ресурсов по CPU на узле к доступным.
+                            memory:
+                              description: Процент отношения запрошенных ресурсов по памяти на узле к доступным.
+                            pods:
+                              description: Процент количества подов от установленной емкости узла.
+                    removeDuplicates:
+                      description: |-
+                        Стратегия следит за тем, чтобы на одном узле не находилось больше одного пода ReplicaSet, ReplicationController, StatefulSet или подов одного задания (Job). Если таких подов два или больше, модуль вытесняет лишние поды, чтобы они лучше распределились по кластеру.
+                      properties:
+                        enabled:
+                          description: Делает стратегию активной.
+                    removePodsViolatingNodeAffinity:
+                      description: |-
+                        Стратегия гарантирует, что все поды, которые нарушают [правила node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity), в конечном счете будут удалены с узлов.
+
+                        По сути, в зависимости от настроек параметра [nodeAffinityType](#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype),
+                        стратегия превращает правило `requiredDuringSchedulingIgnoredDuringExecution` node affinity пода в правило `requiredDuringSchedulingRequiredDuringExecution`, а правило `preferredDuringSchedulingIgnoredDuringExecution` в правило `preferredDuringSchedulingPreferredDuringExecution`.
+                      properties:
+                        enabled:
+                          description: Делает стратегию активной.
+                        nodeAffinityType:
+                            description: Определяет список используемых правил node affinity.
+                    removePodsViolatingInterPodAntiAffinity:
+                      description: |-
+                        Стратегия гарантирует, что поды, нарушающие [правила inter-pod affinity и anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), будут удалены с узлов.
+
+                        Такая ситуация может возникнуть, если правила антипривязки для подов `podB` и `podC` создаются после того, как они уже запущены на узле.
+                      properties:
+                        enabled:
+                          description: Делает стратегию активной.

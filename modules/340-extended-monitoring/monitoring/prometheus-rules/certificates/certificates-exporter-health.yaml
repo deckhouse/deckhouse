@@ -1,0 +1,117 @@
+- name: d8.extended-monitoring.x509-certificate-exporter.availability
+  rules:
+
+  - alert: D8CertExporterTargetDown
+    expr: max by (job) (up{job="x509-certificate-exporter"} == 0)
+    for: 1m
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: x509-certificate-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_ignore_labels: "job"
+      summary: Prometheus can't scrape x509-certificate-exporter metrics.
+      description: |
+        Ways to resolve:
+        
+        - Check the pod status:
+        
+          ```bash
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
+          ```
+
+        - Check the pod logs:
+        
+          ```bash
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          ```
+
+  - alert: D8CertExporterTargetAbsent
+    expr: absent(up{job="x509-certificate-exporter"}) == 1
+    for: 15m
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: x509-certificate-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: There is no `x509-certificate-exporter` target in Prometheus.
+      description: |
+        Ways to resolve:
+        
+        - Check the pod status:
+        
+          ```bash
+          d8 k -n d8-monitoring get pod -l app=x509-certificate-exporter
+          ```
+
+        - Check the pod logs:
+        
+          ```bash
+          d8 k -n d8-monitoring logs -l app=x509-certificate-exporter -c x509-certificate-exporter
+          ```
+
+  - alert: D8CertExporterPodIsNotReady
+    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"x509-certificate-exporter-.*"}) != 1
+    for: 30m
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: x509-certificate-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "pod"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The x509-certificate-exporter pod isn't ready.
+      description: |
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+           
+           ```bash
+           d8 k -n d8-monitoring describe deploy x509-certificate-exporter
+           ```
+
+        2. Check the pod status and investigate why it's not ready:
+        
+           ```bash
+           d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter
+           ```
+
+  - alert: D8CertExporterPodIsNotRunning
+    expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"x509-certificate-exporter-.*"})
+    for: 30m
+    labels:
+      severity_level: "8"
+      d8_module: extended-monitoring
+      d8_component: x509-certificate-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cert_exporter_malfunctioning: "D8CertExporterMalfunctioning,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The x509-certificate-exporter pod isn't running.
+      description: |
+        Steps to resolve:
+
+        1. Retrieve the deployment details:
+           
+           ```bash
+           d8 k -n d8-monitoring describe deploy x509-certificate-exporter
+           ```
+
+        2. Check the pod status and investigate why it's not running:
+        
+           ```bash
+           d8 k -n d8-monitoring describe pod -l app=x509-certificate-exporter
+           ```

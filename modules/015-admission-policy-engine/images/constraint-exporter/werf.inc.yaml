@@ -1,0 +1,44 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /constraint_exporter
+    to: /constraint_exporter
+    before: setup
+imageSpec:
+  config:
+    entrypoint: [ "/constraint_exporter" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /constraint_exporter`) | indent 4 }}
+  - chown 64535:64535 /constraint_exporter
+  - chmod 0700 /constraint_exporter

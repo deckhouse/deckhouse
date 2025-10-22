@@ -1,0 +1,193 @@
+{{- define "kube_proxy_resources" }}
+cpu: 15m
+memory: 25Mi
+{{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: d8-kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-kube-proxy")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: d8-kube-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "kube-proxy"
+      minAllowed:
+        {{- include "kube_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 30m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: d8-kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-proxy")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-proxy
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+      labels:
+        k8s-app: kube-proxy
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      priorityClassName: system-node-critical
+      {{- /* kube-proxy must start before any other components, so we tolerate nodes uninitialized by cloud provider (cloud provider pods requires kube-proxy to work). */ -}}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      automountServiceAccountToken: true
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+    {{- end }}
+      - name: nodeport-bind-address
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "initContainer") }}
+        env:
+        - name: CLOUD_PROVIDER
+          value: {{ dig "cloud" "provider" "Static" .Values.global.clusterConfiguration | lower }}
+        - name: POD_SUBNET
+          value: {{ .Values.global.discovery.podSubnet | quote }}
+        - name: CONTROL_PLANE_ADDRESS
+          value: {{ .Values.kubeProxy.internal.clusterMasterAddresses | required "clusterMasterAddresses not discovered" | first | quote }}
+        - name: KUBERNETES_VERSION
+          value: {{ .Values.global.discovery.kubernetesVersion }}
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy
+          name: config
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      containers:
+      - name: kube-proxy
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . (list "kubeProxy" $kubeVersion.Major $kubeVersion.Minor | join "" )) }}
+        command:
+        - /usr/local/bin/kube-proxy
+        - --config=/var/lib/kube-proxy/config.conf
+        - --hostname-override=$(NODE_NAME)
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy
+          name: config
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+          readOnly: false
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+        env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "kube_proxy_resources" . | nindent 12 }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4210"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:10249/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: kube-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: d8-kube-proxy
+        ports:
+          - containerPort: 4210
+            name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4210
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4210
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: d8-kube-proxy
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi

@@ -1,0 +1,80 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию релизов модулей Deckhouse.
+
+            **Ресурсы ModuleRelease создаёт Deckhouse.**
+          properties:
+            spec:
+              properties:
+                moduleName:
+                  description: Название модуля.
+                version:
+                  description: Версия модуля в данном релизе.
+                weight:
+                  description: _Вес_ (приоритет) модуля.
+                applyAfter:
+                  description: Время, до которого отложено обновление.
+                update:
+                  description: Необязательные параметры обновления.
+                  properties:
+                    versions:
+                      description: |
+                        Список правил перехода `from`→`to`, позволяющих пропускать пошаговые обновления.
+                        Если текущая установленная версия модуля (статус `Deployed`) не ниже `from`, и в кластере есть релиз, версия которого соответствует `to`, контроллер пропустит промежуточные релизы и обновит модуль до версии из `to`.
+                        Значение `to` может задавать минорную ветку (`X.Y` — будет выбрана последняя доступная `X.Y.Z`).
+                        Правило указывается в самом релизе назначения (constrained release) — в том, версия которого соответствует `to`.
+                      items:
+                        properties:
+                          from:
+                            description: Минимальная версия, с которой допускается переход (формат `X.Y`).
+                          to:
+                            description: Конечная версия диапазона — минорная ветка (`X.Y`).
+                requirements:
+                  description: Зависимости релиза — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform мог запустить эту версию модуля.
+                  properties:
+                    deckhouse:
+                      description: Требование к версии Deckhouse.
+                    kubernetes:
+                      description: Требование к версии Kubernetes.
+                    modules:
+                      description: Список других модулей, которые необходимы для этой версии модуля (должны быть включены).
+                changelog:
+                  description: Список изменений модуля в данном релизе.
+            status:
+              properties:
+                phase:
+                  description: Текущий статус релиза.
+                message:
+                  description: Детальное сообщение об ошибке или статусе релиза.
+                transitionTime:
+                  description: Время изменения статуса релиза.
+                approved:
+                  description: |
+                    Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
+                size:
+                  description: Размер образа модуля.
+                pullDuration:
+                  description: Время загрузки модуля.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Показывает текущий статус релиза.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Применяемая политика обновления.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          description: 'Показывает, когда статус релиза изменился.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Детали статуса релиза.'

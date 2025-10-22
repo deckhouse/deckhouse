@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Remove `master` taint if `control-plane` taint was removed in a single node installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2809
+ingress-nginx:
+  fixes:
+    - summary: Increase Ingress validation webhook timeout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2812
+

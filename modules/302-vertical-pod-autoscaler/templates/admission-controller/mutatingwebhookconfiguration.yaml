@@ -1,0 +1,45 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: vpa-webhook-config
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-webhook-config")) | nindent 2 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ printf "%s\n" .Values.verticalPodAutoscaler.internal.CACert | b64enc }}
+    service:
+      name: vpa-webhook
+      namespace: kube-system
+  failurePolicy: Ignore
+  name: vpa.k8s.io
+  namespaceSelector: {}
+  objectSelector:
+    matchExpressions:
+    - key: app
+      operator: NotIn
+      values:
+      - vpa-admission-controller
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+    scope: '*'
+  - apiGroups:
+    - autoscaling.k8s.io
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - verticalpodautoscalers
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 30

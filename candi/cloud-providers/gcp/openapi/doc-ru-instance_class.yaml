@@ -1,0 +1,66 @@
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Описывает параметры группы GCP Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                machineType:
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+
+                    GCP [позволяет указывать](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#create) нестандартное количество CPU и RAM, например: `custom-8-40960` или `n2-custom-8-40960`.
+                capacity:
+                  description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `machineType`).
+
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`a2-highgpu-8g`, `c2-standard-8` и т. п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
+                image:
+                  description: |
+                    Образ, который будет использоваться в заказанных инстансах.
+
+                    Список доступных образов можно найти в [документации провайдера](https://cloud.google.com/compute/docs/images#ubuntu).
+
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                preemptible:
+                  description: |
+                    Необходимость заказа preemptible-инстансов (прерываемых виртуальных машин).
+                diskType:
+                  description: |
+                    Тип созданного диска.
+                diskSizeGb:
+                  description: |
+                    Размер root-диска. Значение указывается в `ГиБ`.
+                disableExternalIP:
+                  description: Запрет назначения внешнего IP-адреса для инстанса.
+                additionalNetworkTags:
+                  description: |
+                    Список дополнительных тегов.
+
+                    Теги, например, позволяют применять к инстансам правила firewall. Подробно про network tags можно прочитать [в официальной документации](https://cloud.google.com/vpc/docs/add-remove-network-tags).
+                additionalLabels:
+                  description: |
+                    Список дополнительных лейблов.
+
+                    Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+    - name: v1
+      schema: *schema
+

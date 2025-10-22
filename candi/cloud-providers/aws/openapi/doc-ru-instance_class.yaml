@@ -1,0 +1,64 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Параметры инстанса в AWS, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                instanceType:
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+                capacity:
+                  description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `instanceType`).
+
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`t2.micro`, `m6a.12xlarge` и т. п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
+                ami:
+                  description: |
+                    Образ Amazon Machine Image (AMI ID), который будет использоваться в заказанных инстансах.
+
+                    Если он не указан, используется AMI, определенный в параметре [masterNodeGroup.instanceClass.ami](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-ami) ресурса `AWSClusterConfiguration`.
+
+                    Как найти нужный AMI (в каждом регионе AMI разные):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                spot:
+                  description: |
+                    Создание spot-инстансов (spot instance). Spot-инстансы будут запускаться с минимально возможной для успешного запуска ценой за час.
+                diskType:
+                  description: |
+                    Тип созданного диска.
+                iops:
+                  description: |
+                    Количество IOPS. Применяется только для `diskType` **io1**.
+                diskSizeGb:
+                  description: |
+                    Размер root-диска. Значение указывается в `ГиБ`.
+                additionalTags:
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам.
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего InstanceClass.
+    - name: v1
+      schema: *schema

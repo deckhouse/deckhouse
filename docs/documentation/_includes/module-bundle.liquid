@@ -1,0 +1,67 @@
+{%- assign moduleName = page.dir | regex_replace: "^.*/[0-9]+\-([a-z-]+)/$", "\1" %}
+{%- assign moduleSnakeName = page['module-snake-name'] %}
+{%- assign moduleKebabName = page['module-kebab-name'] %}
+
+{%- assign bundlesEnabledCount = 0 %}
+{%- assign bundlesDisabledCount = 0 %}
+{%- for bundle in site.data.bundles.bundleNames %}
+  {%- if site.data.bundles.byModule[moduleKebabName][bundle] == 'true' %}
+
+    {%- if bundlesEnabledList.size > 0 %}
+      {%- assign bundlesEnabledList = bundlesEnabledList | append: '`, `' %}
+    {%- endif %}
+
+    {%- assign bundlesEnabledCount = bundlesEnabledCount | plus: 1 %}
+    {%- assign bundlesEnabledList = bundlesEnabledList | append: bundle %}
+
+  {%- else %}
+
+    {%- if bundlesDisabledList.size > 0 %}
+      {%- assign bundlesDisabledList = bundlesDisabledList | append: '`, `' %}
+    {%- endif %}
+
+    {%- assign bundlesDisabledCount = bundlesDisabledCount | plus: 1 %}
+    {%- assign bundlesDisabledList = bundlesDisabledList | append: bundle %}
+
+  {%- endif %}
+{%- endfor %}
+
+{%- if bundlesEnabledCount > 0 %}
+  {%- if bundlesEnabledCount > 1 %}
+{% if page.lang == 'ru' -%}
+     Модуль **включен** по умолчанию в [наборах модулей]({{ "/#наборы-модулей" | true_relative_url }})
+     {%- else -%}
+     The module is **enabled** by default in the following [bundles]({{ "/#module-bundles" | true_relative_url }})
+     {%- endif %}: `{{ bundlesEnabledList }}`.
+  {%- else %}
+{% if page.lang == 'ru' -%}
+     Модуль **включен** по умолчанию в [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}) `{{ bundlesEnabledList }}`.
+     {%- else -%}
+     The module is **enabled** by default in the `{{ bundlesEnabledList }}` [bundle]({{ "/#module-bundles" | true_relative_url }}).
+     {%- endif %}
+  {%- endif %}
+{%- else %}
+{% if page.lang == 'ru' -%}
+  Модуль не включен по умолчанию в каком-либо [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}).
+  {%- else -%}
+  The module is not enabled by default in any [bundles]({{ "/#module-bundles" | true_relative_url }}).
+  {%- endif %}
+{%- endif %}
+
+{%- if bundlesDisabledCount > 0 and bundlesEnabledCount > 0 %}
+  {%- if bundlesDisabledCount > 1 %}
+{% if page.lang == 'ru' -%}
+     Модуль **выключен** по умолчанию в [наборах модулей]({{ "/#наборы-модулей" | true_relative_url }})
+     {%- else -%}
+     The module is **disabled** by default in the following [bundles]({{ "/#module-bundles" | true_relative_url }})
+     {%- endif %}: `{{ bundlesDisabledList }}`.
+  {%- else %}
+{% if page.lang == 'ru' -%}
+     Модуль **выключен** по умолчанию в [наборе модулей]({{ "/#наборы-модулей" | true_relative_url }}) `{{ bundlesDisabledList }}`.
+     {%- else -%}
+     The module is **disabled** by default in the `{{ bundlesDisabledList }}` [bundle]({{ "/#module-bundles" | true_relative_url }}).
+     {%- endif %}
+  {%- endif %}
+{%- endif %}
+
+{% include module-enable.liquid moduleKebabName=moduleKebabName moduleSnakeName=moduleSnakeName %}

@@ -1,0 +1,13 @@
+candi:
+  fixes:
+    - summary: Fix docker-stuck-containers-cleaner unit
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1044
+docs:
+  fixes:
+    - summary: Fix examples in some OpenAPI specifications.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1054
+monitoring-kubernetes:
+  fixes:
+    - summary: Add the container="POD" label to all advisor metrics for pause containers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/960
+

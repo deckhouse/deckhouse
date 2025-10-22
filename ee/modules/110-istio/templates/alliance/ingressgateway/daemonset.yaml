@@ -1,0 +1,276 @@
+{{- define "istio_proxy_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
+  {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ingressgateway
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: ingressgateway
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: istio-proxy
+      minAllowed:
+        {{- include "istio_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 200Mi
+        cpu: 100m
+ {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ingressgateway
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: ingressgateway
+  template:
+    metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+      labels:
+        app: ingressgateway
+        sidecar.istio.io/inject: "false"
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      serviceAccountName: alliance-ingressgateway
+      automountServiceAccountToken: true
+  {{- if $.Values.istio.alliance.ingressGateway.nodeSelector }}
+      nodeSelector:
+        {{- $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | nindent 8 }}
+  {{- end }}
+  {{- if $.Values.istio.alliance.ingressGateway.tolerations }}
+      tolerations:
+        {{- $.Values.istio.alliance.ingressGateway.tolerations | toYaml | nindent 8 }}
+  {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: istio-proxy
+        args:
+        - proxy
+        - router
+        - --domain
+        - $(POD_NAMESPACE).svc.{{ $.Values.global.discovery.clusterDomain }}
+        - --proxyLogLevel=warning
+        - --proxyComponentLogLevel=misc:error
+        - --log_output_level=default:info
+        - --serviceCluster
+        - istio-ingressgateway
+        env:
+        - name: JWT_POLICY
+          value: {{ include "istioJWTPolicy" . }}
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: CA_ADDR
+          value: istiod-{{ $revision }}.d8-istio.svc:15012
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.serviceAccountName
+        - name: CANONICAL_SERVICE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['service.istio.io/canonical-name']
+        - name: CANONICAL_REVISION
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['service.istio.io/canonical-revision']
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: ingressgateway
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/d8-istio/daemonsets/ingressgateway
+        - name: ISTIO_META_MESH_ID
+          value: d8-istio-mesh
+        - name: TRUST_DOMAIN
+          value: {{ $.Values.global.discovery.clusterDomain | quote }}
+        - name: ISTIO_META_UNPRIVILEGED_POD
+          value: "true"
+        - name: ISTIO_META_ROUTER_MODE
+          value: sni-dnat
+        - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+          value: {{ include "istioNetworkName" $ }}
+        - name: ISTIO_META_DNS_CAPTURE
+          value: "true"
+        - name: ISTIO_META_NETWORK
+          value: {{ include "istioNetworkName" $ }}
+        - name: ISTIO_META_CLUSTER_ID
+          value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
+  {{- if $.Values.istio.dataPlane.enableHTTP10 }}
+        - name: ISTIO_META_HTTP10
+          value: "1"
+  {{- end }}
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 15021
+          protocol: TCP
+        - containerPort: 15443
+          protocol: TCP
+        - containerPort: 15012
+          protocol: TCP
+        - containerPort: 15017
+          protocol: TCP
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+          initialDelaySeconds: 10
+          periodSeconds: 2
+          timeoutSeconds: 3
+          failureThreshold: 30
+        securityContext:
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
+        volumeMounts:
+        - name: workload-socket
+          mountPath: /var/run/secrets/workload-spiffe-uds
+        - name: credential-socket
+          mountPath: /var/run/secrets/credential-uds
+        - name: workload-certs
+          mountPath: /var/run/secrets/workload-spiffe-credentials
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /etc/istio/config
+          name: config-volume
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - mountPath: /var/lib/istio/data
+          name: istio-data
+        - mountPath: /etc/istio/pod
+          name: podinfo
+        - mountPath: /etc/istio/ingressgateway-certs
+          name: ingressgateway-certs
+          readOnly: true
+        - mountPath: /etc/istio/ingressgateway-ca-certs
+          name: ingressgateway-ca-certs
+          readOnly: true
+  {{- if eq (include "istioJWTPolicy" .) "third-party-jwt" }}
+        - name: istio-token
+          mountPath: /var/run/secrets/tokens
+          readOnly: true
+  {{- end }}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: istio-ca-root-cert
+        name: istiod-ca-cert
+      - downwardAPI:
+          defaultMode: 420
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels
+            path: labels
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.annotations
+            path: annotations
+          - path: cpu-limit
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: limits.cpu
+          - path: cpu-request
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: requests.cpu
+        name: podinfo
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir: {}
+        name: credential-socket
+      - emptyDir: {}
+        name: workload-certs
+      - emptyDir: {}
+        name: istio-envoy
+      - emptyDir: {}
+        name: istio-data
+      - configMap:
+          defaultMode: 420
+          name: istio-{{ $revision }}
+        name: config-volume
+      - name: ingressgateway-certs
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: istio-ingressgateway-certs
+      - name: ingressgateway-ca-certs
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: istio-ingressgateway-ca-certs
+  {{- if eq (include "istioJWTPolicy" .) "third-party-jwt" }}
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: istio-token
+              expirationSeconds: 43200
+              audience: istio-ca
+  {{- end }}
+{{- end }}

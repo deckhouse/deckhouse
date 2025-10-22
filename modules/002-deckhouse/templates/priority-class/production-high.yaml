@@ -1,0 +1,11 @@
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-high
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+value: 9000
+globalDefault: false
+description: >
+  Stateful workloads in production environment whose unavailability
+  will directly impact production services or will lead to data loss.

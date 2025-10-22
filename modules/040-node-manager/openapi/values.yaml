@@ -1,0 +1,405 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+
+      capiControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+      capsControllerManagerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+      machineControllerManagerEnabled:
+        type: boolean
+      capiControllerManagerEnabled:
+        type: boolean
+        x-examples:
+        - true
+      capsControllerManagerEnabled:
+        type: boolean
+      clusterMasterAddresses:
+        type: array
+        description: |
+          Array of API servers addresses.
+        x-examples:
+          - ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+        items:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+
+      packagesProxy:
+        type: object
+        default: {}
+        properties:
+          addresses:
+            type: array
+            description: |
+              Array of package proxy servers addresses.
+            x-examples:
+              - ["10.0.0.1:5443", "10.0.0.2:5443", "10.0.0.3:5443"]
+            default: []
+            items:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+          token:
+            type: string
+            description: |
+              packages proxy token.
+            x-examples:
+            - "mytoken"
+            default: ""
+      kubernetesCA:
+        type: string
+        x-examples:
+          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+        description: |
+          kubernetes.ca content
+
+      standbyNodeGroups:
+        type: array
+        description: |
+          Settings for standby Pods.
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-dmt-default: name
+            standby:
+              type: number
+            reserveCPU:
+              type: [integer, string]
+            reserveMemory:
+              type: [integer, string]
+            taints:
+              type: array
+              description: |
+                Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                **Caution!** Only `effect`, `key`, `value` fields are available.
+              items:
+                type: object
+                properties:
+                  effect:
+                    type: string
+                    enum:
+                    - NoSchedule
+                    - PreferNoSchedule
+                    - NoExecute
+                  key:
+                    type: string
+                  value:
+                    type: string
+
+      bashibleApiServerCA:
+        type: string
+        x-examples:
+          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+        description: |
+          CA certificate for API server used by bashible.
+      bashibleApiServerCrt:
+        type: string
+        x-examples:
+          - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+        description: |
+          Certificate for API server used by bashible.
+      bashibleApiServerKey:
+        type: string
+        x-examples:
+          - LS0tcHJpdmtleS0tLSBhYWFxcXEgLS1lbmQgcHJpdmtleS0tLQo=
+        description: |
+          Private key for API server used by bashible.
+
+      nodeStatusUpdateFrequency:
+        type: [integer, string]
+        description: |
+          Seconds for nodeStatusUpdateFrequency field in kubelet config. The frequency that kubelet computes node status.
+        x-examples:
+          - "10"
+
+      bootstrapTokens:
+        type: object
+        # This is a dictionary nodeGroup name -> bootstrap token.
+        additionalProperties:
+          type: string
+        description: |
+          Bootstrap tokens for node groups.
+        x-examples:
+          - worker: mytoken
+
+      instancePrefix:
+        type: string
+        x-examples:
+          - "myprefix"
+        description: |
+          Prefix for instance name.
+
+      machineDeployments:
+        type: object
+        description: |
+          Checksums of all EXISTING MachineClasses in the map "{MachineDeployment name}": "{name, nodeGroup, Checksum}"
+        x-examples:
+          - worker:
+              name: "myprefix-worker-02320933"
+              nodeGroup: "workers"
+              checksum: "62090f2241986a8361242e47cf541657099fdccc0c08e34cd694922bdcf31893"
+        additionalProperties:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Name of the MachineDeployment.
+            nodeGroup:
+              type: string
+              description: Name of the NodeGroup.
+            checksum:
+              type: string
+              description: Checksum of the MachineClass, to be reused in MachineDeployment templates at right moments.
+
+      static:
+        type: object
+        default: {}
+        description: |
+          Settings for Static nodes.
+        properties:
+          internalNetworkCIDRs:
+            type: array
+            default: []
+            items:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[1-9][0-9]?$'
+
+      cloudProvider:
+        type: object
+        additionalProperties: true
+        description: |
+          Settings specific for cloud provider: access, zones, regions, etc.
+        properties:
+          type:
+            type: string
+          region:
+            type: string
+          zones:
+            type: array
+            items:
+              type: string
+          instanceClassKind:
+            type: string
+          machineClassKind:
+            type: string
+        x-examples:
+          - type: aws
+            machineClassKind: AWSInstanceClass
+            aws:
+              providerAccessKeyId: myprovaccesskeyid
+              providerSecretAccessKey: myprovsecretaccesskey
+              region: myregion
+              loadBalancerSecurityGroupID: mylbsecuritygroupid
+              keyName: mykeyname
+              instances:
+                iamProfileName: myiamprofilename
+                additionalSecurityGroups:
+                  - ["mysecgroupid1", "mysecgroupid2"]
+              internal:
+                zoneToSubnetIdMap:
+                  zonea: mysubnetida
+                  zoneb: mysubnetidb
+              tags:
+                aaa: aaa
+      clusterAutoscalerPriorities:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
+      nodeGroups:
+        type: array
+        description: |
+          Array of available NodeGroups.
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: |
+                A name of the NodeGroup.
+            manualRolloutID:
+              type: string
+              description: |
+                Value of NodeGroup's annotation "manual-rollout-id".
+            serializedLabels:
+              type: string
+              description: |
+                Labels from node template in the format: key1=value1,key2=value2. If labels does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
+            serializedTaints:
+              type: string
+              description: |
+                Taints from node template in the format: key1=value1:NoSchedule,key2=value2:NoExecute. If taints does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
+            static:
+              type: object
+              description: |
+                Settings for Static nodes.
+              properties:
+                internalNetworkCIDRs:
+                  type: array
+                  items:
+                    type: string
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[1-9][0-9]?$'
+            instanceClass:
+              type: [object, "null"]
+              description: |
+                Copy of the 'spec' section from WhateverInstanceClass resource. Fields are specific to used cloud provider.
+              additionalProperties: true
+            kubernetesVersion:
+              type: string
+              description: |
+                Major.Minor of the Kubernetes version used in cluster.
+              x-examples:
+                - "1.29"
+            updateEpoch:
+              type: [integer, string]
+              x-examples:
+                - "1624550403"
+            nodeType:
+              # See NodeGroup in candi/openapi/node_group.yaml
+              type: string
+              enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
+            gpu:
+              type: object
+              additionalProperties: true
+            cri:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            staticInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            cloudInstances:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            nodeCapacity:
+              type: object
+              properties:
+                name:
+                  type: string
+                rootDisk:
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+                cpu:
+                  oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                memory:
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+            nodeTemplate:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            chaos:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            operatingSystem:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            disruptions:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            kubelet:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
+            nodeDrainTimeoutSecond:
+              type: [integer]
+              additionalProperties: true
+            fencing:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum:
+                    - "Watchdog"
+        x-examples:
+          - - name: worker
+              instanceClass: # minimum
+                ami: myami
+                instanceType: t2.medium
+              nodeType: CloudEphemeral
+              kubernetesVersion: "1.29"
+              cri:
+                type: "Docker"
+              cloudInstances:
+                classReference:
+                  kind: AWSInstanceClass
+                  name: worker
+                maxPerZone: 1
+                minPerZone: 1
+                zones:
+                  - zonea
+      upmeterDiscovery:
+        type: object
+        required:
+          - ephemeralNodeGroupNames
+        properties:
+          ephemeralNodeGroupNames:
+            type: array
+            items:
+              type: string
+      allowedBundles:
+        type: array
+        default:
+          - "ubuntu-lts"
+          - "centos"
+          - "debian"
+          - "opensuse"
+        items:
+          type: string

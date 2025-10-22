@@ -1,0 +1,255 @@
+{{- define "dex_conf" }}
+  {{- $context := . }}
+  issuer: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
+  storage:
+    type: kubernetes
+    config:
+      inCluster: true
+  web:
+    https: 0.0.0.0:5556
+    tlsKey: /etc/dex/certs/tls.key
+    tlsCert: /etc/dex/certs/tls.crt
+    clientRemoteIP:
+      header: X-Real-IP
+  telemetry:
+    http: 127.0.0.1:5558
+  frontend:
+    issuer: "Deckhouse"
+    dir: /web
+    extra:
+      # TODO(nabokihms): make it configurable
+      lang: en
+  {{- with $context.Values.userAuthn.passwordPolicy }}
+  {{ if . }}
+  passwordPolicy:
+    id: local
+    complexityLevel: {{ .complexityLevel | quote }}
+    passwordHistoryLimit: {{ .passwordHistoryLimit }}
+    {{- if .rotation }}
+    rotation:
+      interval: {{ .rotation.interval | quote }}
+    {{- end }}
+    {{- if .lockout }}
+    lockout:
+      maxAttempts: {{ .lockout.maxAttempts }}
+      lockDuration: {{ .lockout.lockDuration | quote }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- with $context.Values.userAuthn.staticUsers2FA }}
+    {{ if .enabled }}
+  twoFactorAuthn:
+    issuer: {{ .issuerName  | quote }}
+    connectors:
+    - local
+    {{- end }}
+  {{- end }}
+  expiry:
+    authRequests: "10m"
+    signingKeys: "6h"
+    idTokens: {{ $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
+    refreshTokens:
+      reuseInterval: "2m"
+      validIfNotUsedFor: "2190h" # 3 months
+  logger:
+    level: info
+    format: json
+  oauth2:
+    responseTypes: ["code", "token", "id_token"]
+  {{- with $context.Values.userAuthn.staticUsers2FA }}
+    {{/* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */}}
+    {{ if .enabled }}
+    skipApprovalScreen: false
+    {{- else }}
+    skipApprovalScreen: true
+    {{- end }}
+  {{- end }}
+  {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
+  enablePasswordDB: true
+  {{- end }}
+  {{- if $context.Values.userAuthn.internal.providers }}
+  connectors:
+    {{- range $provider := $context.Values.userAuthn.internal.providers }}
+      {{- if eq $provider.type "Github" }}
+    - type: github
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        clientID: {{ $provider.github.clientID | quote }}
+        clientSecret: {{ $provider.github.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        orgs:
+        {{- range $org := $provider.github.orgs }}
+        - name: {{ $org.name | quote }}
+          {{- if $org.teams }}
+          teams:
+            {{- range $team := $org.teams }}
+          - {{ $team | quote }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if $provider.github.teamNameField }}
+        teamNameField: {{ $provider.github.teamNameField | lower }}
+        {{- end }}
+        useLoginAsID: {{ $provider.github.useLoginAsID | default false }}
+        loadAllGroups: {{ $provider.github.loadAllGroups | default false }}
+      {{- end }}
+
+      {{- if eq $provider.type "Gitlab" }}
+    - type: gitlab
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        baseURL: {{ $provider.gitlab.baseURL | quote }}
+        clientID: {{ $provider.gitlab.clientID | quote }}
+        clientSecret: {{ $provider.gitlab.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        useLoginAsID: {{ $provider.gitlab.useLoginAsID | default false }}
+        {{- if $provider.gitlab.groups }}
+        groups:
+          {{- range $group := $provider.gitlab.groups }}
+        - {{ $group | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+
+      {{- if eq $provider.type "BitbucketCloud" }}
+    - type: bitbucket-cloud
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        clientID: {{ $provider.bitbucketCloud.clientID | quote }}
+        clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        includeTeamGroups: {{ $provider.bitbucketCloud.includeTeamGroups | default false }}
+        {{- if $provider.bitbucketCloud.teams }}
+        teams:
+          {{- range $team := $provider.bitbucketCloud.teams }}
+        - {{ $team | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+
+
+      {{- if eq $provider.type "LDAP" }}
+    - type: ldap
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        host: {{ $provider.ldap.host | quote }}
+        {{- if $provider.ldap.insecureSkipVerify }}
+        insecureSkipVerify: true
+        {{- end }}
+        {{- if $provider.ldap.insecureNoSSL }}
+        insecureNoSSL: true
+        {{- end }}
+        {{- if $provider.ldap.rootCAData }}
+        rootCAData: {{ $provider.ldap.rootCAData | b64enc }}
+        {{- end }}
+        {{- if $provider.ldap.bindDN  }}
+        bindDN: {{ $provider.ldap.bindDN | quote }}
+        {{- end }}
+        {{- if $provider.ldap.bindPW  }}
+        bindPW: '{{ $provider.ldap.bindPW }}'
+        {{- end }}
+        {{- if $provider.ldap.startTLS }}
+        startTLS: true
+        {{- end }}
+        userSearch:
+          {{- $provider.ldap.userSearch | toYaml | nindent 10 }}
+        {{- if $provider.ldap.groupSearch }}
+        groupSearch:
+          {{- $provider.ldap.groupSearch | toYaml | nindent 10 }}
+        {{- end }}
+        usernamePrompt: {{ $provider.ldap.usernamePrompt | default "LDAP username" | quote }}
+      {{- end }}
+
+      {{- if eq $provider.type "OIDC" }}
+    - type: oidc
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        issuer: {{ $provider.oidc.issuer | quote }}
+        clientID: {{ $provider.oidc.clientID | quote }}
+        clientSecret: {{ $provider.oidc.clientSecret | quote }}
+        redirectURI: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/callback
+        {{- if $provider.oidc.basicAuthUnsupported }}
+        basicAuthUnsupported: true
+        {{- end }}
+        {{- if $provider.oidc.insecureSkipEmailVerified }}
+        insecureSkipEmailVerified: true
+        {{- end }}
+        insecureEnableGroups: true
+        {{- if $provider.oidc.getUserInfo }}
+        getUserInfo: true
+        {{- end }}
+        userIDKey: {{ $provider.oidc.userIDKey | default "sub" | quote }}
+        userNameKey: {{ $provider.oidc.userNameKey | default "name" | quote }}
+        {{- if $provider.oidc.claimMapping }}
+        claimMapping:
+          email: {{ $provider.oidc.claimMapping.email }}
+          groups: {{ $provider.oidc.claimMapping.groups }}
+          preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
+        {{- end }}
+        {{- if $provider.oidc.claimMappingOverride }}
+        overrideClaimMapping: true
+        {{- end }}
+        {{- if $provider.oidc.allowedGroups }}
+        allowedGroups:
+          {{- range $group := $provider.oidc.allowedGroups }}
+          - {{ $group | quote }}
+          {{- end }}
+        {{- end }}
+        scopes:
+        {{- if $provider.oidc.scopes }}
+           {{- range $scope := $provider.oidc.scopes }}
+        - {{ $scope | quote }}
+           {{- end }}
+        {{- else }}
+        - openid
+        - profile
+        - email
+        - groups
+        - offline_access
+        {{- end }}
+        {{- if $provider.oidc.promptType }}
+        promptType: {{ $provider.oidc.promptType | quote }}
+        {{- end }}
+        {{- if $provider.oidc.insecureSkipVerify }}
+        insecureSkipVerify: true
+        {{- end }}
+        {{- if $provider.oidc.rootCAData }}
+        rootCAs:
+        - {{ $provider.oidc.rootCAData | quote }}
+        {{- end }}
+      {{- end }}
+
+      {{- if eq $provider.type "Crowd" }}
+    - type: atlassian-crowd
+      id: {{ $provider.id | quote }}
+      name: {{ $provider.displayName | quote }}
+      config:
+        baseURL: {{ $provider.crowd.baseURL | quote }}
+        clientID: {{ $provider.crowd.clientID | quote }}
+        clientSecret: {{ $provider.crowd.clientSecret | quote }}
+        {{- if $provider.crowd.groups }}
+        groups:
+          {{- range $group := $provider.crowd.groups }}
+        - {{ $group | quote }}
+          {{- end }}
+        {{- end }}
+        usernamePrompt: {{ $provider.crowd.usernamePrompt | default "Crowd username" | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+data:
+  config.yaml: |-
+    {{- include "dex_conf" . | b64enc | nindent 4 }}

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Copyright 2025 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+set -Eeo pipefail
+
+# Disable and remove systemd unit.
+systemctl disable d8-shutdown-inhibitor.service
+rm -f /lib/systemd/system/d8-shutdown-inhibitor.service
+systemctl daemon-reload
+
+# Remove binary.
+rm -f /opt/deckhouse/bin/d8-shutdown-inhibitor

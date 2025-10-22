@@ -1,0 +1,46 @@
+{
+  "sources": {
+    "cluster_logging_config/testfile": {
+      "type": "file",
+      "exclude": [
+        "/var/log/syslog"
+      ],
+      "include": [
+        "/var/log/*log",
+        "/var/log/nginx/*.access.log"
+      ]
+    }
+  },
+  "sinks": {
+    "destination/cluster/testoutput": {
+      "type": "elasticsearch",
+      "inputs": [
+        "cluster_logging_config/testfile"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "api_version": "v8",
+      "endpoint": "https://192.168.0.1:9200",
+      "encoding": {
+        "timestamp_format": "rfc3339"
+      },
+      "batch": {
+        "max_bytes": 10485760,
+        "timeout_secs": 1
+      },
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
+      "compression": "gzip",
+      "bulk": {
+        "action": "index",
+        "index": "{{ kubernetes.namespace }}-%F"
+      },
+      "pipeline": "test-pipe",
+      "mode": "bulk",
+      "suppress_type_name": true
+    }
+  }
+}

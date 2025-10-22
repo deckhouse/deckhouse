@@ -1,0 +1,139 @@
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<link href='../assets/css/supported_versions.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+
+{%- assign osVersions = site.data.supported_versions.bashible | sort %}
+{%- assign k8sVersions = site.data.supported_versions.k8s  %}
+{%- assign langSupportKey = page.lang | append: "_support" %}
+
+{%- assign supported_img_url = '/images/icons/supported_v2.svg' %}
+{%- assign partially_supported_img_url = '/images/icons/intermediate_v2.svg' %}
+{%- assign notes_img_url = '/images/icons/note_v2.svg' %}
+{%- assign not_supported_img_url = '/images/icons/not_supported_v2.svg' %}
+
+## Linux
+
+{{ site.data.i18n.common['os_supported_phrase'][page.lang] }}:
+
+<div markdown="0">
+  <table class="supported_versions fixed-header-table">
+    <thead class="versioning-table">
+    <tr class="header-row">
+      <th class="name" style="text-align: center; white-space: nowrap;">{{site.data.i18n.common['linux_distro'][page.lang] }}</th>
+      <th class="text-align: center; versions" style="white-space: nowrap;">{{ site.data.i18n.common['versions_supported'][page.lang] | capitalize }}</th>
+      {%- if page.lang == 'ru' %}
+      <th style="text-align: center; white-space: nowrap;" colspan="3">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {% else %}
+      <th style="text-align: center; white-space: nowrap;">{{ site.data.i18n.common['redactions'][page.lang] | capitalize }}</th>
+      {%- endif %}
+      <th style="text-align: center;">{{ site.data.i18n.common['notes'][page.lang] | capitalize }}</th>
+    </tr>
+    <tr class="sub-header">
+      <td></td>
+      <td></td>
+      {%- if page.lang == 'ru' %}
+      <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE</td>
+      <td style="text-align: center; width: 170px; font-weight: 600; padding: 5px 10px;">CSE Lite, CSE Pro</td>
+      <td style="text-align: center; width: 170px; white-space: nowrap; font-weight: 600; padding: 0 10px;">BE, SE, SE+, EE</td>
+      {%- else %}
+      <td style="text-align: center; width: 170px; font-weight: 600; padding: 0 10px;">CE, BE, SE, SE+, EE</td>
+      {%- endif %}
+      <td></td>
+    </tr>
+    </thead>
+    <tbody>
+    {%- for osItem in osVersions %}
+    {%- assign osKey = osItem[0] %}
+    {%- assign osName = site.data.supported_versions.osDistributions[osKey].name | default: osKey  %}
+    {%- if site.data.supported_versions.osDistributions[osKey][langSupportKey] and site.data.supported_versions.osDistributions[osKey][langSupportKey] != "true" %}{% continue %}{% endif %}
+    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey %}
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+## Kubernetes
+
+{{ site.data.i18n.common['k8s_supported_phrase'][page.lang] }}:
+
+<div markdown="0">
+<table class="supported_versions supported_versions__kubernetes fixed-header-table">
+<thead>
+    <tr>
+      <th style="width: 5%;"></th>
+      <th style="text-align: center; width: 1%;">{{ site.data.i18n.common['version'][page.lang] | capitalize }}</th>
+      <th>{{site.data.i18n.common['status'][page.lang] | capitalize }}</th>
+    </tr>
+</thead>
+<tbody>
+{%- for k8sItem in k8sVersions %}
+{%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
+{%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
+<tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
+  <td style="text-align: center">
+    <div class="icon">
+      <img src="{{ iconStatus }}" alt="" />
+    </div>
+  </td>
+  <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>
+  <td style="text-align: left">
+    <p>{%- if k8sItem[1].default %}<strong>{{ site.data.i18n.common['default_version'][page.lang] | capitalize }}.</strong> {% endif %}
+    {{ site.data.supported_versions.k8s_statuses[k8sStatus][page.lang] }}</p>
+  </td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</div>
+
+## Container registry
+
+{% alert level="info" %}
+{%- if page.lang == 'ru' %}
+Deckhouse должен работать с любыми container registry, поддерживающими работу с Bearer token-схемой авторизации и с [OCI форматом образов](https://github.com/opencontainers/image-spec/blob/main/spec.md).
+{%- else %}
+Deckhouse should work with any container registry supporting Bearer authentication and [OCI image format specification](https://github.com/opencontainers/image-spec/blob/main/spec.md).
+{%- endif %}
+{% endalert %}
+
+<div markdown="0">
+<table class="supported_versions supported_versions__kubernetes supported_versions__kubernetes-container fixed-header-table">
+<thead>
+<tr><th>
+{%- if page.lang == 'ru' %}
+Container registry, с которыми Deckhouse гарантированно работает
+{%- else %}
+Container registries that Deckhouse is guaranteed to work with
+{%- endif %}
+</th></tr>
+</thead>
+<tbody>
+{%- for registry in site.data.supported_versions.registries %}
+<tr>
+  <td style="text-align: left"
+  {%- if registry[1].additionalInfo %} table__hint_{{ registry[0] }}{% endif -%}>
+  <p><a href="{{ registry[1].url }}" target="_blank">{{ registry[1].longname }}{% if registry[1].additionalInfo %}<sup>*</sup>{% endif %}</a></p>
+  </td>
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function () {
+{%- for registry in site.data.supported_versions.registries %}
+{%- if registry[1].additionalInfo %}
+    tippy('[table__hint_{{ registry[0] }}]', {
+        interactive: true,
+        interactiveDebounce: 10,
+        maxWidth: 600,
+        theme: 'light',
+        allowHTML: true,
+        arrow: false,
+        content: `{{ registry[1].additionalInfo[page.lang] }}`
+      });
+{%- endif -%}
+{%- endfor %}
+});
+
+</script>

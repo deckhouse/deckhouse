@@ -1,0 +1,27 @@
+diff --git a/pkg/registry/indexers.go b/pkg/registry/indexers.go
+index 2ddd668..11c489b 100644
+--- a/pkg/registry/indexers.go
++++ b/pkg/registry/indexers.go
+@@ -18,6 +18,8 @@ import (
+ const (
+ 	imageIndexName     = "image"
+ 	labeledNSIndexName = "labeledNS"
++
++	deprecatedExtendedMonitoringNamespaceAnnotationKey = "extended-monitoring.flant.com/enabled"
+ )
+ 
+ type ControllerIndexers struct {
+@@ -76,6 +78,13 @@ func namespaceIndexers(nsLabel string) cache.Indexers {
+ 				}
+ 			}
+ 
++			annotations := ns.GetAnnotations()
++			if len(annotations) > 0 {
++				if _, ok := annotations[deprecatedExtendedMonitoringNamespaceAnnotationKey]; ok {
++					return []string{ns.GetName()}, nil
++				}
++			}
++
+ 			return nil, nil
+ 		},
+ 	}

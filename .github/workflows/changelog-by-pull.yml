@@ -1,0 +1,48 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Changelog by PR
+on:
+  pull_request_target:
+    types:
+      - "closed"
+      - "edited"
+    branches:
+      - "main"
+jobs:
+  changelog:
+    # Conditions:
+    #   - the PR is edited or merged
+    #   - it is not a changelog PR
+    #   - and its milestone is open
+    if: |
+      (
+        github.event.pull_request &&
+        !contains(github.event.pull_request.labels.*.name, 'changelog')
+      ) && (
+        github.event.pull_request.state == 'closed'         &&
+        github.event.pull_request.merged                    &&
+        github.event.pull_request.milestone.state == 'open'
+      )
+    name: Changelog ${{ github.event.pull_request.milestone.title }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.5.2
+
+      - name: Create changelog
+        uses: ./.github/actions/milestone-changelog
+        with:
+          milestone: ${{ toJSON( github.event.pull_request.milestone ) }}
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}

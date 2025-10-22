@@ -1,0 +1,21 @@
+candi:
+  fixes:
+    - summary: >-
+        Fixed a migration that did not include /opt/deckhouse/bin creation. Also save PATH to a
+        previous jq location to avoid breaking the bashible.sh update process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4771
+deckhouse:
+  fixes:
+    - summary: Add `prometheus.deckhouse.io/rules-watcher-enabled` on the `d8-system` namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4752
+    - summary: Don't change the time for the pending manual `DeckhouseRelease`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4739
+monitoring-kubernetes:
+  fixes:
+    - summary: Fixed path to hostPath in thresholds-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4736
+node-manager:
+  fixes:
+    - summary: Fix draining hook queue flooding.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4770
+

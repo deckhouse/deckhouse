@@ -1,0 +1,132 @@
+# src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
+{{- $protocVersion := "30.2" }}
+{{- $bazelVersions := "6.5.0" }}
+{{- $bazeliskVersions := "v1.20.0" }}
+#
+{{- $source := "https://github.com" }}
+{{- $sourceraw := "https://raw.githubusercontent.com" }}
+{{- if $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
+  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
+{{- end }}
+---
+# #####################################################################
+# BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
+# based on original images: runtime, builder, compilers, cilium-envoy, iptables
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/builder/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/Dockerfile
+# and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile.builder
+# and https://github.com/cilium/image-tools/blob/0e4de6ffe79e97a9795f1ce887a45026e1af22a7/images/iptables/Dockerfile
+#
+# Original IMAGE_TAG of compilers (taken from builds of BPFTOOL and LLVM) is 5569a29cea6b3ad50aeb03102aaf3dc03841197c
+# Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
+# Original IMAGE_TAG of cilium-envoy is v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c
+# Corresponding commit is 0f602c28cb2aa57b29078195049fb257d5b5246c
+# Original IMAGE_TAG of cilium/iptables is 1331e9b1b03f70c9d8b08626d9a7126963f86478
+# Corresponding commit is 0e4de6ffe79e97a9795f1ce887a45026e1af22a7 (https://github.com/cilium/image-tools/tree/0e4de6ffe79e97a9795f1ce887a45026e1af22a7)
+# #####################################################################
+---
+image: {{ .ModuleName }}/golang-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.24" "builder/golang-alpine-svace-1.24" }}
+final: false
+---
+image: {{ .ModuleName }}/base-cilium-dev
+fromImage: builder/alt
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
+import:
+- image: {{ .ModuleName }}/golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
+{{- if eq $.SVACE_ENABLED "true" }}
+- image: {{ .ModuleName }}/golang-artifact
+  add: /
+  to: /
+  includePaths:
+  - opt/svace
+  - usr/local/bin/svace
+  before: install
+{{- end }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  # apt install
+  - |
+    apt-get install -y \
+    apt-https curl jq tzdata \
+    ca-certificates bash-completion iproute2 arpd ipset kmod \
+    iptables iptables-ipv6 iptables-nft \
+    coreutils binutils git git-lfs zip unzip wget mount patch patchelf \
+    make automake autoconf cmake ccache bison flex ninja-build pkg-config \
+    gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
+    glibc glibc-devel glibc-devel-static \
+    python python3 python3-module-pip python3-module-virtualenv \
+    build-essential libtool \
+    libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel
+  # for debug
+  - apt-get install -y strace vim-console
+  # apt clean
+  - apt-get autoclean && apt-get clean
+  # dependencies are only for envoy, bpftool and llvm build
+  # If the versions of these packages are older than those used by default,
+  # you should install them using the `-download-only` flag,
+  # and then install them without this flag before building.
+  - |
+    apt-get update && apt-get install -y \
+    sudo \
+    libcap-devel libpcap-devel \
+    clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
+    libcxxabi-devel \
+    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
+  - apt-get autoclean && apt-get clean
+  install:
+  # Install Go
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - go version
+  # Install protoc
+  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
+  - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
+  # Install protoc plugins
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.5.1 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.36.6 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.5.0 $(cat /run/secrets/SOURCE_REPO)/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
+  - git clone --depth 1 --branch v1.5.1 $(cat /run/secrets/SOURCE_REPO)/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
+  - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
+  - cd /src/protobuf-go/cmd/protoc-gen-go && go install
+  - cd /src/protoc-gen-go-json && go install
+  - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
+  - cd ~
+  - rm -rf /src
+  # Install Bazelisk (for build envoy)
+  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/local/bin/bazel
+  - chmod +x /usr/local/bin/bazel
+  - export BAZELISK_BASE_URL="{{ $source }}/bazelbuild/bazel/releases/download"
+  - USE_BAZEL_VERSION={{ $bazelVersions }} bazel version # to extract all binaries properly
+imageSpec:
+  config:
+    env:
+      GOOS: "linux"
+      GOARCH: "amd64"
+      GOROOT: "/usr/local/go"
+      GOPATH: "/go"
+      PATH: "${PATH}:/usr/local/go/bin:/go/bin"

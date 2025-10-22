@@ -1,0 +1,456 @@
+{
+  "admission-policy-engine": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;use signature verification policies for container images and the ability to&nbsp;prohibit the launch of&nbsp;containers with vulnerabilities",
+        "ru": "Ограничение на&nbsp;возможность использования политик проверки подписи образов контейнеров и&nbsp;возможность установки запрета на&nbsp;запуск контейнеров с&nbsp;уязвимостями"
+      }
+    }
+  },
+  "cloud-provider-vsphere": {
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-vsphere/"
+  },
+  "cloud-provider-zvirt": {
+    "editionFullyAvailable": [
+      "se-plus",
+      "ee"
+    ],
+    "editionMinimumAvailable": "ee",
+    "path": "modules/cloud-provider-zvirt/"
+  },
+  "cni-cilium": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;configure fault tolerant Egress Gateways",
+        "ru": "Ограничение на&nbsp;возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
+      }
+    }
+  },
+  "code": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/code/stable/"
+  },
+  "commander": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "external": "true",
+    "path": "/modules/commander/stable/"
+  },
+  "commander-agent": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "path": ""
+  },
+  "console": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
+      }
+    },
+    "external": "true",
+    "path": "/modules/console/stable/"
+  },
+  "csi-ceph": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-ceph/stable/"
+  },
+  "csi-netapp": {
+    "editions": [
+      "ee",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/csi-netapp/stable/"
+  },
+  "csi-hpe": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-hpe/stable/"
+  },
+  "csi-huawei": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-huawei/stable/"
+  },
+  "csi-nfs": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-nfs/stable/"
+  },
+  "csi-s3": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-s3/stable/"
+  },
+  "csi-scsi-generic": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-scsi-generic/stable/"
+  },
+  "csi-yadro-tatlin-unified": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-yadro-tatlin-unified/stable/"
+  },
+  "delivery-kit": {
+    "editions": [
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": ""
+  },
+  "istio": {
+    "editionMinimumAvailable": "ce",
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;federation and multicluster features",
+        "ru": "Ограничение на&nbsp;использование федерации и&nbsp;мультикластерной конфигурации"
+      }
+    }
+  },
+  "metallb": {
+    "editionMinimumAvailable": "se",
+    "editionsWithRestrictions": [
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;the BGP load balancer for services",
+        "ru": "Ограничение на&nbsp;использование BGP-балансировщика для сервисов"
+      }
+    },
+    "path": "modules/metallb/"
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/neuvector/stable/"
+  },
+  "observability": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true"
+  },
+  "observability-platform": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "external": "true",
+    "path": "/modules/observability-platform/stable/"
+  },
+  "operator-argo": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/operator-argo/stable/"
+  },
+  "payload-registry": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
+  },
+  "pod-reloader": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/pod-reloader/stable/"
+  },
+  "runtime-audit-engine": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/runtime-audit-engine/stable/"
+  },
+  "sdn": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/sdn/stable/"
+  },
+  "sds-local-volume": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
+      }
+    },
+    "external": "true",
+    "path": "/modules/sds-local-volume/stable/"
+  },
+  "sds-node-configurator": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/sds-node-configurator/stable/"
+  },
+  "sds-replicated-volume": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
+        "ru": "Ограничение на&nbsp;возможность создания снимков"
+      }
+    },
+    "external": "true",
+    "path": "/modules/sds-replicated-volume/stable/"
+  },
+  "secrets-store-integration": {
+    "editionFullyAvailable": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/secrets-store-integration/stable/"
+  },
+  "snapshot-controller": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/snapshot-controller/stable/"
+  },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/static-routing-manager/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/storage-volume-data-manager/stable/"
+  },
+  "stronghold (CE)": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "stronghold (EE)": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A&nbsp;separate license is&nbsp;required",
+        "ru": "Требуется отдельная лицензия"
+      },
+      "cse-lite": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      },
+      "cse-pro": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      }
+    },
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "user-authz": {
+    "editionFullyAvailable": [
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on&nbsp;the use of&nbsp;namespace filtering in&nbsp;the role-based access model",
+        "ru": "Ограничение на&nbsp;использование фильтрации по&nbsp;пространствам имен в&nbsp;ролевой модели доступа"
+      }
+    },
+    "path": "modules/user-authz/"
+  },
+  "virtualization": {
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "external": "true",
+    "path": "/modules/virtualization/stable/"
+  }
+}

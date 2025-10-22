@@ -1,0 +1,11 @@
+crds
+docs
+enabled
+hooks
+images
+openapi
+template_tests
+README.md
+test_suite.yaml
+test_samples/
+tests/

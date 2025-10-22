@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - del(.allowedKubernetesVersions, .allowedBundles)
+description:
+  ru: "Удалите `allowedKubernetesVersions` и `allowedBundles`."
+  en: "Delete `allowedKubernetesVersions` and `allowedBundles`."

@@ -1,0 +1,267 @@
+{{- define "configmap" }}
+{{- $context := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+{{- $failover := index . 3 }}
+
+{{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $hstsOptions := $crd.spec.hstsOptions | default dict }}
+{{- $hostPort := $crd.spec.hostPort | default dict }}
+{{- $loadBalancer := $crd.spec.loadBalancer | default dict }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
+data:
+  # User snippets are disabled by default due to substantial security concerns
+  allow-snippet-annotations: "true"
+  # The default annotation risk level has been lowered to High in v1.12. Snippet annotations have an annotation risk level of Critical.
+  # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations-risk/
+  annotations-risk-level: Critical
+  # Additional headers config map name in format namespace/name
+  proxy-set-headers: "d8-ingress-nginx/{{ $crd.name }}-custom-headers"
+  proxy-connect-timeout: "2"
+  proxy-read-timeout: "3600"
+  proxy-send-timeout: "3600"
+  # The ingress problem
+  #  * If we set this param to some big value (more than several seconds), we will have serious problems
+  #    for HTTP/2 clients, because they will keep a connection to the old instance of nginx worker (one,
+  #    that is shutting down). And after some time this old worker instance will have only wrong pod's IP
+  #    addresses in the upstream and will respond with 504 till the worker will die by timeout (or until
+  #    user restart browser).
+  #  * If we set this param to some small value (less than at least several minutes), we will have another
+  #    problem — any change of any pod (creation, deletion, restart, etc) will initiate interruption of
+  #    all connections. And if we need some long-running connections (websocket, or file download, or
+  #    anything else) — we will have serious problems with often connections restarts.
+  #
+  # The new lua based upstream reloader should minimize such reloads, alas we've got to take care
+  # of the edge cases. We've ended up with 5 minutes as some bearable balance between two problems.
+  worker-shutdown-timeout: "300"
+  http-redirect-code: "301"
+  # Upstream Nginx Ingress Controller have decided to switch the option to nginx' defaults: "error timeout"
+  # https://github.com/kubernetes/ingress-nginx/pull/2554
+  # We modify this option to better accomodate end users, since they become unhappy upon geting 5xx in their browsers.
+  # Yes, it lacks immediate feedback if something goes awry, but it leverages
+  # Nginx Ingress controller load balancing capabilities to its full extent.
+  proxy-next-upstream: "error timeout invalid_header http_502 http_503 http_504"
+  hsts: {{ $crd.spec.hsts | default false | quote }}
+  {{- if $crd.spec.hsts }}
+  hsts-max-age: {{ $hstsOptions.maxAge | default 31536000 | quote }}
+    {{- if hasKey $hstsOptions "preload" }}
+  hsts-preload: {{ $hstsOptions.preload | quote }}
+    {{- end }}
+  hsts-include-subdomains: {{ $hstsOptions.includeSubDomains | default false | quote }}
+  {{- end }}
+  # This is a formula to calculate maximum theoretical amount of accepted connections: worker_processes * worker_connections.
+  # By taking default values from upstream nginx-ingress we get this many connections at worst: 16384 * 4 = 65536.
+  # 4 * 8 / 1024 = .03125 MiB is the default buffer size for each connection (4 8k, https://nginx.org/en/docs/http/ngx_http_core_module.html#large_client_header_buffers).
+  # 65536 * .03125 = 2048 MiB. It means that we consume 2 GiB of memory just for headers!!!
+  #
+  # We believe that setting this value to `4 16k` should satisfy most use cases. Why aren't we changing the number of buffers?
+  # As explained below, it is unsafe to use HTTP request headers as a medium of large data transfers. 4 such exceptions should be more than enough.
+  #
+  # What should we do if client insists that large headers buffer should be even bigger?
+  # We have to politely explain that the only place in HTTP request for large quantities of information is the request body.
+  # Otherwise, by abusing the hell out of various tunables, we risk creating DoS situation.
+  large-client-header-buffers: "4 16k"
+  body-size: "64m"
+  use-gzip: "true"
+  # According to article https://weblogs.asp.net/owscott/iis-7-compression-good-bad-how-much
+  # gzip-level 1 gives us 50% of compression for 5~6% of CPU for large buffers.
+  # This is the best offer we can get to save CPU time for other tasks.
+  gzip-level: "1"
+  server-name-hash-bucket-size: "256"
+  variables-hash-bucket-size: "256"
+  {{- if $crd.spec.disableHTTP2 }}
+  use-http2: "false"
+  {{- end }}
+  {{- if $crd.spec.enableHTTP3 }}
+  use-http3: "true"
+  {{- end}}
+  {{- if $crd.spec.legacySSL }}
+  ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"
+  ssl-ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\
+                ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:\
+                ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:\
+                ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:\
+                ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:\
+                ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:\
+                ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:\
+                AES256-GCM-SHA384:AES128-GCM-SHA256:\
+                AES256-SHA256:AES128-SHA256:AES256-SHA:AES128-SHA"
+  {{- end }}
+  server-tokens: "false"
+
+  # IMPORTANT!!! There is a substantial nuance in ingress-nginx behavior:
+  #   * It ignores proxy-real-ip-cidr config param, unless c is set to true;
+  #   * If you set use-forwarded-headers to true, it starts respecting proxy-real-ip-cidr (and setups realip module
+  #     to read client IP from the header), but at the same time, in LUA, it copies some of the incoming X-Forwarded-*
+  #     headers to the proxied request. And it does it not checking source IP.
+  #
+  # So, this all leads us to only two possible behaviors of nginx-ingress:
+  #   *   Either it fully ignores X-Forwarded-* header
+  #   *   EIther it respects all X-Forwarded-* header from ANY IP address
+  {{- if eq $crd.spec.inlet "LoadBalancer" }}
+    {{- if $loadBalancer.behindL7Proxy }}
+  proxy-real-ip-cidr: "0.0.0.0/0"
+  use-forwarded-headers: "true"
+      {{- if $loadBalancer.realIPHeader }}
+  forwarded-for-header: {{ $loadBalancer.realIPHeader }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if eq $crd.spec.inlet "HostPort" }}
+    {{- if $hostPort.behindL7Proxy }}
+  proxy-real-ip-cidr: "0.0.0.0/0"
+  use-forwarded-headers: "true"
+      {{- if $hostPort.realIPHeader }}
+  forwarded-for-header: {{ $hostPort.realIPHeader }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  {{- if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") $failover }}
+  use-proxy-protocol: "true"
+  proxy-real-ip-cidr: "0.0.0.0/0"
+  {{- end }}
+
+  {{- if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
+  use-proxy-protocol: "true"
+  {{- end }}
+
+  {{- if $geoIP2.maxmindLicenseKey }}
+  use-geoip2: "true"
+  {{- end }}
+
+  log-format-escape-json: "true"
+  log-format-upstream: '{
+  {{- if $crd.spec.additionalLogFields }}
+    {{- range $field, $value := $crd.spec.additionalLogFields }}
+    {{ $field | quote }}: {{ $value | quote }},
+    {{- end }}
+  {{- end }}
+    "time": "$time_iso8601",
+    "request_id": "$request_id",
+    "user": "$remote_user",
+    "address": "$remote_addr",
+  {{- if eq $crd.spec.inlet "LoadBalancer" }}
+    {{- if $loadBalancer.behindL7Proxy }}
+    "connection_from": "$realip_remote_addr",
+    {{- end }}
+  {{- else if eq $crd.spec.inlet "HostPort" }}
+    {{- if $hostPort.behindL7Proxy }}
+    "connection_from": "$realip_remote_addr",
+    {{- end }}
+  {{- else if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") }}
+    "connection_from": "$realip_remote_addr",
+  {{- end }}
+    "bytes_received": $request_length,
+    "bytes_sent": $bytes_sent,
+    "protocol": "$server_protocol",
+    "scheme": "$scheme",
+    "method": "$request_method",
+    "host": "$host",
+    "path": "$uri",
+    "request_query": "$args",
+    "referrer": "$http_referer",
+    "user_agent": "$http_user_agent",
+    "request_time": $request_time,
+    "status": $formatted_status,
+    "content_kind": "$content_kind",
+    "upstream_response_time": $total_upstream_response_time,
+    "upstream_retries": $upstream_retries,
+    "namespace": "$namespace",
+    "ingress": "$ingress_name",
+    "service": "$service_name",
+    "service_port": "$service_port",
+    "vhost": "$server_name",
+    "location": "$location_path",
+    "nginx_upstream_addr": "$upstream_addr",
+    "nginx_upstream_bytes_received": "$upstream_bytes_received",
+    "nginx_upstream_response_time": "$upstream_response_time",
+    "nginx_upstream_status": "$upstream_status"
+  }'
+
+  # We can't use whitelist-source-range option, because it may be overwritten by annotation of ingress resource.
+  {{- if and $crd.spec.acceptRequestsFrom (not $failover) }}
+  http-snippet: |
+    geo $realip_remote_addr $d8_ingreess_nginx_access_restricted {
+      default "yes";
+      {{- range $cidr := $crd.spec.acceptRequestsFrom }}
+      {{ $cidr | quote }} "no";
+      {{- end }}
+    }
+  server-snippet: |
+    if ($d8_ingreess_nginx_access_restricted = "yes") {
+      return 444;
+    }
+  {{- end }}
+
+  {{- if $crd.spec.customErrors }}
+  custom-http-errors: {{ $crd.spec.customErrors.codes | join "," | quote }}
+  {{- end }}
+
+  {{- if $crd.spec.underscoresInHeaders }}
+  enable-underscores-in-headers: {{ $crd.spec.underscoresInHeaders  | quote }}
+  {{- end }}
+
+  {{- if $crd.spec.config }}
+    {{- range $key, $additionalConfig := $crd.spec.config }}
+      {{- if and (eq $key "hide-headers") ($context.Values.global.enabledModules | has "istio") }}
+        {{- if not (contains "x-envoy-decorator-operation" $additionalConfig) }}
+      {{- $additionalConfig = (printf "%s, x-envoy-decorator-operation" $additionalConfig) }}
+        {{- end }}
+      {{- end }}
+  {{ $key }}: {{ $additionalConfig | quote }}
+    {{- end }}
+    {{- if and (not (hasKey $crd.spec.config "hide-headers")) ($context.Values.global.enabledModules | has "istio") }}
+  hide-headers: "x-envoy-decorator-operation"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{ include "configmap" (list $context $crd $crd.name false) }}
+
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{ include "configmap" (list $context $crd (printf "%s-failover" $crd.name) true) }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $crd.name }}-custom-headers
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
+data:
+  X-Request-Start: "t=${msec}"
+  {{- if $crd.spec.additionalHeaders }}
+    {{- range $key, $value := $crd.spec.additionalHeaders }}
+  {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+
+{{/*include fake ingress for triggering config reload on custom headers change*/}}
+{{- $headersChecksum := join "," $crd.spec.additionalHeaders | sha256sum }}
+{{ include "fake-ingress" (list $context $crd.name $crd.spec.ingressClass "custom-headers" (printf "/%s" $headersChecksum) )}}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-ingress-telemetry-config
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
+data:
+  telemetry_config.yml: |
+    discard:
+      namespaces:
+{{ $context.Values.ingressNginx.internal.discardMetricResources.namespaces | toYaml | indent 8 }}
+      ingresses:
+{{ $context.Values.ingressNginx.internal.discardMetricResources.ingresses | toYaml | indent 8 }}

@@ -1,0 +1,122 @@
+area/cli:
+  - 'dhctl/**'
+
+area/api-change:
+  - '**/openapi/*'
+  - '**/crds/**'
+
+area/auth:
+  - modules/150-user-authn/**
+  - modules/140-user-authz/**
+  - ee/modules/140-user-authz/**
+
+area/cicd:
+  - '.github'
+
+area/cloud-provider:
+  - modules/030-cloud-provider-*/**
+  - ee/modules/030-cloud-provider-*/**
+  - candi/cloud-providers/**
+  - ee/candi/cloud-providers/**
+
+area/cluster-and-infrastructure:
+  - candi/**
+  - ee/candi/**
+  - modules/040-control-plane-manager/**
+  - modules/040-node-manager/**
+  - ee/modules/040-node-manager/**
+  - modules/040-terraform-manager/**
+  - ee/modules/040-terraform-manager/**
+  - modules/011-flow-schema/**
+  - modules/042-kube-dns/**
+  - modules/470-chrony/**
+  - modules/600-namespace-configurator/**
+  - modules/600-secret-copier/**
+  - ee/modules/350-node-local-dns/**
+
+area/core:
+  - go.mod
+  - go.sum
+  - 'werf.yaml'
+  - modules/007-registrypackages/**
+  - modules/013-helm/**
+  - deckhouse-controller/**
+  - global-hooks/**
+  - '*_lib/**'
+
+type/dependencies:
+  - '**/go.mod'
+  - '**/go.sum'
+
+area/docs:
+  - '**/docs/**'
+  - docs/**
+  - modules/810-documentation/**
+
+# area/dx:
+
+area/modules:
+  - modules/005-external-module-manager/**
+
+area/kubernetes:
+  - '**/version_map.yml'
+  - modules/007-registrypackages/images/kube*/**
+  - modules/036-kube-proxy/**
+
+area/logs:
+  - modules/460-log-shipper/**
+  - modules/462-loki/**
+
+area/monitoring:
+  - modules/200-operator-prometheus/**
+  - modules/300-prometheus/**
+  - modules/301-prometheus-metrics-adapter/**
+  - modules/303-prometheus-pushgateway/**
+  - modules/340-extended-monitoring/**
+  - modules/340-monitoring-*/**
+  - modules/500-okmeter/**
+  - modules/500-upmeter/**
+
+area/network:
+  - modules/021-cni-cilium/**
+  - modules/500-cilium-hubble/**
+  - modules/036-kube-proxy/**
+  - modules/035-cni-flannel/**
+  - modules/035-cni-simple-bridge/**
+  - modules/050-network-policy-engine/**
+  - modules/110-istio/**
+  - ee/modules/110-istio/**
+  - modules/402-ingress-nginx/**
+  - ee/modules/380-metallb/**
+  - ee/modules/450-keepalived/**
+  - ee/modules/450-network-gateway/**
+
+area/scaling:
+  - modules/302-vertical-pod-autoscaler/**
+  - modules/400-descheduler/**
+
+area/security:
+  - modules/015-admission-policy-engine/**
+  - modules/050-network-policy-engine/**
+  - modules/101-cert-manager/**
+  - modules/500-openvpn/**
+  - ee/modules/160-multitenancy-manager/**
+  - ee/modules/500-operator-trivy/**
+
+area/storage:
+  - modules/031-local-path-provisioner/**
+
+area/testing:
+  - testing/**
+  - tools/**
+
+area/ui:
+  - modules/500-dashboard/**
+
+# area/ux
+
+python:
+  - '**/*.py'
+
+go:
+  - '**/*.go'

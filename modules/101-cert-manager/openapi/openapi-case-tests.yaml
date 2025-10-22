@@ -1,0 +1,64 @@
+positive:
+  configValues:
+  # empty configuration is valid
+  - {}
+
+  # only node selector
+  - nodeSelector: {"disk-type": "ssd"}
+
+  # only tolerations
+  - tolerations:
+    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}
+    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}
+
+  # node selector with tolerations
+  - nodeSelector: {"disk-type": "ssd"}
+    tolerations:
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
+
+  # cloudflare settings
+  - cloudflareGlobalAPIKey: "key"
+    cloudflareEmail: "example@example.com"
+  - cloudflareAPIToken: "token"
+    cloudflareEmail: "example@example.com"
+
+  # route53 settings
+  - route53AccessKeyID: "key id"
+    route53SecretAccessKey: "key"
+  # digital ocean creds
+  - digitalOceanCredentials: "creds"
+
+  # gcloud SA
+  - cloudDNSServiceAccount: "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="
+
+  # all in
+  - nodeSelector: { "disk-type": "ssd" }
+    tolerations:
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
+    cloudflareGlobalAPIKey: "key"
+    cloudflareEmail: "example@example.com"
+    route53AccessKeyID: "key id"
+    route53SecretAccessKey: "key"
+    digitalOceanCredentials: "creds"
+    cloudDNSServiceAccount: 'eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0='
+
+  values:
+  - internal:
+      selfSignedCA:
+        cert: string
+        key: string
+      webhookCert:
+        ca: string
+        key: string
+        crt: string
+
+negative:
+  configValues:
+  - nodeSelector: ["must be object, not array"]
+  - tolerations: "must array of object, not string"
+  - tolerations: ["must array of object, not array of strings"]
+  - tolerations: [{"incorrect key": "val"}]
+  - cloudflareEmail: "not email"
+  - cloudDNSServiceAccount: "must be base64 encoded json-string with 'project_id' field"

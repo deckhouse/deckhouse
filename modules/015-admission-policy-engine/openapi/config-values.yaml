@@ -1,0 +1,99 @@
+type: object
+properties:
+  podSecurityStandards:
+    type: object
+    default: {}
+    description: "Pod Security Standards policy settings (PSS)."
+    properties:
+      defaultPolicy:
+        type: string
+        description: |
+          Sets the default [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) policy for all **non-system** namespaces:
+          - `Privileged` — an unrestricted policy. Privilege escalation is possible with this policy;
+          - `Baseline` — a policy with minimum restrictions that prevents privilege escalation;
+          - `Restricted` — a policy with maximum restrictions that conforms to current best practices for securely running applications in a cluster.
+
+          By default:
+          - `Baseline` — if a Deckhouse version starting with v1.55 is being installed;
+          - `Privileged` — if a Deckhouse version lower than v1.55 is being installed (upgrading Deckhouse in a cluster to v1.55+ does not automatically result in a default policy change).
+        enum:
+          - Privileged
+          - Baseline
+          - Restricted
+      enforcementAction:
+        type: string
+        default: "Deny"
+        description: |
+          The enforcement action to control what to do with the result of the constraint.
+          - Deny — Deny action.
+          - Dryrun — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
+          - Warn — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+        enum:
+          - Warn
+          - Deny
+          - Dryrun
+      policies:
+        type: object
+        description: |
+          Sets additional policy parameters.
+        properties:
+          hostPorts:
+            type: object
+            default: {}
+            description: "HostPort constraint settings."
+            properties:
+              knownRanges:
+                type: array
+                description: "Set the range of known ports which will be allowed in a hostPort binding."
+                items:
+                  type: object
+                  properties:
+                    min:
+                      type: integer
+                    max:
+                      type: integer
+
+  denyVulnerableImages:
+    type: object
+    default: {}
+    x-doc-d8Editions:
+      - ee
+      - cse-lite
+      - cse-pro
+    description: |
+      Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
+    properties:
+      storageClass:
+        type: string
+        x-examples: ["ceph-ssd", "false"]
+        description: |-
+          The name of the StorageClass to use for `trivy-provider`.
+
+          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
+
+          The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+          If `false` is specified, `emptyDir` will be forced to be used.
+      enabled:
+        type: boolean
+        default: false
+        description: "Enable trivy provider."
+      registrySecrets:
+        type: array
+        default: []
+        description: |
+          List of additional registry secrets to use for downloading images from private registries.
+
+          By default, the `deckhouse-registry` secret is used to download images for scanning.
+        items:
+          type: object
+          required:
+            - name
+            - namespace
+          properties:
+            name:
+              type: string
+            namespace:
+              type: string

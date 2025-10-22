@@ -1,0 +1,12 @@
+{%- assign moduleName = page['module-kebab-name'] %}
+{%- assign moduleAlertsUrl = "/products/kubernetes-platform/documentation/v1/reference/alerts.html#" | append: moduleName %}
+
+{%- assign moduleAlerts = site.data.deckhouse-alerts.alerts | where: "module", moduleName  %}
+
+{%- if moduleAlerts.size == 1 %}
+{{ site.data.i18n.common['module_has_1_alert'][page.lang] |  replace_first: "%d", moduleAlerts.size | replace_first: "%url", moduleAlertsUrl }}
+{%- elsif moduleAlerts.size > 1 and moduleAlerts.size < 5 %}
+{{ site.data.i18n.common['module_has_2_to_4_alerts'][page.lang] |  replace_first: "%d", moduleAlerts.size | replace_first: "%url", moduleAlertsUrl }}
+{%- elsif moduleAlerts.size >= 5 %}
+{{ site.data.i18n.common['module_has_number_of_alerts'][page.lang] |  replace_first: "%d", moduleAlerts.size | replace_first: "%url", moduleAlertsUrl }}
+{%- endif %}

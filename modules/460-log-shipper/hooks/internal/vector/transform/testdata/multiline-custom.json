@@ -1,0 +1,56 @@
+[
+	{
+		"ends_when": "matched, err = match(.message, r'^endsWhenRegexEnd');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
+		"group_by": [
+			"file",
+			"stream"
+		],
+		"inputs": [],
+		"merge_strategies": {
+			"message": "concat"
+		},
+		"type": "reduce"
+	},
+	{
+		"group_by": [
+			"file",
+			"stream"
+		],
+		"inputs": [
+			"transform/prefix/testit/00_multiline"
+		],
+		"merge_strategies": {
+			"message": "concat"
+		},
+		"starts_when": "matched, err = match(.message, r'^startsWhenRegexEnd');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
+		"type": "reduce"
+	},
+	{
+		"ends_when": "matched, err = match(.message, r'^endsWhenRegex');\nif err != null {\n    false;\n} else {\n    matched;\n}",
+		"group_by": [
+			"file",
+			"stream"
+		],
+		"inputs": [
+			"transform/prefix/testit/01_multiline"
+		],
+		"merge_strategies": {
+			"message": "concat"
+		},
+		"type": "reduce"
+	},
+	{
+		"ends_when": "matched, err = match(.message, r'^startsWhenRegex');\nif err != null {\n    true;\n} else {\n    !matched;\n}",
+		"group_by": [
+			"file",
+			"stream"
+		],
+		"inputs": [
+			"transform/prefix/testit/02_multiline"
+		],
+		"merge_strategies": {
+			"message": "concat"
+		},
+		"type": "reduce"
+	}
+]

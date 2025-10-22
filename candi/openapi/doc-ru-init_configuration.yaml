@@ -1,0 +1,47 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Конфигурация Deckhouse, с которой он запустится после установки.
+    properties:
+      apiVersion:
+        type: string
+        description: Используемая версия API Deckhouse.
+      deckhouse:
+        description: Параметры, необходимые для установки Deckhouse.
+        properties:
+          imagesRepo:
+            description: |
+              Адрес container registry с образами Deckhouse.
+
+              Укажите, если используется редакция Enterprise Edition Deckhouse или сторонний container registry (например, прокси-сервер в закрытом окружении).
+
+              Адрес учитывает используемую редакцию Deckhouse. Публичный адрес container registry для Deckhouse Enterprise Edition — `registry.deckhouse.io/deckhouse/ee`.
+          registryDockerCfg:
+            description: |
+              Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
+
+              Например, для доступа к container registry `registry.company.my` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
+          registryCA:
+            description: |
+              Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+          registryScheme:
+            description: Протокол доступа к container registry (HTTP или HTTPS).
+          releaseChannel:
+            description: |
+              Используйте параметр [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере канал обновлений Deckhouse.
+          devBranch:
+            description: |
+              Параметр используется для нужд разработки. Будет заменен на аргумент CLI-команды.
+          bundle:
+            description: |
+              Используйте параметр [bundle](/modules/deckhouse/configuration.html#parameters-bundle) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Устанавливаемый в кластере вариант поставки Deckhouse.
+          logLevel:
+            description: |
+              Используйте параметр [logLevel](/modules/deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
+
+              Уровень логирования Deckhouse.

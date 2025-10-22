@@ -1,0 +1,9 @@
+---
+layout: none
+permalink: ru/robots.txt
+searchable: false
+sitemap_include: false
+lang: ru
+---
+
+{% include robots.txt.liquid %}

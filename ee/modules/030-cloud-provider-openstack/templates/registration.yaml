@@ -1,0 +1,72 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "openstack" | quote }}
+  region: {{ .Values.cloudProviderOpenstack.internal.connection.region | b64enc | quote }}
+  zones: {{ .Values.cloudProviderOpenstack.internal.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "OpenStackInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
+
+  # openstack
+  {{- $internal := .Values.cloudProviderOpenstack.internal }}
+  {{- $openstackValues := dict "connection" dict }}
+  {{- if and (hasKey $internal.connection "authURL") ($internal.connection.authURL) }}
+    {{- $_ := set $openstackValues.connection "authURL" $internal.connection.authURL }}
+  {{- else }}
+    {{ cat "No key authURL in deckhouse configmap" $internal.connection.authURL | fail }}
+  {{- end }}
+  {{- if and (hasKey $internal.connection "username") ($internal.connection.username)}}
+    {{- $_ := set $openstackValues.connection "username" $internal.connection.username }}
+  {{- else }}
+    {{ cat "No key username in deckhouse configmap" $internal.connection.username | fail }}
+  {{- end }}
+  {{- if and (hasKey $internal.connection "password") ($internal.connection.password) }}
+    {{- $_ := set $openstackValues.connection "password" $internal.connection.password }}
+  {{- else }}
+    {{ cat "No key password in deckhouse configmap" $internal.connection.password | fail }}
+  {{- end }}
+  {{- if and (hasKey $internal.connection "domainName") ($internal.connection.domainName) }}
+    {{- $_ := set $openstackValues.connection "domainName" $internal.connection.domainName }}
+  {{- else }}
+    {{ cat "No key domainName in deckhouse configmap" $internal.connection.domainName | fail }}
+  {{- end }}
+  {{- if and (hasKey $internal.connection "tenantName") (hasKey $internal.connection "tenantID") }}
+    {{ fail "Parameters tenantName and tenantID can't be used simultaneously" }}
+  {{- end }}
+  {{- if hasKey $internal.connection "tenantName" }}
+    {{- $_ := set $openstackValues.connection "tenantName" $internal.connection.tenantName }}
+  {{- end }}
+  {{- if hasKey $internal.connection "tenantID" }}
+    {{- $_ := set $openstackValues.connection "tenantID" $internal.connection.tenantID }}
+  {{- end }}
+  {{- if hasKey $internal.connection "caCert" }}
+    {{- $_ := set $openstackValues.connection "caCert" $internal.connection.caCert }}
+  {{- end }}
+  {{- if and (hasKey $internal.connection "region") ($internal.connection.region) }}
+    {{- $_ := set $openstackValues.connection "region" $internal.connection.region }}
+  {{- else }}
+    {{ cat "No key region in deckhouse configmap" $internal.connection.region | fail }}
+  {{- end }}
+  {{- if hasKey $internal "instances" }}
+    {{- $_ := set $openstackValues "instances" $internal.instances }}
+  {{- end }}
+  {{- if hasKey $internal "externalNetworkNames" }}
+    {{- $_ := set $openstackValues "externalNetworkNames" $internal.externalNetworkNames }}
+  {{- end }}
+  {{- if hasKey $internal "externalNetworkDHCP" }}
+    {{- $_ := set $openstackValues "externalNetworkDHCP" $internal.externalNetworkDHCP }}
+  {{- end }}
+  {{- if hasKey $internal "internalNetworkNames" }}
+    {{- $_ := set $openstackValues "internalNetworkNames" $internal.internalNetworkNames }}
+  {{- else }}
+    {{ cat "No key internalNetworkNames in deckhouse configmap" $internal.internalNetworkNames | fail }}
+  {{- end }}
+  {{- $_ := set $openstackValues "podNetworkMode" $internal.podNetworkMode }}
+  openstack: {{ $openstackValues | toJson | b64enc | quote }}

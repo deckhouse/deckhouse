@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "gcp" | quote }}
+  region: {{ .Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.region | b64enc | quote }}
+  zones: {{ .Values.cloudProviderGcp.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "GCPInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "GCPMachineClass" | quote }}
+  # GCP
+  {{- $gcpValues := dict }}
+  {{- $_ := set $gcpValues "serviceAccountJSON" .Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.serviceAccountJSON }}
+  {{- $_ := set $gcpValues "region" .Values.cloudProviderGcp.internal.providerClusterConfiguration.provider.region }}
+  {{- $_ := set $gcpValues "sshKey" .Values.cloudProviderGcp.internal.providerClusterConfiguration.sshKey }}
+
+  {{- $_ := set $gcpValues "networkName" .Values.cloudProviderGcp.internal.providerDiscoveryData.networkName }}
+  {{- $_ := set $gcpValues "subnetworkName" .Values.cloudProviderGcp.internal.providerDiscoveryData.subnetworkName }}
+  {{- $_ := set $gcpValues "disableExternalIP" .Values.cloudProviderGcp.internal.providerDiscoveryData.disableExternalIP }}
+
+  {{- $_ := set $gcpValues "image" .Values.cloudProviderGcp.internal.providerDiscoveryData.instances.image }}
+  {{- $_ := set $gcpValues "diskSizeGb" .Values.cloudProviderGcp.internal.providerDiscoveryData.instances.diskSizeGb }}
+  {{- $_ := set $gcpValues "diskType" .Values.cloudProviderGcp.internal.providerDiscoveryData.instances.diskType }}
+  {{- $_ := set $gcpValues "networkTags" .Values.cloudProviderGcp.internal.providerDiscoveryData.instances.networkTags }}
+  {{- $_ := set $gcpValues "labels" .Values.cloudProviderGcp.internal.providerDiscoveryData.instances.labels }}
+  gcp: {{ $gcpValues | toJson | b64enc | quote }}

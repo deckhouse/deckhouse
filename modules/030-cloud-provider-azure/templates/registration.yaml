@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "azure" | quote }}
+  region: {{ .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.location | b64enc | quote }}
+  zones: {{ .Values.cloudProviderAzure.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "AzureInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "AzureMachineClass" | quote }}
+
+  # Azure
+  {{- $azureValues := dict }}
+  {{- $_ := set $azureValues "sshPublicKey" .Values.cloudProviderAzure.internal.providerClusterConfiguration.sshPublicKey }}
+
+  {{- $_ := set $azureValues "clientId" .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.clientId }}
+  {{- $_ := set $azureValues "clientSecret" .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.clientSecret }}
+  {{- $_ := set $azureValues "subscriptionId" .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.subscriptionId }}
+  {{- $_ := set $azureValues "tenantId" .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.tenantId }}
+  {{- $_ := set $azureValues "location" .Values.cloudProviderAzure.internal.providerClusterConfiguration.provider.location }}
+
+  {{- $_ := set $azureValues "resourceGroupName" .Values.cloudProviderAzure.internal.providerDiscoveryData.resourceGroupName }}
+
+  {{- $_ := set $azureValues "vnetName" .Values.cloudProviderAzure.internal.providerDiscoveryData.vnetName }}
+  {{- $_ := set $azureValues "subnetName" .Values.cloudProviderAzure.internal.providerDiscoveryData.subnetName }}
+
+  {{- $_ := set $azureValues "urn" .Values.cloudProviderAzure.internal.providerDiscoveryData.instances.urn }}
+  {{- $_ := set $azureValues "diskType" .Values.cloudProviderAzure.internal.providerDiscoveryData.instances.diskType }}
+  {{- $_ := set $azureValues "additionalTags" .Values.cloudProviderAzure.internal.providerDiscoveryData.instances.additionalTags }}
+
+  azure: {{ $azureValues | toJson | b64enc | quote }}

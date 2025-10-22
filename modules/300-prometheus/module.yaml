@@ -1,0 +1,15 @@
+name: prometheus
+stage: "General Availability"
+subsystems:
+  - observability
+namespace: d8-monitoring
+description: |
+  The Prometheus monitoring module
+descriptions:
+  en: |
+    The Prometheus monitoring module
+
+requirements:
+  modules:
+    operator-prometheus: ">= 0.0.0"
+  deckhouse: ">= 1.68"

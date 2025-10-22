@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: multitenancy-manager
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+  name: d8:multitenancy-manager:multitenancy-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: multitenancy-manager
+    namespace: d8-{{ .Chart.Name }}

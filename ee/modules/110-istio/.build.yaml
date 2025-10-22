@@ -1,0 +1,4 @@
+templates/*
+hooks/*
+crds/*
+monitoring/prometheus-rules/*

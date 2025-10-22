@@ -1,0 +1,91 @@
+diff --git a/main.go b/main.go
+index f0249d80..09e990ff 100644
+--- a/main.go
++++ b/main.go
+@@ -84,6 +84,7 @@ type upstream struct {
+ 	Path                string        `json:"path,omitempty"`
+ 	Upstream            string        `json:"upstream,omitempty"`
+ 	UpstreamCaFile      string        `json:"upstreamCaFile,omitempty"`
++	UpstreamInsecure    bool          `json:"upstreamInsecureSkipVerify,omitempty"`
+ 	ExcludePaths        []string      `json:"excludePaths,omitempty"`
+ }
+
+@@ -284,7 +285,7 @@ func main() {
+ 			klog.Fatalf("Failed to create rbac-proxy: %v", err)
+ 		}
+
+-		upstreamTransport, err := initTransport(upstreamConfig.UpstreamCaFile, cfg.upstreamForceH2C)
++		upstreamTransport, err := initTransport(upstreamConfig.UpstreamCaFile, cfg.upstreamForceH2C, upstreamConfig.UpstreamInsecure)
+ 		if err != nil {
+ 			klog.Fatalf("Failed to set up upstream TLS connection: %v", err)
+ 		}
+diff --git a/transport.go b/transport.go
+index 35fc8b82..da046b71 100644
+--- a/transport.go
++++ b/transport.go
+@@ -21,18 +21,15 @@ import (
+ 	"crypto/x509"
+ 	"errors"
+ 	"fmt"
+-	"golang.org/x/net/http2"
+ 	"io/ioutil"
+ 	"net"
+ 	"net/http"
+ 	"time"
+-)
+
+-func initTransport(upstreamCAFile string, forceHTTP2 bool) (http.RoundTripper, error) {
+-	if upstreamCAFile == "" {
+-		return http.DefaultTransport, nil
+-	}
++	"golang.org/x/net/http2"
++)
+
++func initTransport(upstreamCAFile string, forceHTTP2 bool, insecure bool) (http.RoundTripper, error) {
+ 	if forceHTTP2 {
+ 		// Force http/2 for connections to the upstream i.e. do not start with HTTP1.1 UPGRADE req to
+ 		// initialize http/2 session.
+@@ -49,17 +46,6 @@ func initTransport(upstreamCAFile string, forceHTTP2 bool) (http.RoundTripper, e
+ 		return &http2Transport, nil
+ 	}
+
+-	rootPEM, err := ioutil.ReadFile(upstreamCAFile)
+-	if err != nil {
+-		return nil, fmt.Errorf("error reading upstream CA file: %v", err)
+-	}
+-
+-	roots := x509.NewCertPool()
+-	if ok := roots.AppendCertsFromPEM([]byte(rootPEM)); !ok {
+-		return nil, errors.New("error parsing upstream CA certificate")
+-	}
+-
+-	// http.Transport sourced from go 1.10.7
+ 	transport := &http.Transport{
+ 		Proxy: http.ProxyFromEnvironment,
+ 		DialContext: (&net.Dialer{
+@@ -71,8 +57,24 @@ func initTransport(upstreamCAFile string, forceHTTP2 bool) (http.RoundTripper, e
+ 		IdleConnTimeout:       90 * time.Second,
+ 		TLSHandshakeTimeout:   10 * time.Second,
+ 		ExpectContinueTimeout: 1 * time.Second,
+-		TLSClientConfig:       &tls.Config{RootCAs: roots},
++		TLSClientConfig:       &tls.Config{InsecureSkipVerify: insecure},
++	}
++
++	if upstreamCAFile == "" {
++		return transport, nil
+ 	}
+
++	rootPEM, err := ioutil.ReadFile(upstreamCAFile)
++	if err != nil {
++		return nil, fmt.Errorf("error reading upstream CA file: %v", err)
++	}
++
++	roots := x509.NewCertPool()
++	if ok := roots.AppendCertsFromPEM([]byte(rootPEM)); !ok {
++		return nil, errors.New("error parsing upstream CA certificate")
++	}
++
++	transport.TLSClientConfig.RootCAs = roots
++
+ 	return transport, nil
+ }

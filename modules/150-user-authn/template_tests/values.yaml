@@ -1,0 +1,14 @@
+userAuthn:
+  internal:
+    selfSignedCA: {}
+    dexClientCRDs: []
+    dexUsersCRDs: []
+    dexAuthenticatorCRDs: []
+    providers: []
+  publishAPI:
+    enabled: false
+    https:
+      mode: SelfSigned
+  controlPlaneConfigurator:
+    enabled: true
+    dexCAMode: "DoNotNeed"

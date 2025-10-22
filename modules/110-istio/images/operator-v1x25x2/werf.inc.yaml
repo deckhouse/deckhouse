@@ -1,0 +1,75 @@
+---
+{{- $istioVersion := "1.25.2" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/operator/out/operator
+  to: /usr/local/bin/operator
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/manifests
+  to: /var/lib/istio/manifests
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/operator/resources
+  to: /var/lib/sail-operator/resources
+  after: setup
+imageSpec:
+  config:
+    user: "1337:1337"
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/operator"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/operator
+  to: /src/operator
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src/operator/
+  - echo {{ $istioVersion }} > version
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - go mod download
+  - common/scripts/gobuild.sh /src/operator/out/ /src/operator/cmd/main.go
+  - strip /src/operator/out/main
+  - mv /src/operator/out/main /src/operator/out/operator
+  - chmod 0700 /src/operator/out/operator
+  - chown 1337:1337 /src/operator/out/operator
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/sail-operator.git /src/operator
+  - cd /src/operator
+  - git apply --verbose /patches/001-istio-go-mod.patch
+  - rm -rf /src/operator/.git
+---

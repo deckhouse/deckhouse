@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: okmeter
+    rbac.deckhouse.io/aggregate-to-observability-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-okmeter
+  name: d8:manage:permission:module:okmeter:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - okmeter
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

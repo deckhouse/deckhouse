@@ -1,0 +1,70 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+      dns-policy:
+        - kind: Deployment
+          name: cloud-controller-manager
+      liveness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: controller
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+        - kind: Deployment
+          name: csi-controller
+          container: snapshotter
+      readiness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: controller
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+        - kind: Deployment
+          name: csi-controller
+          container: snapshotter
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.discoveryData.properties.apiVersion"

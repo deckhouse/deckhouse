@@ -1,0 +1,88 @@
+{{- define "metrics_scraper_resources" }}
+cpu: 1m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: metrics-scraper
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-scraper")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: metrics-scraper
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "metrics-scraper"
+      minAllowed:
+        {{- include "metrics_scraper_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 250m
+        memory: 400Mi
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: metrics-scraper
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-scraper")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: metrics-scraper
+  template:
+    metadata:
+      labels:
+        app: metrics-scraper
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metrics-scraper")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: metrics-scraper
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "metricsScraper") }}
+        args:
+        - --v=3
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+          name: http
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+          periodSeconds: 60
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "metrics_scraper_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+      serviceAccountName: metrics-scraper
+      volumes:
+      - name: tmp
+        emptyDir: {}

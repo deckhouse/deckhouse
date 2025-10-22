@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: Loki
+  loki:
+    endpoint: "https://loki.d8-monitoring:3100"
+    auth:
+      strategy: "Bearer"
+      token: {{ .Values.loki.internal.logShipperToken | quote }}
+    tls:
+      verifyHostname: false
+      verifyCertificate: false
+{{- if .Values.loki.storeSystemLogs }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: d8-namespaces-to-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          heritage: deckhouse
+  destinationRefs:
+  - d8-loki
+{{- end }}

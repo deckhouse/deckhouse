@@ -1,0 +1,64 @@
+positive:
+  configValues:
+    - upstreamNameservers:
+      - 8.8.8.8
+      - 8.8.4.4
+    - hosts:
+      - domain: one.example.com
+        ip: 192.168.0.1
+      - domain: two.another.example.com
+        ip: 10.10.0.128
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+        - 10.150.0.1
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+          - 10.150.0.1
+        cacheTTLSeconds: 40
+    - enableLogs: true
+    - clusterDomainAliases:
+      - foo.bar
+      - baz.qux
+  values:
+    - internal:
+        enablePodAntiAffinity: true
+        replicas: 2
+negative:
+  configValues:
+    - upstreamNameservers:
+        - foo.bar
+        - 8.8.4.4
+    - hosts:
+      - domain: one?.example.com
+        ip: 192.168.0.foo
+      - domain: two-another.example.com
+        ip: 10.10.0.128
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+          - 10.a150.0.1
+    - enableLogs: 1
+    - clusterDomainAliases:
+      - foo?.bar
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+        - 10.10.0.1
+        cacheTTLSeconds: 3800
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers:
+          - 10.10.0.1
+        cacheTTLSeconds: "abc"
+    - stubZones:
+      - zone: consul.local
+        upstreamNameservers: []
+    - stubZones:
+      - zone: consul.local
+  values:
+    - internal:
+        enablePodAntiAffinity: 1
+    - internal:
+        replicas: a

@@ -1,0 +1,11 @@
+- name: Node exporter
+  link: https://github.com/prometheus/node_exporter
+  description: Prometheus exporter for hardware and OS metrics exposed by *NIX kernels, written in Go with pluggable metric collectors.
+  logo: https://avatars.githubusercontent.com/u/3380462?s=200&v=4
+  license: Apache License 2.0
+
+- name: kube-state-metrics
+  link: https://github.com/kubernetes/kube-state-metrics
+  description: A simple service that listens to the Kubernetes API server and generates metrics about the state of the objects.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0

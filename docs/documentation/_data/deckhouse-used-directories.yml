@@ -1,0 +1,79 @@
+directories:
+#  - path: <directory path>
+#    module: <module name>
+#    node: [any|master|worker]
+#    description:
+#      en:
+#      ru:
+  - path: /mnt/kubernetes-data
+    node: master
+    description:
+      en: only exists in clusters deployed in the cloud when a separate disk is used for the etcd database.
+      ru: существует только в кластерах, развернутых в облаке, когда используется отдельный диск для базы данных etcd.
+  - path: /var/lib/etcd
+    node: master
+    description:
+      en: etcd database.
+      ru: база данных etcd.
+  - path: /var/lib/deckhouse/
+    node: master
+    description:
+      en: files of Deckhouse modules, which dynamically loads from a registry.
+      ru: файлы модулей Deckhouse, динамически загружаемых из хранилища образов.
+  - path: /var/lib/upmeter
+    node: master
+    module: upmeter
+    description:
+      en: the upmeter module database.
+      ru: база данных модуля upmeter.
+  - path: /etc/kubernetes
+    node: any
+    description:
+      en: manifests of static pods, PKI certificate files.
+      ru: манифесты статических подов, файлы сертификатов PKI.
+  - path: /var/lib/bashible
+    node: any
+    description:
+      en: node configuration files.
+      ru: файлы настройки узла.
+  - path: /var/lib/containerd
+    node: any
+    description:
+      en: used to store data related to CRI operation (e.g., containerd); contains container image layers, container file system snapshots, meta information, logs, and other container information.
+      ru: используется для хранения данных, связанных с работой CRI (например, containerd). Содержит слои образов контейнеров, снапшоты файловых систем контейнеров, метаинформацию, логи и другую информацию контейнеров.
+  - path: /mnt/vector-data
+    node: any
+    module: log-shipper
+    description:
+      en: checkpoints of sent logs.
+      ru: служебные данные статуса отправленных журналов.
+  - path: /var/log/containers
+    node: any
+    description:
+      en: logs of containers (when using `containerd`).
+      ru: журналы контейнеров (при использовании `containerd`).
+  - path: /var/lib/kubelet/
+    node: any
+    description:
+      en: "`kubelet` configuration files."
+      ru: файлы настройки `kubelet`.
+  - path: /opt/cni/bin/
+    node: any
+    description:
+      en: CNI plugin executables.
+      ru: исполняемые файлы модуля CNI.
+  - path: /opt/deckhouse/bin/
+    node: any
+    description:
+      en: executable files required for Deckhouse to work.
+      ru: исполняемые файлы, необходимые для работы Deckhouse.
+  - path: /var/log/pods/
+    node: any
+    description:
+      en: logs of all pod containers that are running on this cluster node.
+      ru: журналы всех контейнеров подов, запущенных на узле.
+  - path: /etc/cni/
+    node: any
+    description:
+      en: CNI plugin configuration files.
+      ru: файлы настройки модуля CNI.

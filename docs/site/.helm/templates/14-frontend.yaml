@@ -1,0 +1,177 @@
+{{- $_ := set . "Version" ( splitList "/" .Values.global.doc_version | last ) }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  annotations:
+    "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
+  labels:
+    service: frontend
+    app.kubernetes.io/part-of: deckhouse-docs
+spec:
+  minReadySeconds: 5
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      service: frontend
+  template:
+    metadata:
+      labels:
+        service: frontend
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: docs-builder
+      initContainers:
+        - name: init
+          image: {{ index .Values.werf.image "web-frontend-init" }}
+          command: ["sh"]
+          args: ["/scripts/channels-convert.sh"]
+          env:
+            - name: CHANNELS_CONF_PATH
+              value: "/app/channels-data/channels.conf"
+            - name: CHANNELS_YAML_PATH
+              value: "/app/channels.yaml"
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 65534
+            runAsUser: 65534
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/channels.yaml
+              subPath: channels.yaml
+            - name: channels-data
+              mountPath: /app/channels-data
+      containers:
+        - name: web
+          image: {{ index .Values.werf.image "web-frontend" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/sbin/nginx", "-s", "quit"]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "startup_probe" . | indent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "liveness_probe" . | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "readiness_probe" . | indent 12 }}
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /usr/conf/nginx.conf
+              subPath: nginx.conf
+            - mountPath: /tmp
+              name: web-tmp
+            - name: channels-data
+              mountPath: /app/channels-data
+        - name: router
+          command: ["/app/server"]
+          image: {{ index .Values.werf.image "web-router" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+            - containerPort: 8082
+              name: http
+              protocol: TCP
+          env:
+            - name: VROUTER_DOMAIN_MAP
+              value: {{ .Values.global.domain_map | quote }}
+            {{- include "vrouter_envs" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            {{- include "startup_probe" . | indent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            {{- include "liveness_probe" . | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            {{- include "readiness_probe" . | indent 12 }}
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/root/en/includes/release-channels
+            - name: channels-yaml
+              mountPath: /app/root/ru/includes/release-channels
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: doc-nginx-config
+        - name: channels-yaml
+          configMap:
+            name: release-channels-data
+        - name: web-tmp
+          emptyDir: {}
+        - name: channels-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
+spec:
+  clusterIP: None
+  selector:
+    service: frontend
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: router
+spec:
+  clusterIP: None
+  selector:
+    service: frontend
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8082
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: frontend
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: frontend
+  updatePolicy:
+    updateMode: "Auto"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      service: frontend

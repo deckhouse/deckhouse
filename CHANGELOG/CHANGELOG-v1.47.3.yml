@@ -1,0 +1,17 @@
+candi:
+  fixes:
+    - summary: Fixed `nodegroupconfiguration` step rendering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5133
+deckhouse:
+  fixes:
+    - summary: Fix Module CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5145
+deckhouse-controller:
+  fixes:
+    - summary: Bump addon-operator version to fix mergo concurrent map writes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5139
+ingress-nginx:
+  fixes:
+    - summary: Fix kruise DaemonSet handling on node drain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5142
+

@@ -1,0 +1,25 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: loki-module
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  sampleLimit: 10000
+  endpoints:
+  - port: loki
+    scheme: https
+    path: /metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+  selector:
+    matchLabels:
+      app: loki
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring

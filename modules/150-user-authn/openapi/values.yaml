@@ -1,0 +1,360 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        default: {}
+        x-examples:
+        - tls.crt: plainstring
+          tls.key: plainstring
+          ca.crt: plainstring
+        properties:
+          ca.crt:
+            type: string
+          tls.key:
+            type: string
+          tls.crt:
+            type: string
+      kubernetesDexClientAppSecret:
+        type: string
+        default: ""
+      kubeconfigEncodedNames:
+        type: array
+        default: []
+        x-examples:
+        - ["nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf"]
+        items:
+          type: string
+      discoveredDexClusterIP:
+        type: string
+      discoveredDexCA:
+        type: string
+      kubernetesApiserverTargetPort:
+        type: integer
+      kubernetesApiserverAddresses:
+        type: array
+        items: strings
+      basicAuthProxyCert:
+        type: string
+      basicAuthProxyKey:
+        type: string
+      selfSignedCA:
+        type: object
+        default: {}
+        x-examples:
+        - cert: test
+          key: test
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
+      publishedAPIKubeconfigGeneratorMasterCA:
+        type: string
+      dexTLS:
+        type: object
+        default: {}
+        x-examples:
+        - ca: test
+          crt: test
+          key: test
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+            default: ""
+          certificate_updated:
+            type: boolean
+      dexAuthenticatorCRDs:
+        type: array
+        default: []
+        x-examples:
+        - - credentials:
+              appDexSecret: plainstring
+              cookieSecret: plainstring
+            name: dex-authenticator
+            encodedName: dex-authenticator
+            namespace: dex-authenticator-namespace
+            spec:
+              applicationDomain: dex-authenticator.example.com
+              applicationIngressCertificateSecretName: dex-authenticator-tls
+              applicationIngressClassName: nginx
+              sendAuthorizationHeader: true
+            allowAccessToKubernetes: false
+          - credentials:
+              appDexSecret: plainstring
+              cookieSecret: plainstring
+            name: test
+            encodedName: test
+            namespace: test-namespace
+            spec:
+              signOutURL: "/logout"
+              applicationDomain: test.example.com
+              applicationIngressCertificateSecretName: test-tls
+              applicationIngressClassName: not-nginx
+              highAvailability: true
+              nodeSelector:
+                testnode: ""
+              tolerations:
+                - key: foo
+                  operator: Equal
+                  value: bar
+            allowAccessToKubernetes: true
+        items:
+          type: object
+          properties:
+            uuid:
+              type: string
+            name:
+              type: string
+            namespace:
+              type: string
+            spec:
+              # authenticator spec is copied from custom resources as is and validated by its spec
+              type: object
+              additionalProperties: true
+            allowAccessToKubernetes:
+              type: boolean
+            encodedName:
+              type: string
+            credentials:
+              type: object
+              properties:
+                cookieSecret:
+                  type: string
+                appDexSecret:
+                  type: string
+      dexAuthenticatorNames:
+        type: object
+        default: {}
+        additionalProperties: true
+      dexClientCRDs:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            encodedID:
+              type: string
+            name:
+              type: string
+            namespace:
+              type: string
+            clientSecret:
+              type: string
+            legacyID:
+              type: string
+            legacyEncodedID:
+              type: string
+            labels:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
+            allowAccessToKubernetes:
+              type: boolean
+            spec:
+              # clients spec is copied from custom resources as is and validated by its spec
+              type: object
+              additionalProperties: true
+      dexUsersCRDs:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            encodedName:
+              type: string
+            spec:
+              # users spec is copied from custom resources as is and validated by its spec
+              type: object
+              additionalProperties: true
+            status:
+              type: object
+              properties:
+                expireAt:
+                  type: string
+                lock:
+                  type: object
+                  required:
+                    - state
+                  properties:
+                    state:
+                      type: boolean
+                    reason:
+                      type: string
+                      enum:
+                        - PasswordPolicyLockout
+                    message:
+                      type: string
+                    until:
+                      type: string
+      providers:
+        type: array
+        default: []
+        x-examples:
+        - - id: github
+            displayName: github
+            type: Github
+            github:
+              clientID: plainstring
+              clientSecret: plainstring
+              orgs:
+                - name: opensource
+                  teams:
+                    - Testers
+                    - Developers
+                - name: closesource
+              teamNameField: slug
+              useLoginAsID: true
+          - id: crowd
+            displayName: crowd
+            type: Crowd
+            crowd:
+              clientID: plainstring
+              clientSecret: plainstring
+              groups:
+                - only
+                - team
+              enableBasicAuth: true
+          - id: crowd-next
+            displayName: crowd-next
+            type: Crowd
+            crowd:
+              clientID: plainstring
+              clientSecret: plainstring
+              enableBasicAuth: false
+          - id: gitlab
+            displayName: gitlab
+            type: Gitlab
+            gitlab:
+              clientID: plainstring
+              clientSecret: plainstring
+              groups:
+                - only
+                - team
+          - id: oidc
+            displayName: google
+            type: OIDC
+            oidc:
+              issuer: "https://issue.example.com"
+              clientID: plainstring
+              clientSecret: plainstring
+              basicAuthUnsupported: true
+              insecureSkipEmailVerified: true
+              getUserInfo: true
+              allowedGroups:
+                - only
+                - team
+              scopes:
+                - profile
+                - email
+              userIDKey: subsub
+              userNameKey: noname
+          - id: oidc
+            displayName: google
+            type: OIDC
+            oidc:
+              issuer: "https://issue.example.com"
+              clientID: plainstring
+              clientSecret: plainstring
+              basicAuthUnsupported: true
+              insecureSkipEmailVerified: true
+              getUserInfo: true
+              scopes:
+                - profile
+                - email
+              userIDKey: subsub
+              userNameKey: noname
+              claimMapping:
+                email: mail
+                groups: roles
+                preferred_username: name
+              claimMappingOverride: true
+          - id: bitbucket
+            displayName: bitbucket
+            type: BitbucketCloud
+            bitbucketCloud:
+              clientID: plainstring
+              clientSecret: plainstring
+              teams:
+                - only
+                - team
+          - id: ldap
+            type: LDAP
+            displayName: ldap
+            ldap:
+              host: "ldap.host.example.com:1234"
+              rootCAData: plainstring
+              insecureSkipVerify: true
+              bindDN: plainstring
+              bindPW: plainstring
+              startTLS: true
+              userSearch:
+                baseDN: plainstring
+                filter: plainstring
+                username: uuid
+                idAttr: uuid
+                emailAttr: email
+                nameAttr: sub
+              groupSearch:
+                baseDN: plainstring
+                filter: plainstring
+                nameAttr: name
+                userMatchers:
+                  - userAttr: uuid
+                    groupAttr: groups
+        items:
+          type: object
+          properties:
+            type:
+              type: string
+            displayName:
+              type: string
+            id:
+              type: string
+            # providers spec is copied from custom resources as is and validated by its spec
+            crowd:
+              type: object
+              additionalProperties: true
+            github:
+              type: object
+              additionalProperties: true
+            gitlab:
+              type: object
+              additionalProperties: true
+            oidc:
+              type: object
+              additionalProperties: true
+            ldap:
+              type: object
+              additionalProperties: true
+            bitbucketCloud:
+              type: object
+              additionalProperties: true
+      customLogo:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          checksum:
+            type: string

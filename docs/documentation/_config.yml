@@ -1,0 +1,130 @@
+topnav_title: Deckhouse
+site_title: Deckhouse
+company_name:
+  en: Flant
+  ru: Флант
+company_url:
+  en: https://flant.com
+  ru: https://flant.ru
+url: https://deckhouse.io
+urls:
+  ru: https://deckhouse.ru
+  en: https://deckhouse.io
+canonical_url_prefix_documentation: /products/kubernetes-platform/documentation/v1
+canonical_url_prefix: /products/kubernetes-platform
+site_description:
+  en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
+  ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."
+github_repo_path: /deckhouse/deckhouse
+d8Revision: EE
+
+metrics:
+  google: G-4X28CEP7W2
+  yandex:
+    ru: 78422802
+    en: 100410448
+
+sass:
+    style: compressed
+
+chat_script_url:
+  en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
+  ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
+
+social_links:
+  ru:
+    telegram: https://t.me/deckhouse_ru
+  en:
+    telegram: https://t.me/deckhouse
+
+output: web
+
+exclude:
+- .idea/
+- .gitignore
+- vendor
+- Gemfile.lock
+- Gemfile
+- backends
+- '*.sh'
+- '*.yml'
+- '*.yaml'
+- docker-compose*.yml
+- _tools/
+
+
+highlighter: rouge
+feedback_disable: true
+
+plugins:
+  - jekyll-regex-replace
+  - jekyll_include_plugin
+  - jekyll_asset_pipeline
+
+asset_pipeline:
+  bundle: true
+  compress: true
+  output_path: assets
+  #display_path: nil
+  gzip: false
+
+markdown: kramdown
+kramdown:
+ input: GFM
+ auto_ids: true
+ hard_wrap: false
+ syntax_highlighter: rouge
+ parse_block_html: true
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      toc: false
+      layout: "page"
+      comments: false
+      searchable: true
+      sitemap_include: true
+      topnav: topnav
+      output: web
+      sidebar: main
+      multilang: true
+      comparable: true
+      product_code: kubernetes-platform
+      search_bage_enabled: true
+      lang: en
+      showPrevNextButton: true
+      feedback: true
+      # Maximum number of related links to display
+      related_links_max: 6
+  - scope:
+      path: "pages/admin"
+    values:
+      sidebar: main
+      sitemap_include: true
+      showPrevNextButton: true
+  - scope:
+      path: "pages/architecture"
+    values:
+      sidebar: main
+      sitemap_include: true
+      showPrevNextButton: true
+  - scope:
+      path: "pages/user"
+    values:
+      sidebar: main
+      sitemap_include: true
+      showPrevNextButton: true
+  - scope:
+      path: "pages/reference"
+      sitemap_include: true
+    values:
+      sidebar: main
+  - scope:
+      path: "modules_ru"
+      type: "pages"
+    values:
+      lang: ru
+      showPrevNextButton: true
+timezone: Europe/Moscow

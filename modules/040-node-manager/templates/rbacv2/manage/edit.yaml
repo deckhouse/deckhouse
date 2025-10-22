@@ -1,0 +1,40 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-cloud-instance-manager
+  name: d8:manage:permission:module:node-manager:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  - instancetypescatalogs
+  - nodegroupconfigurations
+  - nodegroups
+  - nodeusers
+  - sshcredentials
+  - staticinstances
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - node-manager
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

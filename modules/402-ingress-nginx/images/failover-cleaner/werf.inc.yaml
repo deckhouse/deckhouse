@@ -1,0 +1,45 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: builder/src
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/*.sum'
+    - '**/*.mod'
+---
+image: {{ .ModuleName }}/failover-cleaner-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /failover-cleaner .
+  - chown -R 64535:64535 /failover-cleaner
+  - chmod +x /failover-cleaner
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+import:
+- image: {{ .ModuleName }}/failover-cleaner-artifact
+  add: /failover-cleaner
+  to: /failover-cleaner
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/failover-cleaner"]

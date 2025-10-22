@@ -1,0 +1,80 @@
+$xxs: 400;
+$xs: 430;
+$s: 550;
+$m: 728;
+$l: 1024;
+$xl: 1200;
+$xxl: 1440;
+$xxxl: 1664;
+
+@mixin min-w($breakpoint) {
+  @if ($breakpoint == xxs) {
+    @media screen and (min-width: #{$xxs}px) {
+      @content;
+    }
+  } @else if ($breakpoint == xs) {
+    @media screen and (min-width: #{$xs}px) {
+      @content
+    }
+  } @else if ($breakpoint == s) {
+    @media screen and (min-width: #{$s}px) {
+      @content
+    }
+  } @else if ($breakpoint == m) {
+    @media screen and (min-width: #{$m}px) {
+      @content
+    }
+  } @else if ($breakpoint == l) {
+    @media screen and (min-width: #{$l}px) {
+      @content
+    }
+  } @else if ($breakpoint == xl) {
+    @media screen and (min-width: #{$xl}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxl) {
+    @media screen and (min-width: #{$xxl}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (min-width: #{$xxxl}px) {
+      @content
+    }
+  }
+}
+
+@mixin max-w($breakpoint) {
+  @if ($breakpoint == xxs) {
+    @media screen and (max-width: #{$xxs - 1}px) {
+      @content;
+    }
+  } @else if ($breakpoint == xs) {
+    @media screen and (max-width: #{$xs - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == s) {
+    @media screen and (max-width: #{$s - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == m) {
+    @media screen and (max-width: #{$m - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == l) {
+    @media screen and (max-width: #{$l - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == xl) {
+    @media screen and (max-width: #{$xl - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxl) {
+    @media screen and (max-width: #{$xxl - 1}px) {
+      @content
+    }
+  } @else if ($breakpoint == xxxl) {
+    @media screen and (max-width: #{$xxxl - 1}px) {
+      @content
+    }
+  }
+}

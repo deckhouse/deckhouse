@@ -1,0 +1,90 @@
+Some providers' clusters may require extra steps before or after installing Deckhouse.
+
+Here are some common problems and ways to solve them. Should you run into difficulties installing Deckhouse in an existing cluster, please, share them by creating an [issue](https://github.com/deckhouse/deckhouse/issues).
+
+{% offtopic title="Installation errors at the 'Waiting for Deckhouse to become Ready' step" %}
+- Error of the following kind:
+  ```
+  │ │ ┌ Waiting for Deckhouse to become Ready
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  ```
+
+  Probably, there is no node in the cluster with the `node-role.kubernetes.io/control-plane: ""` label which is originally used in the `nodeSelector` of the `deckhouse` deployment manifest.
+
+  Ways to fix the error:
+  - Insert the proper `nodeSelector` into the `deckhouse` deployment:
+    ```shell
+    kubectl -n d8-system edit deployment/deckhouse
+    ```
+  - Delete nodeSelector in the `deckhouse` deployment:
+    ```shell
+    kubectl patch -n d8-system deployment deckhouse --type json -p '[{"op": "remove", "path": "/spec/template/spec/nodeSelector"}]'
+    ```
+- Error of the following kind:
+  ```
+  Waiting for Deckhouse to become Ready
+  │ │ Deckhouse pod found: deckhouse-7cc8b6f4bd-9l99t (Running)
+  │ │ Running pod found! Checking logs...
+  │ │ Request failed. Probably pod was restarted during installation.
+  │ │ No Deckhouse pod found.
+  ```
+  And also an error with the status appears in the `deckhouse` module:
+  ```
+  Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
+  ```
+
+  May be, the `kube-apiserver.yaml` static manifest does not specify `runtime-config'.
+
+  Add the `spec.containers.command` parameter to `/etc/kubernetes/manifests/kube-api server.yaml` value- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
+
+  **Caution.** `kube-apiserver` may not respond to requests for a while.
+
+{% endofftopic %}
+
+{% offtopic title="Error in case of Deckhouse installation after interruption" %}
+If the Deckhouse installation was interrupted for unknown reasons, the following error may be displayed during the re-installation:
+```
+  ┌ ⛵ ~ Bootstrap: Install Deckhouse
+  └ ⛵ ~ Bootstrap: Install Deckhouse (43.50 seconds) FAILED
+
+  Timeout while "Check prevent break another bootstrapped": last error: Cluster UUID's not equal in the cluster                              ↵
+  (7489d07a-5fbb-4269-ba0d-e0340ce4f118) and in the cache ().
+  Probably you are trying bootstrap cluster on node with previous created cluster.
+  Please check hostname.
+```
+
+To reinstall Deckhouse on the cluster, you need to delete the following ConfigMaps in the namespace `kube-system`:
+```
+  d8-cluster-is-bootstraped
+  d8-cluster-uuid
+```
+and then start the installation again.
+{% endofftopic %}
+
+{% offtopic title="There is no Ingress controller in the cluster..." %}
+The `documentation` module (`deckhouse-web` in Deckhouse 1.45 or older), which provides a web interface to the cluster documentation, requires the Ingress controller to be active in the cluster. If there is no Ingress controller in your cluster, you can use the built-in [ingress-nginx](/modules/ingress-nginx/) module:
+
+- Enable the <code>ingress-nginx</code> module, by executing the following command:
+
+  ```shell
+  kubectl create -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: ingress-nginx
+  spec:
+    enabled: true
+  EOF
+  ```
+
+- Create an <code>ingress-nginx-controller.yml</code> file with the following contents:
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  {% include_file "{{ includePath }}" syntax="yaml" %}
+
+- Once Deckhouse is installed, apply the file using the command below:
+
+  ```shell
+  kubectl create -f ingress-nginx-controller.yml
+  ```
+{% endofftopic %}

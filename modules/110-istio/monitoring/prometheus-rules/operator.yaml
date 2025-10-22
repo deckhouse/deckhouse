@@ -1,0 +1,25 @@
+- name: d8.istio.operator
+  rules:
+  - alert: D8IstioOperatorReconcileError
+    expr: max(increase(controller_runtime_reconcile_errors_total{job="istio-operator"}[15m])) by (revision) > 0
+    for: 10m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: istio
+      d8_component: operator
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8istio_operator_malfunctioning: "D8IstioOperatorMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "revision"
+      summary: The `istio-operator` is unable to reconcile Istio control plane setup.
+      description: |
+        Deckhouse has detected an error in the `istio-operator` reconciliation loop.
+
+        To investigate the issue, check the operator logs:
+
+        ```bash
+        d8 k -n d8-istio logs -l app=operator,revision={{$labels.revision}}
+        ```

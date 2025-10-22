@@ -1,0 +1,43 @@
+[
+	{
+		"drop_on_abort": false,
+		"inputs": [],
+		"source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+		"type": "remap"
+	},
+	{
+		"condition": "exists(.parsed_data.info)",
+		"inputs": [
+			"transform/prefix/testit/00_parse_json"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "if is_boolean(.parsed_data) || is_float(.parsed_data) {\n    data, err = to_string(.parsed_data);\n    if err != null {\n        false;\n    } else {\n        includes([\".*\"], data);\n    };\n} else if .parsed_data == null {\n    false;\n} else {\n    includes([\".*\"], .parsed_data);\n}",
+		"inputs": [
+			"transform/prefix/testit/01_log_filter"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else if .parsed_data.severity == null {\n    false;\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
+		"inputs": [
+			"transform/prefix/testit/02_log_filter"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "match!(.parsed_data.namespace, r'^d8-.*$') || match!(.parsed_data.namespace, r'^kube-.*$')",
+		"inputs": [
+			"transform/prefix/testit/03_log_filter"
+		],
+		"type": "filter"
+	},
+	{
+		"condition": "if exists(.parsed_data.namespace) \u0026\u0026 is_string(.parsed_data.namespace) {\n    matched = false\n    matched0, err = match(.parsed_data.namespace, r'^dev-.*$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    matched1, err = match(.parsed_data.namespace, r'^prod-.*$')\n    if err != null {\n        true\n    }\n    matched = matched || matched1\n    !matched\n} else {\n    true\n}",
+		"inputs": [
+			"transform/prefix/testit/04_log_filter"
+		],
+		"type": "filter"
+	}
+]

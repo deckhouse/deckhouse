@@ -1,0 +1,57 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /events_exporter
+    to: /events_exporter
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/events_exporter"]
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  setup:
+  - git clone --depth 1 --branch v0.0.4 $(cat /run/secrets/SOURCE_REPO)/nabokihms/events_exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      setup:
+        - "**/*"
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd /src
+    - make build
+    - mv bin/events_exporter /events_exporter
+    - chown 64535:64535 /events_exporter
+    - chmod 700 /events_exporter

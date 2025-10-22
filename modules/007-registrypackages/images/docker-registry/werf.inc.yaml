@@ -1,0 +1,81 @@
+{{- $docker_version := "2.8.3" }}
+{{- $docker_auth_version := "1.13.0" }}
+
+{{- $image_version := $docker_version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ .ModulePath }}modules/{{ $.ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ .SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
+  - cd /src/docker_auth
+  - git apply /patches/docker_auth/*.patch --verbose
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - rm -rf /src/docker_auth/.git
+  - rm -rf /src/distribution/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - registry
+  - auth_server
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "docker": "{{ $docker_version }}", "cesanta_auth": "{{ $docker_auth_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git
+  setup:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
+  - cd /src/docker_auth/auth_server
+  - make build
+  - mv ./auth_server /auth_server
+  - mkdir -p /go/src/github.com/docker/
+  - mv /src/distribution /go/src/github.com/docker/
+  - cd /go/src/github.com/docker/distribution
+  - make
+  - mv bin/registry /
+  - mv /src/scripts/* /
+  - chmod +x /auth_server /registry /install /uninstall

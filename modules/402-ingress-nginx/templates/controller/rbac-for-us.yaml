@@ -1,0 +1,58 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: controller
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "pods", "secrets", "namespaces"]
+  verbs: ["get"]
+{{- if .Values.ingressNginx.internal.ingressControllers }}
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames:
+{{ $leaderElectionConfigMapNames := list }}
+  {{- range $crd := .Values.ingressNginx.internal.ingressControllers }}
+    {{ $name := printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+    {{- if not (has $name $leaderElectionConfigMapNames) }}
+  - {{ $name }}
+    {{- end }}
+    {{- $leaderElectionConfigMapNames := append $leaderElectionConfigMapNames $name }}
+  {{- end }}
+  verbs: ["get", "update"]
+{{- end }}
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingressclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "update", "create"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create","patch"]
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: controller
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: controller
+subjects:
+- kind: ServiceAccount
+  name: ingress-nginx
+  namespace: d8-ingress-nginx

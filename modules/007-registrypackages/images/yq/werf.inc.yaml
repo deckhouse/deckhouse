@@ -1,0 +1,43 @@
+{{- $version := .CandiVersionMap.yq.version }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - yq
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "yq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: tools/yq-v{{ $version }}
+  add: /usr/bin/yq
+  to: /yq
+  before: setup
+shell:
+  setup:
+  - chmod +x /yq /install /uninstall

@@ -1,0 +1,54 @@
+Subject: [PATCH] Prevent sending empty shared bandwidth identifier in HTTP requests to create EIP.
+---
+Index: pkg/cloudprovider/huaweicloud/sharedloadbalancer.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go b/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go
+--- a/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go	(revision a2521439748697680ba5ab25e693b1125a456b8f)
++++ b/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go	(date 1739444245700)
+@@ -1087,7 +1087,7 @@
+ 	eip, err := l.eipClient.Create(&eipmodel.CreatePublicipRequestBody{
+ 		Bandwidth: &eipmodel.CreatePublicipBandwidthOption{
+ 			Name:       &name,
+-			Id:         &opts.ShareID,
++			Id:         opts.ShareID,
+ 			Size:       &opts.BandwidthSize,
+ 			ShareType:  shareType,
+ 			ChargeMode: chargeModel,
+@@ -1102,10 +1102,10 @@
+ }
+ 
+ type CreateEIPOptions struct {
+-	BandwidthSize int32  `json:"bandwidth_size"`
+-	ShareType     string `json:"share_type"`
+-	ShareID       string `json:"share_id"`
+-	ChargeMode    string `json:"charge_mode"`
++	BandwidthSize int32   `json:"bandwidth_size"`
++	ShareType     string  `json:"share_type"`
++	ShareID       *string `json:"share_id"`
++	ChargeMode    string  `json:"charge_mode"`
+ 
+ 	IPType string `json:"ip_type"`
+ }
+Index: pkg/cloudprovider/huaweicloud/dedicatedloadbalancer.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/huaweicloud/dedicatedloadbalancer.go b/pkg/cloudprovider/huaweicloud/dedicatedloadbalancer.go
+--- a/pkg/cloudprovider/huaweicloud/dedicatedloadbalancer.go	(revision a2521439748697680ba5ab25e693b1125a456b8f)
++++ b/pkg/cloudprovider/huaweicloud/dedicatedloadbalancer.go	(date 1739444307297)
+@@ -278,9 +278,9 @@
+ 			ChargeMode: chargeModel,
+ 		}
+ 	}
+-	if eipOpt.ShareID != "" {
++	if eipOpt.ShareID != nil {
+ 		publicIP.Bandwidth = &elbmodel.CreateLoadBalancerBandwidthOption{
+-			Id: &eipOpt.ShareID,
++			Id: eipOpt.ShareID,
+ 		}
+ 	}
+ 	return publicIP, nil

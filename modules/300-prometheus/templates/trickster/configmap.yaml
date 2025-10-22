@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trickster-config
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trickster")) | nindent 2 }}
+data:
+  trickster.conf: |
+    [main]
+      [frontend]
+        listen_port = 8000
+        listen_address = "127.0.0.1"
+      [cache]
+        record_ttl_secs = 21600
+
+      [origins]
+        [origins.main]
+          origin_type = 'prometheus'
+    {{- if (include "helm_lib_ha_enabled" .) }}
+          origin_url = 'https://prometheus-affinitive.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
+    {{- else }}
+          origin_url = 'https://prometheus.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
+    {{- end }}
+          max_value_age_secs = {{ mul .Values.prometheus.retentionDays 86400 }}
+          fast_forward_disable = false
+          default_step = 30
+          req_rewriter_name = 'set-upstream-user'
+
+            [origins.main.tls]
+              insecure_skip_verify = true
+
+            [origins.main.health_check_headers]
+              Authorization = 'Bearer $PROMETHEUS_TOKEN'
+
+        [origins.longterm]
+          origin_type = 'prometheus'
+          origin_url = 'https://prometheus-longterm.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:9090'
+          max_value_age_secs = {{ mul .Values.prometheus.longtermRetentionDays 86400 }}
+          fast_forward_disable = false
+          default_step = 300
+          req_rewriter_name = 'set-upstream-user'
+
+            [origins.longterm.tls]
+              insecure_skip_verify = true
+
+            [origins.longterm.health_check_headers]
+              Authorization = 'Bearer $PROMETHEUS_TOKEN'
+
+      [metrics]
+        listen_port = 8001
+        listen_address = "127.0.0.1"
+      [logging]
+        log_level = 'info'
+
+    [request_rewriters]
+      [request_rewriters.set-upstream-user]
+        instructions = [
+           ['header', 'set', 'Authorization', 'Bearer $PROMETHEUS_TOKEN'],
+        ]

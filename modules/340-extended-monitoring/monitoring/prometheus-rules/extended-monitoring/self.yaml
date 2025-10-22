@@ -1,0 +1,37 @@
+- name: kubernetes.extended-monitoring
+  rules:
+  - alert: ExtendedMonitoringTargetDown
+    expr: absent(up{job="extended-monitoring-exporter"} == 1)
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: >
+        Extended monitoring is unavailable.
+      description: |-
+        The pod running `extended-monitoring-exporter` is currently unavailable.
+
+        As a result, the following alerts will not be triggered:
+
+        * Low disk space and inode usage on volumes.
+        * CPU overloads and container throttling.
+        * `500` errors on Ingress.
+        * Insufficient replicas of Deployments, StatefulSets, and DaemonSets.
+        * [Other alerts](https://deckhouse.io/modules/extended-monitoring/) associated with this exporter.
+
+        To resolve this issue, investigate its possible causes:
+
+        1. Print detailed information about the `extended-monitoring-exporter` deployment:
+
+           ```bash
+           d8 k -n d8-monitoring describe deploy extended-monitoring-exporter
+           ```
+
+        2. Print detailed information about the pods associated with the `extended-monitoring-exporter`:
+
+           ```bash
+           d8 k -n d8-monitoring describe pod -l app=extended-monitoring-exporter
+           ```

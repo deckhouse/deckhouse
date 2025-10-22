@@ -1,0 +1,21 @@
+bashible:
+  fixes:
+    - description: Fixed redhat version detection in bashible.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/739
+candi:
+  fixes:
+    - description: Fix nodeuser creation script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/749
+    - description: Fix kubelet slow start on reboot.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/742
+global:
+  fixes:
+    - description: >-
+        Add number type for  and
+        
+      pull_request: https://github.com/deckhouse/deckhouse/pull/744
+user-authn:
+  fixes:
+    - description: Migrate BitbucketCloud connector to utilizing workspaces API.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/738
+

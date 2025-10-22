@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8-node-local-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-local-dns
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: d8-node-local-dns
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-local-dns:endpoint-slice-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
+rules:
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-local-dns:d8-node-local-dns:endpoint-slice-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-local-dns:endpoint-slice-reader
+subjects:
+  - kind: ServiceAccount
+    name: d8-node-local-dns
+    namespace: kube-system

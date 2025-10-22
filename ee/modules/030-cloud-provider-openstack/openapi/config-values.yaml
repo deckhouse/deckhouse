@@ -1,0 +1,173 @@
+type: object
+properties:
+  connection:
+    type: object
+    description: |
+      This section contains parameters required to connect to the cloud provider's API.
+    properties:
+      authURL:
+        type: string
+        description: |
+          An OpenStack Identity API URL.
+      caCert:
+        type: string
+        description: |
+          Specify the CA x509 certificate used for signing if the OpenStack API has a self-signed certificate;
+          The certificate must have a PEM format.
+      domainName:
+        type: string
+        description: |
+          The domain name.
+      tenantName:
+        type: string
+        description: |
+          The project name.
+
+          Cannot be used together with `tenantID`.
+      tenantID:
+        type: string
+        description: |
+          The project ID.
+          Cannot be used together with `tenantName`.
+      username:
+        type: string
+        description: |
+          The name of the user that has full project privileges.
+      password:
+        type: string
+        description: |
+          The user's password.
+      region:
+        type: string
+        description: |
+          The OpenStack region where the cluster will be deployed.
+  internalNetworkNames:
+    type: array
+    description: |
+      Additional networks that are connected to the VM. cloud-controller-manager uses them to insert InternalIPs into `.status.addresses` in the Node API object.
+    x-examples:
+      - [ "KUBE-3", "devops-internal" ]
+    items:
+      type: string
+  externalNetworkNames:
+    type: array
+    description: |
+      Additional networks that are connected to the VM. cloud-controller-manager uses them to insert ExternalIPs into `.status.addresses` in the Node API object.
+    x-examples:
+      - [ "KUBE-3", "devops-internal" ]
+    items:
+      type: string
+  additionalExternalNetworkNames:
+    type: array
+    description: |
+      Specifies additional networks that can be connected to the VM. `cloud-controller-manager` uses them to insert `ExternalIP` to `.status.addresses` field in the Node API object.
+
+      If you have instances in the cluster that use External Networks (other than those set out in the placement strategy), you must pass them via the `additionalExternalNetworkNames` parameter.
+    x-examples:
+      - ["some-bgp-network"]
+    items:
+      type: string
+  ignoreVolumeMicroversion:
+    type: boolean
+    description: |
+      Setting for backwards compatibility. Enable if the cloud OpenStack version is less than 3.34 and you get error "Version 3.34 is not supported by the API. Minimum is 3.0 and maximum is 3.x" when ordering a PV. This will disable volumes online resize, but will restore ability to order new PVs. (original PR https://github.com/kubernetes/cloud-provider-openstack/pull/1986/)
+    default: false
+  podNetworkMode:
+    type: string
+    description: |
+      Sets the traffic mode for the network that the pods use to communicate with each other (usually, it is an internal network; however, there can be exceptions):
+        * `DirectRouting` — means that there is a direct routing between the nodes.
+        * `DirectRoutingWithPortSecurityEnabled` — direct routing is enabled between the nodes, but only if  the range of addresses of the internal network is explicitly allowed in OpenStack for Ports.
+          * **Caution!** Make sure that the `username` can edit AllowedAddressPairs on Ports connected to the `internalNetworkName` network. Generally, an OpenStack user doesn't have such a privilege if the network has the `shared` flag set.
+        * `VXLAN` — direct routing between the nodes isn't available; VXLAN should be used.
+    enum: ["DirectRouting", "DirectRoutingWithPortSecurityEnabled", "VXLAN"]
+  instances:
+    type: object
+    description: |
+      Instance parameters that are used when creating virtual machines.
+    properties:
+      sshKeyPairName:
+        type: string
+        description: |
+          The name of the OpenStack `keypair` resource; it is used for provisioning instances.
+      securityGroups:
+        type: array
+        description: |
+          A list of securityGroups to assign to the provisioned instances. Defines firewall rules for the provisioned instances.
+        items:
+          type: string
+      imageName:
+        type: string
+        description: |
+          The name of the image.
+      mainNetwork:
+        type: string
+        description: |
+          The path to the network that will serve as the primary network (the default gateway) for connecting to the VM.
+      additionalNetworks:
+        type: array
+        description: |
+          A list of networks to connect to the instance.
+        items:
+          type: string
+  loadBalancer:
+    type: object
+    description: |
+      Load Balancer parameters.
+    properties:
+      subnetID:
+        type: string
+        description: |
+          An ID of the Neutron subnet to create the load balancer virtual IP in.
+      floatingNetworkID:
+        type: string
+        description: |
+          An ID of the external network for floating IPs.
+  zones:
+    type: array
+    description: |
+      The default list of zones for provisioning instances. Can be redefined for each NodeGroup individually.
+    items:
+      type: string
+  tags:
+    type: object
+    description: |
+      A dictionary of tags that will be available on all provisioned instances.
+    additionalProperties:
+      type: string
+  storageClass:
+    type: object
+    default: {}
+    description: |
+      The module automatically creates StorageClasses that are available in OpenStack.
+    properties:
+      exclude:
+        type: array
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        items:
+          type: string
+        x-examples:
+          - [".*-hdd", "iscsi-fast"]
+      default:
+        type: string
+        deprecated: true
+        x-doc-deprecated: true
+        x-examples:
+          - "ceph-ssd"
+        description: |-
+          The name of StorageClass that will be used in the cluster by default.
+
+          If the parameter is omitted, the default StorageClass is either:
+
+          * an arbitrary StorageClass present in the cluster that has the default annotation;
+          * the first (in lexicographic order) StorageClass created by the module (in accordance with the order in OpenStack).
+
+          > **Parameter is deprecated**. Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+      topologyEnabled:
+        type: boolean
+        description: |
+          This feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected.
+
+          > **Warning.** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+        default: true

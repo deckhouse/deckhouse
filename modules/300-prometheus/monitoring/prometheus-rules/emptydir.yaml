@@ -1,0 +1,20 @@
+- name: d8.emptydir
+  rules:
+  - alert: DeckhouseModuleUseEmptyDir
+    expr: |
+      d8_emptydir_usage == 1
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "9"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDirGroup,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_group_for__deckhouse_module_use_empty_dir: DeckhouseModuleUseEmptyDirGroup,prometheus=deckhouse,kubernetes=~kubernetes
+      summary: Deckhouse module {{ $labels.module_name }} is using emptyDir for storage.
+      description: |
+        The Deckhouse module `{{ $labels.module_name }}` is using `emptyDir` as its storage.
+        
+        If the associated Pod is removed from the node for any reason, the data in the `emptyDir` is deleted permanently.
+        Consider using persistent storage if data durability is critical for the module.

@@ -1,0 +1,24 @@
+{{- if and (.Values.userAuthn.publishAPI.enabled) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: kubernetes-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  ca:
+    secretName: kubernetes-api-ca-key-pair
+{{- end }}
+{{- if and (.Values.userAuthn.internal.selfSignedCA.cert) (.Values.userAuthn.internal.selfSignedCA.key) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-api-ca-key-pair
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+data:
+  tls.crt: {{ .Values.userAuthn.internal.selfSignedCA.cert | b64enc }}
+  tls.key: {{ .Values.userAuthn.internal.selfSignedCA.key | b64enc }}
+{{- end }}

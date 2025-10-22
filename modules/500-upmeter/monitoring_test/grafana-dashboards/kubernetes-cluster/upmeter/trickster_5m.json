@@ -1,0 +1,596 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 24,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {
+        "down": "dark-red",
+        "nodata": "semi-dark-yellow",
+        "up": "rgb(174, 232, 170)",
+        "unknown": "light-purple"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "upmeter-prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 18,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 10,
+      "interval": "5m",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "up"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "unknown"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "nodata"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "down"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Prometheus",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "timeseries",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:132",
+          "decimals": 0,
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:133",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "down": "#AD0317",
+        "nodata": "rgb(141, 141, 141)",
+        "up": "#96D98D",
+        "unknown": "#8F3BB8"
+      },
+      "breakPoint": "50%",
+      "cacheTimeout": null,
+      "combine": {
+        "label": "Others",
+        "threshold": 0
+      },
+      "datasource": "upmeter-prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {},
+          "custom": {},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          }
+        },
+        "overrides": []
+      },
+      "fontSize": "80%",
+      "format": "ms",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 6,
+      "interval": "5m",
+      "legend": {
+        "percentage": true,
+        "percentageDecimals": 2,
+        "show": true,
+        "sortDesc": true,
+        "values": false
+      },
+      "legendType": "Right side",
+      "links": [],
+      "nullPointMode": "connected",
+      "pieType": "donut",
+      "pluginVersion": "7.4.2",
+      "strokeWidth": 1,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prometheus",
+      "type": "grafana-piechart-panel",
+      "valueName": "total"
+    },
+    {
+      "aliasColors": {
+        "down": "dark-red",
+        "nodata": "semi-dark-yellow",
+        "up": "rgb(174, 232, 170)",
+        "unknown": "light-purple"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "upmeter-promscale",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 18,
+        "x": 0,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "interval": "5m",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "up"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "unknown"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "nodata"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "down"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Promscale",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "timeseries",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:132",
+          "decimals": 0,
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:133",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "down": "#AD0317",
+        "nodata": "rgb(141, 141, 141)",
+        "up": "#96D98D",
+        "unknown": "#8F3BB8"
+      },
+      "breakPoint": "50%",
+      "cacheTimeout": null,
+      "combine": {
+        "label": "Others",
+        "threshold": 0
+      },
+      "datasource": "upmeter-promscale",
+      "fieldConfig": {
+        "defaults": {
+          "color": {},
+          "custom": {},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          }
+        },
+        "overrides": []
+      },
+      "fontSize": "80%",
+      "format": "ms",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "id": 7,
+      "interval": "5m",
+      "legend": {
+        "percentage": true,
+        "percentageDecimals": 2,
+        "show": true,
+        "sortDesc": true,
+        "values": false
+      },
+      "legendType": "Right side",
+      "links": [],
+      "nullPointMode": "connected",
+      "pieType": "donut",
+      "pluginVersion": "7.4.2",
+      "strokeWidth": 1,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Promscale",
+      "type": "grafana-piechart-panel",
+      "valueName": "total"
+    },
+    {
+      "aliasColors": {
+        "down": "dark-red",
+        "nodata": "semi-dark-yellow",
+        "up": "rgb(174, 232, 170)",
+        "unknown": "light-purple"
+      },
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "upmeter-victoriametrics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 18,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "interval": "5m",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"up\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "up"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"unknown\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "unknown"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\",status=\"nodata\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "nodata"
+        },
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\", status=\"down\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "down"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Victoriametrics",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "timeseries",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:132",
+          "decimals": 0,
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:133",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "down": "#AD0317",
+        "nodata": "rgb(141, 141, 141)",
+        "up": "#96D98D",
+        "unknown": "#8F3BB8"
+      },
+      "breakPoint": "50%",
+      "cacheTimeout": null,
+      "combine": {
+        "label": "Others",
+        "threshold": 0
+      },
+      "datasource": "upmeter-victoriametrics",
+      "fieldConfig": {
+        "defaults": {
+          "color": {},
+          "custom": {},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          }
+        },
+        "overrides": []
+      },
+      "fontSize": "80%",
+      "format": "ms",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 18
+      },
+      "id": 8,
+      "interval": "5m",
+      "legend": {
+        "percentage": true,
+        "percentageDecimals": 2,
+        "show": true,
+        "sortDesc": true,
+        "values": false
+      },
+      "legendType": "Right side",
+      "links": [],
+      "nullPointMode": "connected",
+      "pieType": "donut",
+      "pluginVersion": "7.4.2",
+      "strokeWidth": 1,
+      "targets": [
+        {
+          "expr": "statustime{probe_ref=\"monitoring-and-autoscaling/trickster\"}",
+          "interval": "",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "VictoriaMetrics",
+      "type": "grafana-piechart-panel",
+      "valueName": "total"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Upmeter, Trickster",
+  "uid": "zmN1sFQGz",
+  "version": 2
+}

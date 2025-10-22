@@ -1,0 +1,96 @@
+version: "2"
+run:
+  timeout: 10m
+
+linters:
+  default: none
+  enable:
+    # - bodyclose # TODO: fix me or write reason to ignore
+    # - depguard # TODO: fix me or write reason to ignore
+    - dogsled
+    # - dupl # TODO: fix me or write reason to ignore
+    # - errcheck # TODO: fix me or write reason to ignore
+    # - exhaustive # TODO: fix me or write reason to ignore
+    # - gocritic # TODO: fix me or write reason to ignore
+    # - gocyclo # TODO: fix me or write reason to ignore
+    # - gosec # TODO: fix me or write reason to ignore
+    - govet
+    - ineffassign
+    # - misspell # TODO: fix me or write reason to ignore
+    # - nakedret # TODO: fix me or write reason to ignore
+    - nolintlint
+    # - prealloc # TODO: fix me or write reason to ignore
+    # - revive # TODO: fix me or write reason to ignore
+    - rowserrcheck
+    - staticcheck
+    - tparallel
+    # - unconvert # TODO: fix me or write reason to ignore
+    # - unparam # TODO: fix me or write reason to ignore
+    # - unused # TODO: fix me or write reason to ignore
+    # - whitespace # TODO: fix me or write reason to ignore
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt:.*[rR]ead|[wW]rite|[cC]lose
+        - io:Copy
+    staticcheck:
+      checks:
+        - all
+        - '-QF1001' # TODO: fix me or write reason to ignore
+        - '-QF1003' # TODO: fix me or write reason to ignore
+        - '-QF1004' # TODO: fix me or write reason to ignore
+        - '-QF1007' # TODO: fix me or write reason to ignore
+        - '-QF1008' # not need to fix; we understand how to call nested structs
+        - '-S1000' # TODO: fix me or write reason to ignore
+        - '-S1008' # TODO: fix me or write reason to ignore
+        - '-S1021' # TODO: fix me or write reason to ignore
+        - '-S1023' # TODO: fix me or write reason to ignore
+        - '-S1039' # TODO: fix me or write reason to ignore
+        - '-SA1006' # TODO: fix me or write reason to ignore
+        - '-SA1019' # TODO: waiting for logger to be fixed
+        - '-SA1024' # TODO: fix me or write reason to ignore
+        - '-ST1003' # TODO: waiting for package name will be fixed (underscores)
+        - '-ST1006' # TODO: fix me or write reason to ignore
+        - '-ST1012' # TODO: fix me or write reason to ignore
+        - '-ST1019' # TODO: fix me or write reason to ignore
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: ST1005.*
+      - path: (.+)\.go$
+        text: 'exported: .*'
+      - path: (.+)\.go$
+        text: 'error-strings: error strings should not be capitalized.*'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/deckhouse/deckhouse)
+        - prefix(github.com/deckhouse/deckhouse/dhctl)
+        - prefix(github.com/deckhouse/)
+        - localmodule
+    goimports:
+      local-prefixes:
+        - github.com/deckhouse/deckhouse
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -1,0 +1,905 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Ресурс для подключения дополнительных Alertmanager'ов к Prometheus.
+          properties:
+            spec:
+              properties:
+                type:
+                  description: Тип Alertmanager'а.
+                external:
+                  description: Параметры подключения внешнего Alertmanager.
+                  properties:
+                    address:
+                      description: 'URL-адрес внешнего сервиса Alertmanager.'
+                    service:
+                      description: 'Service в Kubernetes, ссылающийся на развернутый Alertmanager.'
+                      properties:
+                        namespace:
+                          description: Пространство имен Service'а Alertmanager.
+                        name:
+                          description: Имя Service'а Alertmanager.
+                        path:
+                          description: 'Префикс URL-адреса в Service для отправки алертов.'
+                    auth:
+                      description: 'Настройки авторизации.'
+                      properties:
+                        basic:
+                          description: 'Настройки Basic-авторизации.'
+                          properties:
+                            username:
+                              description: 'Имя пользователя.'
+                            password:
+                              description: 'Пароль пользователя.'
+                            bearerToken:
+                              description: 'Bearer-токен.'
+                    tls:
+                      description: 'Настройки TLS.'
+                      properties:
+                        ca:
+                          description: CA-сертификат.
+                        cert:
+                          description: Сертификат клиента.
+                        key:
+                          description: Ключ клиента.
+                        insecureSkipVerify:
+                          description: Отключение проверки сертификата.
+                internal:
+                  type: object
+                  required:
+                    - route
+                  description: Параметры настройки внутренного Alertmanager.
+                  properties:
+                    inhibitRules:
+                      description: Список правил подавления.
+                      items:
+                        description: Правила подавления используются для подавления уведомлений от определенных оповещений, если уже сработали другие определенные оповещения ([подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule)).
+                        properties:
+                          equal:
+                            description: Лейблы, которые должны иметь одинаковое значение в исходном и целевом алерте, чтобы подавление вступило в силу.
+                          sourceMatch:
+                            description: Список условий, которым должен соответствовать один или более алертов, чтобы подавление вступило в силу.
+                            items:
+                              description: Условие содержит критерии сравнения лейблов алертов.
+                              properties: &match-properties
+                                name:
+                                  description: Имя лейбла для сравнения.
+                                regex:
+                                  description: Тип сравнения — по равенству (false) или регулярному выражению (true).
+                                value:
+                                  description: Значение лейбла (regex-шаблон) для удовлетворения условию.
+                          targetMatch:
+                            description: Список условий, проверяемых в алертах, при выполнении которых алерты будут подавлены.
+                            items:
+                              description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
+                              properties: *match-properties
+                    receivers:
+                      description: |
+                        Список receiver'ов.
+                      items:
+                        description: Receiver определяет одну или несколько интеграций для отправки оповещений.
+                        properties:
+                          emailConfigs:
+                            description: Список конфигураций для отправки оповещений по электронной почте.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений по электронной почте.
+                              properties:
+                                authIdentity:
+                                  description: Идентификатор, используемый для аутентификации.
+                                authPassword:
+                                  description: |
+                                    Ключ Secret'а, содержащий пароль для аутентификации.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: &data-in-secret-properties
+                                    key:
+                                      description: |
+                                        Ключ Secret'а, из которого брать данные.
+                                    name:
+                                      description: |
+                                        Имя Secret'а.
+                                    optional:
+                                      description: |
+                                        Определяет, обязательно ли (`false`) указанные Secret или его ключ должны существовать.
+                                authSecret:
+                                  description: |
+                                    Ключ Secret'а, содержащий CRAM-MD5-секрет для аутентификации.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                authUsername:
+                                  description: Имя пользователя, используемое для аутентификации.
+                                from:
+                                  description: Адрес отправителя.
+                                headers:
+                                  description: |
+                                    Список дополнительных заголовков электронной почты.
+
+                                    Переопределяет все установленные ранее заголовки.
+                                  items:
+                                    description: Определяется набором пар ключ/значение.
+                                    properties:
+                                      key:
+                                        description: Ключ.
+                                      value:
+                                        description: Значение.
+                                hello:
+                                  description: Имя хоста для идентификации на SMTP-сервере.
+                                html:
+                                  description: HTML-содержимое тела письма оповещения.
+                                requireTLS:
+                                  description: |
+                                    Использовать SMTP TLS.
+                                sendResolved:
+                                  description: Уведомлять или нет о том, что алерт более не активен.
+                                smarthost:
+                                  description: SMTP-хост, через который отправляются электронные письма.
+                                text:
+                                  description: Текстовое содержимое тела письма.
+                                tlsConfig: &tls-config
+                                  description: Конфигурация TLS.
+                                  properties:
+                                    ca:
+                                      description: Структура, содержащая сертификат CA для target'ов.
+                                      properties:
+                                        configMap:
+                                          description: ConfigMap, содержащий данные для использования в target'е.
+                                          properties: &data-in-cm-properties
+                                            key:
+                                              description: Ключ ConfigMap, из которого брать данные.
+                                            name:
+                                              description: Имя ConfigMap.
+                                            optional:
+                                              description: |
+                                                Определяет, обязательно ли (`false`) указанные ConfigMap или его ключ должны существовать.
+                                        secret:
+                                          description: Secret, содержащий данные для использования в target'е.
+                                          properties: *data-in-secret-properties
+                                    cert:
+                                      description: Структура, содержащая файл клиентского сертификата target'а.
+                                      properties:
+                                        configMap:
+                                          description: ConfigMap, содержащий данные для использования в target'е.
+                                          properties: *data-in-cm-properties
+                                        secret:
+                                          description: Secret, содержащий данные, используемые для target'а.
+                                          properties: *data-in-secret-properties
+                                    insecureSkipVerify:
+                                      description: Отключение проверки сертификатов target'а.
+                                    keySecret:
+                                      description: Secret, содержащий файл ключа клиента для target'а.
+                                      properties: *data-in-secret-properties
+                                    serverName:
+                                      description: Имя сервера, используемое для проверки на target'е.
+                                to:
+                                  description: Адрес e-mail, на который будут отправлены оповещения.
+                          name:
+                            description: Имя receiver'а. Должно быть уникальным для всего списка receiver'ов.
+                          opsgenieConfigs:
+                            description: Список конфигураций для отправки оповещений через OpsGenie.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений с помощью OpsGenie. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config)
+                              properties:
+                                apiKey:
+                                  description: |
+                                    Ключ Secret'а, содержащий OpsGenie API key.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                apiURL:
+                                  description: URL-адрес OpsGenie API для отправки запросов.
+                                description:
+                                  description: Описание инцидента.
+                                details:
+                                  description: Список произвольных пар ключ/значение, которые содержат более подробную информацию об инциденте.
+                                  items:
+                                    properties:
+                                      key:
+                                        description: Ключ.
+                                      value:
+                                        description: Значение.
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: &bearer-token-secret
+                                      description: |
+                                        Ключ Secret'а, содержащий bearer-токен, который будет использоваться клиентом для аутентификации.
+
+                                        Secret должен находиться в пространстве имен `d8-monitoring`.
+                                      properties: *data-in-secret-properties
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                message:
+                                  description: Текст алерта. Максимум 130 символов.
+                                note:
+                                  description: Дополнительный текст алерта.
+                                priority:
+                                  description: Приоритет алерта. Доступны варианты P1, P2, P3, P4 и P5.
+                                responders:
+                                  description: Список responder'ов, ответственных за уведомления.
+                                  items:
+                                    description: |
+                                      При определении responder'а должно быть определено одно из полей — `id`, `name` или `username`.
+                                    properties:
+                                      id:
+                                        description: ID responder'а.
+                                      name:
+                                        description: Имя responder'а.
+                                      type:
+                                        description: Тип responder'а.
+                                      username:
+                                        description: Имя пользователя responder'а.
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                source:
+                                  description: Обратная ссылка на отправителя уведомления.
+                                tags:
+                                  description: Разделенный запятыми список тегов, указываемый в уведомлениях.
+                          pagerdutyConfigs:
+                            description: Список конфигураций для отправки оповещений через PagerDuty.
+                            items:
+                              description: |
+                                Конфигурация определяет параметры отправки оповещений с помощью PagerDuty. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config)
+                              properties:
+                                class:
+                                  description: Класс/тип события.
+                                client:
+                                  description: Идентификатор клиента.
+                                clientURL:
+                                  description: Обратная ссылка на отправителя уведомления.
+                                component:
+                                  description: Компонент системы, отноящийся к алерту.
+                                description:
+                                  description: Описание инцидента.
+                                details:
+                                  description: Список произвольных пар ключ/значение, которые содержат более подробную информацию об инциденте.
+                                  items:
+                                    properties:
+                                      key:
+                                        description: Ключ.
+                                      value:
+                                        description: Значение.
+                                group:
+                                  description: Кластер или группа источников.
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                routingKey:
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ интеграции PagerDuty (при использовании Events API v2).
+
+                                    Необходимо определить либо это поле, либо `serviceKey`.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                serviceKey:
+                                  description: |
+                                    Ключ Secret'а, содержащий служебный ключ PagerDuty (при использовании типа интеграции «Prometheus»).
+
+                                    Необходимо определить либо это поле, либо `routingKey`.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                severity:
+                                  description: Уровень инцидента.
+                                url:
+                                  description: URL-адрес для отправки запроса.
+                          pushoverConfigs:
+                            description: Список конфигураций для отправки оповещений через Pushover.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений с помощью Pushover. [Подробнее](https://prometheus.io/docs/alerting/latest/configuration/#pushover_config)
+                              properties:
+                                expire:
+                                  description: Как долго ваше уведомление будет повторяться,
+                                    если пользователь не подтвердит получение уведомления.
+                                html:
+                                  description: Тип сообщения — HTML или простой текст.
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                message:
+                                  description: Содержание сообщения.
+                                priority:
+                                  description: Приоритет. [Подробнее…](https://pushover.net/api#priority)
+                                retry:
+                                  description: Как часто серверы Pushover будут отправлять одно и то же уведомление пользователю. Должно быть не менее 30 секунд.
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                sound:
+                                  description: Переопределение звука по умолчанию.
+                                title:
+                                  description: Заголовок уведомления.
+                                token:
+                                  description: |
+                                    Ключ Secret'а, содержащий API-токен зарегистрированного приложения ([подробнее...](https://pushover.net/apps)).
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                url:
+                                  description: Дополнительный URL-адрес, отображаемый рядом с сообщением.
+                                urlTitle:
+                                  description: Заголовок для дополнительного URL-адреса,
+                                    при его отсутствии отображается только URL-адрес.
+                                userKey:
+                                  description: |
+                                    Ключ Secret'а, содержащий пользовательский ключ пользователя-получателя.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                          slackConfigs:
+                            description: Список конфигураций для отправки оповещений через Slack.
+                            items:
+                              description: |
+                                Конфигурация определяет параметры отправки оповещений с помощью Slack. [Подробнее…](https://prometheus.io/docs/alerting/latest/configuration/#slack_config)
+                              properties:
+                                actions:
+                                  description: Список Slack actions, которые отправляются с каждым уведомлением.
+                                  items:
+                                    description: |
+                                      Настраивает один Slack action, который отправляется с каждым уведомлением.
+
+                                      Больше информации [здесь](https://api.slack.com/docs/message-attachments#action_fields) и [здесь](https://api.slack.com/docs/message-buttons).
+                                    properties:
+                                      confirm:
+                                        description: Защищает пользователей от деструктивных действий, прося их подтвердить нажатие кнопки еще раз.
+                                          [Подробнее...](https://api.slack.com/docs/interactive-message-field-guide#confirmation_fields)
+                                        properties:
+                                          dismissText:
+                                            description: Надпись на кнопке отмены.
+                                          okText:
+                                            description: Надпись на кнопке подтверждения.
+                                          text:
+                                            description: |
+                                              Подробное описание последствий выполнения действия и назначения кнопок.
+
+                                              Не более 30 символов.
+                                          title:
+                                            description: Короткий заголовок всплывающего окна.
+                                      name:
+                                        type: string
+                                      style:
+                                        type: string
+                                      text:
+                                        minLength: 1
+                                        type: string
+                                      type:
+                                        minLength: 1
+                                        type: string
+                                      url:
+                                        type: string
+                                      value:
+                                        type: string
+                                apiURL:
+                                  description: |
+                                    Ключ Secret'а, содержащий URL-адрес Slack webhook.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                callbackId:
+                                  type: string
+                                channel:
+                                  description: Канал или пользователь для отправки уведомлений.
+                                color:
+                                  type: string
+                                fallback:
+                                  type: string
+                                fields:
+                                  description: Список полей Slack, которые отправляются с каждым уведомлением.
+                                  items:
+                                    description: |
+                                      Каждый элемент списка настраивает одно поле Slack, которое отправляется с каждым уведомлением.
+
+                                      Каждое поле должно содержать заголовок (`title`), значение (`value`) и необязательный параметр `short`, указывающий, достаточно ли короткое поле для отображения рядом с другими короткими полями. [Подробнее...](https://api.slack.com/docs/message-attachments#fields)
+                                footer:
+                                  type: string
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                iconEmoji:
+                                  type: string
+                                iconURL:
+                                  type: string
+                                imageURL:
+                                  type: string
+                                linkNames:
+                                  type: boolean
+                                mrkdwnIn:
+                                  items:
+                                    type: string
+                                  type: array
+                                pretext:
+                                  type: string
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                shortFields:
+                                  type: boolean
+                                text:
+                                  type: string
+                                thumbURL:
+                                  type: string
+                                title:
+                                  type: string
+                                titleLink:
+                                  type: string
+                                username:
+                                  type: string
+                          victoropsConfigs:
+                            description: Список конфигураций для отправки оповещений через VictorOps.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений с помощью VictorOps. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#victorops_config)
+                              properties:
+                                apiKey:
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ API для использования при обращении к API VictorOps.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                apiUrl:
+                                  description: URL-адрес VictorOps API.
+                                customFields:
+                                  description: Список дополнительных настраиваемых полей для уведомлений.
+                                  items:
+                                    description: Определяется набором пар ключ/значение.
+                                    properties:
+                                      key:
+                                        description: Ключ.
+                                      value:
+                                        description: Значение.
+                                entityDisplayName:
+                                  description: Краткое описание проблемы.
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                messageType:
+                                  description: Тип предупреждения (CRITICAL, WARNING, INFO).
+                                monitoringTool:
+                                  description: Название инструмента мониторинга, с которого поступает сообщение о состоянии.
+                                routingKey:
+                                  description: Ключ, используемый для сопоставления оповещения с командой.
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                stateMessage:
+                                  description: Полное описание проблемы.
+                          telegramConfigs:
+                            description: Список конфигураций для отправки оповещений через Telegram.
+                            items:
+                              description: |
+                                Конфигурация определяет параметры отправки оповещений с помощью Telegram.
+
+                                [Подробнее см. в документации Prometheus…](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config)
+                              properties:
+                                apiURL:
+                                  description: |
+                                    Адрес Telegram API, например `https://api.telegram.org`.
+
+                                    Если не указано, будет использоваться адрес API по умолчанию.
+                                  type: string
+                                botToken:
+                                  description: |
+                                    Ключ Secret'а, содержащий токен Telegram-бота.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                  required:
+                                    - key
+                                  type: object
+                                chatID:
+                                  description: Идентификатор чата Telegram.
+                                  format: int64
+                                  type: integer
+                                disableNotifications:
+                                  description: Отключить/включить уведомления Telegram.
+                                  type: boolean
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    authorization:
+                                      description: |
+                                        Конфигурация заголовка авторизации для клиента.
+
+                                        Это взаимоисключающая опция с разделом BasicAuth.
+                                      properties:
+                                        credentials:
+                                          description: |
+                                            Secret, содержащий полномочия для выполнения запроса.
+
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        type:
+                                          description: |
+                                            Устанавливает тип аутентификации.
+
+                                            По умолчанию — Bearer. Basic будет вызывать ошибку.
+                                          type: string
+                                      type: object
+                                    basicAuth:
+                                      description: |
+                                        Параметры базовой аутентификации клиента.
+
+                                        Это взаимоисключающая опция с разделом Authorization. Если оба определены, BasicAuth имеет приоритет.
+                                      properties:
+                                        password:
+                                          description: |
+                                            Secret, который содержит пароль для аутентификации.
+
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        username:
+                                          description: |
+                                            Secret, который содержит имя пользователя для аутентификации.
+
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                      type: object
+                                    bearerTokenSecret:
+                                      description: |
+                                        Secret, содержащий токен носителя, который будет использоваться клиентом для аутентификации.
+
+                                        Secret должен находиться в пространстве имен `d8-monitoring`.
+                                      properties: *data-in-secret-properties
+                                      required:
+                                        - key
+                                      type: object
+                                    followRedirects:
+                                      description: Указывает, должен ли клиент следовать перенаправлениям HTTP 3xx.
+                                      type: boolean
+                                    oauth2:
+                                      description: Учетные данные клиента OAuth2, используемые для получения токена target'а.
+                                      properties:
+                                        clientId:
+                                          description: Secret или ConfigMap, содержащие идентификатор клиента OAuth2.
+                                          properties:
+                                            configMap:
+                                              description: |
+                                                ConfigMap, который содержит данные, используемые для target'а.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: |
+                                                Secret, который содержит данные, используемые в target'е.
+
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        clientSecret:
+                                          description: |
+                                            Secret, который содержит клиентские данные OAuth2.
+
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        endpointParams:
+                                          additionalProperties:
+                                            type: string
+                                          description: Параметры для добавления к URL-адресу токена.
+                                          type: object
+                                        scopes:
+                                          description: Области действия OAuth2, используемые для запроса токена.
+                                          items:
+                                            type: string
+                                          type: array
+                                        tokenUrl:
+                                          description: URL-адрес для получения токена.
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - clientId
+                                        - clientSecret
+                                        - tokenUrl
+                                      type: object
+                                    proxyURL:
+                                      description: Опциональный URL-адрес прокси.
+                                      type: string
+                                    tlsConfig:
+                                      description: Конфигурация TLS для клиента.
+                                      properties:
+                                        ca:
+                                          description: Центр сертификации, используемый при проверке сертификатов сервера.
+                                          properties:
+                                            configMap:
+                                              description: |
+                                                ConfigMap, который содержит данные для использования в target'е.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: |
+                                                Secret, который содержит данные для использования в target'е.
+
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        cert:
+                                          description: Сертификат клиента для представления при выполнении аутентификации клиента.
+                                          properties:
+                                            configMap:
+                                              description: |
+                                                ConfigMap, который содержит данные для использования в target'е.
+
+                                                ConfigMap должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-cm-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                            secret:
+                                              description: |
+                                                Secret, который содержит данные для использования в target'е.
+
+                                                Secret должен находиться в пространстве имен `d8-monitoring`.
+                                              properties: *data-in-secret-properties
+                                              required:
+                                                - key
+                                              type: object
+                                              x-kubernetes-map-type: atomic
+                                          type: object
+                                        insecureSkipVerify:
+                                          description: Отключает проверку целевого сертификата.
+                                          type: boolean
+                                        keySecret:
+                                          description: |
+                                            Secret, который содержит файл клиентского ключа target'а.
+
+                                            Secret должен находиться в пространстве имен `d8-monitoring`.
+                                          properties: *data-in-secret-properties
+                                          required:
+                                            - key
+                                          type: object
+                                          x-kubernetes-map-type: atomic
+                                        serverName:
+                                          description: Используется для проверки имени хоста для target'а.
+                                          type: string
+                                      type: object
+                                  type: object
+                                message:
+                                  description: Шаблон сообщения
+                                  type: string
+                                parseMode:
+                                  description: Режим разбора сообщения Telegram.
+                                  enum:
+                                    - MarkdownV2
+                                    - Markdown
+                                    - HTML
+                                  type: string
+                                sendResolved:
+                                  description: Уведомлять ли о урегулированных предупреждениях.
+                                  type: boolean
+                              type: object
+                            type: array
+                          webhookConfigs:
+                            description: Список конфигураций для отправки оповещений через webhook.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений с помощью webhook'а. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#webhook_config)
+                              properties:
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                maxAlerts:
+                                  description: |
+                                    Максимальное количество алертов, отправляемых на одно сообщение webhook.
+
+                                    Если 0 — в сообщение включаются все алерты.
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                url:
+                                  description: |
+                                    URL-адрес для отправки HTTP POST-запросов.
+
+                                    `urlSecret` имеет приоритет над `url`.
+
+                                    Должен быть определен либо `urlSecret`, либо `url`.
+                                urlSecret:
+                                  description: |
+                                    Ключ Secret'а, содержащий URL-адрес webhook для отправки HTTP-запросов.
+
+                                    `urlSecret` имеет приоритет над `url`.
+
+                                    Должен быть определен либо `urlSecret`, либо `url`.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                          wechatConfigs:
+                            description: Список конфигураций для отправки оповещений через WeChat.
+                            items:
+                              description: Конфигурация определяет параметры отправки оповещений с помощью WeChat. [Подробнее...](https://prometheus.io/docs/alerting/latest/configuration/#wechat_config)
+                              properties:
+                                agentID:
+                                  type: string
+                                apiSecret:
+                                  description: |
+                                    Ключ Secret'а, содержащий ключ API WeChat.
+
+                                    Secret должен находиться в пространстве имен `d8-monitoring`.
+                                  properties: *data-in-secret-properties
+                                apiURL:
+                                  description: URL-адрес WeChat API.
+                                corpID:
+                                  description: Идентификатор корпорации для аутентификации.
+                                httpConfig:
+                                  description: Конфигурация HTTP-клиента.
+                                  properties:
+                                    basicAuth:
+                                      description: Параметры базовой аутентификации клиента.
+                                      properties:
+                                        password:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит пароль для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                        username:
+                                          description: Secret в пространстве имен `d8-monitoring`, который содержит имя пользователя для проверки подлинности.
+                                          properties: *data-in-secret-properties
+                                    bearerTokenSecret: *bearer-token-secret
+                                    proxyURL:
+                                      description: URL-адрес прокси-сервера (опционально).
+                                    tlsConfig: *tls-config
+                                message:
+                                  description: Данные для запроса через API WeChat.
+                                    API.
+                                messageType:
+                                  type: string
+                                sendResolved:
+                                  description: Уведомлять или нет о завершении алертов.
+                                toParty:
+                                  type: string
+                                toTag:
+                                  type: string
+                                toUser:
+                                  type: string
+                    route:
+                      description: |
+                        Определение маршрута алертов, соответствующих пространству имен ресурса.
+
+                        Если он присутствует, то будет добавлен в сгенерированную
+                        конфигурацию Alertmanager'а в качестве маршрута первого уровня.
+                      properties:
+                        continue:
+                          description: |
+                            Продолжать ли проверять условие алерта к дочерним узлам.
+
+                            Оператор Prometheus всегда будет переопределять значение на true для маршрута первого уровня.
+                        groupBy:
+                          description: Список лейблов для группировки.
+                        groupInterval:
+                          description: |
+                            Время ожидания, прежде чем отправлять обновленное уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)`
+                            (миллисекунды, секунды, минуты, часы).
+                        groupWait:
+                          description: |
+                            Время ожидания, прежде чем отправлять первоначальное уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)`
+                            (миллисекунды, секунды, минуты, часы).
+                        matchers:
+                          description: |
+                            Список условий, которым должны соответствовать лейблы алертов.
+
+                            Для маршрута первого уровня оператор удаляет все существующие
+                            совпадения равенства и регулярных выражений на лейбле
+                            `namespace` и добавляет совпадения `namespace: <object namespace>`.
+                          items:
+                            description: Условие содержит критерии удовлетворяющих ему лейблов алертов.
+                            properties: *match-properties
+                        receiver:
+                          description: |
+                            Имя receiver'а для этого маршрута.
+
+                            Если он не пустой, то должен быть указан в поле `receivers`.
+                        repeatInterval:
+                          description: |
+                            Время ожидания, прежде чем повторять последнее уведомление.
+
+                            Должно соответствовать регулярному выражению `[0-9]+(ms|s|m|h)` (миллисекунды, секунды, минуты, часы).
+                        routes:
+                          description: Дочерние маршруты.

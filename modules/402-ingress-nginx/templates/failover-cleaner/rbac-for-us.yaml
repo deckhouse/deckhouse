@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: failover-cleaner
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:ingress-nginx:failover-cleaner
+  {{- include "helm_lib_module_labels" (list . (dict "app" "failover-cleaner")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:ingress-nginx:failover-cleaner
+  {{- include "helm_lib_module_labels" (list . (dict "app" "failover-cleaner")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:ingress-nginx:failover-cleaner
+subjects:
+- kind: ServiceAccount
+  name: failover-cleaner
+  namespace: d8-ingress-nginx

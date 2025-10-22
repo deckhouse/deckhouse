@@ -1,0 +1,111 @@
+cilium-hubble:
+    - version: 2
+      conversions:
+        - del(.auth.password) | if .auth == {} then del(.auth) end
+cloud-provider-vsphere:
+    - version: 2
+      description:
+        en: If the field `.storageClass.compatibilityFlag` exists, capitalize the field value.
+        ru: Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы.
+      conversions:
+        - if .storageClass | has("compatibilityFlag") then .storageClass.compatibilityFlag |= (.[0:1] | ascii_upcase) + (.[1:] | ascii_downcase) end
+control-plane-manager:
+    - version: 2
+      description:
+        en: Delete `etcd.externalMembersNames`
+        ru: Удалите `etcd.externalMembersNames`
+      conversions:
+        - del(.etcd.externalMembersNames) | if .etcd == {} then del(.etcd) end
+dashboard:
+    - version: 2
+      conversions:
+        - del(.auth.password) | if .auth == {} then del(.auth) end
+    - version: 3
+      conversions:
+        - del(.accessLevel)
+        - del(.auth.allowScale) | if .auth == {} then del(.auth) end
+descheduler:
+    - version: 2
+      description:
+        en: Delete `settings`.
+        ru: Удалите `settings`.
+      conversions:
+        - del(.)
+extended-monitoring:
+    - version: 2
+      description:
+        en: If the `.imageAvailability.skipRegistryCertVerification` field is set to `true`, add `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. Then, delete the `skipRegistryCertVerification` field from the object. If the `.imageAvailability` object becomes empty after this change, delete it.
+        ru: Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его.
+      conversions:
+        - if .imageAvailability.skipRegistryCertVerification == true then .imageAvailability.registry.tlsConfig.insecureSkipVerify=true end
+        - del(.imageAvailability.skipRegistryCertVerification) | if .imageAvailability == {} then del(.imageAvailability) end
+global:
+    - version: 2
+      description:
+        en: Move `storageClass` to `modules.storageClass`. Remove `modules.resourcesRequests.everyNode`, `modules.resourcesRequests.masterNode` and `modules.proxy` parameters.
+        ru: Перенесите `storageClass` в `modules.storageClass`. Удалите параметры `modules.resourcesRequests.everyNode`, `modules.resourcesRequests.masterNode` и `modules.proxy`.
+      conversions:
+        - if .storageClass and .modules.storageClass == null then .modules.storageClass = .storageClass end
+        - del(.storageClass)
+        - del(.modules.resourcesRequests.everyNode)
+        - del(.modules.resourcesRequests.masterNode)
+        - del(.modules.proxy)
+istio:
+    - version: 2
+      description:
+        en: Delete `.settings.auth.password`.
+        ru: Удалите `.settings.auth.password`.
+      conversions:
+        - del(.auth.password) | if .auth == {} then del(.auth) end
+    - version: 3
+      description:
+        en: |
+            * Move `.settings.enableHTTP10` to `.settings.dataPlane.enableHTTP10`.
+            * Move `.settings.proxyConfig` to `.settings.dataPlane.proxyConfig`.
+        ru: |
+            * Перенесите `.settings.enableHTTP10` в `.settings.dataPlane.enableHTTP10`.
+            * Перенесите `.settings.proxyConfig` в `.settings.dataPlane.proxyConfig`.
+      conversions:
+        - if has("enableHTTP10") then .dataPlane.enableHTTP10 = .enableHTTP10 | del(.enableHTTP10) else . end
+        - if has("proxyConfig") then .dataPlane.proxyConfig = .proxyConfig | del(.proxyConfig) else . end
+metallb:
+    - version: 2
+      description:
+        en: Remove all `addressPool` elements with the `layer2` protocol.
+        ru: Удалите все элементы `addressPool` с протоколом `layer2`.
+      conversions:
+        - .
+node-manager:
+    - version: 2
+      description:
+        en: Delete `allowedKubernetesVersions` and `allowedBundles`.
+        ru: Удалите `allowedKubernetesVersions` и `allowedBundles`.
+      conversions:
+        - del(.allowedKubernetesVersions, .allowedBundles)
+openvpn:
+    - version: 2
+      conversions:
+        - del(.auth.password) | if .auth == {} then del(.auth) end
+        - del(.storageClass)
+prometheus:
+    - version: 2
+      description:
+        en: Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it.
+        ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
+      conversions:
+        - del(.auth.password) | if .auth == {} then del(.auth) end
+upmeter:
+    - version: 2
+      conversions:
+        - del(.auth.status.password) | if .auth.status == {} then del(.auth.status) end | if .auth == {} then del(.auth) end
+        - del(.auth.webui.password) | if .auth.webui == {} then del(.auth.webui) end | if .auth == {} then del(.auth) end
+    - version: 3
+      conversions:
+        - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
+user-authn:
+    - version: 2
+      description:
+        en: Replace `publishAPI.enable` with `publishAPI.enabled`.
+        ru: Замените `publishAPI.enable` на `publishAPI.enabled`.
+      conversions:
+        - if .publishAPI.enable != null then .publishAPI.enabled = .publishAPI.enable | del(.publishAPI.enable) end

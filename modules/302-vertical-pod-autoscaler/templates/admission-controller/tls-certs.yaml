@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: vpa-tls-certs
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+data:
+  caCert.pem: {{ printf "%s" .Values.verticalPodAutoscaler.internal.CACert | b64enc }}
+  caKey.pem:  {{ printf "%s" .Values.verticalPodAutoscaler.internal.CAKey | b64enc }}
+  serverCert.pem: {{ printf "%s" .Values.verticalPodAutoscaler.internal.serverCert | b64enc }}
+  serverKey.pem: {{ printf "%s" .Values.verticalPodAutoscaler.internal.serverKey | b64enc }}

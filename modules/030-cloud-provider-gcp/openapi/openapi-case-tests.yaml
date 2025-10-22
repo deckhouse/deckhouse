@@ -1,0 +1,33 @@
+defaults:
+
+positive:
+  values:
+    - internal:
+        providerClusterConfiguration:
+          apiVersion: deckhouse.io/v1
+          kind: GCPClusterConfiguration
+          layout: WithoutNAT
+          sshKey: test
+          masterNodeGroup:
+            replicas: 1
+            zones:
+              - europe-west3-b
+            instanceClass:
+              machineType: n1-standard-4
+              image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20240523a
+              diskSizeGb: 20
+          provider:
+            region: test
+            serviceAccountJSON: test
+        providerDiscoveryData:
+          apiVersion: deckhouse.io/v1
+          kind: GCPCloudDiscoveryData
+          disableExternalIP: false
+          instances:
+            diskSizeGb: 50
+            diskType: test
+            image: image
+            networkTags: ["test1"]
+          networkName: test
+          subnetworkName: test
+          zones: ["test"]

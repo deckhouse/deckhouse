@@ -1,0 +1,63 @@
+{{- $version := "1.25" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }}  $(cat /run/secrets/SOURCE_REPO)/virt-what.git /src/virt-what
+  - rm -rf /src/virt-what/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - virt-what
+  - virt-what-cpuid-helper
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "virt-what": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf pkgconf automake build-base
+  setup:
+  - cd /src/virt-what
+  - autoreconf -fi
+  - autoconf
+  - LDFLAGS="-static" ./configure
+  - make
+  - strip ./virt-what-cpuid-helper
+  - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
+  - mv /src/scripts/* /
+  - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall

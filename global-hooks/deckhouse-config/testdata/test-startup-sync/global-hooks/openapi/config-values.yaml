@@ -1,0 +1,14 @@
+---
+type: object
+default: {}
+additionalProperties: false
+properties:
+  paramStr:
+    type: string
+  paramNum:
+    type: number
+  paramBool:
+    type: boolean
+  paramDef:
+    type: string
+    default: "azaza"

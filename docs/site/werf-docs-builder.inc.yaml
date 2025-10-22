@@ -1,0 +1,134 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+{{ if eq .ModuleName "documentation" }}
+fromImage: common/distroless
+{{ else }}
+fromImage: builder/scratch
+{{ end }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/docs-builder
+  to: /app/server
+  before: setup
+- image: d8-docs-artifacts
+  add: /export/embedded_modules.json
+  to: /app/hugo-init/data/dkp/embedded_modules.json
+  before: setup
+imageSpec:
+  config:
+    workingDir: "/app"
+    entrypoint: [ "/app/server" ]
+git:
+  - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
+    to: /app/hugo-init
+{{ if ne .ModuleName "website-docs" }}
+    excludePaths:
+    - config/production/
+    - data/dkp/embedded_modules.json
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
+    to: /app/hugo-init/config/production/hugo.yaml
+{{- include "image mount points" . | nindent 2 }}
+{{ end }}
+
+---
+image: d8-docs-artifacts
+from: {{ .Images.BASE_ALPINE }}
+final: false
+shell:
+  setup:
+  - |
+    mkdir -p /export
+    MODULES_DIR="/rawdata/embedded-modules"
+    for name in $(find ${MODULES_DIR} -regex '.\+/modules/[^/]\+/docs/\(README\|readme\).md'); do
+      moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
+      moduleEdition=$(echo $name | sed -E "s#^.*${MODULES_DIR}/##; s#^modules/#ce/modules/#; s#^ee/(be|fe|se|se-plus)/#\1/#" | cut -d/ -f1)
+      DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' )
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" --arg moduleEdition "$moduleEdition" 'select(. != null) | .module=$module | .embedded="true"| .tags += ["embedded"] | .editionMinimumAvailable="\($moduleEdition)" |.url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end '
+    done | jq -s 'unique_by(.module) | {entries: .}' | jq --slurpfile tags /rawdata/docs/modules/embedded_modules_tags.json '
+      .entries |= map(
+      . as $mod
+      | if $tags[0][$mod.module] != null then
+          $mod + {tags: (($mod.tags // []) + $tags[0][$mod.module] | unique)}
+        else
+          $mod
+        end
+      )' | jq --slurpfile excluded /rawdata/docs/modules/excluded_modules.json '
+      .entries |= map(select(.module as $m | ($excluded[0] | index($m) | not)))
+      ' > /export/embedded_modules.json
+
+    MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
+    if [ "$MODULES_COUNT" -le 10 ]; then
+      echo "Got only $MODULES_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got ${MODULES_COUNT} DKP embedded modules."
+      echo
+    fi
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+git:
+- add: /{{ .ModulePath }}
+  to: /rawdata/embedded-modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/{README,readme}*.md
+  - ee/**/docs/{README,readme}*.md
+- add: /{{ .ModulePath }}/docs/documentation/_data/modules
+  to: /rawdata/docs/modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - embedded_modules_tags.json
+  - excluded_modules.json
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+{{ if ne .ModuleName "website-docs" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+{{ end }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -ldflags '-s -w' .
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/docs-builder
+{{ if ne .ModuleName "website-docs" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - cd /src
+{{ end }}
+git:
+- add: /{{ .ModulePath }}docs/site/backends/docs-builder
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*'

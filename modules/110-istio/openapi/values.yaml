@@ -1,0 +1,315 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      versionMap:
+        type: object
+        default: {}
+        x-examples:
+          - {"1.21": { "fullVersion": "1.21.6", "revision": "1x21", "imageSuffix": "V1x21x6", "isReady": false } } # must be real
+        additionalProperties:
+          type: object
+          properties:
+            fullVersion:
+              type: string
+              x-examples: ["1.21.6"]
+            revision:
+              type: string
+              x-examples: ["v1x21"]
+            imageSuffix:
+              type: string
+              x-examples: ["V1x21x6"]
+            isReady:
+              type: boolean
+              x-examples: [false]
+      kialiSigningKey:
+        type: string
+        x-examples:
+        - "FD9Q24PwNZkg4pV9cxTOV1Se5R0RD1sT"
+      istioToK8sCompatibilityMap:
+        type: object
+        default:
+          "1.19": ["1.26", "1.27", "1.28", "1.29", "1.30", "1.31"]
+          "1.21": ["1.27", "1.28", "1.29", "1.30", "1.31", "1.32", "1.33"]
+          "1.25": ["1.27", "1.28", "1.29", "1.30", "1.31", "1.32", "1.33"]
+        additionalProperties:
+          type: array
+          items:
+            type: string
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      ca:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: string
+            x-examples: ["---CERT PEM---"]
+          key:
+            type: string
+            x-examples: ["---KEY PEM---"]
+          chain:
+            type: string
+            x-examples: ["---CHAIN PEM---"]
+          root:
+            type: string
+            x-examples: ["---ROOT PEM---"]
+      enableAmbientMode:
+        type: boolean
+        default: false
+        x-examples: [true]
+      federations:
+        type: array
+        default: []
+        x-examples:
+        - [{"name": "aaa", "trustDomain": "bbb", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"}], "virtualIP": "3.4.5.6"}]}]
+      multiclusters:
+        type: array
+        default: []
+        x-examples:
+        - [{"name": "aaa", "spiffeEndpoint": "ccc", "ca": "---CERT---asdasda314g---ENDCERT", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+      remotePublicMetadata:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          properties:
+            name:
+              type: string
+            spiffeEndpoint:
+              type: string
+            enableIngressGateway:
+              type: bool
+            apiHost:
+              type: string
+            networkName:
+              type: string
+            apiJWT:
+              type: string
+            ingressGateways:
+              type: array
+              default: []
+              items:
+                type: object
+                properties:
+                  address:
+                    type: string
+                  port:
+                    type: integer
+            public:
+              type: object
+              default: {}
+              properties:
+                clusterUUID:
+                  type: string
+                authnKeyPub:
+                  type: string
+                rootCA:
+                  type: string
+      remoteAuthnKeypair:
+        type: object
+        default: {}
+        properties:
+          pub:
+            type: string
+            x-examples: ["---PUB KEY---"]
+          priv:
+            type: string
+            x-examples: ["---PRIV KEY---"]
+      deprecatedVersions:
+        type: array
+        items:
+          type: object
+          required:
+          - version
+          - alertSeverity
+          properties:
+            version:
+              type: string
+            alertSeverity:
+              type: integer
+              minimum: 1
+              maximum: 9
+        default:
+          - version: "1.19"
+            alertSeverity: 4
+      globalVersion:
+        type: string
+        x-examples: ["1.21"] # must be real
+      isGlobalVersionIstiodReady:
+        type: boolean
+        default: false
+        x-examples: [true]
+      versionsToInstall:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - ["1.21"] # must be real
+      operatorVersionsToInstall:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - ["1.21"] # must be real
+      applicationNamespaces:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - ["myns"]
+      applicationNamespacesToMonitor:
+        type: array
+        items:
+          type: string
+        default: [ ]
+        x-examples:
+          - [ "myns" ]
+      multiclustersNeedIngressGateway:
+        type: boolean
+        default: false
+        x-examples: [true]
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+            x-examples:
+              - plainstring
+          tls.key:
+            type: string
+            x-examples:
+              - plainstring
+          ca.crt:
+            type: string
+            x-examples:
+              - plainstring
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
+      ingressControllers:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-examples: ["test"]
+            spec:
+              type: object
+              default: {}
+              properties:
+                ingressGatewayClass:
+                  type: string
+                  x-examples: ["istio"]
+                inlet:
+                  type: string
+                  x-examples:  ["HostPort", "LoadBalancer"]
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                tolerations:
+                  type: array
+                  description: |
+                    The same as `spec.tolerations` for the Kubernetes pod.
+
+                    Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        type: integer
+                        format: int64
+                      value:
+                        type: string
+                loadBalancer:
+                  type: object
+                  default: {}
+                  properties:
+                    sourceRanges:
+                      type: array
+                      items:
+                        type: string
+                    annotations:
+                      type: object
+                      additionalProperties: true
+                nodePort:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                hostPort:
+                  type: object
+                  default: {}
+                  properties:
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
+                resourcesRequests:
+                  type: object
+                  default: {}
+                  properties:
+                    mode:
+                      type: string
+                      x-examples: ["VPA", "Static"]
+                    vpa:
+                      type: object
+                      default: {}
+                      properties:
+                        mode:
+                          type: string
+                        cpu:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                              x-examples: ["200m"]
+                            min:
+                              type: string
+                        memory:
+                          type: object
+                          default: {}
+                          properties:
+                            max:
+                              type: string
+                            min:
+                              type: string
+                              x-examples: ["100Mi"]
+                    static:
+                      type: object
+                      default: {}
+                      properties:
+                        cpu:
+                          type: string
+                          x-examples: ["100m"]
+                        memory:
+                          type: string

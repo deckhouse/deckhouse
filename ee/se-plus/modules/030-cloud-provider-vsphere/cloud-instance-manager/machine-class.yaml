@@ -1,0 +1,64 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: VsphereMachineClass
+metadata:
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  region: {{ .Values.nodeManager.internal.cloudProvider.vsphere.region | quote }}
+  zone:  {{ .zoneName | quote }}
+  numCPUs: {{ .nodeGroup.instanceClass.numCPUs }}
+  memory: {{ add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4) }}
+  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize | default 20 }}
+  template: {{ .nodeGroup.instanceClass.template | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.template | quote }}
+  virtualMachineFolder: {{ .Values.nodeManager.internal.cloudProvider.vsphere.vmFolderPath | quote }}
+  mainNetwork: {{ .nodeGroup.instanceClass.mainNetwork | quote }}
+{{- if .nodeGroup.instanceClass.additionalNetworks }}
+  additionalNetworks:
+  {{- range .nodeGroup.instanceClass.additionalNetworks }}
+  - {{ . | quote }}
+  {{- end }}
+{{- end }}
+  datastore: {{ .nodeGroup.instanceClass.datastore | default .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.datastore | quote }}
+{{- /* TODO: remove once all clusters are migrated to the "resourcePool" field */ -}}
+{{- if or .nodeGroup.instanceClass.resourcePool .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePoolPath }}
+  resourcePool: {{ or .nodeGroup.instanceClass.resourcePool .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.resourcePoolPath | quote }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "disableTimesync" }}
+  disableTimesync: {{ .nodeGroup.instanceClass.disableTimesync }}
+{{- else }}
+  disableTimesync: {{ .Values.nodeManager.internal.cloudProvider.vsphere.instanceClassDefaults.disableTimesync }}
+{{- end }}
+  clusterNameTag: {{ .Values.global.discovery.clusterUUID }}
+  nodeRoleTag: {{ .nodeGroup.name }}-{{ .zoneName }}
+  sshKeys:
+  - {{ .Values.nodeManager.internal.cloudProvider.vsphere.sshKey }}
+{{- if not .nodeGroup.instanceClass.runtimeOptions }}
+{{ $_ := set .nodeGroup.instanceClass "runtimeOptions" dict }}
+{{- end }}
+  runtimeOptions:
+  {{- if hasKey .nodeGroup.instanceClass.runtimeOptions "nestedHardwareVirtualization" }}
+    nestedHardwareVirtualization: {{ .nodeGroup.instanceClass.runtimeOptions.nestedHardwareVirtualization }}
+  {{- else }}
+    nestedHardwareVirtualization: true
+  {{- end }}
+    resourceAllocationInfo:
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuShares }}
+      cpuShares: {{ .nodeGroup.instanceClass.runtimeOptions.cpuShares }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuLimit }}
+      cpuLimit: {{ .nodeGroup.instanceClass.runtimeOptions.cpuLimit }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.cpuReservation }}
+      cpuReservation: {{ .nodeGroup.instanceClass.runtimeOptions.cpuReservation }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.memoryShares }}
+      memoryShares: {{ .nodeGroup.instanceClass.runtimeOptions.memoryShares }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.runtimeOptions.memoryLimit }}
+      memoryLimit: {{ .nodeGroup.instanceClass.runtimeOptions.memoryLimit }}
+{{- end }}
+      memoryReservation: {{ mul (div (add .nodeGroup.instanceClass.memory (mod .nodeGroup.instanceClass.memory 4)) 100) (.nodeGroup.instanceClass.runtimeOptions.memoryReservation | default 80) }}
+  secretRef:
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

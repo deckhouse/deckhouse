@@ -1,0 +1,12 @@
+---
+apiVersion: deckhouse.io/v1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: victoria-metrics
+spec:
+  access: Proxy
+  basicAuth: false
+  jsonData:
+    timeInterval: 30s
+  type: prometheus
+  url: http://victoria-metrics-victoria-metrics-single-server.victoria-metrics-test.svc.cluster.local:8428/

@@ -1,0 +1,23 @@
+{{- range $idx, $bgpPeer := .Values.metallb.bgpPeers }}
+---
+apiVersion: metallb.io/v1beta2
+kind: BGPPeer
+metadata:
+  name: bgp-peer-{{ $idx }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "speaker")) | nindent 2 }}
+spec:
+  myASN: {{ index $bgpPeer "my-asn" }}
+  peerASN: {{ index $bgpPeer "peer-asn" }}
+  peerAddress: {{ index $bgpPeer "peer-address" }}
+  {{- if index $bgpPeer "source-address" }}
+  sourceAddress: {{ index $bgpPeer "source-address" }}
+  {{- end }}
+  {{- if index $bgpPeer "hold-time" }}
+  holdTime: {{ index $bgpPeer "hold-time" }}
+  {{- end }}
+  {{- if index $bgpPeer "node-selector" }}
+  nodeSelectors:
+  - {{- index $bgpPeer "node-selector" | toYaml | nindent 4 }}
+  {{- end }}
+{{- end }}

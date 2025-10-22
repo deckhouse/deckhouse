@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: alpha1_to_alpha2
+    crdName: deschedulers.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1alpha2
+  - name: alpha2_to_alpha1
+    crdName: deschedulers.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha1
+EOF
+}
+
+function __on_conversion::alpha1_to_alpha2() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha1" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeLabelSelector = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
+       del(.spec.deschedulerPolicy.strategies.removeFailedPods) |
+       del(.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts) |
+       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
+       del(.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint) |
+       if .spec.deschedulerPolicy.strategies.removeDuplicates.enabled then .spec.strategies.removeDuplicates.enabled = .spec.deschedulerPolicy.strategies.removeDuplicates.enabled end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled | .spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = ["requiredDuringSchedulingIgnoredDuringExecution"] end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
+       if .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled then .spec.strategies.highNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled | .spec.strategies.highNodeUtilization.thresholds = {"cpu": 20, "memory": 20, "pods": 20} end |
+       if .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled then .spec.strategies.lowNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled | .spec.strategies.lowNodeUtilization.thresholds = {"cpu": 20, "memory": 20, "pods": 20} | .spec.strategies.lowNodeUtilization.targetThresholds = {"cpu": 70, "memory": 70, "pods": 70} end |
+       del(.spec.deploymentTemplate) |
+       del(.spec.deschedulerPolicy)
+     else . end
+  )')
+  then
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.nodeLabelSelector//""' <<< ${converted})"
+     if [ -n "${node_selector}" ]; then
+       new_node_selector="$(label-converter --to-set <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --argjson new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.nodeLabelSelector = $new_node_selector' <<< ${converted})"
+     fi
+    done
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deschedulers.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::alpha2_to_alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion ==  "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
+       if .spec.nodeLabelSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector end |
+       del(.spec.nodeLabelSelector) |
+       if .spec.strategies.removeDuplicates.enabled then .spec.deschedulerPolicy.strategies.removeDuplicates.enabled = .spec.strategies.removeDuplicates.enabled end |
+       if .spec.strategies.removePodsViolatingNodeAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled = .spec.strategies.removePodsViolatingNodeAffinity.enabled end |
+       if .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
+       if .spec.strategies.highNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled = .spec.strategies.highNodeUtilization.enabled end |
+       if .spec.strategies.lowNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled = .spec.strategies.lowNodeUtilization.enabled end |
+       del(.spec.strategies)
+     else . end
+  )')
+  then
+    items_count="$(jq -c 'length' <<< ${converted})"
+    for ((i=0; i<${items_count}; i++)); do
+     node_selector="$(jq -rc --argjson item_number "$i" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${converted})"
+     if [ -n "${node_selector}" ]; then
+       new_node_selector="$(label-converter --to-equality <<< "${node_selector}"| sed 's|"|\"|g')"
+       converted="$(jq -c --arg new_node_selector "${new_node_selector}" --argjson item_number "${i}" '.[$item_number].spec.deschedulerPolicy.globalParameters.nodeSelector = $new_node_selector' <<< ${converted})"
+     fi
+    done
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted }
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deschedulers.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"

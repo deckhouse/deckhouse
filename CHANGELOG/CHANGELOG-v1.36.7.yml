@@ -1,0 +1,25 @@
+candi:
+  fixes:
+    - summary: OpenaAPI schemas minor fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2593
+deckhouse:
+  fixes:
+    - summary: OpenaAPI schemas minor fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2593
+docs:
+  fixes:
+    - summary: >-
+        Show more info about attributes of array elements in the OpenAPI schemas in the
+        documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2591
+    - summary: Fix typos and broken links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2584
+istio:
+  fixes:
+    - summary: Fix `D8IstioDataPlaneWithoutIstioInjectionConfigured` alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2599
+prometheus:
+  fixes:
+    - summary: Fixed input lag by bumping Grafana version to `8.5.13`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2603
+

@@ -1,0 +1,7 @@
+- name: keepalived
+  link: https://github.com/acassen/keepalived
+  description: Provides simple and robust facilities for loadbalancing and high-availability to Linux system and Linux based infrastructures.
+  logo: https://pbs.twimg.com/profile_images/1132878189515218945/bq-C0K5C_400x400.png
+  license: GNU General Public License v2.0
+
+

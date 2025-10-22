@@ -1,0 +1,3 @@
+templates/*
+monitoring/grafana-dashboards/kubernetes-cluster/*
+monitoring/prometheus-rules/*

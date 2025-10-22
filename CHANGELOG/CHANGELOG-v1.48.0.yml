@@ -1,0 +1,95 @@
+admission-policy-engine:
+  features:
+    - summary: Add `RequiredAnnotation` policy to the Deckhouse `OperationPolicy` resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5090
+    - summary: Add a security policy entity to check workload against adjustable set of security rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4828
+candi:
+  features:
+    - summary: Add Kubernetes 1.27 support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4631
+      impact: All control plane components will be restarted.
+  fixes:
+    - summary: fix bashible rights to run when SELixux in Enforcement mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5148
+    - summary: Fix bootstraping master node for AltLinux bundle.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5099
+    - summary: Add a node approval annotations step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5047
+    - summary: >-
+        Remove the property `etcdDisk` in `nodeGroups` and remove anchor inheritance in the
+        `AWSClusterConfiguration` OpenAPI specification.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4977
+ci:
+  fixes:
+    - summary: Added deckhouse logs if the Pod hasn't changed to ready status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3978
+cloud-provider-azure:
+  fixes:
+    - summary: Fix behavior of the `acceleratedNetworking` variable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5000
+cloud-provider-openstack:
+  features:
+    - summary: Add OpenStack cloud provider discovery data.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4793
+cni-cilium:
+  fixes:
+    - summary: cli hubble, incorrect socket address
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4913
+common:
+  fixes:
+    - summary: Add commonName field to Deckhouse X.509 certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4999
+dashboard:
+  features:
+    - summary: Show username and groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5128
+docs:
+  fixes:
+    - summary: Fix the example of using `deckhouse-controller helper helper change-registry`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5208
+ingress-nginx:
+  features:
+    - summary: Provide a High Availability setting for `ingress-nginx` module's control-plane components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5046
+istio:
+  features:
+    - summary: Added a way to globally override resources for `istio-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4852
+linstor:
+  features:
+    - summary: Added node selector and fix tolerations for satellites.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5138
+prometheus:
+  features:
+    - summary: Improves the `TargetSampleLimitExceeded` alert by adding target labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4795
+runtime-audit-engine:
+  fixes:
+    - summary: Mount docker and containerd sockets to fetch metadata.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5110
+    - summary: >-
+        Mount falco config to rules-loader to enable plugins for validating webhook. Otherwise,
+        webhook returns an error for valid rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5110
+    - summary: >-
+        Output webhook validation error. Without this change, users have to search it in logs among
+        all running falco pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5110
+    - summary: Fix `FalcoAuditRules` resource name in rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5110
+    - summary: Fix converter `apiVersion` header, it was `apiversion`, which is not valid.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5110
+user-authn:
+  features:
+    - summary: >-
+        Add `Group` object and migration. The `groups` property of the `User` object becomes
+        read-only.  Migration hook will create groups for all users based on this property. To
+        continue to deploy `User` objects, users must remove groups from the manifest.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4406
+  fixes:
+    - summary: Improve groups migration (run only once and slugify group names).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5130
+    - summary: Disable env expansion to support dollar character in `bindPW` for LDAP connector.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5106
+

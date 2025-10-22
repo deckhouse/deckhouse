@@ -1,0 +1,9 @@
+{% assign stage = include.stage %}
+{%- if stage %}
+{%- assign stage_long = stage | append: "_long" %}
+{%- if site.data.i18n.features[stage_long][page.lang] %}
+{% alert level="warning" %}
+{{ site.data.i18n.features[stage_long][page.lang] }}
+{% endalert %}
+{%- endif %}
+{%- endif %}

@@ -1,0 +1,23 @@
+---
+layout: default
+---
+<!--#include virtual="/includes/banner.html" -->
+<div class="container">
+  {%- include nav-breadcrumbs_guides.html %}
+  <div class="layout-sidebar">
+    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--guides">
+        {%- include toc_in_sidebar.html %}
+    </div>
+    <div class="layout-sidebar__content layout-sidebar__content--guides">
+      <div class="docs">
+        <h1>{{ page.title }}</h1>
+        <div class="post-content">
+          {{ content }}
+        </div>
+      </div>
+      {%- if page.feedback != false %}
+       {%- include feedback.html %}
+      {%- endif %}
+    </div>
+  </div>
+</div>

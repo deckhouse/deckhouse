@@ -1,0 +1,35 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $kubernetesVersion := .Values.global.discovery.kubernetesVersion }}
+---
+{{- $policyName := "ingressnginxcontroller-settings.deckhouse.io" }}
+{{- $inlets := list "LoadBalancer"  "LoadBalancerWithProxyProtocol" "HostPort" "HostPortWithProxyProtocol" "HostWithFailover" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["ingressnginxcontrollers"]
+  validations:
+{{- range $inlet := $inlets }}
+{{- $spec :=  printf "%s%s" (lower $inlet | trunc 1)  (substr 1 -1 $inlet) }}
+    - expression: '!(has(object.spec.{{ $spec }} ) && object.spec.inlet != "{{ $inlet }}" )'
+      reason: Forbidden
+      messageExpression: '''parameters "spec.{{ $spec }}" available only for inlet "{{ $inlet }}"'''
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list .  ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

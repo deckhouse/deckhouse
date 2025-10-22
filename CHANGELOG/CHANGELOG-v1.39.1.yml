@@ -1,0 +1,6 @@
+kube-proxy:
+  fixes:
+    - summary: Fix insufficient privileges for the init container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2923
+      impact: The `kube-proxy` DaemonSet will be restarted.
+

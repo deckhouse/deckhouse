@@ -1,0 +1,42 @@
+{
+  "en": [
+    {
+      "title": "Privacy Policy",
+      "url": "/privacy-policy/",
+      "target": "",
+      "rel": ""
+    },
+    {
+      "title": "Terms of service",
+      "url": "/terms-of-service/",
+      "target": "",
+      "rel": ""
+    },
+    {
+      "title": "Cookie Policy",
+      "url": "/cookie-policy/",
+      "target": "",
+      "rel": ""
+    }
+  ],
+  "ru": [
+    {
+      "title": "Политика обработки персональных данных",
+      "url": "/security-policy/",
+      "target": "",
+      "rel": ""
+    },
+    {
+      "title": "Политика использования файлов «cookie»",
+      "url": "/cookie-policy/",
+      "target": "",
+      "rel": ""
+    },
+    {
+      "title": "Правовые документы",
+      "url": "https://legal.flant.ru/",
+      "target": "_blank",
+      "rel": ""
+    }
+  ]
+}

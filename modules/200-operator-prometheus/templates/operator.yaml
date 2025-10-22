@@ -1,0 +1,139 @@
+{{- define "prometheus_operator_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prometheus-operator
+  namespace: d8-operator-prometheus
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-operator")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: prometheus-operator
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus-operator"
+      minAllowed:
+        {{- include "prometheus_operator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-operator
+  namespace: d8-operator-prometheus
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: prometheus-operator
+  template:
+    metadata:
+      labels:
+        app: prometheus-operator
+    spec:
+      affinity:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - --kubelet-service=d8-monitoring/kubelet
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        - --config-reloader-cpu-request=0
+        - --config-reloader-cpu-limit=0
+        - --config-reloader-memory-request=0
+        - --config-reloader-memory-limit=0
+{{- end }}
+        - "--prometheus-config-reloader={{ include "helm_lib_module_image" (list . "prometheusConfigReloader") }}"
+        - --alertmanager-instance-namespaces=d8-monitoring
+        - --prometheus-instance-namespaces=d8-monitoring
+        - --thanos-ruler-instance-namespaces=d8-monitoring
+        - --secret-field-selector=type!=kubernetes.io/dockercfg,type!=kubernetes.io/service-account-token,type!=helm.sh/release.v1
+        - --web.listen-address=127.0.0.1:8080
+        image: {{ include "helm_lib_module_image" (list . "prometheusOperator") }}
+        name: prometheus-operator
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "prometheus_operator_resources" . | nindent 12 }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 8443
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: prometheus-operator
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+      serviceAccountName: operator-prometheus
+      imagePullSecrets:
+      - name: deckhouse-registry

@@ -1,0 +1,50 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    setup:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/inhibitor
+  stageDependencies:
+    setup:
+    - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - d8-shutdown-inhibitor
+  - d8-shutdown-inhibitor.service
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  setup:
+  - cd /src/inhibitor
+  - GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /d8-shutdown-inhibitor ./cmd/d8-shutdown-inhibitor
+  - mv /src/scripts/* /

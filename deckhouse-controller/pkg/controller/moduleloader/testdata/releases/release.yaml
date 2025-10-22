@@ -1,0 +1,99 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: example
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/losev/external-modules
+    scheme: HTTP
+status:
+  message: Ready
+  modules:
+    - name: alpha
+      policy: example
+  modulesCount: 2
+  syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: example
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 17
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: echo
+  resourceVersion: "231005773"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+    - losev-test
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernetes: '> v1.25.0'
+  source: losev-test
+  weight: 900
+status:
+  conditions:
+    - lastProbeTime: "2024-12-03T15:57:20Z"
+      lastTransitionTime: "2024-12-03T15:57:20Z"
+      status: "True"
+      type: EnabledByModuleConfig
+    - lastProbeTime: "2024-12-04T10:01:55Z"
+      lastTransitionTime: "2024-12-03T15:57:26Z"
+      status: "True"
+      type: EnabledByModuleManager
+    - lastProbeTime: "2024-12-04T10:01:55Z"
+      lastTransitionTime: "2024-12-04T10:01:53Z"
+      status: "True"
+      type: IsReady
+    - lastProbeTime: "2024-12-04T10:06:41Z"
+      lastTransitionTime: "2024-12-04T10:06:41Z"
+      status: "False"
+      type: IsOverridden
+  hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
+  phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: example
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: example
+    status: deployed
+  name: echo-v1.0.0
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: example
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: echo
+  version: 1.0.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"

@@ -1,0 +1,9 @@
+name: cloud-provider-openstack
+critical: true
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-openstack
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

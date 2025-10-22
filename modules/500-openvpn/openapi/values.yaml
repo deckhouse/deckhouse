@@ -1,0 +1,43 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      migrated:
+        type: boolean
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      deployDexAuthenticator:
+        type: boolean
+      effectiveStorageClass:
+        oneOf:
+          - type: string
+          - type: boolean
+        x-examples: [false, "test"]
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
+      pushToClientRoutes:
+        type: array
+        x-examples:
+          - ["172.25.176.0/24"]
+        items:
+          type: string
+      pushToClientSearchDomains:
+        type: array
+        items:
+          type: string

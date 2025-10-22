@@ -1,0 +1,43 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch v3.19.1 $(cat /run/secrets/SOURCE_REPO)/enix/x509-certificate-exporter.git /src
+    - rm -r /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+    - go build -v -tags netgo,osusergo -o x509-certificate-exporter ./cmd/x509-certificate-exporter
+    - chown -R 64535:64535 /src/x509-certificate-exporter
+    - chmod 0700 /src/x509-certificate-exporter
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/x509-certificate-exporter
+    to: /x509-certificate-exporter
+    after: setup
+imageSpec:
+  config:
+    entrypoint: ["/x509-certificate-exporter"]

@@ -1,0 +1,27 @@
+{{- range $index, $storageClass := .Values.cloudProviderAzure.internal.storageClasses }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "azure-disk-csi")) | nindent 2 }}
+  {{- include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | nindent 2 }}
+  name: {{ $storageClass.name | quote }}
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: {{ $storageClass.type | quote }}
+  kind: managed
+  {{- if hasKey $storageClass "cachingMode" }}
+  cachingMode: {{ $storageClass.cachingMode | quote }}
+  {{- end }}
+  {{- if hasKey $storageClass "diskIOPSReadWrite" }}
+  diskIopsReadWrite: {{ $storageClass.diskIOPSReadWrite | quote }}
+  {{- end }}
+  {{- if hasKey $storageClass "diskMBpsReadWrite" }}
+  diskMbpsReadWrite: {{ $storageClass.diskMBpsReadWrite | quote }}
+  {{- end }}
+  {{- if hasKey $storageClass "tags" }}
+  tags: {{ $storageClass.tags | quote }}
+  {{- end }}
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}

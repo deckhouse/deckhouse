@@ -1,0 +1,28 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: prometheus-pushgateway
+      heritage: deckhouse
+  namespaceSelector:
+    matchNames:
+    - kube-{{ .Chart.Name }}
+  endpoints:
+  - port: http-metrics
+    relabelings:
+    - regex: namespace|pod|service|endpoint
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_service_label_app]
+      targetLabel: pushgateway
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep

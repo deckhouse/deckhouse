@@ -1,0 +1,118 @@
+---
+project: deckhouse
+configVersion: 1
+build:
+  imageSpec:
+    author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
+    clearHistory: true
+    config:
+      keepEssentialWerfLabels: true
+      removeLabels:
+        - /.*/
+---
+{{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
+{{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "false") }}
+---
+# revisions settings
+{{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
+{{- $_ := set . "Editions" $editionsSettings.editions }}
+
+# checks redactions list
+{{- if not $.Editions }}
+  {{ fail "Editions list is empty" }}
+{{- end }}
+
+{{- $editionsDict := dict }}
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.name }}
+     {{ fail printf "Editions name is empty" }}
+  {{- end }}
+  {{- $_ := set $editionsDict $edition.name "" }}
+{{- end }}
+
+{{- if not (hasKey $editionsDict .Env) }}
+  {{ fail (printf "Editions name not found %v" .Env) }}
+{{- end }}
+
+{{- $eeEdition := false }}
+
+{{- range $_, $edition := $.Editions }}
+  {{- if eq $edition.name "EE" }}
+     {{- $eeEdition = true }}
+  {{- end }}
+
+  {{- if eq $edition.name $.Env }}
+    {{- break }}
+  {{- end }}
+{{- end }}
+
+{{- $_ := set . "isEE" $eeEdition }}
+
+---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
+{{- $_ := set . "gitPrefix" "" }}
+---
+# Base Images
+{{- include "parse_base_images_map" . }}
+---
+# version map
+{{- include "parse_version_map" . }}
+{{- include "base_k8s_versions" . }}
+---
+# Terraform Versions
+{{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
+
+# Source repo  settings
+{{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
+
+# source repo with protected cloud providers
+# use example.com as default because we can fail build without env
+{{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
+
+# Source repo with observability private code
+{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
+
+# Stronghold repo access for building d8 cli
+{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO" "example.com") }}
+
+{{- $_ := set . "CI_COMMIT_TAG" (env "CI_COMMIT_TAG" "dev") }}
+
+# svace analyze toggler
+{{- $_ := set . "SVACE_ENABLED" (env "SVACE_ENABLED" "false") }}
+
+{{- $_ := set . "SVACE_ANALYZE_HOST" (env "SVACE_ANALYZE_HOST" "example.host") }}
+
+{{- $_ := set . "SVACE_ANALYZE_SSH_USER" (env "SVACE_ANALYZE_SSH_USER" "user") }}
+
+# goproxy  settings
+{{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
+
+# registry auth
+{{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
+{{- $_ := set . "RegistryPassword" (env "REGISTRY_PASSWORD" "test") }}
+---
+# render ssh-static
+{{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
+---
+{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
+---
+{{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
+---
+{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env ) }}
+---
+# render images and artifact from .werf
+# WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml
+# common parts of images and/or images should be placed in .werf/defines directory in define templates
+# and should include in werf.yaml (see include dhctl_artifact) ar include in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml
+#
+# we separate defines and images in separated files for logical separation
+# why didn't we move all images in defines and include it defines directly in werf.yaml?
+#  1. We have different images building between CSE and OSS
+#  2. Logical separation
+#  3. That separation can find defines used in images in one place and images itself in different place
+#     This may be revised in the future
+
+{{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
+{{ tpl $content $ }}
+{{ end }}

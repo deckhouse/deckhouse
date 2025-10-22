@@ -1,0 +1,13 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: web
+  namespace: d8-{{.Chart.Name}}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "web")) | nindent 2 }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+  selector:
+    app: web

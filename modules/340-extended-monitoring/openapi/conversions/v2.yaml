@@ -1,0 +1,7 @@
+version: 2
+conversions:
+  - if .imageAvailability.skipRegistryCertVerification == true then .imageAvailability.registry.tlsConfig.insecureSkipVerify=true end
+  - del(.imageAvailability.skipRegistryCertVerification) | if .imageAvailability == {} then del(.imageAvailability) end
+description:
+  ru: "Если для поля `.imageAvailability.skipRegistryCertVerification` установлено значение `true`, добавьте поле `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. После этого удалите поле `.imageAvailability.skipRegistryCertVerification` из объекта. Если в результате объект `.imageAvailability` становится пуст, удалите его."
+  en: "If the `.imageAvailability.skipRegistryCertVerification` field is set to `true`, add `.imageAvailability.registry.tlsConfig.insecureSkipVerify=true`. Then, delete the `skipRegistryCertVerification` field from the object. If the `.imageAvailability` object becomes empty after this change, delete it."

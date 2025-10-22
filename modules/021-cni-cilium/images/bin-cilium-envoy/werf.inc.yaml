@@ -1,0 +1,165 @@
+{{- $ciliumProxyRev := "0f602c28cb2aa57b29078195049fb257d5b5246c" }}
+{{- $bazelVersions := "6.5.0" }}
+{{- $envoySHA := "93466adc53567315e3114d6d1774c56f8066d24e" }}
+{{- $ciliumProxyCacheRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-v2" }}
+{{- $ciliumProxyDepsRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-lfs-v2" }}
+#  to force manual creation of fresh build cache
+{{- $buildWithPreparedCacheAndDeps := true }}
+#
+{{- $source := "https://github.com" }}
+{{- if $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
+{{- end }}
+---
+# #####################################################################
+# Build cilium-envoy binaries
+# Original IMAGE_TAG of cilium-envoy is v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c
+# Corresponding commit is 0f602c28cb2aa57b29078195049fb257d5b5246c
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile
+# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/.github/workflows/build-envoy-images-release.yaml
+# #####################################################################
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
+  - cd /src/proxy
+  - git checkout {{ $ciliumProxyRev }}
+  - ls /patches/proxy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/proxy/*.patch
+  - rm -rf /src/proxy/.git
+  #
+  - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
+  - cd /src/envoy
+  - git checkout {{ $envoySHA }}
+  - ls /patches/envoy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/envoy/*.patch
+  # original cilium patches
+  - git apply --verbose /src/proxy/patches/*.patch
+  - rm -rf /src/envoy/.git
+---
+image: {{ .ModuleName }}/cilium-envoy-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
+{{- if $buildWithPreparedCacheAndDeps }}
+- from: tmp_dir
+  to: /home/cilium/.cache/bazel
+- from: tmp_dir
+  to: /home/cilium/.cache/go-build
+- from: tmp_dir
+  to: /tmp/bazel-cache
+- from: tmp_dir
+  to: /tmp/bazel-deps
+{{- end }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - mkdir -p /cilium && mv /src/proxy /cilium/
+  - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
+  - echo 'Defaults env_keep += "ALTWRAP_LLVM_VERSION GCC_VERSION"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "GOPROXY GOPATH GOROOT GOOS GOARCH GO_VERSION CGO_ENABLED"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "TARGETARCH ARCH BAZELISK_BASE_URL BAZEL_VERSION USE_BAZEL_VERSION BAZEL_OUTPUT_BASE"' >> /etc/sudoers
+  - echo 'Defaults env_keep += "BAZEL_BUILD_OPTS PKG_BUILD V DEBUG DESTDIR"' >> /etc/sudoers
+  - groupadd -f -g 1337 cilium && useradd -m -g cilium -u 1337 cilium
+  - mv -t /home/cilium/.cache /root/.cache/bazelisk
+  - chown -R 1337:1337 /home/cilium /cilium/proxy /src/envoy
+  - chmod -R a+w /tmp
+  setup:
+  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
+  #
+  # cache
+{{- if $buildWithPreparedCacheAndDeps }}
+  - git clone --depth 1 --branch {{ $ciliumProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-cache.git /tmp/bazel-cache
+  - git lfs install
+  - git clone --depth 1 --branch {{ $ciliumProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/cilium/proxy-build-deps.git /tmp/bazel-deps
+{{- else }}
+  - mkdir -v -p /tmp/bazel-cache
+  - mkdir -v -p /tmp/bazel-deps
+{{- end }}
+  - chown -R 1337:1337 /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache
+  #
+  - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
+  - export TARGETARCH=amd64 ARCH="x86_64"
+  #
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /cilium/proxy
+  - go mod vendor && go mod verify
+  - sudo -u cilium PATH=${PATH} make -C proxylib all
+  - sudo -u cilium PATH=${PATH} mkdir -p /tmp/install/usr/lib
+  - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
+  #
+  - export BAZELISK_BASE_URL="{{ $source }}/bazelbuild/bazel/releases/download"
+  - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
+{{- if $buildWithPreparedCacheAndDeps }}
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+{{- else }}
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+{{- end }}
+  - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
+  #
+  - cd /cilium/proxy
+  - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
+  #
+  - sudo -u cilium sed -i "30,56d" WORKSPACE
+  - sudo -u cilium sed -i '30i local_repository(' WORKSPACE
+  - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
+  - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
+  - sudo -u cilium sed -i '33i )' WORKSPACE
+  #
+  - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
+  - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
+  #
+  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  #
+  - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
+  - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
+{{- if $buildWithPreparedCacheAndDeps }}
+  - sudo -u cilium PATH=${PATH} tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+{{- else }}
+  - rm -rf /tmp/bazel-deps
+{{- end }}
+  #
+  - sudo -u cilium PATH=${PATH} make clang.bazelrc
+  #
+  - sudo -u cilium PATH=${PATH} make bazel-bin/cilium-envoy-starter bazel-bin/cilium-envoy
+  - sudo -u cilium PATH=${PATH} ./bazel/get_workspace_status
+  - sudo -u cilium PATH=${PATH} make install
+  - rm -rf /cilium/proxy/vendor

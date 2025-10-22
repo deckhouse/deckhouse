@@ -1,0 +1,51 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: downtimes.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: upmeter
+    app: upmeter
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: downtimes
+    singular: downtime
+    kind: Downtime
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Downtime incident records
+          required:
+            - spec
+          properties:
+            spec:
+              type: array
+              items:
+                type: object
+                description: Spec of downtime incident.
+                properties:
+                  startDate:
+                    type: string
+                    description: Start of downtime (Unix time or RFC3339 date 2020-09-07T17:24:55Z).
+                  endDate:
+                    type: string
+                    description: End of downtime (Unix time or RFC3339 date 2020-09-07T17:24:55Z).
+                  type:
+                    type: string
+                    description: Type of downtime incident.
+                    enum: ["Accident", "Maintenance", "InfrastructureMaintenance", "InfrastructureAccident"]
+                  description:
+                    type: string
+                    description: Human readable incident information.
+                  affected:
+                    type: array
+                    description: A list of affected groups.
+                    items:
+                      type: string

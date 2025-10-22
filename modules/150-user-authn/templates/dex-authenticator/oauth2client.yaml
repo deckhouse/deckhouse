@@ -1,0 +1,29 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ $crd.encodedName }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
+id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+secret: {{ $crd.credentials.appDexSecret }}
+    {{- if $crd.spec.allowedEmails }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+  - {{ $email }}
+{{- end }}
+    {{- end }}
+    {{- if $crd.spec.allowedGroups }}
+allowedGroups:
+{{- range $group := $crd.spec.allowedGroups }}
+  - {{ $group }}
+{{- end }}
+    {{- end }}
+redirectURIs:
+  {{- range $app := $crd.spec.applications }}
+- https://{{ $app.domain }}/dex-authenticator/callback
+{{- end }}
+{{- end }}

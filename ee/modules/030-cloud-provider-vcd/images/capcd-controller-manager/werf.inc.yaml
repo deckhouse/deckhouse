@@ -1,0 +1,60 @@
+{{- $version := "v1.3.2"}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /cluster-api-provider-cloud-director
+  to: /cluster-api-provider-cloud-director
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/cluster-api-provider-cloud-director"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+import:
+- image: {{$.ModuleName}}/cloud-controller-manager-src-artifact
+  add: /src
+  to: /src/ccm
+  after: install
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/cluster-api-provider-cloud-director /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - echo "replace github.com/vmware/cloud-provider-for-cloud-director => /src/ccm" >> go.mod
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version={{ $version }}" -o /cluster-api-provider-cloud-director
+  - chown 64535:64535 /cluster-api-provider-cloud-director
+  - chmod 0755 /cluster-api-provider-cloud-director

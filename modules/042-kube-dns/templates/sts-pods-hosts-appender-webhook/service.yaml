@@ -1,0 +1,16 @@
+{{- if .Values.kubeDns.clusterDomainAliases }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-kube-dns-sts-pods-hosts-appender-webhook
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
+spec:
+  selector:
+    app: sts-pods-hosts-appender-webhook
+  ports:
+  - name: https
+    port: 443
+    targetPort: 4443
+{{- end }}

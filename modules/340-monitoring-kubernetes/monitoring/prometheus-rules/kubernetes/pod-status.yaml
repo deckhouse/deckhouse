@@ -1,0 +1,42 @@
+- name: kubernetes.pod_status_incorrect
+  rules:
+    - alert: PodStatusIsIncorrect
+      expr: >
+        (count by (node, namespace, pod) (kube_pod_status_ready{condition="true"} == 0) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
+        and
+        (
+          (count by (namespace, pod) (kube_pod_container_status_ready==1) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
+          unless
+          (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
+        )
+      for: 10m
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__node_has_pods_with_incorrect_status: "NodeHasPodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_has_pods_with_incorrect_status: "NodeHasPodsWithIncorrectStatus,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Incorrect state of Pod `{{ $labels.namespace }}/{{ $labels.pod }}` running on node `{{ $labels.node }}`.
+        description: |
+          The Pod `{{ $labels.namespace }}/{{ $labels.pod }}` running on node `{{ $labels.node }}` is listed as `NotReady` while all the Pod's containers are `Ready`.
+
+          This could have been caused by the [known Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
+
+          Steps to troubleshoot:
+          
+          1. Identify all pods with this state:
+          
+             ```bash
+             d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'
+             ```
+
+          2. Identify all affected nodes:
+          
+             ```bash
+             d8 k get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c
+             ```
+
+          3. Restart kubelet on each node:
+          
+             ```bash
+             systemctl restart kubelet
+             ```

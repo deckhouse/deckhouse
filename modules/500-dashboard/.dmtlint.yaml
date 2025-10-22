@@ -1,0 +1,40 @@
+linters-settings:
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: Deployment
+          name: api
+          container: api
+        - kind: Deployment
+          name: auth
+          container: auth
+        - kind: Deployment
+          name: web
+          container: web
+      readiness-probe:
+        - kind: Deployment
+          name: api
+          container: api
+        - kind: Deployment
+          name: auth
+          container: auth
+        - kind: Deployment
+          name: metrics-scraper
+          container: metrics-scraper
+        - kind: Deployment
+          name: web
+          container: web
+  module:
+    conversions:
+      disable: true
+  templates:
+    exclude-rules:
+      service-port:
+        - name: api
+          port: https
+        - name: auth
+          port: https
+        - name: metrics-scraper
+          port: https
+        - name: web
+          port: https

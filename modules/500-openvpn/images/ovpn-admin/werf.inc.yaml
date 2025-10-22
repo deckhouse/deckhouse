@@ -1,0 +1,109 @@
+{{- $gitCommit := "e5bf819db34227cc739963059d72582a73ea1613" }}
+{{- $binaries := "/bin/bash" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/templates
+  to: /app/templates
+  stageDependencies:
+    install:
+      - '**/*'
+{{- include "image mount points" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+  add: /src/ovpn-admin
+  to: /app/ovpn-admin
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/version
+  to: /app/version
+  before: setup
+- image: {{ .ModuleName }}/openvpn-artifact
+  add: /src/openvpn/src/openvpn/openvpn
+  to: /usr/sbin/openvpn
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+  add: /src/frontend/static
+  to: /app/frontend/static
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+imageSpec:
+  config:
+    workingDir: "/app"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone $(cat /run/secrets/SOURCE_REPO)/palark/ovpn-admin.git .
+  - git checkout {{ $gitCommit }}
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+  - echo {{ $gitCommit }} > version
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -ldflags="-s -w" .
+  - chown -R 64535:64535 /src
+  - chmod 0755 /src/ovpn-admin
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+final: false
+from: {{ .Images.BASE_NODE_16_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /src/frontend
+  - npm install
+  - npm run build
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+import:
+- image: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /openssl
+  before: install
+shell:
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - cp /openssl/usr/local/bin/* /relocate/bin/

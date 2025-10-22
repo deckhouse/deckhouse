@@ -1,0 +1,63 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/module-exists
+  name: test-source-1
+  resourceVersion: "1001"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: Some errors occurred. Inspect status for details
+  modules:
+  - checksum: 'sha256:'
+    name: enabledmodule
+    version: v1.2.3
+  - error: |-
+      get image info: fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
+            MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
+    name: errormodule
+    policy: test-alpha
+    version: unknown
+  modulesCount: 2
+  phase: Active
+  syncTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/change-cause: check release (no releases in cluster)
+  creationTimestamp: null
+  labels:
+    module: enabledmodule
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: enabledmodule-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: enabledmodule
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

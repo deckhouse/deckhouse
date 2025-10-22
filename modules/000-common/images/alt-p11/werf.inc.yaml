@@ -1,0 +1,30 @@
+{{- define "alt archive repos" }}
+{{- $date := "2025-10-12" }}
+- sed -i -E "s|http://ftp.altlinux.org/pub/distributions/archive/p11/date/[0-9]{4}/[0-9]{2}/[0-9]{2}/|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/|g" /etc/apt/sources.list.d/alt.list
+{{- end }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/alt
+final: false
+shell:
+  beforeInstall:
+  {{- include "alt archive repos" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  # ssh auth to 3p repos
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: builder/alt
+final: false
+shell:
+  beforeInstall:
+  {{- include "alt archive repos" . | nindent 2 }}
+  - cp /etc/apt/sources.list.d/alt.list /etc/apt/sources.list.d/alt.list.orig
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  # return original repos
+  - mv /etc/apt/sources.list.d/alt.list.orig /etc/apt/sources.list.d/alt.list
+imageSpec:
+  config:
+    user: "64535:64535"

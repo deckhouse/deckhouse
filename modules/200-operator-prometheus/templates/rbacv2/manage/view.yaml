@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: operator-prometheus
+    rbac.deckhouse.io/aggregate-to-observability-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-operator-prometheus
+  name: d8:manage:permission:module:operator-prometheus:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - operator-prometheus
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

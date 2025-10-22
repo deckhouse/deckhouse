@@ -1,0 +1,771 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+name: 'Suspend rock-solid'
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'Id of issue where label was set'
+        required: false
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: false
+      comment_id:
+        description: 'Id of comment in issue where to put workflow run status'
+        required: false
+      editions:
+        description: 'Comma separated editions to suspend. Example: ee,fe,ce,be,se,se-plus'
+        required: false
+
+env:
+
+  # <template: werf_envs>
+  WERF_VERSION: "v2.46.0"
+  WERF_ENV: "FE"
+  TEST_TIMEOUT: "15m"
+  # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
+  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  # Registry for additional repositories used for testing Github Actions workflows.
+  GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
+  WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  # </template: werf_envs>
+  DEPLOY_CHANNEL: rock-solid
+
+# Note: no concurrency section for suspend workflows.
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+
+  # <template: git_info_job>
+
+  git_info:
+    name: Get git info
+    runs-on: ubuntu-latest
+    outputs:
+      ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
+      ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
+      ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
+      ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
+      ref_full: ${{ steps.git_info.outputs.ref_full }}
+      github_sha: ${{ steps.git_info.outputs.github_sha }}
+      pr_number: ${{ steps.git_info.outputs.pr_number }}
+    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
+    steps:
+      - id: git_info
+        name: Get tag name and SHA
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
+
+            let refSlug = ''
+            let refName = ''
+            let refFull = ''
+            let githubBranch = ''
+            let githubTag = ''
+            let githubSHA = ''
+            let prNumber = ''
+            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
+              // Trigger: workflow_dispatch with pull_request_ref.
+              // Extract pull request number from 'refs/pull/<NUM>/merge'
+              prNumber = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+
+              refSlug       = `pr${prNumber}`
+              refName       = context.payload.inputs.ci_commit_ref_name
+              refFull       = context.payload.inputs.pull_request_ref
+              githubBranch  = refName
+              githubSHA     = context.payload.inputs.pull_request_sha
+              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
+            } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
+              // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
+              const targetRepo = context.payload.repository.full_name;
+              const prRepo = context.payload.pull_request.head.repo.full_name
+              const prRef = context.payload.pull_request.head.ref
+
+              refSlug = `pr${context.issue.number}`;
+              refName = (prRepo === targetRepo) ? prRef : refSlug;
+              refFull = `refs/pull/${context.issue.number}/head`
+              githubBranch = refName
+              githubSHA = context.payload.pull_request.head.sha
+              core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+              prNumber = context.issue.number
+            } else {
+              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
+              // refName is 'main' or tag name, so slugification is not necessary.
+              refSlug       = GITHUB_REF_NAME
+              refName       = GITHUB_REF_NAME
+              refFull       = GITHUB_REF
+              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
+              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
+              githubSHA     = context.sha
+              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+            }
+
+            core.setCommandEcho(true)
+            core.setOutput('ci_commit_ref_slug', refSlug)
+            core.setOutput('ci_commit_ref_name', refName)
+            core.setOutput(`ci_commit_tag`, githubTag)
+            core.setOutput(`ci_commit_branch`, githubBranch)
+            core.setOutput(`ref_full`, refFull)
+            core.setOutput('github_sha', githubSHA)
+            core.setOutput('pr_number', prNumber)
+            core.setCommandEcho(false)
+
+  # </template: git_info_job>
+
+  detect_editions:
+    name: Detect editions
+    runs-on: ubuntu-latest
+    outputs:
+      DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
+      DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}
+      DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
+      DEPLOY_BE: ${{steps.detect_editions.outputs.DEPLOY_BE}}
+      DEPLOY_SE: ${{steps.detect_editions.outputs.DEPLOY_SE}}
+      DEPLOY_SE-plus: ${{steps.detect_editions.outputs.DEPLOY_SE-plus}}
+    steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          RESTRICTED=no
+
+          for edition in CE EE FE BE SE SE-plus ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable deploy of ${edition} edition."
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+              RESTRICTED=yes
+            fi
+          done
+
+          if [[ $RESTRICTED == "no" ]] ; then
+            echo "No restrictions. Enable deploy to all editions."
+            for edition in CE EE FE BE SE SE-plus ; do
+              echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
+            done
+          fi
+
+  run_suspend:
+    name: Suspend rock-solid channel
+    environment:
+      name: rock-solid
+    needs:
+      - git_info
+      - detect_editions
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: update_comment_on_start>
+      - name: Update comment on start
+        if: ${{ github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const name = 'Suspend rock-solid';
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnStart({github, context, core, name})
+
+      # </template: update_comment_on_start>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+
+
+      - name: Publish suspend images for CE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: CE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for CE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for EE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_EE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: EE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for EE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for FE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_FE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: FE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for FE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for BE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_BE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: BE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for BE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for SE
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: SE
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for SE edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+      - name: Publish suspend images for SE-plus
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE-plus == 'true' }}
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          WERF_ENV: SE-plus
+          SKIP_PUSH_FOR_SUSPEND: ${{secrets.SKIP_PUSH_FOR_SUSPEND}}
+        run: |
+          # SRC_NAME is a name of image from werf.yaml.
+          # SRC is a source image name.
+          # DST is an image name for docker push.
+          function push_rmi() {
+            SRC_NAME=$1
+            DST=$2
+
+            enable_push="true"
+            if [[ ${GITHUB_REPOSITORY} != "deckhouse/deckhouse" ]]; then
+              if [[ ${SKIP_PUSH_FOR_SUSPEND} == "true" ]]; then
+                enable_push="false"
+                echo "⚓️ ❎ [$(date -u)] SKIP_PUSH_FOR_SUSPEND=true, skip running 'docker image push ${DST}'."
+              fi
+            fi
+
+            if [[ ${enable_push} == "true" ]] ; then
+              echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
+              docker image push ${DST}
+            fi
+
+            echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
+            docker image rmi ${DST} || true;
+          }
+
+          # Some precautions.
+          shouldExit1=
+          if [[ -z ${DEV_REGISTRY_PATH} ]] ; then
+            echo "::error title=Missed variable::DEV_REGISTRY_PATH is not set. Define destination registry in secrets."
+            shouldExit1=yes
+          fi
+          if [[ -z ${WERF_ENV} ]] ; then
+            echo "::error title=Missed variable::WERF_ENV is not set. Cannot deploy unknown edition, only ce, ee and fe are allowed in inputs."
+            shouldExit1=yes
+          fi
+          if [[ -n ${shouldExit1} ]] ; then
+            exit 1
+          fi
+
+          echo "Suspend '${RELEASE_CHANNEL}' for SE-plus edition".
+
+          # Variables
+          #   1. Edition and channel.
+          # CE/EE/FE/BE/SE/SE-plus -> ce/ee/fe/be/se/se-plus
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          RELEASE_CHANNEL=rock-solid
+
+          echo "⚓️ 💫 [$(date -u)] Start publishing 'release-channel suspend' image for '${REGISTRY_SUFFIX}' edition onto '${RELEASE_CHANNEL}' release channel."
+
+          #   2. Prod registry: use github packages if DECKHOUSE_REGISTRY_HOST not set (run in the test repo).
+          DST_REGISTRY_PATH=${DECKHOUSE_REGISTRY_HOST}/deckhouse
+          if [[ -z "${DECKHOUSE_REGISTRY_HOST}" ]]; then
+            DST_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${DST_REGISTRY_PATH}'"
+          fi
+
+          #   3. Build and publish release-channel image to prod registry.
+          RELEASE_CHANNEL_IMAGE=${DST_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_CHANNEL}
+          echo "⚓️ 🛠 [$(date -u)] Build 'release-channel suspend' image as '${RELEASE_CHANNEL_IMAGE}'."
+
+          regctl image get-file "${RELEASE_CHANNEL_IMAGE}" version.json | jq '. + {"suspend": true}' > version.json
+
+          cat <<EOF >Dockerfile
+          FROM scratch
+          COPY version.json version.json
+          EOF
+          docker build . -t "${RELEASE_CHANNEL_IMAGE}"
+
+          push_rmi 'release-channel suspend' "${RELEASE_CHANNEL_IMAGE}"
+
+      # <template: update_comment_on_finish>
+      - name: Update comment on finish
+        id: update_comment_on_finish
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+        env:
+          NEEDS_CONTEXT: ${{ toJSON(needs) }}
+          JOB_CONTEXT: ${{ toJSON(job) }}
+          STEPS_CONTEXT: ${{ toJSON(steps) }}
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          retries: 3
+          script: |
+            const statusConfig = 'job,final';
+            const name = 'Suspend rock-solid';
+            const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
+            const jobContext = JSON.parse(process.env.JOB_CONTEXT);
+            const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
+            let jobNames = null
+            if (process.env.JOB_NAMES) {
+              jobNames = JSON.parse(process.env.JOB_NAMES);
+            }
+
+            core.info(`needsContext: ${JSON.stringify(needsContext)}`);
+            core.info(`jobContext: ${JSON.stringify(jobContext)}`);
+            core.info(`stepsContext: ${JSON.stringify(stepsContext)}`);
+            core.info(`jobNames: ${JSON.stringify(jobNames)}`);
+
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.updateCommentOnFinish({github, context, core, statusConfig, name, needsContext, jobContext, stepsContext, jobNames});
+      # </template: update_comment_on_finish>
+

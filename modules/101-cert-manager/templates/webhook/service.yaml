@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cert-manager-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: https
+    port: 443
+    targetPort: webhook
+  selector:
+    app: webhook

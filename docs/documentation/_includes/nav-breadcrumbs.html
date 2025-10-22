@@ -1,0 +1,40 @@
+<div class="breadcrumbs-container">
+  <div class="breadcrumbs__left">
+    <ol class="breadcrumbs">
+      {% if page.sidebar == 'embedded-modules' %}
+        <!--<li class="breadcrumbs__item"><strong><a href="/modules/">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</a></strong></li>-->
+      {% else %}
+        <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation_platform[page.lang] }}</li>
+      {% endif %}
+    </ol>
+  </div>
+  <div class="breadcrumbs__right">
+    <ol class="breadcrumbs">
+      {% include nav-breadcrumbs-pagepath.html %}
+    </ol>
+  </div>
+
+  <!--start search-->
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+        {%- if page.sidebar == 'embedded-modules' %}
+        data-search-index-path="/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
+        data-search-context="{{ site.data.i18n.common.search_context_modules[page.lang] }}"
+        {%- else %}
+        data-search-index-path="{{ '/search.json' | true_relative_url }}:2.0,/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        data-search-context="{{ site.data.i18n.common.search_context_dkpdocs_and_modules[page.lang] }}"
+        {%- endif -%}
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
+  </div>
+  <!--end search-->
+  <!--loading search JS-->
+  {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
+  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+  <!--end loading search JS-->
+</div>

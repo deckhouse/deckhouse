@@ -1,0 +1,350 @@
+- name: kubernetes.node.disk_inodes_usage
+  rules:
+    - alert: KubeletNodeFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="soft"})
+        )
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="hard"} + 5)
+        )
+      for: 5m
+      labels:
+        severity_level: "7"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: >
+          Approaching hard eviction threshold of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+        description: |
+          The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="hard"})
+        )
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSInodesUsage
+      expr: |
+        (
+          (
+            max by (node, mountpoint) (node_filesystem_files_free)
+          ) == 0
+        )
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_inodes"}))
+        and (max by (node, mountpoint) (node_filesystem_files) != 0)
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: No free inodes remaining on nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+
+    - alert: KubeletImageFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="soft"})
+        )
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="hard"} + 5)
+        )
+      for: 5m
+      labels:
+        severity_level: "7"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Approaching hard eviction threshold of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+        description: |
+          The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSInodesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="hard"})
+        )
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSInodesUsage
+      expr: |
+        (
+          (
+            max by (node, mountpoint) (node_filesystem_files_free)
+          ) == 0
+        )
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_inodes"}))
+        and (max by (node, mountpoint) (node_filesystem_files) != 0)
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: No free inodes remaining on imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+
+- name: kubernetes.node.disk_bytes_usage
+  rules:
+    - alert: KubeletNodeFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="soft"})
+        )
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Soft eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Soft eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"} + 5)
+        )
+      for: 5m
+      labels:
+        severity_level: "7"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Approaching hard eviction threshold of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+        description: |
+          The nodefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"})
+        )
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Hard eviction of nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletNodeFSBytesUsage
+      expr: |
+        (
+          (
+            max by (node, mountpoint) (node_filesystem_avail_bytes)
+          ) == 0
+        )
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_bytes"}))
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: No free space remaining on nodefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+
+    - alert: KubeletImageFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="soft"})
+        )
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Soft eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Soft eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"} + 5)
+        )
+      for: 5m
+      labels:
+        severity_level: "7"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Approaching hard eviction threshold of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.
+        description: |
+          The imagefs usage on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is nearing the hard eviction threshold.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSBytesUsage
+      expr: |
+        (
+          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"})
+        )
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is in progress.
+        description: |
+          Hard eviction of imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}` is currently in progress.
+
+          Hard eviction threshold: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+          Current usage: {{ .Value }}%
+
+    - alert: KubeletImageFSBytesUsage
+      expr: |
+        (
+          (
+            max by (node, mountpoint) (node_filesystem_avail_bytes)
+          ) == 0
+        )
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_bytes"}))
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        plk_create_group_if_not_exists__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        plk_grouped_by__node_disk_usage: "NodeDiskUsage,tier=cluster,prometheus=deckhouse,node={{ $labels.node }},kubernetes=~kubernetes"
+        summary: No free space remaining on imagefs on node `{{$labels.node}}` at mountpoint `{{$labels.mountpoint}}`.

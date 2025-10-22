@@ -1,0 +1,442 @@
+common:
+  of:
+    en: of
+    ru: ""
+  array:
+    en: array
+    ru: массив
+  of_array:
+    en: arrays
+    ru: массивов
+  object:
+    en: object
+    ru: объект
+  of_object:
+    en: objects
+    ru: объектов
+  number:
+    en: number
+    ru: число
+  of_number:
+    en: number
+    ru: чисел
+  integer:
+    en: integer
+    ru: целочисленный
+  of_integer:
+    en: integers
+    ru: целых чисел
+  string:
+    en: string
+    ru: строка
+  of_string:
+    en: strings
+    ru: строк
+  boolean:
+    en: boolean
+    ru: булевый
+  of_boolean:
+    en: booleans
+    ru: булевых значений
+  allowed_values:
+    en: Allowed values
+    ru: допустимые значения
+  allowed_values_of_array:
+    en: of the array
+    ru: элемента массива
+  default_value:
+    en: default
+    ru: по умолчанию
+  default_version:
+    en: default version
+    ru: версия по умолчанию
+  deprecated:
+    en: deprecated
+    ru: устарел
+  deprecated_parameter:
+    en: Deprecated
+    ru: Параметр устарел
+  deprecated_resource:
+    en: Deprecated resource. Support for the resource might be removed in a later release.
+    ru: Устаревший ресурс. Поддержка ресурса может быть исключена в следующих версиях.
+  deprecated_parameter_hint:
+    en: Support for the parameter might be removed in a later release.
+    ru: Поддержка параметра может быть исключена в следующих версиях.
+  for_example:
+    en: for example
+    ru: например
+  here:
+    en: "here"
+    ru: "здесь"
+  dev_menu_message:
+    en: "Menu is not generated in dev build mode"
+    ru: "В режиме dev сборки меню не генерируется"
+  example:
+    en: example
+    ru: пример
+  examples:
+    en: examples
+    ru: примеры
+  element_of_array:
+    en: element of the array
+    ru: элемент массива
+  x-kubernetes-int-or-string:
+    en: integer or string
+    ru: строка или число
+  of_x-kubernetes-int-or-string:
+    en: of integers or strings
+    ru: строк или чисел
+  pattern:
+    en: pattern
+    ru: шаблон
+  port:
+    en: port
+    ru: порт
+  protocol:
+    en: protocol
+    ru: протокол
+  purpose:
+    en: purpose
+    ru: назначение
+  length:
+    en: length
+    ru: длина
+  min_length:
+    en: minimal length
+    ru: минимальная длина
+  max_length:
+    en: maximum length
+    ru: максимальная длина
+  required_value_sentence:
+    en: Required value
+    ru: Обязательный параметр
+  not_required_value_sentence:
+    en: Not required value.
+    ru: Необязательный параметр.
+  conversions:
+    en: Conversions
+    ru: Конверсии
+  documents_found:
+    en: Documents found
+    ru: Найдено документов
+  conversion_action_message:
+    en: |
+      The module is configured using the ModuleConfig resource, the schema of which contains a version number.
+      When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+    ru: |
+      Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии.
+      При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+  conversion_global_action_message:
+    en: |
+      Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number.
+      When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+    ru: |
+      Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии.
+      При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+  conversion_from_version:
+    en: "updates from version"
+    ru: "обновление из версии"
+  conversion_to_version:
+    en: "to version"
+    ru: "в версию"
+  conversion_to:
+    en: "to"
+    ru: "в"
+  conversion_missing_description:
+    en: "Conversion description is missing"
+    ru: "Описание конверсии отсутствует"
+  conversion_expressions:
+    en: "Actions performed by the conversion (jq syntax)"
+    ru: "Преобразования, выполняемые конверсией (синтаксис jq)"
+  parameters:
+    en: Parameters
+    ru: Параметры
+  parameters_found:
+    en: Parameters found
+    ru: Найдено параметров
+  parameters_and_resources_found:
+    en: Parameters and resources found
+    ru: Найдено параметров и ресурсов
+  empty_search_documents_result:
+    en: Documents not found.
+    ru: Документов не найдено.
+  empty_search_parameters_resources_result:
+    en: Parameters and resources not found.
+    ru: Параметров и ресурсов не найдено.
+  no_description:
+    en: There is no description...
+    ru: Нет описания...
+  documentation:
+    en: Documentation
+    ru: Документация
+  documentation_platform:
+    en: Platform documentation
+    ru: Документация платформы
+  platform:
+    en: Platform
+    ru: Платформа
+  search_placeholder_text:
+    en: Search...
+    ru: Поиск...
+  search_placeholder_text_guides:
+    en: Search for guides...
+    ru: Поиск гайдов...
+  search_context_dkpdocs_and_modules:
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
+  search_context_modules:
+    en: The search is performed throughout modules, excluding the DKP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+  search_context_only_product_docs:
+    en: The search is performed throughout the product documentation, excluding modules.
+    ru: Поиск выполняется по всей документации продукта, не включая модули.
+  module_available_editions_prefix:
+    en: Available in editions
+    ru: Доступно в редакциях
+  module_available_with_limitations_prefix:
+    en: Available with limitations in
+    ru: Доступно с ограничениями в редакциях
+  module_available_without_limitations_prefix:
+    en: Available without limitations in
+    ru: Доступно без ограничений в редакциях
+  parameter_available_editions_prefix:
+    en: Available in editions
+    ru: Доступно в редакциях
+  warning_ee_version:
+    en: Available only in
+    ru: Доступно только в
+  version:
+    en: version
+    ru: версия
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
+  versions:
+    en: versions
+    ru: версии
+  version_of_module:
+    en: Module version
+    ru: Версия модуля
+  channel_or_version_of_module:
+    en: Module channel/version
+    ru: Канал/версия модуля
+  version_of_schema:
+    en: Schema version
+    ru: Версия схемы
+  versions_supported:
+    en: Supported versions
+    ru: Поддерживаемые версии
+  status:
+    en: status
+    ru: статус
+  or:
+    en: or
+    ru: или
+  scope:
+    en: Scope
+    ru: Область (scope)
+  notice-latest:
+    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+  os_supported_phrase:
+    en: The following Linux distributions are currently supported for nodes
+    ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
+  k8s_supported_phrase:
+    en: The following Kubernetes versions are currently supported
+    ru: В настоящий момент поддерживаются следующие версии Kubernetes
+  linux_distro:
+    en: Linux Distribution
+    ru: Дистрибутив Linux
+  redactions:
+    en: Supported in redactions
+    ru: Поддерживается в редакциях
+  notes:
+    en: Notes
+    ru: Примечания
+  for_domain_template:
+    en: for the domain template
+    ru: для шаблона доменов
+  module_web_ifaces:
+    en: Web interfaces associated with the module
+    ru: Веб-интерфейсы, связанные с модулем
+  role:
+    en: role
+    ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module `XXXX` parameters
+    ru: Параметры модуля `XXXX`
+  module_x_crds:
+    en: Module `XXXX` custom resources
+    ru: Кастомные ресурсы модуля `XXXX`
+  module_x_documentation:
+    en: Module `XXXX` documentation
+    ru: Документация модуля `XXXX`
+  module_x_cluster_configuration:
+    en: Module `XXXX` provider configuration
+    ru: Настройки провайдера модуля `XXXX`
+  includes_rules_from:
+    en: includes all rules from the role
+    ru: включает все правила из роли
+  deckhouse:
+    en: deckhouse
+    ru: deckhouse
+  module:
+    en: module
+    ru: модуль
+  modules:
+    en: modules
+    ru: модули
+  modules_of_a_scope:
+    en: The modules within the scope
+    ru: Модули, входящие в область
+  alert_description_template:
+    en: Alert description template
+    ru: Шаблон описания алерта
+  alert_summary:
+    en: Alert summary
+    ru: Краткое описание
+  alert_severity:
+    en: "Alert severity<br/><br/>S1 – highest<br/>S9 – lowest"
+    ru: "Критичность (severity) алерта<br/><br/>S1 – самая высокая<br/>S9 – самая низкая"
+  alert_edition:
+    en: The minimum DKP edition in which the alert is available
+    ru: Минимальная редакция DKP, в которой доступен алерт
+  note_ce_notguaranteed:
+    en: Functionality in Community Edition is not guaranteed
+    ru: Работоспособность в Community Edition не гарантируется
+  module_has_the_following_alerts:
+    en: The following alerts are implemented in the module
+    ru: В модуле реализованы следующие алерты
+  module_has_1_alert:
+    en: The module has [%d alert](%url).
+    ru: В модуле реализован [%d алерт](%url).
+  module_has_2_to_4_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алерта](%url).
+  module_has_number_of_alerts:
+    en: The module has [%d alerts](%url).
+    ru: В модуле реализовано [%d алертов](%url).
+  module_alerts_title:
+    en: Alerts
+    ru: Алерты
+  namespaces:
+    en: namespaces
+    ru: пространства имен
+  namespaces_used_by_modules:
+    en: Namespaces in which modules of a scope operate
+    ru: Пространства имен используемых модулями области
+  all_namespaces:
+    en: All namespaces
+    ru: Все пространства имен
+  all_modules:
+    en: All modules
+    ru: Все модули
+  description_cr:
+    ru: Deckhouse Kubernetes Platform, кастомные ресурсы (custom resources) модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — Custom resources of the <MODULENAME> module.
+  description_configuration:
+    ru: Deckhouse Kubernetes Platform, параметры конфигурации модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — configuration parameters of the <MODULENAME> module.
+  description_examples:
+    ru: Deckhouse Kubernetes Platform, примеры конфигурации модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — examples of configuring the <MODULENAME> module.
+  description_usage:
+    ru: Deckhouse Kubernetes Platform, примеры использования модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — examples of using the <MODULENAME> module.
+  description_faq:
+    ru: Deckhouse Kubernetes Platform, частые вопросы по использованию модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — Frequently Asked Questions for the <MODULENAME> module.
+  autogenerated_page_alert_english:
+    en: This page is generated automatically.
+    ru: Эта страница генерируется автоматически, информация доступна только на английском языке.
+  d8_cli_reference_title:
+    en: Deckhouse CLI command reference
+    ru: Справка по командам Deckhouse CLI
+  d8_cli_reference_description:
+    en: List of commands and parameters for Deckhouse CLI (d8)
+    ru: Список команд и параметров Deckhouse CLI (d8)
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
+  show_more:
+    en: Show more
+    ru: Показать ещё
+
+comparison:
+  except_parameters:
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+  module_has_restions:
+    en: "There are limitations to functionality"
+    ru: "Есть ограничения функциональности"
+  module_has_restions_short:
+    en: "with limitations"
+    ru: "с ограничениями"
+
+features:
+  currency_sign:
+    en: "&#36;"
+    ru: "&#8381;"
+  experimental:
+    en: Experimental
+    ru: Экспериментальная версия
+  experimental_long:
+    en: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+    ru: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
+  preview:
+    en: Preview
+    ru: Предварительная версия (preview)
+  preview_long:
+    en: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
+    ru: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
+  deprecated:
+    en: Deprecated
+    ru: Устарело
+  deprecated_long:
+    en: Deprecated version. Development and support have been terminated.
+    ru: Устарело. Развитие и поддержка прекращены.
+  "general_availability":
+    en: Ready to be used in production environments
+    ru: Готово к использованию в production-средах
+  "general_availability_long":
+    en: Generally available version. Ready to be used in production environments.
+    ru: Общедоступная версия. Готово к использованию в production-средах.
+  temporaryDeprecated:
+    en: The current version of the module is deprecated, a new version will be published soon.
+    ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
+  proprietaryOkmeter:
+    en: A separate license is required
+    ru: Требуется отдельная лицензия
+  proprietaryOkmeter_long:
+    en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
+    ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
+  ee:
+    en: This feature is available in Enterprise Edition only.
+    ru: Доступно только в Enterprise Edition.
+  commercial:
+    en: Available in some commercial editions.
+    ru: Доступно в некоторых коммерческих редакциях.
+  notAvailableInThisEdition:
+    en: Available in other commercial editions.
+    ru: Доступно в других коммерческих редакциях.
+  requiresSeparateLicense:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+  requiresSeparateLicenseObservability:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

@@ -1,0 +1,154 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:kubernetes:view_resources
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - pods
+      - pods/status
+      - replicationcontrollers
+      - replicationcontrollers/scale
+      - services
+      - services/status
+      - limitranges
+      - replicationcontrollers/status
+      - resourcequotas
+      - resourcequotas/status
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - controllerrevisions
+      - daemonsets
+      - daemonsets/status
+      - deployments
+      - deployments/scale
+      - deployments/status
+      - replicasets
+      - replicasets/scale
+      - replicasets/status
+      - statefulsets
+      - statefulsets/scale
+      - statefulsets/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+      - horizontalpodautoscalers/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+      - verticalpodautoscalercheckpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - cronjobs/status
+      - jobs
+      - jobs/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+      - poddisruptionbudgets/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+      - ingresses
+      - ingresses/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - /api
+      - /api/*
+      - /apis
+      - /apis/*
+      - /openapi
+      - /openapi/*
+      - /version
+      - /version/
+    verbs:
+      - get
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - selfsubjectaccessreviews
+      - selfsubjectrulesreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - selfsubjectreviews
+    verbs:
+      - create

@@ -1,0 +1,66 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: network-policy-engine
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:network-policy-engine
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - nodes
+  - endpoints
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups:
+  - "networking.k8s.io"
+  resources:
+  - networkpolicies
+  verbs:
+  - list
+  - get
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+    - networkpolicies
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - "discovery.k8s.io"
+  resources:
+    - endpointslices
+  verbs:
+    - get
+    - list
+    - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:network-policy-engine
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:network-policy-engine
+subjects:
+- kind: ServiceAccount
+  name: network-policy-engine
+  namespace: d8-system

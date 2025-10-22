@@ -1,0 +1,146 @@
+{%- include getting_started/global/partials/NOTICES.liquid %}
+
+{% if page.platform_code == "bm-private" and page.lang == "ru" %}
+{% alert level="info" %}
+В [Deckhouse Академии](https://deckhouse.ru/academy/) доступен для прохождения курс обучения [«Установка Deckhouse Kubernetes Platform в закрытом окружении»](https://education.flant.ru/course/ustanovka-deckhouse-kubernetes-platform-v-zakrytom-okruzhenii/).
+{% endalert %}
+{% endif %}
+
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
+
+Для развертывания будет использован следующий набор узлов:
+{%- assign preset=site.data.getting_started.stronghold.presets.minimal %}
+<div id="preset_minimal" markdown="1">
+{{ preset.description[page.lang] }}
+</div>
+
+{%- assign layout_platform_code = page.platform_code | regex_replace: "^(openstack)_.+$", "\1" %}
+{%- assign layout = site.data.getting_started.stronghold.installTypes[layout_platform_code].layout %}
+{%- offtopic title="Схема размещения и взаимодействия ресурсов в облаке..." %}
+{%- capture layout_path %}getting_started/stronghold/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
+{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
+Схема размещения ресурсов (layout) определяет расположение ресурсов в облаке и их сетевое взаимодействие. Существует несколько предопределённых схем размещения, о которых подробнее вы можете узнать [в документации]({{ layout_doc_path }}).
+
+При установке будет использоваться схема размещения ресурсов `{{ layout.name }}`.
+
+{% include  {{ layout_path }} %}
+{%- endofftopic %}
+{%- endunless %}
+
+{% if include.presentation -%}
+Презентация содержит основные этапы установки, которые предстоит пройти.
+
+<div data-presentation="{{ include.presentation }}"></div>
+{%- endif %}
+
+{% if page.platform_type == "existing" %}
+Если вы развернули **новый** кластер и хотите поставить в него Deckhouse, то рекомендуем вернуться на предыдущий шаг и использовать руководство по развертыванию кластера с помощью самого Deckhouse.
+
+Кластеры Kubernetes, предлагаемые различными облачными провайдерами, имеют свои особенности и различия, так же как и кластеры, развернутые вручную. Правильная стратегия установки Deckhouse в таких кластерах — установить Deckhouse в минимальной конфигурации, после чего включить необходимые модули.
+
+Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации с включенным модулем [внутренней документации](/modules/documentation/) (для примера работы web-приложения) и модулем [cert-manager](/modules/cert-manager/).
+
+После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/products/kubernetes-platform/documentation/), чтобы получить об этом необходимую информацию. Также, при возникновении вопросов, вы можете попросить помощи [сообщества](/community/about.html).
+
+{% elsif page.platform_code == "bm-private" %}
+## Схема развертывания
+Данное руководство предлагает развертывание кластера Kubernetes с помощью Deckhouse в закрытом окружении, из которого нет прямого доступа к внешнему хранилищу образов контейнеров (registry.deckhouse.ru) или внешним репозиториям deb/rpm-пакетов.
+
+Установка в закрытом окружении в целом аналогична установке [на bare metal](../bm/step2.html). Отличие только в некоторых дополнительных параметрах настройки.
+
+Схема развертывания Deckhouse в закрытом окружении:<br />
+<img src="/images/gs/private-env-schema-RU.svg" alt="Схема развертывания Deckhouse в закрытом окружении">
+
+{% alert %}Внутренний репозиторий пакетов ОС необходим для установки curl на узлах будущего кластера (при
+отсутствии возможности доступа к официальным репозиториям через прокси-сервер).
+{% endalert %}
+{% endif %}
+
+## Что необходимо для установки
+
+<ol>
+  <li><p><strong>Персональный компьютер.</strong> Компьютер, с которого будет производиться установка.{% unless page.platform_type == "existing" %} Он нужен только для запуска инсталлятора Deckhouse и не будет частью кластера.{% endunless %}</p>
+
+   {% offtopic title="Требования..." %}
+   - ОС: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
+   - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+{% if page.platform_code == "bm-private" %}
+   - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+{%- else %}
+   - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
+{%- endif %}
+{%- if page.platform_type == 'cloud' %}
+   - доступ до API облачного провайдера, учетная запись с правами на создание ресурсов и настроенная
+     {%- if page.platform_code == 'aws' %} утилита [awscli](https://aws.amazon.com/cli/)
+     {%- elsif page.platform_code == "gcp" %} утилита [gcloud](https://cloud.google.com/sdk/docs/install)
+     {%- elsif page.platform_code == "azure" %} утилита [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+     {%- elsif page.platform_code == "yandex" %} утилита [Yandex Cloud (CLI)](https://cloud.yandex.ru/docs/cli/quickstart)
+     {%- elsif page.platform_code == "openstack" %} [утилита](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) управления через CLI
+     {%- elsif page.platform_code == "vsphere" %} утилита [govc](https://github.com/vmware/govmomi/tree/master/govc#installation)
+     {%- else %} CLI-утилита управления облачными ресурсами
+     {%- endif %};
+{%- endif %}
+{%- if page.platform_type == "existing" %}
+   - `kubectl`, настроенный для доступа к существующему кластеру.
+{%- elsif page.platform_type == "baremetal"  %}
+   - SSH-доступ по ключу до узла, который будет **master-узлом** будущего кластера.
+   - SSH-доступ по ключу до узла, который будет **worker-узлом** будущего кластера (если кластер будет состоять не из одного master-узла).
+{%- endif %}
+   {% endofftopic %}
+  </li>
+<li>
+{% if page.platform_type == "existing" %}
+  <p><strong>Существующий кластер Kubernetes.</strong></p>
+  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="/products/kubernetes-platform/documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
+  <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (см. п.1), подключится к кластеру и развернет Deckhouse.</p>
+  <p><strong>Обратите внимание</strong>, что установка непосредственно с master-узла не поддерживается.</p>
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
+  <p><strong>Ресурсы облачного провайдера.</strong></p>
+   {% offtopic title="Минимальные рекомендованные ресурсы..." %}
+   - 8 ядер CPU;
+   - 16 ГБ RAM;
+   - 100 ГБ дискового пространства
+   {%- if page.platform_code == 'aws' %};
+   - ядро Linux версии `5.7` или новее.
+   {%- else %}.{%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_code == 'zvirt' %}
+  <p><strong>Минимальные ресурсы для работы zVirt.</strong></p>
+   {% offtopic title="Минимальные рекомендованные ресурсы..." %}
+   - 8 ядер CPU;
+   - 16 ГБ RAM;
+   - 100 ГБ дискового пространства
+   {%- if page.platform_code == 'aws' %};
+   - ядро Linux версии `5.7` или новее.
+   {%- else %}.{%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_type == 'baremetal' %}
+   <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
+   {% offtopic title="Требования..." %}
+   - не менее 4 ядер CPU;
+   - не менее 8 ГБ RAM;
+   - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
+   - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
+   - ядро Linux версии `5.7` или новее;
+   - **Уникальный hostname** в пределах серверов (виртуальных машин) кластера;
+   {% if page.platform_code == "bm-private" %}
+   - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
+   {%- else %}
+   - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
+   - доступ к стандартным для используемой ОС репозиториям пакетов;
+   {%- endif %}
+   - SSH-доступ от **персонального компьютера** (см. п.1) по ключу;
+   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22/TCP</code>;
+   - на узле не должно быть установлено пакетов container runtime, например containerd или Docker;
+   - на узле должны быть установлены пакеты `cloud-utils` и `cloud-init`.
+   {% endofftopic %}
+{%- endif %}
+</li>
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" %}
+<li>
+   <p><strong>Физический сервер или виртуальная машина для worker-узла.</strong></p>
+   <p>Требования аналогичны требованиям к master-узлу, но также зависят от характера запускаемой на узлах нагрузки.</p>
+</li>
+{%- endif %}
+</ol>

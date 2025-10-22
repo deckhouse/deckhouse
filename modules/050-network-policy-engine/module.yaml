@@ -1,0 +1,7 @@
+name: network-policy-engine
+stage: "General Availability"
+subsystems:
+  - networking
+namespace: d8-system
+requirements:
+  deckhouse: ">= 1.68"

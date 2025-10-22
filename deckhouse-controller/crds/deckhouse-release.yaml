@@ -1,0 +1,103 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: deckhousereleases.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: deckhousereleases
+    singular: deckhouserelease
+    kind: DeckhouseRelease
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for Deckhouse release.
+          required:
+            - spec
+          properties:
+            approved:
+              type: boolean
+              default: false
+              description: |
+                Allows or disables manual updates.
+
+                Ignored if the module's update mode is set to `Auto` (`update.mode: Auto`).
+            spec:
+              type: object
+              required:
+                - version
+              properties:
+                version:
+                  type: string
+                  description: Deckhouse version.
+                  x-doc-examples: ['v1.24.20']
+                applyAfter:
+                  type: string
+                  description: Marks release as a part of canary release. This release will be delayed until this time.
+                requirements:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Deckhouse release requirements.
+                disruptions:
+                  type: array
+                  items:
+                    type: string
+                  x-doc-deprecated: true
+                  description: Disruptive changes in the release.
+                changelog:
+                  type: object
+                  description: Release's changelog for enabled modules.
+                  x-kubernetes-preserve-unknown-fields: true
+                changelogLink:
+                  type: string
+                  description: Link to site with full changelog for this release.
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Deployed
+                    - Outdated # deprecated
+                    - Suspended
+                    - Superseded
+                    - Skipped
+                  description: Current status of the release.
+                message:
+                  type: string
+                  description: Detailed status or error message.
+                transitionTime:
+                  type: string
+                  description: Time of release status change.
+                approved:
+                  type: boolean
+                  description: |
+                    The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Current release status.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          format: date-time
+          description: 'When the release status was changed.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Release status details.'

@@ -1,0 +1,187 @@
+@use "components/common/_breakpoints";
+
+.supported_versions {
+    width: auto;
+    margin-bottom: 0;
+    padding: .3125rem .65rem;
+    border-color: #eaeaf9;
+    line-height: 1.35;
+    box-shadow: 0 3px 9px 1px rgba(59, 66, 109, .15);
+    background-color: #fff;
+    color: #222a5e;
+
+    @include breakpoints.min-w(m) {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    &:not(:first-child) {
+        margin-top: 2em;
+    }
+
+    &:not(:last-child) {
+        margin-bottom: 2em;
+    }
+
+    th {
+        font-size: 12px;
+        font-weight: 400;
+        vertical-align: middle;
+
+        @include breakpoints.min-w(m) {
+            font-size: 14px;
+        }
+    }
+
+    th, td {
+        border: 1px solid #eaeaf9 !important;
+    }
+
+    thead {
+        th {
+            min-width: 12ch;
+            font-size: .75rem;
+            font-weight: 500;
+
+            @include breakpoints.min-w(l) {
+                min-width: 160px;
+            }
+
+            @include breakpoints.min-w(xl) {
+                min-width: auto;
+            }
+
+            @include breakpoints.min-w(xxl) {
+                font-size: .875rem;
+            }
+        }
+
+    }
+
+    .icon {
+        display: flex;
+        margin: auto;
+        padding: 1rem 0.5rem;
+        width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
+
+        @include breakpoints.min-w(m) {
+            width: 28px;
+            height: 28px;
+        }
+    }
+}
+
+.supported_versions:not(.supported_versions__kubernetes-container) {
+    thead {
+        th:nth-child(odd), td:nth-child(odd) {
+            background-color: #F3F3FA;
+        }
+
+        th:nth-child(even), td:nth-child(even) {
+            background-color: #F9F9FD;
+        }
+
+        th:first-child, td:first-child {
+            background-color: #ffffff;
+        }
+    }
+}
+
+.supported_versions__kubernetes-container {
+    thead {
+        th, td {
+            background-color: #eff3f9;
+        }
+    }
+}
+
+.tableFloatingHeaderOriginal {
+    left: auto !important;
+    top: 0 !important;
+    pointer-events: none;
+    transition: margin-top .15s ease;
+
+    &.sticky {
+        padding: 9px;
+        margin: -10px;
+        overflow: hidden;
+        transform: translateY(-10px);
+        background: none;
+    }
+}
+
+.table-wrapper__versions {
+    &.more {
+
+        &--on-right {
+            table {
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+        }
+
+        &--on-left {
+            table {
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+        }
+    }
+
+    & > div {
+        padding: 10px;
+        margin: -10px;
+        overflow-x: auto;
+    }
+
+    &.more table::before,
+    &.more table::after {
+        content: '';
+        position: absolute;
+        top: 11px;
+        height: var(--table-height, 100%);
+        left: 0;
+        right: 0;
+        opacity: 0;
+        transition: opacity .3s ease-in-out;
+        width: 100%;
+        z-index: 4;
+        pointer-events: none;
+        border-radius: 0;
+    }
+
+    &.more table::before {
+        background: linear-gradient(90deg, rgba(59, 66, 109, .15) 0%, transparent 5%);
+    }
+
+    &.more table::after {
+        background: linear-gradient(90deg, transparent 95%, rgba(59, 66, 109, .15) 100%);
+    }
+
+    &.more--on-left table::before {
+        transform: translateX(-10px);
+        opacity: 1;
+    }
+
+    &.more--on-right table::after {
+        transform: translateX(10px);
+        opacity: 1;
+    }
+}
+
+@keyframes waves {
+    0% {
+        transform: translate(-50%, -50%);
+        opacity: .5;
+    }
+
+    60%, 100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+    }
+}

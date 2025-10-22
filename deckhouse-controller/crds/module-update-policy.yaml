@@ -1,0 +1,339 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: moduleupdatepolicies.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: moduleupdatepolicies
+    singular: moduleupdatepolicy
+    kind: ModuleUpdatePolicy
+    shortNames:
+      - mup
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the update settings for a module's release.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleUpdatePolicy
+              metadata:
+                name: example-update-policy
+              spec:
+                moduleReleaseSelector:
+                  labelSelector:
+                    matchLabels:
+                      source: example
+                      module: module-1
+                releaseChannel: Alpha
+                update:
+                  mode: Auto
+                  windows:
+                    - days:
+                        - "Mon"
+                        - "Wed"
+                      from: "13:30"
+                      to: "14:00"
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - update
+                - moduleReleaseSelector
+              properties:
+                releaseChannel:
+                  type: string
+                  description: |
+                    Desirable module release channel.
+
+                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                  default: Stable
+                  enum:
+                    - Alpha
+                    - Beta
+                    - EarlyAccess
+                    - Stable
+                    - RockSolid
+                update:
+                  type: object
+                  description: Update settings for target modules.
+                  default: {}
+                  properties:
+                    mode:
+                      type: string
+                      default: 'AutoPatch'
+                      description: |
+                        Modules version update mode (release change).
+
+                        - `AutoPatch` — automatic update mode for patch releases.
+
+                          To change a minor version (for example, from `v1.15.*` to `v1.16.*`), confirmation is required.
+
+                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
+
+                        - `Auto` — all updates are applied automatically.
+
+                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+
+                        - `Manual` — confirmation is required for updating both minor and patch versions.
+
+                        To confirm the update, add the `modules.deckhouse.io/approved="true"` annotation to the corresponding ModuleRelease resource.
+
+                        - `Ignore` — updates are ignored.
+                      enum:
+                        - 'Auto'
+                        - 'Manual'
+                        - 'Ignore'
+                        - 'AutoPatch'
+                    windows:
+                      type: array
+                      description: |
+                        Modules update timetable.
+                      items:
+                        type: object
+                        required:
+                          - from
+                          - to
+                        properties:
+                          from:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["13:00"]
+                            description: |
+                              Start time of the update window (UTC timezone).
+
+                              Should be less than the end time of the update window.
+                          to:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["18:30"]
+                            description: |
+                              End time of the update window (UTC timezone).
+
+                              Should be more than the start time of the update window.
+                          days:
+                            type: array
+                            description: The days of the week on which the update window is applied.
+                            x-doc-examples: ["Mon", "Wed"]
+                            items:
+                              type: string
+                              description: Day of the week.
+                              x-doc-examples: ["Mon"]
+                              enum:
+                                - Mon
+                                - Tue
+                                - Wed
+                                - Thu
+                                - Fri
+                                - Sat
+                                - Sun
+                moduleReleaseSelector:
+                  type: object
+                  description: |
+                    Selects target modules to apply update settings to.
+                  required:
+                    - labelSelector
+                  properties:
+                    labelSelector:
+                      description: |
+                        Label-selector-based filter to match target modules.
+
+                        If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
+                      type: object
+                      minProperties: 1
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: An array of set-based expressions.
+                          items:
+                            required:
+                              - key
+                              - operator
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [Exists, DoesNotExist]
+                                required: [key, operator]
+                                not:
+                                  required: [values]
+                              - properties:
+                                  operator:
+                                    enum: [In, NotIn]
+                                required: [key, operator, values]
+                            type: object
+                            properties:
+                              key:
+                                description: A label name.
+                                type: string
+                              operator:
+                                description: A comparison operator.
+                                type: string
+                                enum: [In, NotIn, Exists, DoesNotExist]
+                              values:
+                                type: array
+                                description: A label value.
+                                items:
+                                  type: string
+                        matchLabels:
+                          type: object
+                          description: A number of equality-based label filters.
+                          x-doc-examples: [{ "source": "deckhouse", "module": "deckhouse-admin" }]
+                          additionalProperties:
+                            type: string
+      additionalPrinterColumns:
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: Module release channel.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: Module release update mode.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          priority: 1
+          type: string
+          description: Module release update windows.
+    - name: v1alpha2
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the update settings for a module's release.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha2
+              kind: ModuleUpdatePolicy
+              metadata:
+                name: example-update-policy
+              spec:
+                releaseChannel: Alpha
+                update:
+                  mode: Auto
+                  windows:
+                    - days:
+                        - "Mon"
+                        - "Wed"
+                      from: "13:30"
+                      to: "14:00"
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - update
+              properties:
+                releaseChannel:
+                  type: string
+                  description: |
+                    Desirable module release channel.
+
+                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                  default: Stable
+                  enum:
+                    - Alpha
+                    - Beta
+                    - EarlyAccess
+                    - Stable
+                    - RockSolid
+                update:
+                  type: object
+                  description: Update settings for target modules.
+                  properties:
+                    mode:
+                      type: string
+                      default: 'Auto'
+                      description: |
+                        Modules version update mode (release change).
+
+                        - `AutoPatch` — automatic update mode for patch releases.
+
+                          To change a minor version (for example, from `v1.15.*` to `v1.16.*`), confirmation is required.
+
+                          A patch version update (for example, from `v1.16.1` to `v1.16.2`) is applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows), if they are set.
+
+                        - `Auto` — all updates are applied automatically.
+
+                          Modules minor version updates (for example, from `v1.15.*` to `v1.16.*`) and patch version updates (for example, from `v1.16.1` to `v1.16.2`) are applied according to the [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+
+                        - `Manual` — confirmation is required for updating both minor and patch versions.
+
+                        To confirm the update, add the `modules.deckhouse.io/approved="true"` annotation to the corresponding ModuleRelease resource.
+                      enum:
+                        - 'Auto'
+                        - 'Manual'
+                        - 'AutoPatch'
+                    windows:
+                      type: array
+                      description: |
+                        Modules update timetable.
+                      items:
+                        type: object
+                        required:
+                          - from
+                          - to
+                        properties:
+                          from:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["13:00"]
+                            description: |
+                              Start time of the update window (UTC timezone).
+
+                              Should be less than the end time of the update window.
+                          to:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["18:30"]
+                            description: |
+                              End time of the update window (UTC timezone).
+
+                              Should be more than the start time of the update window.
+                          days:
+                            type: array
+                            description: The days of the week on which the update window is applied.
+                            x-doc-examples: ["Mon", "Wed"]
+                            items:
+                              type: string
+                              description: Day of the week.
+                              x-doc-examples: ["Mon"]
+                              enum:
+                                - Mon
+                                - Tue
+                                - Wed
+                                - Thu
+                                - Fri
+                                - Sat
+                                - Sun
+      additionalPrinterColumns:
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: The module release channel.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: The module release update mode.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          priority: 1
+          type: string
+          description: The module release update windows.

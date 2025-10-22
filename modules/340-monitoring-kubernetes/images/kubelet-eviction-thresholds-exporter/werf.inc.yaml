@@ -1,0 +1,54 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/loop
+  to: /bin/loop
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bin/loop"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go test ./... -v
+  - go build -ldflags="-s -w" -o loop main.go
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/loop

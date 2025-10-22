@@ -1,0 +1,206 @@
+{{- define "longterm_prometheus_resources" }} # for reference see modules/300-prometheus/hooks/detect_vpa_max.go
+cpu: 50m
+memory: 500Mi
+{{- end }}
+
+{{- define "longterm_config_reloader_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if .Values.prometheus.longtermRetentionDays }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prometheus-longterm
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: prometheus-longterm
+  updatePolicy:
+    updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus"
+      minAllowed:
+        {{- include "longterm_prometheus_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: {{ .Values.prometheus.vpa.longtermMaxCPU | default .Values.prometheus.internal.vpa.longtermMaxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.longtermMaxMemory | default .Values.prometheus.internal.vpa.longtermMaxMemory | quote }}
+    - containerName: config-reloader
+      minAllowed:
+        {{- include "longterm_config_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        memory: 50Mi
+        cpu: 20m
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: longterm
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  replicas: 1
+  retention: {{ .Values.prometheus.longtermRetentionDays }}d
+  retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
+{{- if (.Values.global.enabledModules | has "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
+  version: v2.53.2
+{{- else }}
+  image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+  version: v2.55.1
+{{- end }}
+  imagePullSecrets:
+  - name: deckhouse-registry
+  listenLocal: true
+  query:
+    maxSamples: 100000000
+  additionalArgs:
+    - name: scrape.timestamp-tolerance
+      value: 10ms
+  {{- include "prometheus_init_containers" (list . "prometheus-longterm-db") | nindent 2 }}
+  containers:
+  - name: prometheus
+    startupProbe:
+      failureThreshold: 300
+{{- if (.Values.global.enabledModules | has "prompp") }}
+    envFrom:
+      - configMapRef:
+          name: prometheus-pp-envs
+{{- end }}
+  - name: kube-rbac-proxy
+    {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 4 }}
+    image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+    args:
+    - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
+    - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+    - "--v=2"
+    - "--logtostderr=true"
+    - "--stale-cache-interval=1h30m"
+    - "--livez-path=/livez"
+    ports:
+    - containerPort: 9090
+      name: https
+    livenessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
+    readinessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
+    env:
+    - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: KUBE_RBAC_PROXY_CONFIG
+      value: |
+        upstreams:
+        - upstream: http://127.0.0.1:9090/
+          path: /
+          authorization:
+            resourceAttributes:
+              namespace: d8-monitoring
+              apiGroup: monitoring.coreos.com
+              apiVersion: v1
+              resource: prometheuses
+              subresource: http
+              name: longterm
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+  {{- end }}
+    volumeMounts:
+    - name: kube-rbac-proxy-ca
+      mountPath: /etc/kube-rbac-proxy
+  - name: config-reloader
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- include "longterm_config_reloader_resources" . | nindent 8 }}
+  {{- end }}
+  affinity:
+    podAntiAffinity:
+      {{- if eq .Values.prometheus.longtermPodAntiAffinity "Required" }}
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+              prometheus: main
+          topologyKey: kubernetes.io/hostname
+      {{- else }}
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: prometheus
+                prometheus: main
+            topologyKey: kubernetes.io/hostname
+      {{- end }}
+  scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
+  evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+  externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/longterm/
+{{- end }}
+  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+    fsGroup: 64535
+  serviceAccountName: prometheus
+  podMetadata:
+    labels:
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "94"
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "96"
+    annotations:
+      checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
+  {{- if .Values.prometheus.longtermNodeSelector }}
+  nodeSelector:
+    {{ .Values.prometheus.longtermNodeSelector | toYaml }}
+  {{- else }}
+    {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2}}
+  {{- end }}
+  {{- if .Values.prometheus.longtermTolerations }}
+  tolerations:
+    {{ .Values.prometheus.longtermTolerations | toYaml | nindent 2}}
+  {{- else }}
+    {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
+  {{- end }}
+
+  {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 2 }}
+  {{- $storageClass := .Values.prometheus.internal.prometheusLongterm.effectiveStorageClass }}
+  {{- if $storageClass }}
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.prometheus.internal.prometheusLongterm.diskSizeGigabytes }}Gi
+        storageClassName: {{ $storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+      {{- include "longterm_prometheus_resources" . | nindent 6 }}
+  {{- end }}
+  volumes:
+  - name: kube-rbac-proxy-ca
+    configMap:
+      defaultMode: 420
+      name: kube-rbac-proxy-ca.crt
+{{- end }}

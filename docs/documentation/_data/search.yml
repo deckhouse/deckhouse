@@ -1,0 +1,8 @@
+searchItems:
+  ru: []
+  en: []
+
+skipParameters:
+  - kind
+  - apiVersion
+  - spec

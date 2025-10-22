@@ -1,0 +1,20 @@
+---
+image: golangci-lint-artifact
+fromImage: builder/golang-alpine
+final: false
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/golangci/golangci-lint --branch v2.1.2
+  - cd golangci-lint/
+  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
+  - rm -rf /golangci-lint/.git
+---

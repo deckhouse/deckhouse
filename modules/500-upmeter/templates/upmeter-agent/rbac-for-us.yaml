@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:{{ .Chart.Name }}:upmeter-agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+rules:
+  # Control-plane
+  - apiGroups: [""]
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+  # - In monitoring, we check daemonset availability based on available nodes
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  # - In various probes, we check pods readiness
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # - In deckhouse-controller probe we need to discover deckhouse-leader service
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
+    resourceNames: ["deckhouse-leader"]
+  # Deckhouse hooks checked via the CR change sync, and nodegroup probes
+  - apiGroups: ["deckhouse.io"]
+    resources: ["upmeterhookprobes" , "nodegroups"]
+    verbs: ["*"]
+  # Metrics Adapter API
+  - apiGroups: ["custom.metrics.k8s.io"]
+    resources: ["metrics"]
+    verbs: ["get"]
+  # Metrics-sources probe, node-exporter
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get"]
+  # Cert-manager basic probe checking for secret creation
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["create", "delete"]
+  
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:{{ .Chart.Name }}:upmeter-agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:upmeter-agent
+subjects:
+  - kind: ServiceAccount
+    name: upmeter-agent
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+rules:
+  # Fetching smoke-mini; creating configmaps, deployments, pods
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: upmeter-agent
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: upmeter-agent
+subjects:
+  - kind: ServiceAccount
+    name: upmeter-agent
+    namespace: d8-{{ .Chart.Name }}

@@ -1,0 +1,103 @@
+{{- define "webhook_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if .Values.kubeDns.clusterDomainAliases }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name:  d8-kube-dns-sts-pods-hosts-appender-webhook
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: d8-kube-dns-sts-pods-hosts-appender-webhook
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "webhook"
+      minAllowed:
+        {{- include "webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8-kube-dns-sts-pods-hosts-appender-webhook
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: sts-pods-hosts-appender-webhook
+  template:
+    metadata:
+      annotations:
+        checksum/certificate: {{ include (print .Template.BasePath "/sts-pods-hosts-appender-webhook/secret.yaml") . | sha256sum }}
+      labels:
+        app: sts-pods-hosts-appender-webhook
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "sts-pods-hosts-appender-webhook")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+        - name: webhook
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderWebhook") }}
+          command:
+          - /sts-pods-hosts-appender-webhook
+          - -tls-cert-file=/etc/webhook/certs/tls.crt
+          - -tls-key-file=/etc/webhook/certs/tls.key
+          env:
+          - name: CLUSTER_DOMAIN
+            value: {{ .Values.global.discovery.clusterDomain | quote }}
+          - name: CLUSTER_DOMAIN_ALIASES
+            value: {{ .Values.kubeDns.clusterDomainAliases | join " " | quote }}
+          - name: INIT_CONTAINER_IMAGE
+            value: {{ include "helm_lib_module_image" (list . "stsPodsHostsAppenderInitContainer") }}
+          ports:
+          - containerPort: 4443
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 4443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            failureThreshold: 2
+            periodSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 4443
+              scheme: HTTPS
+            periodSeconds: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "webhook_resources" . | nindent 14 }}
+  {{- end }}
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: d8-kube-dns-sts-pods-hosts-appender-webhook
+{{- end }}

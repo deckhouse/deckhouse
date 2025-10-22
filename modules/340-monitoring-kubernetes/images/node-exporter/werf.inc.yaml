@@ -1,0 +1,55 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/node_exporter
+  to: /bin/node_exporter
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bin/node_exporter"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v1.9.1 $(cat /run/secrets/SOURCE_REPO)/prometheus/node_exporter.git .
+  - git apply /patches/*.patch --verbose
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o node_exporter node_exporter.go
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/node_exporter

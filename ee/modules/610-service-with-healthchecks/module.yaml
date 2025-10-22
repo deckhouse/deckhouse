@@ -1,0 +1,7 @@
+name: service-with-healthchecks
+stage: "General Availability"
+namespace: d8-service-with-healthchecks
+description: |
+  Internal LoadBalancer with per-port healthchecks.
+requirements:
+  deckhouse: ">= 1.68"

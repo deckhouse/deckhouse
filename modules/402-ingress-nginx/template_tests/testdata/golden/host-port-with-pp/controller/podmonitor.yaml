@@ -1,0 +1,78 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+    prometheus: main
+  name: ingress-nginx-controller
+  namespace: d8-monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+    - d8-ingress-nginx
+  podMetricsEndpoints:
+  - bearerTokenSecret:
+      key: token
+      name: prometheus-token
+    metricRelabelings:
+    - action: labeldrop
+      regex: ingress_class
+    path: /controller/metrics
+    port: https-metrics
+    relabelings:
+    - action: labeldrop
+      regex: endpoint|namespace|pod|container
+    - replacement: nginx-ingress-controller
+      targetLabel: job
+    - sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: node
+    - sourceLabels:
+      - __meta_kubernetes_pod_label_name
+      targetLabel: controller
+    - replacement: controller
+      targetLabel: scrape_source
+    - replacement: cluster
+      targetLabel: tier
+    - action: keep
+      regex: "true"
+      sourceLabels:
+      - __meta_kubernetes_pod_ready
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  - bearerTokenSecret:
+      key: token
+      name: prometheus-token
+    path: /protobuf/metrics
+    port: https-metrics
+    relabelings:
+    - action: labeldrop
+      regex: endpoint|namespace|pod|container
+    - replacement: nginx-ingress-controller
+      targetLabel: job
+    - sourceLabels:
+      - __meta_kubernetes_pod_node_name
+      targetLabel: node
+    - sourceLabels:
+      - __meta_kubernetes_pod_label_name
+      targetLabel: controller
+    - sourceLabels:
+      - __meta_kubernetes_pod_controller_name
+      targetLabel: app
+    - replacement: protobuf
+      targetLabel: scrape_source
+    - replacement: cluster
+      targetLabel: tier
+    - action: keep
+      regex: "true"
+      sourceLabels:
+      - __meta_kubernetes_pod_ready
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+  selector:
+    matchLabels:
+      app: controller

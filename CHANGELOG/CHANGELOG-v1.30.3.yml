@@ -1,0 +1,9 @@
+bashible:
+  fixes:
+    - description: Remove SELinux enabling step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/709
+monitoring:
+  fixes:
+    - description: Remove apparmor profile for node-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/710
+

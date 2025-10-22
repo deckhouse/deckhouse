@@ -1,0 +1,12 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+---
+apiVersion: externaldata.gatekeeper.sh/v1beta1
+kind: Provider
+metadata:
+  name: ratify-provider
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  url: https://ratify.d8-{{ .Chart.Name }}:6001/ratify/gatekeeper/v1/verify
+  timeout: 27
+  caBundle: {{ .Values.admissionPolicyEngine.internal.ratify.webhook.ca | b64enc | quote }}
+{{- end }}

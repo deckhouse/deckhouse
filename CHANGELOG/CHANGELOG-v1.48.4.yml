@@ -1,0 +1,13 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Remove duplicates from additional security groups in cloud-data-discoverer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5279
+    - summary: >-
+        Fix migration from `openstack_blockstorage_volume_v2` to `openstack_blockstorage_volume_v3`
+        for bastion hosts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5271
+user-authn:
+  fixes:
+    - summary: Fix kubeconfig certificate generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5273
+

@@ -1,0 +1,12 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: Deployment
+          name: prometheus-metrics-adapter
+          container: prometheus-metrics-adapter
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics

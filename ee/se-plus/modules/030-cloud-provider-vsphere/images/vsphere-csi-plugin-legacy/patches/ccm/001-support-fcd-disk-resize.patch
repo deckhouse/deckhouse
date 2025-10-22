@@ -1,0 +1,186 @@
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision 448b9856b68373cf334d1065cae67140054debd8)
++++ b/go.mod	(revision 92ef9ea7f6ed2c66092be9e9420804c2d337820b)
+@@ -26,7 +26,6 @@
+ 	github.com/golang/protobuf v1.2.0
+ 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
+ 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
+-	github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c // indirect
+ 	github.com/googleapis/gnostic v0.2.0 // indirect
+ 	github.com/gorilla/websocket v1.4.0 // indirect
+ 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
+@@ -58,7 +57,7 @@
+ 	github.com/stretchr/testify v1.3.0 // indirect
+ 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
+ 	github.com/ugorji/go v1.1.1 // indirect
+-	github.com/vmware/govmomi v0.20.0
++	github.com/vmware/govmomi v0.21.1-0.20191021230255-674286cbacce
+ 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
+ 	go.etcd.io/bbolt v1.3.2 // indirect
+ 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.sum b/go.sum
+--- a/go.sum	(revision 448b9856b68373cf334d1065cae67140054debd8)
++++ b/go.sum	(revision 92ef9ea7f6ed2c66092be9e9420804c2d337820b)
+@@ -25,6 +25,7 @@
+ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
++github.com/davecgh/go-xdr v0.0.0-20161123171359-e6a2ba005892/go.mod h1:CTDl0pzVzE5DEzZhPfvhY/9sPFMQIxaJ9VAMs9AagrE=
+ github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
+ github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
+ github.com/docker/distribution v0.0.0-20180820212402-02bf4a2887a4 h1:8UiRPZ+dol3ndYHduUTj2JM4gG4wcsHW6kZoSAJowBc=
+@@ -64,6 +65,7 @@
+ github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf/go.mod h1:HP5RmnzzSNb993RKQDq4+1A4ia9nllfqcQFTQJedwGI=
+ github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c h1:jWtZjFEUE/Bz0IeIhqCnyZ3HG6KRXSntXe4SjtuTH7c=
+ github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
++github.com/google/uuid v0.0.0-20170306145142-6a5e28554805/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/googleapis/gnostic v0.2.0 h1:l6N3VoaVzTncYYW+9yOz2LJJammFZGBO13sqgEhpy9g=
+ github.com/googleapis/gnostic v0.2.0/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTVRp3pOg5EKY=
+ github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=
+@@ -145,6 +147,9 @@
+ github.com/ugorji/go v1.1.1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
+ github.com/vmware/govmomi v0.20.0 h1:+1IyhvoVb5JET2Wvgw9J3ZDv6CK4sxzUunpH8LhQqm4=
+ github.com/vmware/govmomi v0.20.0/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
++github.com/vmware/govmomi v0.20.3/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
++github.com/vmware/govmomi v0.21.1-0.20191021230255-674286cbacce/go.mod h1:zbnFoBQ9GIjs2RVETy8CNEpb+L+Lwkjs3XZUL0B3/m0=
++github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728/go.mod h1:x9oS4Wk2s2u4tS29nEaDLdzvuHdB19CvSGJjPgkZJNk=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+ go.etcd.io/bbolt v1.3.2 h1:Z/90sZLPOeCy2PwprqkFa25PdkusRzaj9P8zm/KNyvk=
+Index: pkg/common/connectionmanager/zones.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/connectionmanager/zones.go b/pkg/common/connectionmanager/zones.go
+--- a/pkg/common/connectionmanager/zones.go	(revision 448b9856b68373cf334d1065cae67140054debd8)
++++ b/pkg/common/connectionmanager/zones.go	(revision 92ef9ea7f6ed2c66092be9e9420804c2d337820b)
+@@ -101,8 +101,13 @@
+ 		return nil, err
+ 	}
+
++	var dcConfig []string
++	if tmpVsi.Cfg != nil {
++		dcConfig = strings.Split(tmpVsi.Cfg.Datacenters, ",")
++	}
++
+ 	// More than 1 DC in this VC
+-	if numOfDc > 1 {
++	if (numOfDc > 1 && len(dcConfig) > 1) || (numOfDc > 1 && dcConfig == nil) {
+ 		klog.Info("Multi Datacenter configuration detected")
+ 		return cm.getDIFromMultiVCorDC(ctx, zoneLabel, regionLabel, zoneLooking, regionLooking)
+ 	}
+@@ -116,12 +121,23 @@
+ 		return nil, err
+ 	}
+
+-	discoveryInfo := &ZoneDiscoveryInfo{
+-		VcServer:   vc,
+-		DataCenter: datacenterObjs[0],
+-	}
++	if dcConfig == nil {
++		return &ZoneDiscoveryInfo{
++			VcServer:   vc,
++			DataCenter: datacenterObjs[0],
++		}, nil
++	} else {
++		for _, dc := range datacenterObjs {
++			if strings.TrimPrefix(dc.Name(), "/") == dcConfig[0] {
++				return &ZoneDiscoveryInfo{
++					VcServer:   vc,
++					DataCenter: dc,
++				}, nil
++			}
++		}
++		return nil, ErrUnsupportedConfiguration
+
+-	return discoveryInfo, nil
++	}
+ }
+
+ func (cm *ConnectionManager) getDIFromMultiVCorDC(ctx context.Context,
+Index: pkg/common/vclib/datacenter.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/common/vclib/datacenter.go b/pkg/common/vclib/datacenter.go
+--- a/pkg/common/vclib/datacenter.go	(revision 448b9856b68373cf334d1065cae67140054debd8)
++++ b/pkg/common/vclib/datacenter.go	(revision 92ef9ea7f6ed2c66092be9e9420804c2d337820b)
+@@ -22,6 +22,7 @@
+ 	"fmt"
+ 	"path/filepath"
+ 	"strings"
++	"time"
+
+ 	"github.com/vmware/govmomi/find"
+ 	"github.com/vmware/govmomi/object"
+@@ -495,7 +496,7 @@
+ 			VslmCreateSpecBackingSpec: types.VslmCreateSpecBackingSpec{
+ 				Datastore: ds,
+ 			},
+-			ProvisioningType: string(types.BaseConfigInfoDiskFileBackingInfoProvisioningTypeThin),
++			ProvisioningType: string(types.BaseConfigInfoDiskFileBackingInfoProvisioningTypeLazyZeroedThick),
+ 		},
+ 	}
+
+@@ -633,6 +634,49 @@
+ 	return nil, ErrNoDiskIDFound
+ }
+
++func (dc *Datacenter) ExtendFirstClassDisk(ctx context.Context, diskID string, newCapacityInMB int64) error {
++	newClient, err := vslm.NewClient(ctx, dc.Client())
++	if err != nil {
++		return err
++	}
++
++	m := vslm.NewGlobalObjectManager(newClient)
++
++	task, err := m.ExtendDisk(ctx, types.ID{Id: diskID}, newCapacityInMB)
++	klog.Warningf("Extending disk %v with newCapacityInMB %v", diskID, newCapacityInMB)
++	if err != nil {
++		klog.Errorf("Extend(%s) failed. Err: %v", diskID, err)
++		return err
++	}
++
++	taskResult, err := task.Wait(ctx, 30*time.Second)
++	klog.Warningf("taskResult: %v", taskResult)
++	if err != nil {
++		klog.Errorf("Wait(%s) failed. Err: %v", diskID, err)
++		return err
++	}
++
++	return nil
++}
++
++func (dc *Datacenter) CountFirstClassDiskAssociations(ctx context.Context, diskID string) (count int, err error) {
++	newClient, err := vslm.NewClient(ctx, dc.Client())
++	if err != nil {
++		return 0, err
++	}
++
++	m := vslm.NewGlobalObjectManager(newClient)
++
++	associations, err := m.RetrieveAssociations(ctx, []types.ID{{Id: diskID}})
++	klog.Warningf("Associations %v", associations[0].VmDiskAssociation)
++	if err != nil {
++		klog.Errorf("RetrieveAssociations(%s) failed. Err: %v", diskID, err)
++		return 0, err
++	}
++
++	return len(associations[0].VmDiskAssociation), nil
++}
++
+ // DeleteFirstClassDisk deletes an FCD.
+ func (dc *Datacenter) DeleteFirstClassDisk(ctx context.Context,
+ 	datastoreName string, datastoreType ParentDatastoreType, diskID string) error {

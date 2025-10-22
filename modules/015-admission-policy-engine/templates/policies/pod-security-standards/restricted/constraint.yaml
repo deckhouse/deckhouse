@@ -1,0 +1,19 @@
+{{- $context := . }}
+
+{{- range $enforcementAction := .Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions }}
+
+  {{- $parameters := dict "allowedCapabilities" (list "NET_BIND_SERVICE") "requiredDropCapabilities" (list "ALL") }}
+  {{- include "pod_security_standard_restricted" (list $context "D8AllowedCapabilities" $enforcementAction $parameters) }}
+
+  {{- include "pod_security_standard_restricted" (list $context "D8AllowPrivilegeEscalation" $enforcementAction) }} # Privilege Escalation
+
+  {{- $parameters := dict "volumes" (list "configMap" "csi" "downwardAPI" "emptyDir" "ephemeral" "persistentVolumeClaim" "projected" "secret") }} # Volumes
+  {{- include "pod_security_standard_restricted" (list $context "D8AllowedVolumeTypes" $enforcementAction $parameters) }}
+
+  {{- $parameters := dict "runAsUser" (dict "rule" "MustRunAsNonRoot") }} # Allowed Users
+  {{- include "pod_security_standard_restricted" (list $context "D8AllowedUsers" $enforcementAction $parameters) }}
+
+  {{- $parameters := dict "allowedProfiles" (list "RuntimeDefault" "Localhost") "allowedLocalhostFiles" (list "*") }}
+  {{- include "pod_security_standard_restricted" (list $context "D8AllowedSeccompProfiles" $enforcementAction $parameters) }}
+
+{{- end }}

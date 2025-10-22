@@ -1,0 +1,22 @@
+
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Содержит информацию о статических группах.
+          properties:
+            spec:
+              properties:
+                name:
+                  description: Уникальное имя группы.
+                members:
+                  type: array
+                  description: Список членов группы.
+                  items:
+                    properties:
+                      kind:
+                        description: Тип члена группы.
+                      name:
+                        description: Имя пользователя (члена группы) или название группы (члена группы).

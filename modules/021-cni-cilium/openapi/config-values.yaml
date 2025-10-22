@@ -1,0 +1,287 @@
+type: object
+properties:
+  debugLogging:
+    type: boolean
+    default: false
+    description: Enabled debug logging for Cilium components.
+  labelsRegex:
+    type: array
+    description: |
+      Cilium creates security identifiers based on the k8s entity labels. The more labels are involved in this process, the higher the access granularity that can be achieved.
+      However, in large clusters, excessive granularity can create a heavy load. You can use the `labelsRegex` option to explicitly specify which labels are to be used for security policies,
+      and which labels are to be neglected. Refer to the [documentation](https://docs.cilium.io/en/stable/operations/performance/scalability/identity-relevant-labels/#limiting-identity-relevant-labels) to learn more about reducing the identity cardinality
+
+      Each label must be specified by a RegExp expression in YAML quoted string format. Note that special characters must be escaped.
+    x-doc-examples:
+      - ["k8s:!app\\.kubernetes\\.io", "k8s:io\\.cilium\\.k8s\\.policy"]
+    items:
+      type: string
+  createNodeRoutes:
+    type: boolean
+    description: |
+      Create routes to Pods on other Nodes.
+
+      All Nodes must be located in the same L2 domain.
+  masqueradeMode:
+    type: string
+    enum: ["Netfilter", "BPF"]
+    default: "BPF"
+    description: |
+      Cilium masquerade work mode for pods traffic leaving the cluster.
+      - `BPF` - use cilium BPF. Basic operation mode.
+
+        In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
+
+      - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
+
+        In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
+
+      > In `BPF` mode, if `ExternalIP` other than `InternalIP` is specified for a cluster node, and that IP address is not currently assigned to any interface on the node, it will not be reachable from neighboring nodes from pods network.
+      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway``.
+  tunnelMode:
+    type: string
+    enum: ["Disabled", "VXLAN"]
+    default: "Disabled"
+    description: |
+      Tunnel mode.
+
+      > Note! After changing the parameter, it is necessary to restart all nodes, otherwise, there may be problems with the availability of Pods!
+
+      > Note! VXLAN mode is not compatible with following bpfLBMode modes: Hybrid, DSR. bpfLBMode will be overriden to SNAT if the tunnelMode is VXLAN.
+  svcSourceRangeCheck:
+    type: boolean
+    default: false
+    description: |
+      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
+      Some cloud providers support filtering of incoming traffic based on the `sourceRanges` parameter in their loadBalancer implementations. In such cases, the [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
+      recommends disabling the `svcSourceRangeCheck` option.
+
+      Do not enable if another balancer or any type of SNAT is running in front of the services.
+  loadBalancerSourceRangeAllTypes:
+    type: boolean
+    default: true
+    description: |
+      Enable loadBalancerSourceRanges CIDR filtering for all service types, not just LoadBalancer services.
+      The corresponding NodePort and ClusterIP will also apply the CIDR filter.
+      For more detailed information, please visit the [link](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
+  policyAuditMode:
+    type: boolean
+    default: false
+    description: |
+      Do not enforce any Network Policy. Just log allowed/disallowed connections.
+  exclusiveCNIPlugin:
+    type: boolean
+    default: true
+    description: |
+      Prevents additional CNI plugins from being enabled on cluster nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
+
+      Explicitly disabling this option is recommended only when using an additional CNI or a specific CNI plugin in the cluster. An example of such a use case could be the Linkerd CNI plugin.
+  bpfLBMode:
+    type: string
+    default: "Hybrid"
+    enum: ["SNAT", "Hybrid", "DSR"]
+    description: |
+      eBPF LoadBalancer mode:
+      - `SNAT` — traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
+      - `DSR` — traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
+      - `Hybrid` — TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
+  activeL2NeighborDiscoveryEnabled:
+    type: boolean
+    default: true
+    description: |
+      Enables the Cilium `L2 neighbor discovery` mechanism, which helps ensure that ARP table entries are kept up-to-date on all cluster nodes.
+  extraLoadBalancerAlgorithmsEnabled:
+    type: boolean
+    default: false
+    x-experimental: true
+    description: |
+      Allows selectively overriding the load balancing algorithm using eBPF between backends for individual services. The annotation `service.cilium.io/lb-algorithm` is used for overriding with one of the following values: `random`, `maglev`, or `least-conn`.
+
+      > Note! This option requires the Linux kernel version on the nodes to be at least 5.15.
+  resourcesManagement:
+    description: |
+      Settings for CPU and memory requests and limits by cilium agent pods.
+    default: {}
+    oneOf:
+    - properties:
+        mode:
+          enum: [ "VPA" ]
+        vpa: {}
+    - properties:
+        mode:
+          enum: [ "Static" ]
+        static: {}
+    x-examples:
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+          limitRatio: 1.5
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+          limitRatio: 1.5
+    - mode: Static
+      static:
+        requests:
+          cpu: "55m"
+          memory: "256Mi"
+        limits:
+          cpu: 2
+          memory: "2Gi"
+    properties:
+      mode:
+        type: string
+        description: |
+          Resource management mode:
+          - `Static` is a classic one. In it, you specify requests/limits. The parameters of this mode are defined in the [static](#parameters-resourcesmanagement-static) parameter section;
+          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesmanagement-vpa) parameter section.
+        enum: ['VPA', 'Static']
+        default: 'VPA'
+      vpa:
+        type: object
+        default: {}
+        description: |
+          Resource management options for the `VPA` mode.
+        properties:
+          mode:
+            type: string
+            description: |
+              VPA operating mode.
+            enum: ['Initial', 'Auto']
+            default: 'Initial'
+          cpu:
+            type: object
+            default: {}
+            description: |
+              CPU-related VPA settings.
+            properties:
+              max:
+                description: |
+                  The maximum value that the VPA can set for the CPU requests.
+                default: 4
+                oneOf:
+                - type: string
+                  pattern: "^[0-9]+m?$"
+                - type: number
+              min:
+                description: |
+                  The minimum value that the VPA can set for the CPU requests.
+                default: '100m'
+                oneOf:
+                - type: string
+                  pattern: "^[0-9]+m?$"
+                - type: number
+              limitRatio:
+                type: number
+                examples: [1.5]
+                description: |
+                  The CPU limits/requests ratio.
+
+                  This ratio is used for calculating the initial CPU limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+          memory:
+            type: object
+            default: {}
+            description: |
+              Memory-related VPA settings.
+            properties:
+              max:
+                description: |
+                  The maximum memory requests the VPA can set.
+                default: '4Gi'
+                oneOf:
+                - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                - type: number
+              min:
+                description: |
+                  The minimum memory requests the VPA can set.
+                default: '128Mi'
+                oneOf:
+                - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                - type: number
+              limitRatio:
+                type: number
+                examples: [1.5]
+                description: |
+                  The memory limits/requests ratio.
+
+                  This ratio is used for calculating the initial memory limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+      static:
+        type: object
+        description: |
+          Resource management options for the `Static` mode.
+        properties:
+          requests:
+            type: object
+            description: |
+              Resource requests settings for pods.
+            properties:
+              cpu:
+                oneOf:
+                - type: string
+                  pattern: "^[0-9]+m?$"
+                - type: number
+                description: |
+                  Configuring CPU requests.
+              memory:
+                oneOf:
+                - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                - type: number
+                description: |
+                  Configuring memory requests.
+          limits:
+            type: object
+            description: |
+              Configuring CPU and memory limits.
+            properties:
+              cpu:
+                oneOf:
+                - type: string
+                  pattern: "^[0-9]+m?$"
+                - type: number
+                description: |
+                  Configuring CPU limits.
+              memory:
+                oneOf:
+                - type: string
+                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                - type: number
+                description: |
+                  Configuring memory limits.
+  encryption:
+    type: object
+    description: |
+      CNI Cilium encryption settings.
+    default: {}
+    properties:
+      mode:
+        type: string
+        enum: ["Disabled", "WireGuard"]
+        default: "Disabled"
+        description: |
+          Encryption mode:
+          - `Disabled` — encryption is disabled.
+          - `WireGuard` — enables traffic encryption between pods using WireGuard.
+
+            > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either via the CONFIG_WIREGUARD=m kernel config option on Linux 5.6 and newer, or using an external WireGuard module for older kernels).
+
+            > Note! Using WireGuard may cause significant CPU consumption by Cilium agent pods.
+      nodeToNodeModeEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enabling traffic encryption between nodes and pods in HostNetwork.
+
+            > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
+
+          > Note! When this mode is active, `NodePort` and `HostPort` are not available from the `PodNetwork`.

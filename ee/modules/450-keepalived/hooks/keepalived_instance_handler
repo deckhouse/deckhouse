@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __config__() {
+  cat << EOF
+   configVersion: v1
+   kubernetes:
+   - name: nodes
+     queue: /modules/$(module::name::kebab_case)
+     group: main
+     keepFullObjectsInMemory: false
+     apiVersion: v1
+     kind: Node
+     jqFilter: |
+       {
+         "labels": .metadata.labels
+       }
+   - name: secrets
+     queue: /modules/$(module::name::kebab_case)
+     group: main
+     keepFullObjectsInMemory: false
+     apiVersion: v1
+     kind: Secret
+     namespace:
+       nameSelector:
+         matchNames: ["d8-keepalived"]
+     labelSelector:
+       matchExpressions:
+       - {"key": "keepalived-instance", "operator": "Exists"}
+     jqFilter: |
+       {
+         "labels": .metadata.labels,
+         "authPass": (.data.authPass | @base64d)
+       }
+   - name: keepalived_instances
+     queue: /modules/$(module::name::kebab_case)
+     group: main
+     keepFullObjectsInMemory: false
+     apiVersion: deckhouse.io/v1alpha1
+     kind: KeepalivedInstance
+     jqFilter: |
+       {
+         "name": .metadata.name,
+         "spec": .spec
+       }
+EOF
+}
+
+function __main__() {
+  if context::jq -e '
+    ([.snapshots.keepalived_instances[].filterResult.spec.vrrpInstances[].id] | unique | length) !=
+    ([.snapshots.keepalived_instances[].filterResult.spec.vrrpInstances[].id] | length)' >/dev/null 2>&1
+  then
+    >&2 echo "ERROR: All vrrpInstances[].id in all KeepalivedInstances must be unique cluster-wide."
+    exit 1
+  fi
+
+  instances="$(context::jq -r '[.snapshots.keepalived_instances[].filterResult | {(.name): .spec}] | reduce .[] as $i ({}; . * $i)')"
+  values::set keepalived.internal.instances "${instances}"
+
+  for instanceName in $(jq -r '. | keys[]' <<< ${instances}); do
+    nodeSelector=$(jq -r ".\"${instanceName}\".nodeSelector" <<< "$instances")
+    replicas=$(context::jq -r "[.snapshots.nodes[] | select(.filterResult.labels | contains(${nodeSelector}))] | length")
+    values::set keepalived.internal.instances."${instanceName}".replicas $replicas
+  done
+
+  for instance in $(jq -nr --argjson a "${instances}" '$a | to_entries[] | .key'); do
+    if authPass=$(context::jq --arg instance "$instance" -re '.snapshots.secrets[] | select(.filterResult.labels."keepalived-instance" == $instance) | .filterResult.authPass'); then
+      values::set keepalived.internal.instances."${instance}".authPass "$authPass"
+    else
+      values::set keepalived.internal.instances."${instance}".authPass $(tools::generate_password | cut -c -8)
+    fi
+  done
+}
+
+hook::run "$@"

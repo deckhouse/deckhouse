@@ -1,0 +1,79 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: upmeter-agent
+          container: chown-volume-data
+      liveness-probe:
+        - kind: StatefulSet
+          name: upmeter
+          container: kube-rbac-proxy
+        - kind: StatefulSet
+          name: smoke-mini-e
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-d
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-c
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-b
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-a
+          container: smoke-mini
+        - kind: DaemonSet
+          name: upmeter-agent
+          container: agent
+      readiness-probe:
+        - kind: DaemonSet
+          name: upmeter-agent
+          container: agent
+        - kind: StatefulSet
+          name: upmeter
+          container: kube-rbac-proxy
+      image-digest:
+        - kind: StatefulSet
+          name: smoke-mini-e
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-d
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-c
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-b
+          container: smoke-mini
+        - kind: StatefulSet
+          name: smoke-mini-a
+          container: smoke-mini
+  module:
+    oss:
+      disable: true
+    conversions:
+      disable: true
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:upmeter:upmeter-agent
+        - kind: ClusterRole
+          name: d8:upmeter:upmeter
+        - kind: Role
+          name: upmeter-agent
+  templates:
+    exclude-rules:
+      service-port:
+        - name: smoke-mini-a
+          port: http
+        - name: smoke-mini-b
+          port: http
+        - name: smoke-mini-c
+          port: http
+        - name: smoke-mini-d
+          port: http
+        - name: smoke-mini-e
+          port: http

@@ -1,0 +1,103 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: E2E Autoclean
+on:
+  schedule:
+  - cron: '0 7 * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [ closed ]
+
+env:
+  SCRIPT_DIR: ".github/scripts/python/e2e-commander-clean"
+  E2E_COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+  E2E_COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+  e2e-autoclean:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: Run
+    needs:
+    - skip_tests_repos
+    runs-on: [self-hosted, regular]
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+    - uses: actions/setup-python@v5.6.0
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      run: |
+        python ${SCRIPT_DIR}/main.py --auto
+
+    # <template: send_fail_report>
+    - name: Send fail report
+      if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+      env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        JOB_NAME: ${{ github.job }}
+        WORKFLOW_NAME: ${{ github.workflow }}
+        WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+      run: |
+        bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+    # </template: send_fail_report>
+  e2e-pr-clean:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    env:
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    name: Run
+    needs:
+    - skip_tests_repos
+    runs-on: [ self-hosted, regular ]
+    steps:
+
+    # <template: checkout_step>
+    - name: Checkout sources
+      uses: actions/checkout@v3.5.2
+
+    # </template: checkout_step>
+    - uses: actions/setup-python@v5.6.0
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install deps
+      run: |
+        pip install -r ${SCRIPT_DIR}/requirements.txt
+    - name: Run clean
+      run: |
+        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+        if [[ deckhouse/deckhouse == $GITHUB_REPOSITORY ]] ; then
+          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+          REPO_SUFFIX=
+        fi
+        python ${SCRIPT_DIR}/main.py --pr ${PULL_REQUEST_NUMBER}${REPO_SUFFIX:+-${REPO_SUFFIX}}

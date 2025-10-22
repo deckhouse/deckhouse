@@ -1,0 +1,47 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --branch 7.4.0 --depth 1 $(cat /run/secrets/SOURCE_REPO)/redis/redis.git /src
+  - rm -r /src/utils
+  - rm -r /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/alpine-3.20
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache build-base gcc make
+  install:
+  - cd /src
+  # disable Redis protected mode [1] as it is unnecessary in context of Docker
+  # (ports are not automatically exposed when running inside Docker, but rather explicitly by specifying -p / -P)
+  # [1]: https://github.com/redis/redis/commit/edd4d555df57dc84265fdfb4ef59a4678832f6da
+  - grep -E '^ *createBoolConfig[(]"protected-mode",.*, *1 *,.*[)],$' src/config.c
+  - sed -ri 's!^( *createBoolConfig[(]"protected-mode",.*, *)1( *,.*[)],)$!\10\2!' src/config.c
+  - grep -E '^ *createBoolConfig[(]"protected-mode",.*, *0 *,.*[)],$' src/config.c
+  - make CFLAGS="-static" LDFLAGS="-static"
+  - chown 64535:64535 /src/src/redis-server
+  - chmod 0700 /src/src/redis-server
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/src/redis-server
+  to: /redis-server
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/redis-server"]

@@ -1,0 +1,252 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "system-ns.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["*"]
+        operations: ["CREATE"]
+        resources: ["namespaces"]
+  validations:
+    - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
+      reason: Forbidden
+      messageExpression: '''Creation of system namespaces is forbidden'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+
+---
+{{- $policyName := "label-objects.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-kinds'
+      expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
+    - name: 'exclude-restartedAt'
+      expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
+          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
+          && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+          && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
+          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
+          && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
+          != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+  validations:
+    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
+      reason: Forbidden
+      messageExpression: "'Creating, updating and deleting an objects with the `heritage: deckhouse` label is forbidden'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
+
+{{- if ne .Values.global.deckhouseVersion "dev" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "heritage-label-objects.deckhouse.io"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    objectSelector:
+      matchExpressions:
+      - key: "heritage"
+        operator: In
+        values:
+        - "deckhouse"
+      - key: maintenance.deckhouse.io/no-resource-reconciliation
+        operator: NotIn
+        values:
+        - ""
+        - "true"
+{{- end }}
+---
+{{- $policyName := "update-policy-label-objects.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE"]
+        resources:   ["modulereleases"]
+  validations:
+    - expression: request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || ! ("modules.deckhouse.io/update-policy" in object.metadata.labels)
+        || ! ("modules.deckhouse.io/update-policy" in oldObject.metadata.labels)
+        || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]
+      reason: Forbidden
+      messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: "update-policy-label-objects.deckhouse.io"
+  validationActions: [Deny]
+
+---
+{{/* Check update windows in the deckhouse ModuleConfig */}}
+{{- $policyName := "mc-update-windows.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["moduleconfigs"]
+  matchConditions:
+    - name: 'deckhouse-mc'
+      expression: 'object.metadata.name == "deckhouse"'
+    - name: 'windows-are-set'
+      expression: |
+        has(object.spec.settings.update) &&
+        has(object.spec.settings.update.windows) &&
+        object.spec.settings.update.windows.size() > 0
+  validations:
+    - expression: 'object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
+      reason: Forbidden
+      messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{/* End deckhouse windows validation */}}
+
+---
+{{/* Check update windows in the ModuleUpdatePolicy */}}
+{{- $policyName := "mup-update-windows.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["moduleupdatepolicies"]
+  matchConditions:
+    - name: 'windows-are-set'
+      expression: |
+        has(object.spec.update) &&
+        has(object.spec.update.windows) &&
+        object.spec.update.windows.size() > 0
+  validations:
+    - expression: 'object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
+      reason: Forbidden
+      messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{/* End mup windows validation */}}
+---
+{{- $policyName := "default-cluster-storage-class.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["storage.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["storageclasses"]
+  matchConditions:
+    - name: 'exclude-users'
+      expression: |
+        !(
+          request.userInfo.username.startsWith("system:serviceaccount:d8-system")
+        )
+  validations:
+    - expression: |
+        !(
+          (
+            oldObject == null &&
+            object != null && has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations
+          ) || (
+            (oldObject != null && has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations) !=
+            (object != null && has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)
+          )
+        )
+      reason: Forbidden
+      messageExpression: '''Creating and updating an StorageClass with the `is-default-class` annotation is forbidden. Use `defaultClusterStorageClass` in ModuleConfig `global`'''
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to add StorageClass with the `is-default-class` annotation'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "default-cluster-storage-class-objects.deckhouse.io"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+
+{{- end }}

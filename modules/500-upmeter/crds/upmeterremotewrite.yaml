@@ -1,0 +1,106 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: upmeterremotewrites.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: upmeter
+    app: upmeter
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: upmeterremotewrites
+    singular: upmeterremotewrite
+    kind: UpmeterRemoteWrite
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: Upmeter `remote_write` configuration.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - config
+              properties:
+                # more sophisticated example
+                # https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/d10bc67f226e7c23efc1202928697d221478b7b9/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml
+                config:
+                  type: object
+                  description: Config defines the `remote_write` configuration for Prometheus.
+                  required:
+                    - url
+                  properties:
+                    url:
+                      type: string
+                      description: The URL of the endpoint to send samples to.
+                    basicAuth:
+                      type: object
+                      description: BasicAuth for the URL.
+                      required:
+                        - password
+                        - username
+                      properties:
+                        username:
+                          type: string
+                          description: The username for authentication.
+                          minLength: 1
+                        password:
+                          type: string
+                          description: The password for authentication.
+                          minLength: 1
+                    bearerToken:
+                      type: string
+                      description: Bearer token.
+                      minLength: 1
+                    tlsConfig:
+                      type: object
+                      description: TLS Config to use for remote write.
+                      properties:
+                        insecureSkipVerify:
+                          description: Disable target certificate validation.
+                          type: boolean
+                          x-doc-default: false
+                        ca:
+                          description: The CA certificate used when verifying the API server certificate.
+                          type: string
+                          x-doc-default: ""
+                    headers:
+                      type: object
+                      description: Additional HTTP headers to send with each remote write request.
+                      properties:
+                        X-Scope-OrgID:
+                          description: |
+                            The `X-Scope-OrgID` header specifying the tenant ID.
+                          type: string
+                        X-Auth-Token:
+                          description: |
+                            The `X-Auth-Token` header specifying the authentication token.
+                          type: string
+                      oneOf:
+                        - required: ["X-Scope-OrgID", "X-Auth-Token"]
+                additionalLabels:
+                  type: object
+                  description: Additional labels to add to all metrics.
+                  additionalProperties:
+                    type: string
+                intervalSeconds:
+                  type: number
+                  description: The size of timeslot to send.
+                  default: 300
+                  enum:
+                    - 30
+                    - 300
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema

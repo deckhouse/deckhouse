@@ -1,0 +1,7 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+---
+
+{% include doclinks.liquid %}

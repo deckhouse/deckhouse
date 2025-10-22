@@ -1,0 +1,9 @@
+cert-manager:
+  fixes:
+    - summary: Fix patch for cert-manager certificate owner ref field
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1985
+prometheus:
+  fixes:
+    - summary: fix deckhouse group alerts label selectors
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1987
+

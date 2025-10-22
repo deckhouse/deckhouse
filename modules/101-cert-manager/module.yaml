@@ -1,0 +1,14 @@
+name: cert-manager
+stage: "General Availability"
+subsystems:
+  - security
+namespace: d8-cert-manager
+description: |
+  This module installs the reliable and highly available cert-manager
+  https://github.com/jetstack/cert-manager
+descriptions:
+  en: |
+    This module installs the reliable and highly available cert-manager
+    https://github.com/jetstack/cert-manager
+requirements:
+  deckhouse: ">= 1.68"

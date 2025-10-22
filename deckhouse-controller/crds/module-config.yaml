@@ -1,0 +1,124 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: moduleconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    kind: ModuleConfig
+    plural: moduleconfigs
+    singular: moduleconfig
+    shortNames:
+    - mc
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration of the Deckhouse Kubernetes Platform module (module parameters). The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleConfig
+              metadata:
+                name: module-1
+              spec:
+                enabled: true
+                settings: { }
+                version: 1
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                  description: |
+                    Enables or disables the module.
+                  x-doc-examples: ['false']
+                maintenance:
+                  type: string
+                  enum: ["NoResourceReconciliation"]
+                  description: |
+                    Defines the module maintenance mode.
+
+                    - `NoResourceReconciliation`: A mode for developing or tweaking the module.
+
+                      In this mode:
+
+                      - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
+                      - Resource monitoring is disabled, which prevents deleted resources from being restored.
+                      - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+                      - The `ModuleIsInMaintenanceMode` alert is triggered.
+                  x-doc-examples: ['NoResourceReconciliation']
+                version:
+                  type: number
+                  description: |
+                    Version of settings schema.
+                  x-doc-examples: ['1']
+                settings:
+                  type: object
+                  description: |
+                    Module settings.
+                  x-kubernetes-preserve-unknown-fields: true
+                updatePolicy:
+                  type: string
+                  description: |
+                    Module update policy.
+                  x-doc-examples: ['test-alpha']
+                source:
+                  type: string
+                  description: |
+                    The source of the module it provided by one (otherwise empty).
+            status:
+              type: object
+              properties:
+                version:
+                  type: string
+                  description: "Version of settings schema in use"
+                message:
+                  type: string
+                  description: "Additional information"
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Enabled
+          type: boolean
+          description: "Module enabled state"
+          jsonPath: .spec.enabled
+        - name: UpdatePolicy
+          description: The update policy of the module.
+          jsonPath: .spec.updatePolicy
+          type: string
+          priority: 1
+        - name: Source
+          description: The source of the module.
+          type: string
+          jsonPath: .spec.source
+          priority: 1
+        - name: Version
+          type: string
+          description: "Version of settings schema in use"
+          jsonPath: .status.version
+        - name: Age
+          type: date
+          description: 'CreationTimestamp is a timestamp representing the server time
+            when this object was created. It is not guaranteed to be set in happens-before
+            order across separate operations. Clients may not set this value. It is represented
+            in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
+            lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+          jsonPath: .metadata.creationTimestamp
+        - name: Message
+          type: string
+          description: "Additional information"
+          jsonPath: .status.message

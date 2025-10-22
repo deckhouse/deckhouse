@@ -1,0 +1,54 @@
+{{- $version := "1.6.1"}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/bin/cloud-provider-for-cloud-director
+  to: /cloud-provider-for-cloud-director
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/cloud-provider-for-cloud-director"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/cloud-provider-for-cloud-director.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-provider-for-cloud-director/release.Version={{ $version }}" -o bin/cloud-provider-for-cloud-director cmd/ccm/main.go
+  - chown 64535:64535 bin/cloud-provider-for-cloud-director
+  - chmod 0755 bin/cloud-provider-for-cloud-director

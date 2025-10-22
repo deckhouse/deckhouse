@@ -1,0 +1,495 @@
+kind: AWSClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Describes the configuration of a cloud cluster in AWS.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: AWSClusterConfiguration
+        layout: WithoutNAT
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        nodeNetworkCIDR: "172.16.0.0/22"
+        vpcNetworkCIDR: "172.16.0.0/16"
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            instanceType: m5.xlarge
+            ami: ami-08b6d44b4f6f7b279
+            diskType: gp3
+        nodeGroups:
+          - name: worker
+            nodeTemplate:
+              labels:
+                node-role.kubernetes.io/worker: ""
+            replicas: 2
+            instanceClass:
+              instanceType: t2.medium
+              ami: ami-0caef02b518350c8b
+            additionalTags:
+              backup: srv1
+        provider:
+          providerAccessKeyId: '<AWS_ACCESS_KEY>'
+          providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
+          region: eu-central-1
+        tags:
+          team: rangers
+    x-unsafe-rules: [deleteZones]
+    additionalProperties: false
+    required: [apiVersion, kind, layout, provider, masterNodeGroup, sshPublicKey]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [AWSClusterConfiguration]
+      peeredVPCs:
+        type: array
+        description: |
+          A list of AWS VPC IDs to peer with the cluster network.
+
+          The service account must have access to all the VPCs listed. You have to configure the peering connection [manually](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html) if no access is available.
+        items:
+          type: string
+      masterNodeGroup:
+        type: object
+        required: [replicas, instanceClass]
+        description: |
+          Parameters of the master's NodeGroup.
+
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+        properties:
+          replicas:
+            type: integer
+            minimum: 1
+            description: |
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
+          instanceClass:
+            type: object
+            required: [instanceType, ami]
+            description: |
+              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+            properties:
+              instanceType:
+                type: string
+                description: |
+                  Instance type of AWS instance.
+
+                  **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
+                example: t3.large
+              ami:
+                type: string
+                description: |
+                  The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                  Here is how you can find the required AMI (each region has its own set of AMIs):
+                  ```shell
+                  aws ec2 --region <REGION> describe-images \
+                  --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                  jq '.Images[].ImageId'
+                  ```
+                example: ami-040a1551f9c9d11ad
+              additionalSecurityGroups:
+                type: array
+                description: |
+                  The additional security groups to add to provisioned instances of the specific InstanceClass.
+                items:
+                  type: string
+              diskType:
+                description: Instance EBS disk type.
+                example: "gp2"
+                type: string
+                enum: [gp3, gp2, io2, io1, st1, sc1]
+              diskSizeGb:
+                description: Instance disk size in gibibytes.
+                example: 50
+                type: integer
+              etcdDisk:
+                type: object
+                default: {sizeGb: 20, type: "gp3"}
+                properties:
+                  sizeGb:
+                    description: Etcd disk size in gibibytes.
+                    type: integer
+                  type:
+                    description: Etcd disk type.
+                    type: string
+          zones:
+            type: array
+            items:
+              type: string
+            minItems: 1
+            uniqueItems: true
+            description: |
+              A limited set of zones in which master nodes can be created.
+
+              The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
+            x-doc-required: false
+          additionalTags:
+            type: object
+            additionalProperties:
+              type: string
+            description: |
+              The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+            x-doc-examples:
+            - project: cms-production
+              severity: critical
+      nodeGroups:
+        type: array
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the NodeGroup. It is used to generate the node name.
+            replicas:
+              type: integer
+              description: |
+                The number of nodes.
+            nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
+              properties:
+                labels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                annotations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                taints:
+                  type: array
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                    > Available fields: `effect`, `key`, and `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              required: [instanceType, ami]
+              type: object
+              description: |
+                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              properties:
+                instanceType:
+                  type: string
+                  description: |
+                    Instance type of AWS instance.
+
+                    **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
+                  example: t3.large
+                ami:
+                  type: string
+                  description: |
+                    The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                    Here is how you can find the required AMI (each region has its own set of AMIs):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                  example: ami-040a1551f9c9d11ad
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    The additional security groups to add to provisioned instances of the specific InstanceClass.
+                  items:
+                    type: string
+                diskType:
+                  description: Instance EBS disk type.
+                  example: "gp2"
+                  type: string
+                  enum: [ gp3, gp2, io2, io1, st1, sc1 ]
+                diskSizeGb:
+                  description: Instance disk size in gibibytes.
+                  example: 50
+                  type: integer
+            zones:
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
+              description: |
+                A limited set of zones in which nodes can be created.
+
+                The order in which zones are specified does not influence the sequence of node creation. Nodes are assigned to zones in alphabetical order: the first node is placed in the alphabetically first zone, the second node in the second zone, and so forth. If there are more nodes than zones, the assignment process restarts from the beginning of the zone list after placing a node in the last alphabetical zone.
+              x-doc-required: false
+            additionalTags:
+              type: object
+              additionalProperties:
+                type: string
+              description: |
+                The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+              x-doc-example: |
+                ```yaml
+                project: cms-production
+                severity: critical
+                ```
+      layout:
+        type: string
+        description: |
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
+
+          > **Note,** that the `Standard` layout is deprecated.
+        enum: ['WithoutNAT', 'WithNAT', 'Standard']
+      standard:
+        type: object
+        additionalProperties: false
+        required: []
+        description: Layout is **deprecated**.
+        properties: {}
+        deprecated: true
+      withoutNAT:
+        type: object
+        additionalProperties: false
+        required: []
+        properties: {}
+      withNAT:
+        type: object
+        additionalProperties: false
+        required: []
+        properties:
+          bastionInstance:
+            type: object
+            required: [instanceClass]
+            properties:
+              zone:
+                type: string
+                description: |
+                  The zone in which the bastion instance will be created.
+
+                  By default, the first available zone in the region or the first from the list of the global parameter `zones` will be used.
+              instanceClass:
+                type: object
+                required: [instanceType, ami]
+                description: |
+                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                properties:
+                  instanceType:
+                    type: string
+                    description: |
+                      Instance type of AWS instance.
+
+                      **Caution!** Ensure that this type is present in selected zone.
+                    example: t3.large
+                  ami:
+                    type: string
+                    description: |
+                      The Amazon Machine Image (AMI ID) to use in provisioned instance.
+
+                      Here is how you can find the required AMI (each region has its own set of AMIs):
+                      ```shell
+                      aws ec2 --region <REGION> describe-images \
+                      --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                      jq '.Images[].ImageId'
+                      ```
+                    example: ami-040a1551f9c9d11ad
+                  additionalSecurityGroups:
+                    type: array
+                    description: |
+                      The additional security groups to add to provisioned instance of the specific InstanceClass.
+                    items:
+                      type: string
+                  diskType:
+                    description: Instance EBS disk type.
+                    example: "gp2"
+                    type: string
+                    enum: [gp3, gp2, io2, io1, st1, sc1]
+                  diskSizeGb:
+                    description: Instance disk size in gibibytes.
+                    example: 20
+                    type: integer
+      vpcNetworkCIDR:
+        type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        description: |
+          A subnet to use in the VPC being created.
+
+          **A mandatory parameter** if the `existingVPCID` parameter is omitted.
+        x-unsafe: true
+      nodeNetworkCIDR:
+        type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        description: |
+          A subnet to use for cluster nodes:
+          * The IP range must overlap or match the VPC address range.
+          * The IP range will be evenly split into subnets, one per Availability Zone in your region.
+          * An optional but recommended parameter. By default, it corresponds to the whole range of VPC addresses.
+
+          If a new VPC is created along with a new cluster and no `vpcNetworkCIDR` is provided, then the range from  `nodeNetworkCIDR` is used for the VPC. Thus, the entire VPC is allocated for the cluster networks, and you will not be able to add other resources to this VPC.
+
+          The `nodeNetworkCIDR` range is distributed between subnets depending on the number of availability zones in the selected region. For example, if `nodeNetworkCIDR: "10.241.1.0/20"` and there are three availability zones in the region, subnets will be created with the `/22` mask.
+        x-unsafe: true
+      existingVPCID:
+        type: string
+        description: |
+          ID of the existing VPC to use for deploying.
+
+          * **A mandatory parameter** if the `vpcNetworkCIDR` is omitted.
+          * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
+      sshPublicKey:
+        type: string
+        description: |
+          A public key for accessing nodes.
+      disableDefaultSecurityGroup:
+        type: boolean
+        description: |
+          If set to `true`, the default security group will not be created.
+
+          **Warning.** When using `disableDefaultSecurityGroup: true`, you must manually create all required security groups to allow access to cluster nodes. Additionally, you must explicitly specify them in the following parameters:
+
+          - `additionalSecurityGroups` in the `masterNodeGroup` section of the `AWSClusterConfiguration` resource;
+          - `additionalSecurityGroups` in the `AWSInstanceClass` resource;
+          - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
+
+          To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via SSH.
+
+          By default, `0.0.0.0/0`.
+      tags:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          A dictionary of tags to create on all resources that support this feature.
+
+          You have to re-create all the machines to add new tags if tags were modified in the running cluster.
+        x-doc-required: false
+      provider:
+        type: object
+        additionalProperties: false
+        required: [providerAccessKeyId, providerSecretAccessKey, region]
+        description: |
+          Contains [settings to connect](https://deckhouse.io/modules/cloud-provider-aws/environment.html) to the AWS API.
+        properties:
+          providerAccessKeyId:
+            type: string
+            description: |
+              Access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
+          providerSecretAccessKey:
+            type: string
+            description: |
+              Access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
+          region:
+            type: string
+            description: |
+              The name of the AWS region where instances will be provisioned.
+            x-unsafe: true
+      zones:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
+        description: |
+          The globally restricted set of zones that this cloud provider works with.
+
+          Restricts only the **creation** of nodes in the cluster.
+      additionalRolePolicies:
+        type: array
+        items:
+          type: string
+          pattern: '^([a-zA-Z0-9_\-]+):([a-zA-Z0-9_\-\*\?]+)$'
+        minItems: 1
+        description: |
+          A list containing additional policy actions for IAM roles.
+          * Additional policy actions would be attached to the default IAM role policy actions.
+          * Parameter is optional. If omitted, only default IAM role policy actions are used.
+          * Example of policy actions: `ecr:ListImages`, `s3:GetObject`, etc.
+
+          Default IAM role policies actions contain the following roles:
+          - `ec2:DescribeTags`
+          - `ec2:DescribeInstances`
+      iamNodeRole:
+        type: string
+        pattern: ^[a-zA-Z0-9+=,.@\-_']{1,64}$
+        description: |
+          The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
+
+          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
+
+          More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
+    allOf:
+    - oneOf:
+      - required: [layout]
+        properties:
+          layout:
+            enum: [Standard]
+            type: string
+      - required: [layout]
+        properties:
+          layout:
+            enum: [WithoutNAT]
+            type: string
+      - required: [layout]
+        properties:
+          layout:
+            enum: [WithNAT]
+            type: string
+    - oneOf:
+      - required: [vpcNetworkCIDR]
+      - required: [existingVPCID]

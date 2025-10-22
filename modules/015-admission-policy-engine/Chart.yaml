@@ -1,0 +1,6 @@
+name: admission-policy-engine
+version: 0.0.1
+dependencies:
+  - name: constraint-templates
+    version: 0.0.1
+    repository: "file:///deckhouse/modules/015-admission-policy-engine/charts/constraint_templates"

@@ -1,0 +1,71 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ingress-nginx-controller
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    path: /controller/metrics
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: nginx-ingress-controller
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_label_name]
+      targetLabel: controller
+    - targetLabel: scrape_source
+      replacement: controller
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    metricRelabelings:
+    # remove ingress_class, we have "controller" label
+    - regex: ingress_class
+      action: labeldrop
+  - port: https-metrics
+    scheme: https
+    path: /protobuf/metrics
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: nginx-ingress-controller
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_label_name]
+      targetLabel: controller
+    - sourceLabels: [__meta_kubernetes_pod_controller_name]
+      targetLabel: app
+    - targetLabel: scrape_source
+      replacement: protobuf
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+  selector:
+    matchLabels:
+      app: controller
+  namespaceSelector:
+    matchNames:
+    - d8-ingress-nginx
+{{- end }}

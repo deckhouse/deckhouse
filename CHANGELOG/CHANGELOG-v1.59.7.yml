@@ -1,0 +1,7 @@
+monitoring-kubernetes:
+  fixes:
+    - summary: Avoid hook fails on decoding old Helm 2 releases.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8251
+    - summary: Fix hook with checking Helm deprecated resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8246
+

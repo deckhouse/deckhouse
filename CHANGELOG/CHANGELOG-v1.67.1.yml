@@ -1,0 +1,29 @@
+dhctl:
+  fixes:
+    - summary: Resource readiness fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11018
+docs:
+  fixes:
+    - summary: Update modules development documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11110
+istio:
+  features:
+    - summary: Bump Istio version to `1.21.6`. Bump Kiali version to `1.81`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9930
+      impact: >-
+        In environments where legacy versions of istio are used, the D8 update will be blocked, and
+        the `D8IstioDeprecatedIstioVersionInstalled` alert will be fired.
+  fixes:
+    - summary: Fixes for Federation/Multicluster metadata-exporter and for istio-operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11150
+multitenancy-manager:
+  fixes:
+    - summary: >-
+        Fix the 'secure' and 'secure_with_dedicated_nodes' project templates and add supporting
+        default values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11096
+user-authn:
+  fixes:
+    - summary: Add profile scope to OIDC auth requests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11083
+

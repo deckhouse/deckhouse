@@ -1,0 +1,804 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                ingressClass:
+                  description: |
+                    Имя Ingress-класса для обслуживания NGINX Ingress controller.
+
+                    Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
+
+                    **Важно.** Если указать значение "nginx", дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class` или поля `spec.ingressClassName`.
+                inlet:
+                  description: |
+                    Способ приема трафика из внешней сети. Изменение установленного способа невозможно.
+                    * `LoadBalancer` — устанавливается Ingress-контроллер и заказывается сервис с типом `LoadBalancer`;
+                    * `LoadBalancerWithProxyProtocol` — устанавливается Ingress-контроллер и заказывается сервис с типом `LoadBalancer`. Ingress-контроллер использует proxy-protocol для получения настоящего IP-адреса клиента;
+                    * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`;
+
+                      Требуется обязательная установка параметров в [секции spec.HostPort](#ingressnginxcontroller-v1-spec-hostport).
+                    * `HostPortWithProxyProtocol` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента;
+
+                      Требуется обязательная установка параметров в [секции spec.HostPortWithProxyProtocol](#ingressnginxcontroller-v1-spec-hostportwithproxyprotocol).
+
+                      **Внимание.** При использовании этого инлета, убедитесь, что запросы к Ingress-контроллеру направляются только от доверенных источников. Одним из способов настройки ограничения может служить параметр [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom).
+                    * `HostWithFailover` — устанавливаются два Ingress-контроллера — основной и резервный. Основной контроллер запускается в hostNetwork. Если поды основного контроллера недоступны, трафик уходит в резервный контроллер;
+
+                      > **Внимание.** На одном хосте может быть только один контроллер с данным типом инлета.
+
+                      > **Внимание.** Необходимо, чтобы на узле были свободны следующие порты: 80, 81, 443, 444, 4207, 4208.
+
+                      > **Внимание.** Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
+
+                      > **Внимание.** Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
+                controllerVersion:
+                  description: |
+                    Версия NGINX Ingress controller.
+
+                    **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
+                enableIstioSidecar:
+                  description: |
+                    Добавить к подам контроллера аннотации для автоматического инжекта сайдкаров Istio.
+                    При включении этого параметра к подам Ingress-контроллера добавляются аннотации `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`. При создании таких подов к ним автоматически будут добавлены сайдкары Istio с помощью mutating webhook. После этого весь трафик в сторону Service CIDR будет перехватываться сайдкаром.
+
+                     Чтобы воспользоваться этой функцией, необходимо доработать прикладные Ingress-ресурсы, добавив аннотации:
+                     * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар istio-proxy перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
+                     * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
+
+                     > **Внимание.** Данный параметр не может быть включен, если инлет Ingress-контроллера установлен в значение `HostWithFailover`.
+                waitLoadBalancerOnTerminating:
+                  description: |
+                    Количество секунд до того, как /healthz начнет возвращать код 500, когда под перейдет в статус Terminating.
+                chaosMonkey:
+                  description: |
+                    Инструмент, позволяющий систематически вызывать случайные прерывания работы подов контроллера.
+
+                    Предназначен для проверки Ingress-контроллера на реальную работу отказоустойчивости.
+                validationEnabled:
+                  description: |
+                    Включить валидацию Ingress-правил.
+                    > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
+                annotationValidationEnabled:
+                  description: |
+                    Включить валидацию аннотаций Ingress-правил.
+                nodeSelector:
+                  description: |
+                    Как в `spec.nodeSelector` у подов.
+
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                tolerations:
+                  description: |
+                    Как в `spec.tolerations` у подов.
+
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                loadBalancer:
+                  description: |
+                    Секция настроек для инлета `LoadBalancer`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список адресов в формате CIDR, которым разрешен доступ на балансировщик.
+
+                        > **Внимание.**  Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+                        > Провайдеры поддерживающие опцию: _AWS_, _GCP_, _Azure_
+                        > Провайдеры игнорирующие опцию: _YandexCloud_
+                        > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Перед промышленным использованием опции рекомендуется тестирование.
+                    annotations:
+                      description: |
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+
+                        **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках.
+                        Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
+                    behindL7Proxy:
+                      description: |
+                        Включает обработку и передачу заголовков `X-Forwarded-*`.
+
+                        **Внимание.** При использовании этой опции вы должны быть уверены, что запросы к Ingress направляются только от доверенных источников.
+                    realIPHeader:
+                      description: |
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
+
+                        Работает только при включении `behindL7Proxy`.
+                loadBalancerWithProxyProtocol:
+                  description: |
+                    Секция настроек для инлета `LoadBalancerWithProxyProtocol`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список адресов в формате CIDR, которым разрешен доступ на балансировщик.
+
+                        > **Внимание.**  Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+                        > Провайдеры поддерживающие опцию: _AWS_, _GCP_, _Azure_
+                        > Провайдеры игнорирующие опцию: _YandexCloud_
+                        > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Перед промышленным использованием опции рекомендуется тестирование.
+
+                    annotations:
+                      description: |
+                        Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+
+                        **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров необходимо будет пересоздать `IngressNginxController` (или создать новый, затем удалив старый).
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
+                hostPort:
+                  description: |
+                    Секция настроек для инлета `HostPort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.
+                    behindL7Proxy:
+                      description: |
+                        Включает обработку и передачу заголовков `X-Forwarded-*`.
+
+                        > **Внимание.** При использовании этой опции вы должны быть уверены, что запросы к Ingress-контроллеру направляются только от доверенных источников. Одним из способов настройки ограничения может служить опция `acceptRequestsFrom`.
+                    realIPHeader:
+                      description: |
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
+
+                        Работает **только** при включении `behindL7Proxy`.
+                hostPortWithProxyProtocol:
+                  description: |
+                    Секция настроек для инлета `HostPortWithProxyProtocol`.
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, возможность подключения по HTTP отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, возможность подключения по HTTPS отсутствует.
+
+                        **Обязательный параметр**, если не указан `httpPort`.
+                acceptRequestsFrom:
+                  description: |
+                    Список адресов в формате CIDR, которым разрешено подключаться к контроллеру.
+
+                    Независимо от инлета всегда проверяется непосредственный адрес (в логах содержится в поле `original_address`), с которого производится подключение, а не «адрес клиента», который может передаваться в некоторых инлетах через заголовки или с использованием `proxy protocol`.
+
+                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html), и если адрес, с которого непосредственно производится подключение, не разрешен – NGINX закрывает соединение (используя return 444).
+
+                    **По умолчанию** к контроллеру можно подключаться с любых адресов.
+                hsts:
+                  description: |
+                    Включен ли `HSTS`. [Подробнее...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                hstsOptions:
+                  description: |
+                    Параметры HTTP Strict Transport Security.
+                  properties:
+                    maxAge:
+                      description: |
+                        Время в секундах, в течение которого браузер должен помнить, что сайт доступен только с помощью HTTPS.
+                    preload:
+                      description: |
+                        Добавлять ли сайт в список предзагрузки.
+
+                        Эти списки используются современными браузерами и разрешают подключение к сайту только по HTTPS.
+                    includeSubDomains:
+                      description: |
+                        Применять ли настройки `HSTS` ко всем поддоменам сайта.
+                geoIP2:
+                  description: |
+                    Опции для включения GeoIP2.
+                  properties:
+                    maxmindLicenseKey:
+                      description: |
+                        Лицензионный ключ для скачивания базы данных GeoIP2.
+
+                        Указание ключа в конфигурации включает скачивание базы GeoIP2 при каждом старте контроллера. [Подробнее](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/) о получении ключа.
+                    maxmindEditionIDs:
+                      description: |
+                        Список ревизий баз данных, которые будут скачаны при старте.
+
+                        [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
+                legacySSL:
+                  description: |
+                    Определяет, разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
+
+                    Работа разрешена для следующих версий протокола TLS: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
+
+                    Допустимые комбинации алгоритмов шифрования, расположенные в порядке от наиболее надёжной к наименее надёжной: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
+
+                    **По умолчанию** включены только `TLSv1.2`, `TLSv1.3` и самые новые алгоритмы шифрования.
+                disableHTTP2:
+                  description: |
+                    Выключить ли HTTP/2.
+                config:
+                  description: |
+                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
+
+                    > **Внимание.** Ошибка в указании опций может привести к отказу в работе Ingress-контроллера.
+
+                    > **Внимание.** Не рекомендуется использовать данную опцию, так как не гарантируется обратная совместимость или работоспособность Ingress-контроллера.
+                additionalHeaders:
+                  description: |
+                    Дополнительные header'ы, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
+                additionalLogFields:
+                  description: |
+                    Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
+                resourcesRequests:
+                  description: |
+                    Настройки максимальных значений CPU и memory, которые может запросить под при выборе узла (если VPA выключен, максимальные значения становятся значениями по умолчанию).
+                  properties:
+                    mode:
+                      description: |
+                        Режим управления реквестами ресурсов.
+                    vpa:
+                      description: |
+                        Настройки VPA режима управления.
+                      properties:
+                        mode:
+                          description: |
+                            Режим работы VPA.
+                        cpu:
+                          description: |
+                            Настройки для CPU.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение, которое может выставить VPA для реквеста к CPU.
+                            min:
+                              description: |
+                                Минимальное значение, которое может выставить VPA для реквеста к CPU.
+                        memory:
+                          description: |
+                            Значение для запроса memory.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение, которое может выставить VPA для реквеста к memory.
+                            min:
+                              description: |
+                                Минимальное значение, которое может выставить VPA для реквеста к memory.
+                    static:
+                      description: |
+                        Настройки статического режима управления.
+                      properties:
+                        cpu:
+                          description: |
+                            Значение для реквеста к CPU.
+                        memory:
+                          description: |
+                            Значение для реквеста к memory.
+                customErrors:
+                  description: |
+                    Секция с настройкой кастомизации HTTP-ошибок.
+
+                    Если секция определена, все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех NGINX Ingress controller'ов**.
+                  properties:
+                    serviceName:
+                      description: |
+                        Имя сервиса, который будет использоваться как custom default backend.
+                    namespace:
+                      description: |
+                        Имя namespace, в котором будет находиться сервис, используемый как custom default backend.
+                    codes:
+                      description: |
+                        Список кодов ответа (массив), при которых запрос будет перенаправляться на custom default backend.
+                underscoresInHeaders:
+                  description: |
+                    Разрешены ли нижние подчеркивания в заголовках.
+
+                    [Подробнее...](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
+
+                    [Почему](https://docs.nginx.com/#missing-disappearing-http-headers) не стоит бездумно это включать.
+                minReplicas:
+                  description: |
+                    Минимальное количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
+                maxReplicas:
+                  description: |
+                    Максимально количество реплик `LoadBalancer` и `LoadBalancerWithProxyProtocol` для HPA.
+                defaultSSLCertificate:
+                  description: |
+                    Сертификат, который используется:
+                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
+
+                    По умолчанию используется самоподписанный сертификат.
+
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
+                  properties:
+                    secretRef:
+                      description: |
+                        Ссылка на Secret для передачи Ingress-контроллеру.
+                      properties:
+                        name:
+                          description: |
+                            Имя Secret'а, содержащего SSL–сертификат.
+                        namespace:
+                          description: |
+                            Имя namespace, в котором находится Secret с SSL—сертификатом.
+    - name: v1
+      served: true
+      storage: false
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          properties:
+            status:
+              properties:
+                loadBalancer:
+                  properties:
+                    ip:
+                      description: |
+                        IP-адрес балансировщика нагрузки.
+                    hostname:
+                      description: |
+                        DNS-имя балансировщика нагрузки.
+            spec:
+              properties:
+                ingressClass:
+                  description: |
+                    Имя Ingress-класса для обслуживания NGINX Ingress Controller.
+
+                    Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
+
+                    > Если указать значение `nginx`, дополнительно будут обрабатываться Ingress-ресурсы без аннотации `kubernetes.io/ingress.class` или поля `spec.ingressClassName`.
+                inlet:
+                  description: |
+                    Способ приема трафика из внешней сети. Изменение установленного способа невозможно.
+
+                    Возможные значения:
+
+                    * `LoadBalancer` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`;
+                    * `LoadBalancerWithProxyProtocol` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Ingress-контроллер использует proxy-protocol для получения настоящего IP-адреса клиента;
+                    * `LoadBalancerWithSSLPassthrough` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
+
+                      > Функция SSL Passthrough реализована путем перехвата всего трафика на настроенном HTTPS-порту (по умолчанию: `443`) и передачи его локальному TCP-прокси. Это полностью обходит NGINX и приводит к существенному снижению производительности.
+
+                      Протокол SSL Passthrough использует Server Name Indication (SNI) и считывает данные о виртуальном домене из протокола согласования TLS, для чего требуется подходящий клиент.
+
+                      Если имя хоста не совпадает с запрошенным именем хоста, запрос передается в NGINX на настроенный SSL Passthrough прокси-порт (по умолчанию: `442`), который затем передает запрос серверу по умолчанию.
+
+                      > В отличие от HTTP-бэкендов, трафик для SSL Passthrough бэкендов отправляется на ClusterIP, а не на отдельные эндпоинты.
+                      >
+                      > Поскольку SSL Passthrough работает на 4 уровне модели OSI (TCP), а не на уровне 7 (HTTP), использование SSL Passthrough делает невозможным использование всех остальных аннотаций, установленных для Ingress.
+
+                    * `HostPort` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`;
+                    * `HostPortWithProxyProtocol` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
+
+                      > **Важно.** Перед использованием этого инлета убедитесь, что запросы к Ingress будут направляться только от доверенных источников. Для настройки ограничений воспользуйтесь параметром `acceptRequestsFrom`.
+
+                    * `HostPortWithSSLPassthrough` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
+
+                      Укажите параметры работы инлета в секции [`spec.HostPortWithSSLPassthrough`](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
+
+                      Протокол SSL Passthrough использует SNI и считывает данные о виртуальном домене из протокола согласования TLS, для чего требуется подходящий клиент.
+
+                      Если имя хоста не совпадает с запрошенным именем хоста, запрос передается в NGINX на настроенный SSL Passthrough прокси-порт (по умолчанию: `442`), который затем передает запрос серверу по умолчанию.
+
+                      > Функция SSL Passthrough реализована путем перехвата всего трафика на настроенном HTTPS-порту (по умолчанию: `443`) и передачи его локальному TCP-прокси. Это полностью обходит NGINX и приводит к существенному снижению производительности.
+                      >
+                      > В отличие от HTTP-бэкендов, трафик для SSL Passthrough бэкендов отправляется на ClusterIP, а не на отдельные эндпоинты.
+                      >
+                      > Поскольку SSL Passthrough работает на 4 уровне модели OSI (TCP), а не на уровне 7 (HTTP), использование SSL Passthrough делает невозможным использование всех остальных аннотаций, установленных для Ingress.
+
+                    * `HostWithFailover` — устанавливаются два Ingress-контроллера — основной и резервный. Основной контроллер запускается в `hostNetwork`. Если поды основного контроллера недоступны, трафик уходит в резервный контроллер.
+
+                      > На одном хосте может быть только один контроллер с данным типом инлета.
+                      >
+                      > Убедитесь, что на узле свободны следующие порты: `80`, `81`, `443`, `444`, `4207`, `4208`.
+                      >
+                      > Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
+                      >
+                      > Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
+                controllerVersion:
+                  description: |
+                    Версия NGINX Ingress Controller.
+
+                    **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
+                enableIstioSidecar:
+                  description: |
+                    Добавляет к подам контроллера аннотации для автоматического инжекта сайдкаров Istio.
+
+                    При включении этого параметра к подам Ingress-контроллера добавляются аннотации `sidecar.istio.io/inject: "true"` и `traffic.sidecar.istio.io/includeOutboundIPRanges: "<Service CIDR>"`. При создании таких подов к ним автоматически будут добавлены сайдкары Istio с помощью mutating webhook. После этого весь трафик в сторону Service CIDR будет перехватываться сайдкаром.
+
+                    Чтобы воспользоваться этой функцией, добавьте аннотации в прикладные Ingress-ресурсы:
+
+                    * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Сайдкар `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
+                    * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
+
+                    > **Внимание.** Данный параметр не может быть включен, если инлет Ingress-контроллера установлен в значение `HostWithFailover`.
+                waitLoadBalancerOnTerminating:
+                  description: |
+                    Количество секунд до того момента, когда эндпойнт `/healthz` начнёт возвращать код `500` после перехода пода в статус `Terminating`.
+                chaosMonkey:
+                  description: |
+                    Инструмент, позволяющий систематически вызывать случайные прерывания работы подов контроллера.
+
+                    Предназначен для проверки Ingress-контроллера на реальную работу отказоустойчивости.
+                validationEnabled:
+                  description: |
+                    Включает валидацию Ingress-правил.
+                    > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
+                annotationValidationEnabled:
+                  description: |
+                    Включает валидацию аннотаций Ingress-правил.
+                nodeSelector:
+                  description: |
+                    Аналогично параметру `spec.nodeSelector` у подов.
+
+                    Если значение не указано или указано `false`, Deckhouse попытается определить значение [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+
+                    Используйте формат стандартного списка `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                tolerations:
+                  description: |
+                    Аналогично параметру `spec.tolerations` у подов.
+
+                    Если значение не указано или указано `false`, подам модуля [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки) устанавливаются все возможные tolerations.
+
+                    Используйте формат стандартного списка [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                loadBalancer:
+                  description: |
+                    Секция настроек инлета `LoadBalancer`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список адресов в формате CIDR, которым разрешен доступ к балансировщику.
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+                        >
+                        > - Провайдеры поддерживающие опцию: AWS, Azure, GCP.
+                        > - Провайдеры игнорирующие опцию: Yandex Cloud.
+                        >
+                        > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Протестируйте работу опции перед использованием в production-среде.
+                    annotations:
+                      description: |
+                        Аннотации, которые будут назначены сервису для гибкой настройки балансировщика.
+
+                        > Модуль не учитывает особенности указания аннотаций в различных облаках.
+                        >
+                        > Если аннотации для заказа балансировщика применяются только при создании сервиса, для обновления подобных параметров пересоздайте ресурс IngressNginxController (или создайте новый и удалите старый).
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                    behindL7Proxy:
+                      description: |
+                        Включает обработку и передачу заголовков `X-Forwarded-*`.
+
+                        > **Внимание.** Перед использованием этой опции убедитесь, что запросы к Ingress направляются только от доверенных источников.
+                    realIPHeader:
+                      description: |
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
+
+                        > Работает только при включении `behindL7Proxy`.
+                loadBalancerWithProxyProtocol:
+                  description: |
+                    Секция настроек инлета `LoadBalancerWithProxyProtocol`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список адресов в формате CIDR, которым разрешен доступ к балансировщику.
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+                        >
+                        > Провайдеры поддерживающие опцию: AWS, Azure, GCP.
+                        > Провайдеры игнорирующие опцию: Yandex Cloud.
+                        >
+                        > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Протестируйте работу опции перед использованием в production-среде.
+                    annotations:
+                      description: |
+                        Аннотации, которые будут назначены сервису для гибкой настройки балансировщика.
+
+                        > Модуль не учитывает особенности указания аннотаций в различных облаках.
+                        >
+                        > Если аннотации для заказа балансировщика применяются только при создании сервиса, для обновления подобных параметров пересоздайте ресурс IngressNginxController (или создайте новый и удалите старый).
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                loadBalancerWithSSLPassthrough:
+                  description: |
+                    Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
+                  properties:
+                    sourceRanges:
+                      description: |
+                        Список адресов в формате CIDR, которым разрешен доступ к балансировщику.
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+                        >
+                        > Провайдеры поддерживающие опцию: AWS, Azure, GCP.
+                        > Провайдеры игнорирующие опцию: Yandex Cloud.
+                        >
+                        > Для остальных облачных провайдеров поведение может зависеть от особенностей реализации облака. Протестируйте работу опции перед использованием в production-среде.
+                    annotations:
+                      description: |
+                        Аннотации, которые будут назначены сервису для гибкой настройки балансировщика.
+
+                        > Модуль не учитывает особенности указания аннотаций в различных облаках.
+                        >
+                        > Если аннотации для заказа балансировщика применяются только при создании сервиса, для обновления подобных параметров пересоздайте ресурс IngressNginxController (или создайте новый и удалите старый).
+                    loadBalancerClass:
+                      description: |
+                        Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
+                hostPort:
+                  description: |
+                    Секция настроек инлета `HostPort`.
+                  properties:
+                    httpPort:
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, подключение по HTTP невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, подключение по HTTPS невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpPort`.
+                    behindL7Proxy:
+                      description: |
+                        Включает обработку и передачу заголовков `X-Forwarded-*`.
+
+                        > **Внимание.** Перед использованием этой опции убедитесь, что запросы к Ingress направляются только от доверенных источников. Для настройки ограничений воспользуйтесь параметром `acceptRequestsFrom`.
+                    realIPHeader:
+                      description: |
+                        Заголовок, из которого будет получен настоящий IP-адрес клиента.
+
+                        > Работает только при включенной опции `behindL7Proxy`.
+                hostPortWithProxyProtocol:
+                  description: |
+                    Секция настроек инлета `HostPortWithProxyProtocol`.
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, подключение по HTTP невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, подключение по HTTPS невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpPort`.
+                hostPortWithSSLPassthrough:
+                  description: |
+                    Секция настроек инлета `HostPortWithSSLPassthrough`.
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Порт для небезопасного подключения по HTTP.
+
+                        Если параметр не указан, подключение по HTTP невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpsPort`.
+                    httpsPort:
+                      description: |
+                        Порт для безопасного подключения по HTTPS.
+
+                        Если параметр не указан, подключение по HTTPS невозможно.
+
+                        > Параметр обязателен в случае, если не задан `httpPort`.
+                acceptRequestsFrom:
+                  description: |
+                    Список адресов в формате CIDR, которым разрешен доступ к контроллеру.
+
+                    Независимо от инлета всегда проверяется непосредственный адрес (поле `original_address` в логах), с которого производится подключение, а не адрес клиента, который может передаваться в некоторых инлетах через заголовки или с использованием proxy protocol.
+
+                    Параметр реализован с помощью [map module](https://nginx.org/en/docs/http/ngx_http_map_module.html).
+                    Если адрес, с которого производится подключение, не разрешен, nginx закрывает соединение, отправляя код `444`).
+
+                    > По умолчанию к контроллеру можно подключаться с любых адресов.
+                hsts:
+                  description: |
+                    Включает использование заголовков ответа HTTP Strict-Transport-Security (HSTS). Подробнее о заголовках HSTS — [в статье на портале MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
+                hstsOptions:
+                  description: |
+                    Параметры HSTS.
+                  properties:
+                    maxAge:
+                      description: |
+                        Время в секундах, в течение которого браузер помнит, что сайт доступен только с помощью HTTPS.
+                    preload:
+                      description: |
+                        Добавляет сайт в список предзагрузки.
+
+                        Список указывает браузерам, что подключение к перечисленным сайтам должно осуществляться только по HTTPS.
+                    includeSubDomains:
+                      description: |
+                        Применяет настройки HSTS ко всем поддоменам сайта.
+                geoIP2:
+                  description: |
+                    Опции для включения GeoIP2.
+                  properties:
+                    maxmindLicenseKey:
+                      description: |
+                        Лицензионный ключ для скачивания базы данных GeoIP2.
+
+                        При наличии ключа в конфигурации база GeoIP2 скачивается при каждом старте контроллера. Подробнее о получении ключа — [в статье в блоге MaxMind](https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases/).
+                    maxmindEditionIDs:
+                      description: |
+                        Список ревизий баз данных, которые будут скачаны при старте.
+
+                        Подробнее о базах данных GeoLite — [в статье в блоге MaxMind](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data).
+                legacySSL:
+                  description: |
+                    Определяет, разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
+
+                    Работа разрешена для следующих версий протокола TLS: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
+
+                    Допустимые комбинации алгоритмов шифрования, расположенные в порядке от наиболее надёжной к наименее надёжной: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
+
+                    > По умолчанию включены только `TLSv1.2`, `TLSv1.3` и самые новые алгоритмы шифрования.
+                disableHTTP2:
+                  description: |
+                    Выключает HTTP/2.
+                enableHTTP3:
+                  description: |
+                    Включает HTTP/3.
+
+                    > HTTP/3 доступен только в контролере версии 1.10.
+                config:
+                  description: |
+                    Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
+
+                    > Ошибка в опциях может привести к неработоспособности Ingress-контроллера.
+                    >
+                    > Используйте опцию с осторожностью, поскольку обратная совместимость и работоспособность Ingress-контроллера не гарантируются.
+                additionalHeaders:
+                  description: |
+                    Дополнительные заголовки, которые будут добавлены к каждому запросу. Указываются в формате `ключ: значение(строка)`.
+                additionalLogFields:
+                  description: |
+                    Дополнительные поля, которые будут добавлены в логи nginx. Указываются в формате `ключ: значение(строка)`.
+                resourcesRequests:
+                  description: |
+                    Настройки максимальных значений CPU и памяти (memory), которые может запросить под при выборе узла. Если VPA выключен, максимальные значения становятся значениями по умолчанию.
+                  properties:
+                    mode:
+                      description: |
+                        Режим управления запросами ресурсов.
+                    vpa:
+                      description: |
+                        Настройки режима управления Vertical Pod Autoscaler (VPA).
+                      properties:
+                        mode:
+                          description: |
+                            Режим работы VPA.
+                        cpu:
+                          description: |
+                            Настройки ограничений запросов к CPU.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение запроса к CPU, которое может выставить VPA.
+                            min:
+                              description: |
+                                Минимальное значение запроса к CPU, которое может выставить VPA.
+                        memory:
+                          description: |
+                            Настройки ограничений запросов к памяти.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение запроса к памяти, которое может выставить VPA.
+                            min:
+                              description: |
+                                Минимальное значение запроса к памяти, которое может выставить VPA.
+                    static:
+                      description: |
+                        Настройки статического режима управления.
+                      properties:
+                        cpu:
+                          description: |
+                            Значение для запроса к CPU.
+                        memory:
+                          description: |
+                            Значение для запроса к памяти.
+                customErrors:
+                  description: |
+                    Секция с настройкой кастомизации HTTP-ошибок.
+
+                    > Если секция указана в настройках, все параметры в ней являются обязательными.
+                    >
+                    > Изменение любого параметра приводит к перезапуску всех Ingress-контроллеров.
+                  properties:
+                    serviceName:
+                      description: |
+                        Имя сервиса, который будет использоваться в качестве кастомного бэкенда по умолчанию.
+                    namespace:
+                      description: |
+                        Название пространства имён, в котором будет находиться сервис, используемый в качестве кастомного бэкенда по умолчанию.
+                    codes:
+                      description: |
+                        Список кодов ответа (массив), при которых запрос будет перенаправляться на кастомный бэкенд.
+                underscoresInHeaders:
+                  description: |
+                    Разрешает использовать символ нижнего подчеркивания в заголовках.
+
+                    Вспомогательные ресурсы:
+
+                    - [об использовании нижнего подчеркивания в заголовках](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers);
+                    - [почему нужно внимательно включать разрешение для нижних подчеркиваний в заголовках](https://docs.nginx.com/#missing-disappearing-http-headers).
+                minReplicas:
+                  description: |
+                    Минимальное количество реплик `LoadBalancer`, `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
+                maxReplicas:
+                  description: |
+                    Максимальное количество реплик `LoadBalancer` `LoadBalancerWithProxyProtocol` и `LoadBalancerWithSSLPassthrough` для HPA.
+                defaultSSLCertificate:
+                  description: |
+                    Сертификат, который используется:
+
+                    - при запросах на `catch-all`-сервер (подразумевается [директива server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) nginx). На `catch-all`-сервер попадают запросы, для которых нет соответствующего Ingress-ресурса;
+                    - для Ingress–ресурсов, в которых не задан `secretName` в секции `tls`.
+
+                    По умолчанию используется самоподписанный сертификат.
+
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Чтобы указать сертификат для Ingress-ресурсов модулей Deckhouse, используйте глобальный параметр [`modules.https.customCertificate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
+                  properties:
+                    secretRef:
+                      description: |
+                        Ссылка на Secret для передачи Ingress-контроллеру.
+                      properties:
+                        name:
+                          description: |
+                            Имя Secret, содержащего SSL–сертификат.
+                        namespace:
+                          description: |
+                            Название пространства имён, в котором находится Secret с SSL-сертификатом.
+                controllerPodsAdditionalAnnotations:
+                  description: |
+                    Дополнительные пользовательские аннотации для подов Ingress-контроллера.
+
+                    > Используйте параметр с осторожностью, поскольку обратная совместимость и работоспособность Ingress-контроллера при использовании параметра не гарантируются.
+                controllerLogLevel:
+                  x-enum-descriptions:
+                    - "в журнал будут записываться только критические ошибки."
+                    - "в журнал будут записываться предупреждения и ошибки."
+                    - "информационные сообщения, включая базовые сведения для отладки."
+                    - "расширенная информация об изменениях в состоянии системы."
+                    - "подробный отладочный вывод, может включать избыточные данные."
+                    - "журналы на уровне трассировки с подробным пошаговым контекстом."
+                  description: |
+                    Определяет уровень логирования для журналов Ingress-контроллера.
+                nginxProfilingEnabled:
+                  type: boolean
+                  description: |
+                    Включает профилирование NGINX с помощью Valgrind.
+                    Отчет об анализе памяти сохраняется в каталоге `/var/log/valgrind` на хосте.
+                    При включении Valgrind создает файл с именем `memcheck.${timestamp}.log`.
+
+                    После завершения отладки не забудьте отключить режим профилирования!
+
+                    Отчет содержит информацию о поведении процесса, включая возможные утечки памяти.
+
+                    > **Внимание.** Включение этой опции значительно увеличивает использование памяти и замедляет обработку запросов HTTP/HTTPS процессом NGINX.
+
+                    > **Внимание.** Когда включена опция, под контроллера ingress-nginx запускается в привилегированном режиме.

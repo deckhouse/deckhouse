@@ -1,0 +1,85 @@
+# modules_images
+  {{- $Root := . }}
+  {{- $ModulesImagesDigestList := list }}
+  {{- $ExcludedModulesDict := dict }}
+
+# Collect images if desired for editions
+#
+# depending on the rules for skipping modules in the editions.yaml
+# file and the used assembly mechanism (werf, docker), we form modules for assembly
+  {{- $ModulesImagesBuildFiles := dict }}
+  {{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipCollectImages }}
+  {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
+  {{- end }}
+
+    # fill in "$_" data for assembly
+    {{- if eq $.Env $edition.name }}
+    {{- if $edition.excludeModules }}
+    {{- range $_, $exludeModuleName := $edition.excludeModules }}
+    {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
+    {{- end }}
+    {{- end }}
+
+    {{- break -}}
+    {{- end }}
+    {{- end }}
+
+    {{- range $path, $content := $ModulesImagesBuildFiles  }}
+    {{- $ctx := dict }}
+    {{- if regexMatch "/werf.inc.yaml$" $path }}
+    {{- $_ := set $ctx "ImageInstructionType" "Stapel" }}
+    {{- else }}
+    {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
+    {{- end }}
+    {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+      {{- $moduleName := $ImageData._2 }}
+      # exclude modules and images from editions
+      {{- if hasKey $ExcludedModulesDict $moduleName }}
+      {{- continue -}}
+      {{- end }}
+
+      {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
+      {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
+      {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
+      {{- $_ := set $ctx "ModuleName" $moduleName }}
+      {{- $_ := set $ctx "ImageName" $ImageData._3 }}
+      {{- $_ := set $ctx "ImageBuildData" $content }}
+      {{- $_ := set $ctx "Files" $Root.Files }}
+      {{- $_ := set $ctx "Env" $Root.Env }}
+      {{- $_ := set $ctx "isEE" $Root.isEE }}
+
+      {{- $_ := set $ctx "Images" $Root.Images }}
+      {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
+      {{- $_ := set $ctx "TF" $Root.TF }}
+      {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
+      {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
+      {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
+      {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+      {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
+      {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
+      {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
+      {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}
+      {{- $_ := set $ctx "RegistryPassword" $Root.RegistryPassword }}
+
+      {{- $_ := set $ctx "ProjectName" (list $ctx.ModuleName $ctx.ImageName | join "/") }}
+      {{- $_ := set $ctx "SVACE_ENABLED" $Root.SVACE_ENABLED }}
+      {{- $_ := set $ctx "SVACE_ANALYZE_HOST" $Root.SVACE_ANALYZE_HOST }}
+      {{- $_ := set $ctx "SVACE_ANALYZE_SSH_USER" $Root.SVACE_ANALYZE_SSH_USER }}
+      {{- $_ := set $ctx "Commit" $Root.Commit }}  
+      {{- $_ := set $ctx "gitPrefix" $Root.gitPrefix }}
+---
+{{ include "module_image_template" $ctx }}
+  {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
+  {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
+  {{- if $ImageManifest.image }}
+  {{- if ne $ImageManifest.final false }}
+  {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+---
+# render images digest image
+{{ include "images_digest_image" (dict "Images" .Images "ModulesImagesDigestList" $ModulesImagesDigestList) }}
+---

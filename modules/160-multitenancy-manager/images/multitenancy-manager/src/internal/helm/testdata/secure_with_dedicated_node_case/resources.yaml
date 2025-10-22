@@ -1,0 +1,170 @@
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/node-selector: node-role/gpu-shared=
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 20Gi
+    requests.cpu: 2
+    requests.memory: 10Gi
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: isolated
+  namespace: test
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  - ports:
+    - port: 53
+      protocol: UDP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-ingress-nginx
+      podSelector:
+        matchLabels:
+          app: controller
+  podSelector:
+    matchLabels: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: FalcoAuditRules
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: container-drift-9f86d081
+  namespace: test
+spec:
+  rules:
+  - macro:
+      condition: (evt.type in (execve, execveat) and evt.dir=<)
+      name: spawned_process
+  - macro:
+      condition: (container.id != host)
+      name: container
+  - rule:
+      condition: "spawned_process  and container  and proc.is_exe_upper_layer=true
+        \n \n \nand group.gid >= 10  and group.gid <= 100 \n \nand k8s.ns.name=test\n"
+      desc: Detect if an executable not belonging to the base image of a container
+        is being executed. The drop and execute pattern can be observed very often
+        after an attacker gained an initial foothold. is_exe_upper_layer filter field
+        only applies for container runtimes that use overlayfs as union mount filesystem.
+      name: Drop and execute new binary in container in test project
+      output: |
+        Executing binary not part of base image (project=test user_loginuid=%user.loginuid user_uid=%user.uid comm=%proc.cmdline exe=%proc.exe container_id=%container.id k8s.ns=%k8s.ns.name image=%container.image.repository proc.name=%proc.name proc.sname=%proc.sname proc.pname=%proc.pname proc.aname[2]=%proc.aname[2] exe_flags=%evt.arg.flags proc.exe_ino=%proc.exe_ino proc.exe_ino.ctime=%proc.exe_ino.ctime proc.exe_ino.mtime=%proc.exe_ino.mtime proc.exe_ino.ctime_duration_proc_start=%proc.exe_ino.ctime_duration_proc_start proc.exepath=%proc.exepath proc.cwd=%proc.cwd proc.tty=%proc.tty container.start_ts=%container.start_ts proc.sid=%proc.sid proc.vpgid=%proc.vpgid evt.res=%evt.res)
+      priority: Critical
+      tags:
+      - container_drift
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+  name: allowed-uid-gid-9f86d081
+  namespace: test
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    runAsGroup:
+      ranges:
+      - max: 100
+        min: 10
+      rule: MustRunAs

@@ -1,0 +1,230 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в Azure.
+
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+      standard:
+        description: |
+          Настройки для схемы размещения [Standard](https://deckhouse.ru/modules/cloud-provider-azure/layouts.html#standard).
+        properties:
+          natGatewayPublicIpCount:
+            description: |
+              Количество IP-адресов для [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([тарификация](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+
+              NAT Gateway не используется, если установлено `0`.
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы под пользователем `azureuser`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по SSH.
+
+          По умолчанию `*`.
+      vNetCIDR:
+        description: |
+          Адресное пространство [виртуальной сети](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) в формате [CIDR](https://ru.wikipedia.org/wiki/%D0%91%D0%B5%D1%81%D0%BA%D0%BB%D0%B0%D1%81%D1%81%D0%BE%D0%B2%D0%B0%D1%8F_%D0%B0%D0%B4%D1%80%D0%B5%D1%81%D0%B0%D1%86%D0%B8%D1%8F).
+
+          Виртуальная сеть — это виртуальная изолированная часть общедоступной сети Azure. Каждая виртуальная сеть выделена для вашей подписки.
+
+          **Внимание.** Нужно учитывать, что в случае настройки пиринга, использования VPN или связывания сетей других кластеров, адресное пространство сетей не должно пересекаться.
+      nameservers:
+        description: |
+          Конфигурация DNS-серверов для виртуальной сети Azure, которая используется для узлов кластера.
+        properties:
+          addresses:
+            description: Список DNS-серверов.
+      subnetCIDR:
+        description: |
+          [Подсеть](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
+
+          Виртуальную сеть можно сегментировать на одну или несколько подсетей в пределах ограничений.
+      peeredVNets:
+        description: |
+          Массив VNet, с которыми будет объединена сеть кластера.
+
+          ServiceAccount должен иметь доступ ко всем перечисленным VNet. Если доступа нет, пиринговое соединение необходимо [настраивать вручную](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview).
+        items:
+          properties:
+            resourceGroupName:
+              description: |
+                Имя группы ресурсов, в которой находится VNet.
+            vnetName:
+              description: |
+                Имя VNet.
+      serviceEndpoints:
+        description: |
+          Список Service Endpoints, ассоциированных с подсетью.
+
+          Service Endpoints для виртуальной сети позволяют прямо и безопасно подключаться к сервисам Azure по оптимизированному маршруту через магистральную сеть Azure. Они позволяют ограничить пределами отдельных виртуальных сетей доступ к критически важным ресурсам сервисов Azure. Через Service Endpoints приватные IP-адреса в виртуальной сети могут подключаться к эндпоинтам сервисов Azure, не используя публичный IP-адрес в виртуальной сети.
+
+          Больше информации можно найти в [официальной документации](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-service-endpoints-overview).
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов.
+
+              Для обеспечения кворума важно, чтобы оно было нечетным.
+          zones:
+            description: |
+              Список зон, в которых допустимо создавать master-узлы.
+
+              Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              ```shell
+              az vm list-skus -l westeurope -o table
+              ```
+          instanceClass:
+            description: |
+              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+            properties: &instanceClassProperties_ru
+              machineSize:
+                description: |
+                  Тип заказываемых инстансов.
+
+                  Узнать все доступные типы в регионе можно с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                  ```shell
+                  az vm list-sizes --location westeurope -o table
+                  ```
+              urn:
+                description: |
+                  Образ виртуальной машины, который будет использоваться для инстанса.
+
+                  Подробнее про образы виртуальных машин можно прочитать в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                  Получить `urn` образа c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (столбец №4):
+
+                  ```shell
+                  az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
+                  az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
+                  ```
+
+                  По умолчанию используется образ из `AzureCloudDiscoveryData` — образ, из которого был создан мастер-узел при развертывании кластера.
+
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+              enableExternalIP:
+                description: |
+                  Разрешение назначения внешнего IP-адреса для инстанса.
+
+                  Параметр доступен только для layout `Standard`.
+              diskSizeGb:
+                description: |
+                  Размер root-диска. Значение указывается в `ГиБ`.
+              diskType:
+                description: |
+                  Тип создаваемых дисков (root-диска и диска для etcd).
+
+                  Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                  ```shell
+                  az vm list-skus -l westeurope --zone
+                  ```
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в `ГиБ`.
+              additionalTags:
+                description: |
+                  Список дополнительных тегов в формате `key: value`, которые будут назначены инстансам.
+              acceleratedNetworking:
+                default: false
+                description: |
+                  Accelerated Networking обеспечивает пропускную способность сети до 30 Гбит/с.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Доступные зоны для выбранного типа инстанса можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                ```shell
+                az vm list-skus -l westeurope -o table
+                ```
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если ресурсы это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > Доступны только поля `effect`, `key`, `values`.
+            instanceClass:
+              description: |
+                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
+      tags:
+        description: |
+          Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-azure/environment.html) к API Azure.
+        properties:
+          location:
+            description: |
+              Имя географического региона, в котором будут созданы все ресурсы. Получение списка доступных локаций через [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+              ```shell
+              az account list-locations -o table
+              ```
+          subscriptionId:
+            description: |
+              Идентификатор подписки.
+          clientId:
+            description: |
+              Идентификатор клиента.
+          clientSecret:
+            description: |
+              Секрет (secret) клиента.
+
+              Помните о сроке действия секрета. По умолчанию он действителен один год. Чтобы создать service account с большим сроком действия секрета, обратитесь к [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
+          tenantId:
+            description: |
+              Идентификатор tenant'а.
+      zones:
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный облачный провайдер.

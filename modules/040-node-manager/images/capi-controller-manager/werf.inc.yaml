@@ -1,0 +1,56 @@
+{{- $version := "1.10.6" }}
+---
+image: {{ .ModuleName }}/capi-controller-manager
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /capi-controller-manager
+  to: /capi-controller-manager
+  before: setup
+git:
+{{- include "image mount points" . }}
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cluster-api.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git hack test
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash git
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -trimpath -ldflags "-s -w -extldflags \"-static\"" -o bin/manager sigs.k8s.io/cluster-api
+  - mv /src/bin/manager /capi-controller-manager
+  - chown 64535:64535 /capi-controller-manager
+  - chmod 0700 /capi-controller-manager

@@ -1,0 +1,196 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modules
+    singular: module
+    kind: Module
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
+
+          properties:
+            properties:
+              type: object
+              properties:
+                availableSources:
+                  type: array
+                  description: Available sources for downloading the module.
+                  items:
+                    type: string
+                weight:
+                  type: integer
+                  description: Module _weight_ (priority).
+                namespace:
+                  type: string
+                  description: Module namespace.
+                subsystems:
+                  type: array
+                  description: Module subsystems.
+                  items:
+                    type: string
+                source:
+                  type: string
+                  description: Source the module was downloaded from (otherwise will be blank).
+                stage:
+                  type: string
+                  description: Current stage of the module lifecycle.
+                critical:
+                  type: boolean
+                  description: Indicates whether the module critical or not.
+                version:
+                  type: string
+                  description: Module version.
+                releaseChannel:
+                  type: string
+                  description: Module release channel.
+                exclusiveGroup:
+                  type: string
+                  description: Indicates the group where only one module can be active at a time.
+                updatePolicy:
+                  type: string
+                  description: Module update policy.
+                disableOptions:
+                  type: object
+                  description: Parameters of module disable protection.
+                  properties:
+                    confirmation:
+                      type: boolean
+                    message:
+                      type: string
+                requirements:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                  properties:
+                    deckhouse:
+                      type: string
+                      description: Required Deckhouse version.
+                    kubernetes:
+                      type: string
+                      description: Required Kubernetes version.
+                    bootstrapped:
+                      type: string
+                      description: Required cluster installation status (for built-in DKP modules only).
+                    modules:
+                      type: object
+                      description: A list of other enabled modules required for the module.
+                      additionalProperties:
+                        type: string
+                accessibility:
+                  type: object
+                  description: Module accessibility settings.
+                  properties:
+                    editions:
+                      type: object
+                      description: Module operation settings in Deckhouse editions.
+                      additionalProperties:
+                        type: object
+                        properties:
+                          available:
+                            type: boolean
+                          enabledInBundles:
+                            type: array
+                            items:
+                              type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Module phase.
+                  enum:
+                    - Unavailable
+                    - Available
+                    - Downloading
+                    - DownloadingError
+                    - Reconciling
+                    - Installing
+                    - HooksDisabled
+                    - WaitSyncTasks
+                    - Downloaded
+                    - Conflict
+                    - Ready
+                    - Error
+                hooksState:
+                  type: string
+                  description: Hooks status report.
+                conditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Weight
+          jsonPath: .properties.weight
+          type: integer
+          priority: 1
+          description: Module weight
+        - name: Stage
+          jsonPath: .properties.stage
+          type: string
+          description: Module stage
+        - name: Release channel
+          jsonPath: .properties.releaseChannel
+          description: Release channel of the module.
+          type: string
+          priority: 1
+        - name: Source
+          jsonPath: .properties.source
+          type: string
+          description: Source of the module it provided by one.
+        - name: Version
+          jsonPath: .properties.version
+          type: string
+          description: Module version.
+          priority: 1
+        - name: Phase
+          jsonPath: .status.phase
+          type: string
+          description: Module phase.
+        - name: Enabled
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
+          description: Module`s enabled status.
+          type: string
+        - name: Disabled Message
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
+          description: Module`s enabled information.
+          type: string
+          priority: 1
+        - name: Ready
+          jsonPath: .status.conditions[?(@.type=='IsReady')].status
+          description: Module`s ready status.
+          type: string

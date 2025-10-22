@@ -1,0 +1,36 @@
+x-config-version: 2
+type: object
+properties:
+  earlyOomEnabled:
+    type: boolean
+    default: true
+    x-examples:
+    - false
+    description: |
+      Set to 'false' to disable early OOM killer in case it behaves incorrectly.
+  instancePrefix:
+    type: string
+    description: |
+      The prefix to use when creating instances via the corresponding cloud provider module.
+
+      The default value can be calculated based on the `ClusterConfiguration` struct if the cluster is installed via the Deckhouse installer.
+    x-examples:
+      - kube
+  mcmEmergencyBrake:
+    type: boolean
+    default: false
+    x-examples:
+    - false
+    description: |
+      Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
+
+      > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.
+  capiEmergencyBrake:
+    type: boolean
+    default: false
+    x-examples:
+    - false
+    description: |
+      Set to 'true' to disable CAPI in case of potentially cluster-damaging changes.
+
+      > **Warning.** Use this flag only if you know why you are doing it and clearly understand the consequences.

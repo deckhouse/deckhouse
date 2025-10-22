@@ -1,0 +1,75 @@
+- name: d8.l2-load-balancer.services
+  rules:
+    - alert: L2LoadBalancerOrphanServiceFound
+      expr: max by (namespace, name) (d8_l2_load_balancer_orphan_service == 1)
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__istio_irrelevant_external_services: ClusterHasL2LoadBalancerOrphanServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__istio_irrelevant_external_services: ClusterHasL2LoadBalancerOrphanServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Orphaned service with an irrelevant L2LoadBalancer name has been found.
+        description: |
+          The cluster contains an orphaned service `{{$labels.name}}` in the `{{$labels.namespace}}` namespace  with an irrelevant L2LoadBalancer name.
+
+          To resolve this issue, verify the L2LoadBalancer name specified in the annotation `network.deckhouse.io/l2-load-balancer-name`.
+
+- name: d8.metallb.migrate
+  rules:
+    - alert: D8MetallbUpdateMCVersionRequired
+      expr: d8_metallb_update_mc_version_required == 1
+      for: 1m
+      labels:
+        severity_level: "5"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_settings_outdated: D8MetallbUpdateMCVersionRequiredGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_settings_outdated: D8MetallbUpdateMCVersionRequiredGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: The metallb ModuleConfig settings are outdated.
+        description: |
+          D8 MetalLB settings are outdated.
+
+          To resolve this issue, increase version in the ModuleConfig `metallb`.
+
+    - alert: D8MetallbNotSupportedServiceAnnotationsDetected
+      expr: d8_metallb_not_supported_service_annotations_detected == 1
+      for: 1m
+      labels:
+        severity_level: "4"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_settings_outdated: D8MetallbNotSupportedServiceAnnotationsDetectedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_settings_outdated: D8MetallbNotSupportedServiceAnnotationsDetectedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
+        description: |
+          The annotation '{{$labels.annotation}}' has been deprecated for the service '{{$labels.name}}' in the '{{$labels.namespace}}' namespace.
+
+          The following service annotations are no longer effective:
+          - `metallb.universe.tf/ip-allocated-from-pool`: Remove this annotation.
+          - `metallb.universe.tf/address-pool`: Replace it with the `.spec.loadBalancerClass` parameter or use the `network.deckhouse.io/metal-load-balancer-class` annotation, referencing the appropriate MetalLoadBalancerClass.
+          - `metallb.universe.tf/loadBalancerIPs`: Replace it with `network.deckhouse.io/load-balancer-ips: <IP>`.
+          - `metallb.universe.tf/allow-shared-ip`: Replace it with `network.deckhouse.io/load-balancer-shared-ip-key`.
+
+          **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
+
+    - alert: D8MetallbObsoleteLayer2PoolsAreUsed
+      expr: d8_metallb_obsolete_layer2_pools_are_used == 1
+      for: 1m
+      labels:
+        severity_level: "7"
+        tier: application
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_settings_outdated: D8MetallbObsoleteLayer2PoolsAreUsedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_settings_outdated: D8MetallbObsoleteLayer2PoolsAreUsedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: The metallb module has obsolete `layer2` pools configured.
+        description: |
+          In ModuleConfig version 2, addressPool '{{$labels.name}}' of type “layer2” are ignored. They should be removed from the configuration.

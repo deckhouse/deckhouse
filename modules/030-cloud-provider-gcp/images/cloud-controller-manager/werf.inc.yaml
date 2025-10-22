@@ -1,0 +1,74 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- if $value.ccm.gcp }}
+    {{- $src_version := toString $value.ccm.gcp | replace "/" "-"}}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/gcp-cloud-controller-manager
+  to: /usr/local/bin/cloud-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches/{{ $src_version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.ccm.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
+  - cd /src
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager cmd/cloud-controller-manager/main.go cmd/cloud-controller-manager/nodeipamcontroller.go cmd/cloud-controller-manager/gkenetworkparamsetcontroller.go
+  - chown 64535:64535 /src/gcp-cloud-controller-manager
+  - chmod 0755 /src/gcp-cloud-controller-manager
+  {{- end }}
+{{- end }}

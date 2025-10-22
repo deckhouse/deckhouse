@@ -1,0 +1,53 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /huaweicloud-cloud-controller-manager
+  to: /huaweicloud-cloud-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/huaweicloud-cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v0.26.9 $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-huaweicloud.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-bullseye
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /huaweicloud-cloud-controller-manager cmd/cloud-controller-manager/cloud-controller-manager.go
+  - chown 64535:64535 /huaweicloud-cloud-controller-manager
+  - chmod 0755 /huaweicloud-cloud-controller-manager

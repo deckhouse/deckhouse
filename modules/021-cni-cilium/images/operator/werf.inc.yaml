@@ -1,0 +1,47 @@
+{{- $ciliumVersion := "1.17.4" }}
+# #####################################################################
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/operator/Dockerfile
+# #####################################################################
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/bin-cilium-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git bash
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64
+  - cd /src/cilium
+  - go mod vendor && go mod verify
+  - |
+    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- include "image-build.build" (set $ "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator`) | indent 4 }}
+  - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
+  - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
+  - rm -rf /src/cilium/vendor
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /out/linux/amd64/usr/bin/cilium-operator
+  to: /usr/bin/cilium-operator
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/cilium-operator"]

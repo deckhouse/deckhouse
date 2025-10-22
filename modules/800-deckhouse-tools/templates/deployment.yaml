@@ -1,0 +1,61 @@
+{{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deckhouse-tools
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse-tools")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: deckhouse-tools
+  template:
+    metadata:
+      labels:
+        app: deckhouse-tools
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+        fsGroup: 64535
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: null
+      serviceAccount: null
+      containers:
+      - name: web
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "web") }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+        ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "web_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

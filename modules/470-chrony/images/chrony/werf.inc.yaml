@@ -1,0 +1,87 @@
+{{- $version := "4.6.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/470-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
+---
+image: {{ .ModuleName }}/build-chrony-static-artifact
+fromImage: builder/alpine-3.20
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/chrony
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache automake autoconf libtool build-base bison asciidoctor libcap-dev libcap-static
+  install:
+  - cd /src
+  - echo "{{ $version }}" > version.txt
+  - CFLAGS="-static" LDFLAGS="-static" ./configure --prefix=/opt/chrony-static
+  - make -j1
+  - make -j1 install
+  - chown -R 64535:64535 /opt/chrony-static
+  - chmod +x /opt/chrony-static/bin/chronyc
+  - chmod +x /opt/chrony-static/sbin/chronyd
+---
+image: {{ .ModuleName }}/build-entrypoint-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o /entrypoint main.go
+  - chown -R 64535:64535 /entrypoint
+  - chmod +x /entrypoint
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/build-chrony-static-artifact
+  add: /opt/chrony-static
+  before: setup
+- image: common/tini-artifact
+  add: /tini/tini-static
+  to: /tini
+  before: setup
+- image: {{ .ModuleName }}/build-entrypoint-artifact
+  add: /entrypoint
+  to: /entrypoint
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/tini", "--"]
+    cmd: ["/entrypoint"]

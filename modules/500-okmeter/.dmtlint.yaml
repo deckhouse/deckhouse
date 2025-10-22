@@ -1,0 +1,23 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: okmeter
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent
+      readiness-probe:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent
+      image-digest:
+        - kind: DaemonSet
+          name: okmeter
+          container: okagent

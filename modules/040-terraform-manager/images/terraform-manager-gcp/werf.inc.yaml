@@ -1,0 +1,54 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "gcp") }}'
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/gcp
+  to: /deckhouse/candi/cloud-providers/gcp
+import:
+- image: terraform-provider-gcp
+  add: /terraform-provider-gcp
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "gcp") }}/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google
+  before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v{{ .TF.gcp.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-google.git .
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git google/test-fixtures/appengine/hello-world-flask
+---
+image: terraform-provider-gcp
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
+  - mv terraform-provider-gcp /terraform-provider-gcp
+  - chmod -R 755 /terraform-provider-gcp
+  - chown 64535:64535 /terraform-provider-gcp

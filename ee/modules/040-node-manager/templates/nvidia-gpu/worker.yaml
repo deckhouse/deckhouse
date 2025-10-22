@@ -1,0 +1,140 @@
+{{- if include "nvidia_gpu_enabled" . }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "role" "worker")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: node-feature-discovery-worker
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: worker
+      minAllowed:
+        cpu: 5m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 50m
+        memory: 128Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-feature-discovery-worker
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "role" "worker")) | nindent 2 }}
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      role: worker
+  template:
+    metadata:
+      labels:
+        role: worker
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "nvidia_node_selector" (tuple . "any" "") | nindent 6 }}
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: node-feature-discovery-worker
+      containers:
+      - name: worker
+        image: {{ include "helm_lib_module_image" (list . "nodeFeatureDiscovery") }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        livenessProbe:
+          grpc:
+            port: 8082
+        readinessProbe:
+          grpc:
+            port: 8082
+          failureThreshold: 10
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        resources:
+          requests:
+          {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 5m
+            memory: 64Mi
+        {{- end }}
+        command:
+        - "/nfd-worker"
+        args:
+        - -feature-gates=NodeFeatureGroupAPI=false
+        - -metrics=8081
+        - -grpc-health=8082
+        - -config=/etc/kubernetes/node-feature-discovery/nfd-worker.conf
+        ports:
+          - containerPort: 8081
+            name: metrics
+          - containerPort: 8082
+            name: health
+        volumeMounts:
+        - name: host-boot
+          mountPath: "/host-boot"
+          readOnly: true
+        - name: host-os-release
+          mountPath: "/host-etc/os-release"
+          readOnly: true
+        - name: host-sys
+          mountPath: "/host-sys"
+          readOnly: true
+        - name: host-usr-lib
+          mountPath: "/host-usr/lib"
+          readOnly: true
+        - name: host-lib
+          mountPath: "/host-lib"
+          readOnly: true
+        - name: features-d
+          mountPath: "/etc/kubernetes/node-feature-discovery/features.d/"
+          readOnly: true
+        - name: nfd-worker-conf
+          mountPath: "/etc/kubernetes/node-feature-discovery"
+          readOnly: true
+      volumes:
+        - name: host-boot
+          hostPath:
+            path: "/boot"
+        - name: host-os-release
+          hostPath:
+            path: "/etc/os-release"
+        - name: host-sys
+          hostPath:
+            path: "/sys"
+        - name: host-usr-lib
+          hostPath:
+            path: "/usr/lib"
+        - name: host-lib
+          hostPath:
+            path: "/lib"
+        - name: features-d
+          hostPath:
+            path: "/etc/kubernetes/node-feature-discovery/features.d/"
+        - name: nfd-worker-conf
+          configMap:
+            name: node-feature-discovery-worker-conf
+            items:
+              - key: nfd-worker.conf
+                path: nfd-worker.conf
+{{- end }}

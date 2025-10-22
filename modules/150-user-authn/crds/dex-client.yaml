@@ -1,0 +1,88 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dexclients.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Namespaced
+  names:
+    plural: dexclients
+    singular: dexclient
+    kind: DexClient
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Allows applications that support DC authentication to interact with Dex.
+
+            After the `DexClient` object appears in the cluster:
+            * Dex will register a client with a `dex-client-<NAME>@<NAMESPACE>` **clientID**, where `<NAME>` and `<NAMESPACE>` are `metadata.name` and `metadata.namespace` of the DexClient object, respectively.
+            * A `dex-client-<NAME>` Secret containing the client access password (**clientSecret**) will be created in the corresponding namespace (where `<NAME>` is `metadata.name` of the DexClient object).
+
+            [Usage example...](usage.html#configuring-the-oauth2-client-in-dex-for-connecting-an-application)
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All users are allowed.'
+                  items:
+                    type: string
+                allowedGroups:
+                  type: array
+                  description: |
+                    A list of groups whose members are allowed to connect to the client;
+                    **By default**, all groups can connect.
+                  items:
+                    type: string
+                redirectURIs:
+                  type: array
+                  description: 'Array or urls that Dex can redirect to after successful authentication.'
+                  items:
+                    type: string
+                trustedPeers:
+                  type: array
+                  description: |
+                    OAuth2 client IDs that allowed cross authentication with the current client.
+
+                    [Details...](https://developers.google.com/identity/protocols/CrossClientAuth)
+                  items:
+                    type: string
+                secretMetadata:
+                  type: object
+                  description: 'A list of labels and an annotations that will be transferred to the metadata secrets of the DexClient resource.'
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                        maxLength: 63
+                        pattern: '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$'
+                      maxProperties: 100
+                      x-kubernetes-validations:
+                        - rule: "self.all(key, key.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'))"
+                          message: "Label key must match the pattern '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'"
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema

@@ -1,0 +1,45 @@
+type: object
+properties:
+  storageClass:
+    properties:
+      provision:
+        description: |
+          Создание дополнительных StorageClass или переопределение параметров, создаваемых по умолчанию.
+        items:
+          properties:
+            name:
+              description: |
+                Имя будущего класса.
+            type:
+              description: |
+                Тип диска.
+            iopsPerGB:
+              description: |
+                I/O операций в секунду на каждый Гб для дисков типа `io1` или `io2` (у дисков `gp2` этот параметр `3`):
+                  * **Внимание!** Если это значение, умноженное на размер запрошенного диска, будет меньше 100 или больше 64000, создание такого диска завершится ошибкой.
+                  * Подробное описание типов дисков и их IOPS вы найдете [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+            iops:
+              description: |
+                I/O операций в секунду для дисков типа `gp3`:
+                  * Допустимые значения: от `3000` до `16000`.
+                  * Если не задан, будет использоваться значение 3000 согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Изменение этого параметра не приводит к изменению аналогичных параметров для уже созданных дисков. Их необходимо править вручную через консоль управления AWS.
+            throughput:
+              description: |
+                Пропускная способность в MiB/s для дисков типа `gp3`:
+                  * Допустимые значения: от `125` до `1000`.
+                  * Если не задан, будет использоваться значение 125 согласно [документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Изменение этого параметра не приводит к изменению аналогичных параметров для уже созданных дисков. Их необходимо править вручную через консоль управления AWS.
+      exclude:
+        description: |
+          Полные имена (или regex выражения имен) StorageClass, которые не будут созданы в кластере.
+      default:
+        description: |-
+          Имя StorageClass, который будет использоваться по умолчанию в кластере.
+
+          Если значение не указано, фактический StorageClass по умолчанию будет определен следующим образом:
+
+          * присутствующий StorageClass в кластере, имеющий default-аннотацию;
+          * первый (по алфавиту) StorageClass из тех, что создаются модулем.
+
+          > **Параметр устарел.** Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass)

@@ -1,0 +1,15 @@
+candi:
+  features:
+    - summary: Add deckhouse release requirements about docker presence.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4816
+      impact: It will be impossible to update Deckhouse until docker is replaced with containerd.
+common:
+  fixes:
+    - summary: Prevent usage of vulnerable TLS ciphers in `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4825
+      impact: Ingress controller Pods will restart.
+node-manager:
+  fixes:
+    - summary: Prevent usage of vulnerable TLS ciphers in `bashible-apiserver`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4827
+

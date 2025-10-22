@@ -1,0 +1,85 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: customprometheusrules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: prometheus
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: customprometheusrules
+    singular: customprometheusrule
+    kind: CustomPrometheusRules
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - groups
+              properties:
+                groups:
+                  type: array
+                  description: |
+                    Alert group description.
+
+                    The structure of the groups is similar to [that of prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - rules
+                    description: RuleGroup is a list of sequentially evaluated recording and alerting rules.
+                    properties:
+                      interval:
+                        type: string
+                      name:
+                        type: string
+                      rules:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - expr
+                          description: Rule describes an alerting or recording rule.
+                          properties:
+                            alert:
+                              type: string
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              x-kubernetes-preserve-unknown-fields: true
+                              type: object
+                            expr:
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              x-kubernetes-int-or-string: true
+                            for:
+                              type: string
+                            labels:
+                              additionalProperties:
+                                type: string
+                              x-kubernetes-preserve-unknown-fields: true
+                              type: object
+                            record:
+                              type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema

@@ -1,0 +1,59 @@
+{{- $version := "1.10-48.1" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch applied/{{ $version }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
+  - rm -rf /src/netcat/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - nc
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nc": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make g++
+  setup:
+    - cd /src/netcat
+    - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
+    - strip ./nc
+    - mv ./nc /nc
+    - mv /src/scripts/* /
+    - chmod +x /nc /install /uninstall

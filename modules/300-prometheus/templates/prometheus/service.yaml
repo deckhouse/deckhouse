@@ -1,0 +1,56 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "main")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: https
+    port: 9090
+    protocol: TCP
+    targetPort: https
+  selector:
+    prometheus: main
+    app.kubernetes.io/name: prometheus
+{{- if (include "helm_lib_ha_enabled" .) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-main-0
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: https
+    port: 9090
+    targetPort: https
+  selector:
+    prometheus: main
+    app.kubernetes.io/name: prometheus
+    statefulset.kubernetes.io/pod-name: prometheus-main-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-main-1
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: https
+    port: 9090
+    targetPort: https
+  selector:
+    prometheus: main
+    app.kubernetes.io/name: prometheus
+    statefulset.kubernetes.io/pod-name: prometheus-main-1
+{{- end }}

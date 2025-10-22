@@ -1,0 +1,185 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет режим и настройки обновления модуля.
+          properties:
+            spec:
+              properties:
+                releaseChannel:
+                  description: |
+                    Желаемый канал обновления модуля.
+                    Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                update:
+                  description: |
+                    Режим и настройки обновления модуля.
+                  properties:
+                    mode:
+                      description: |
+                        Режим обновления версий модуля.
+
+                        - `AutoPatch` — автоматический режим обновления для патч-версий.
+
+                          Для обновления минорной версии (например, с `v1.15.*` на `v1.16.*`) необходимо подтверждение.
+
+                          Обновление патч-версии (например, с `v1.16.1` на `v1.16.2`) применяется с учетом [окон обновлений](/modules/deckhouse/configuration.html#parameters-update-windows), если они заданы.
+
+                        - `Auto` (автоматический) — все обновления применяются автоматически.
+
+                          Обновления минорной версии (например, с `v1.15.*` на `v1.16.*`) и патч-версии (например, с `v1.16.1` на `v1.16.2`) применяются с учетом заданных [окон обновлений](/modules/deckhouse/configuration.html#parameters-update-windows), либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений.
+
+                        - `Manual` (ручной) — для обновления и минорной, и патч-версии необходимо подтверждение.
+
+                        Для подтверждения обновления установите аннотацию `modules.deckhouse.io/approved="true"` в соответствующем ресурсе ModuleRelease.
+
+                        - `Ignore` — обновления отключены.
+                    windows:
+                      description: |
+                        Расписание окон обновления модуля.
+                      items:
+                        properties:
+                          from:
+                            description: |
+                              Время начала окна обновления (в часовом поясе UTC).
+
+                              Должно быть меньше времени окончания окна обновления.
+                          to:
+                            description: |
+                              Время окончания окна обновления (в часовом поясе UTC).
+
+                              Должно быть больше времени начала окна обновления.
+                          days:
+                            description: Дни недели, в которые применяется окно обновлений.
+                            items:
+                              description: День недели.
+                moduleReleaseSelector:
+                  type: object
+                  description: |
+                    Определяет модули к которым применяются настройки обновления.
+                  properties:
+                    labelSelector:
+                      description: |
+                        Определяет фильтр на основе меток, указанных у целевых модулей
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
+                      type: object
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: Список фильтров на основе выражений.
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                description: Имя метки.
+                                type: string
+                              operator:
+                                description: Оператор сравнения.
+                                type: string
+                              values:
+                                type: array
+                                description: Значение метки.
+                                items:
+                                  type: string
+                        matchLabels:
+                          type: object
+                          description: Фильтр на основе совпадения меток.
+                          additionalProperties:
+                            type: string
+            status:
+              properties:
+                matchedModules:
+                  description: Список модулей подпадающих под данные настройки обновления.
+                errors:
+                  description: Список сообщений об ошибках.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: Канал обновления модуля.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: Режим обновления модуля.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          type: string
+          description: Окна обновления модуля.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет режим и настройки обновления модуля.
+          properties:
+            spec:
+              properties:
+                releaseChannel:
+                  description: |
+                    Желаемый канал обновления модуля.
+
+                    Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                update:
+                  description: |
+                    Режим и настройки обновления модуля.
+                  properties:
+                    mode:
+                      description: |
+                        Режим обновления версий модуля.
+
+                        - `AutoPatch` — автоматический режим обновления для патч-версий.
+
+                          Для обновления минорной версии (например, с `v1.15.*` на `v1.16.*`) необходимо подтверждение.
+
+                          Обновление патч-версии (например, с `v1.16.1` на `v1.16.2`) применяется с учетом [окон обновлений](/modules/deckhouse/configuration.html#parameters-update-windows), если они заданы.
+
+                        - `Auto` (автоматический) — все обновления применяются автоматически.
+
+                          Обновления минорной версии (например, с `v1.15.*` на `v1.16.*`) и патч-версии (например, с `v1.16.1` на `v1.16.2`) применяются с учетом заданных [окон обновлений](/modules/deckhouse/configuration.html#parameters-update-windows), либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений.
+
+                        - `Manual` (ручной) — для обновления и минорной, и патч-версии необходимо подтверждение.
+
+                        Для подтверждения обновления установите аннотацию `modules.deckhouse.io/approved="true"` в соответствующем ресурсе ModuleRelease.
+                    windows:
+                      description: |
+                        Расписание окон обновления модуля.
+                      items:
+                        properties:
+                          from:
+                            description: |
+                              Время начала окна обновления (в часовом поясе UTC).
+
+                              Должно быть меньше времени окончания окна обновления.
+                          to:
+                            description: |
+                              Время окончания окна обновления (в часовом поясе UTC).
+
+                              Должно быть больше времени начала окна обновления.
+                          days:
+                            description: Дни недели, в которые применяется окно обновлений.
+                            items:
+                              description: День недели.
+            status:
+              properties:
+                matchedModules:
+                  description: Список модулей подпадающих под данные настройки обновления.
+                errors:
+                  description: Список сообщений об ошибках.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: Канал обновления модуля.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: Режим обновления модуля.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          type: string
+          description: Окна обновления модуля.

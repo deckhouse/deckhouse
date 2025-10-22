@@ -1,0 +1,66 @@
+{{- $version := "1.47.2" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ext2/e2fsprogs.git /src/e2fsprogs
+  - rm -rf /src/e2fsprogs/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+  add: /relocate/sbin
+  to: /
+  includePaths:
+  - mke2fs
+  - fsck
+  - resize2fs
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
+  setup:
+  - mkdir /relocate
+  - cd /src/e2fsprogs
+  - CFLAGS='-static' LDFLAGS="-static" ./configure
+  - make
+  - make DESTDIR=/relocate install
+  - make clean

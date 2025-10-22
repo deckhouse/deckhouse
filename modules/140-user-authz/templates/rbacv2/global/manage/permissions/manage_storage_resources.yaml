@@ -1,0 +1,42 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:manage:permission:subsystem:storage:manage_resources
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-storage-as: manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+      - csinodes
+      - storageclasses
+      - volumeattachments
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshotclasses
+      - volumesnapshotcontents
+    verbs:
+      - create
+      - update
+      - patch
+      - delete

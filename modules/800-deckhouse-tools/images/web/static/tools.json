@@ -1,0 +1,24 @@
+[
+  {
+    "version": "v0.0.0",
+    "name": "Deckhouse CLI",
+    "links": [
+      {
+        "link": "/files/d8-cli/linux-amd64/bin/d8",
+        "platform": "Linux (Intel)"
+      },
+      {
+        "link": "/files/d8-cli/darwin-amd64/bin/d8",
+        "platform": "MacOS (Intel)"
+      },
+      {
+        "link": "/files/d8-cli/darwin-arm64/bin/d8",
+        "platform": "MacOS (ARM)"
+      },
+      {
+        "link": "/files/d8-cli/windows-amd64/bin/d8.exe",
+        "platform": "Windows (Intel)"
+      }
+    ]
+  }
+]

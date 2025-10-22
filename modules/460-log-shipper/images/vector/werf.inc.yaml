@@ -1,0 +1,119 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+    add: /reloader
+    to: /usr/bin/reloader
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+    add: /relocate
+    to: /
+    before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/vector"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/reloader
+  to: /src/reloader
+  includePaths:
+  - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v0.44.0 $(cat /run/secrets/SOURCE_REPO)/vectordotdev/vector.git /src/vector
+  - rm -rf /src/vector/website /src/vector/scripts/integration
+  - rm -rf /src/vector/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/vector
+  to: /src
+  before: install
+mount:
+- from: tmp_dir
+  to: /root/.cargo
+- from: tmp_dir
+  to: /src/target
+secrets:
+- id: CARGO_PROXY
+  value: {{ .CargoProxy }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  install:
+  - export CARGO_NET_GIT_FETCH_WITH_CLI=true
+  - cd /src
+  - |
+    export CARGO_PROXY=$(cat /run/secrets/CARGO_PROXY)
+    if ! [[ "${CARGO_PROXY}" = "false" ]]; then
+      echo '[source.crates-io]' >> .cargo/config.toml
+      echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+      echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+      echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
+    fi
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - |
+    cargo build \
+    --release \
+    -j $(($(nproc) /2)) \
+    --no-default-features \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored,aws-core"
+  - strip target/release/vector
+  - mkdir -p /relocate/etc /relocate/usr/bin
+  - cp target/release/vector /vector
+  - rm -rf /srv/.cargo/config.toml ~/.gitconfig
+  - chown 64535:64535 /vector
+  - chmod 0755 /vector
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
+fromImage: builder/golang-alpine-1.24
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/reloader
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /reloader main.go
+  - chown 64535:64535 /reloader
+  - chmod 755 /reloader
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /vector
+    to: /relocate/usr/bin/vector
+    before: install
+shell:
+  install:
+  - /binary_replace.sh -i /relocate/usr/bin/vector -o /relocate
+  - cp -pr /etc/pki /relocate/etc

@@ -1,0 +1,46 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+  {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-operator-{{ $revision }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "prometheus" "main")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: operator
+      revision: {{ $revision }}
+  namespaceSelector:
+    matchNames:
+    - d8-{{ $.Chart.Name }}
+  podMetricsEndpoints:
+    {{- if eq $version "1.25" }}
+  - port: https-metrics
+    scheme: https
+    bearerTokenSecret:
+      key: token
+      name: prometheus-token
+    tlsConfig: # TODO https://github.com/deckhouse/deckhouse/issues/1487
+      insecureSkipVerify: true
+    {{- else}}
+  - port: http-metrics
+    scheme: http
+    {{- end }}
+    relabelings:
+    - targetLabel: job
+      replacement: istio-operator
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_pod_label_revision]
+      targetLabel: revision
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+  {{- end }}
+{{- end }}

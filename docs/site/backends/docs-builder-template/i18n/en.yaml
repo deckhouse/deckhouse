@@ -1,0 +1,89 @@
+allowed_values: allowed values
+search_placeholder_text: Search...
+search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
+search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
+search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
+modules: modules
+modules2: modules
+module: module
+module_versions: Module versions
+module_version: Module version
+channel_or_version: "Channel/version"
+channel_or_version_of_module: "Module channel/version"
+deckhouse: deckhouse
+documentation: documentation
+Documentation: Documentation
+modules_documentation: Modules documentation
+modules_list: Modules list
+category: category
+core: core
+community_edition_en: community edition
+commercial_editions_en: commercial editions
+conversions_title: Conversions
+conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+conversion_global_action_message: Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+conversion_from_version: Updates from version
+conversion_to: to
+conversion_expressions: Actions performed by the conversion (jq syntax)
+conversion_missing_description: Conversion description is missing
+currency_sign: "$"
+commercial: Available in some commercial editions.
+notAvailableInThisEdition: Available in other commercial editions.
+default_value: default
+platform: platform
+pattern: pattern
+example: example
+examples: examples
+found: found
+length: length
+min_length: minimal length
+max_length: maximum length
+moduleLinkTitleADVANCED_USAGE: Advanced usage
+moduleLinkTitleREADME: Description
+moduleLinkTitleEXAMPLES: Examples
+moduleLinkTitleCONFIGURATION: Configuration
+moduleLinkTitleUSAGE: Usage
+moduleLinkTitleSETUP: Setup
+moduleLinkTitleFAQ: FAQ
+moduleLinkTitleCRD: Custom Resources
+moduleLinkTitleCR: Custom Resources
+module_is_available_in_ee_only: The module is available only in Deckhouse Enterprise Edition.
+module_available_editions_prefix: Available in
+module_available_with_limitations_prefix: Available with limitations in
+module_available_without_limitations_prefix: Available without limitations in
+module_has_restions_short: with limitations
+module_alert_experimental: Experimental
+module_alert_preview: Preview
+module_alert_general_availability: Generally available version
+module_alert_deprecated: Deprecated
+module_alert_experimental_long: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+module_alert_preview_long: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
+module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
+module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
+reset_filter: reset filter
+deprecated_parameter: Deprecated
+deprecated_parameter_hint: Support for the parameter might be removed in a later release.
+show_more: Show more
+show_more_pattern: "Show %s more"
+element_of_array: element of the array
+x-kubernetes-int-or-string: integer or string
+of_x-kubernetes-int-or-string: of integers or strings
+array: array
+of_array: of arrays
+object: object
+of_object: of objects
+number: number
+of_number: of numbers
+integer: integer
+of_integer: of integers
+string: string
+of_string: of strings
+boolean: boolean
+of_boolean: of booleans
+version: version
+version_of_module: "### module version"
+version_of_schema: Schema version
+required_value_sentence: Required value
+parameters: parameters
+api: API
+no_custom_configuration: The module has no configuration parameters.

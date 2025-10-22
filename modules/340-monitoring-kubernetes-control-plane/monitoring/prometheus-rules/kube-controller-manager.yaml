@@ -1,0 +1,13 @@
+- name: coreos.kube-controller-manager
+  rules:
+  - alert: K8SControllerManagerTargetDown
+    expr: absent(up{job="kube-controller-manager"} == 1)
+    for: 5m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Controller manager is down.
+      description: There is no running kube-controller-manager. As a result, deployments and replication
+        controllers are not progressing.
+      runbook: https://coreos.com/tectonic/docs/latest/troubleshooting/controller-recovery.html#recovering-a-controller-manager

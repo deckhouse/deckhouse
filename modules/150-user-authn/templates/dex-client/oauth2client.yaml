@@ -1,0 +1,74 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.userAuthn.internal.dexClientCRDs }}
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ $crd.encodedID }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
+id: {{ $crd.id }}
+name: {{ $crd.id }}
+secret: {{ $crd.clientSecret }}
+  {{ if $crd.spec.trustedPeers }}
+trustedPeers:
+{{- range $peer := $crd.spec.trustedPeers }}
+  - {{ $peer }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.redirectURIs }}
+redirectURIs:
+{{- range $uri := $crd.spec.redirectURIs }}
+  - {{ $uri }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.allowedEmails }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+- {{ $email }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.allowedGroups }}
+allowedGroups:
+{{- range $group := $crd.spec.allowedGroups }}
+- {{ $group }}
+{{- end }}
+  {{- end }}
+
+# Following manifest should be deleted, because it uses colons in the client
+# name which is impossible to send as a part basic auth credentials.
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ $crd.legacyEncodedID }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
+id: {{ $crd.legacyID }}
+name: {{ $crd.legacyID }}
+secret: {{ $crd.clientSecret }}
+  {{ if $crd.spec.trustedPeers }}
+trustedPeers:
+{{- range $peer := $crd.spec.trustedPeers }}
+  - {{- $peer }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.redirectURIs }}
+redirectURIs:
+{{- range $uri := $crd.spec.redirectURIs }}
+  - {{ $uri }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.allowedEmails }}
+allowedEmails:
+{{- range $email := $crd.spec.allowedEmails }}
+  - {{ $email }}
+{{- end }}
+  {{- end }}
+  {{ if $crd.spec.allowedGroups }}
+allowedGroups:
+{{- range $group := $crd.spec.allowedGroups }}
+- {{ $group }}
+{{- end }}
+  {{- end }}
+{{- end }}

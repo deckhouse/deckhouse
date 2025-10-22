@@ -1,0 +1,75 @@
+{{- $version := "6.7.0" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/xfs/xfsprogs-dev.git /src/xfsprogs-dev
+  - rm -rf /src/xfsprogs-dev/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - mkfs.xfs
+  - xfs_*
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "xfsprogs": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-bookworm
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install -y make libinih-dev libblkid-dev gettext liburcu-dev libtool libicu-dev pkg-config
+  setup:
+  - cd /src/xfsprogs-dev
+  - libtoolize -c -i -f
+  - cp -f include/install-sh .
+  - aclocal -I m4 &&	autoconf
+  - LDFLAGS="-static" ./configure --enable-shared=no  --disable-scrub
+  - make LLDFLAGS=-all-static
+  - strip mkfs/mkfs.xfs &&
+    strip repair/xfs_repair &&
+    strip quota/xfs_quota &&
+    strip growfs/xfs_growfs &&
+    strip mdrestore/xfs_mdrestore &&
+    strip spaceman/xfs_spaceman
+  - mv mkfs/mkfs.xfs /mkfs.xfs &&
+    mv repair/xfs_repair /xfs_repair &&
+    mv quota/xfs_quota /xfs_quota &&
+    mv growfs/xfs_growfs /xfs_growfs &&
+    mv mdrestore/xfs_mdrestore /xfs_mdrestore &&
+    mv spaceman/xfs_spaceman /xfs_spaceman &&
+    mv spaceman/xfs_info.sh /xfs_info &&
+    mv /src/scripts/* /
+  - chmod +x /mkfs.xfs /xfs_repair /xfs_quota /xfs_growfs /xfs_mdrestore /xfs_spaceman /xfs_info /install /uninstall

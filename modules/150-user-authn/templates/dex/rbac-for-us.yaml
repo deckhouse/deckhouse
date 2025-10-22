@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authn:dex:crd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups: ["dex.coreos.com"]
+  resources:
+  - authcodes
+  - authrequests
+  - connectors
+  - devicerequests
+  - devicetokens
+  - oauth2clients
+  - offlinesessionses
+  - passwords
+  - refreshtokens
+  - signingkeies
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authn:dex:crd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authn:dex:crd
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+rules:
+- apiGroups: ["dex.coreos.com"]
+  resources:
+  - authcodes
+  - authrequests
+  - connectors
+  - oauth2clients
+  - offlinesessionses
+  - passwords
+  - refreshtokens
+  - signingkeies
+  verbs:
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dex
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authn:dex:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: dex
+    namespace: d8-{{ $.Chart.Name }}

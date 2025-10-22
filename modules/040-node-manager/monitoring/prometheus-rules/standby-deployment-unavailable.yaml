@@ -1,0 +1,38 @@
+- name: d8.standby-deployment-unavailable
+  rules:
+  - alert: StandbyHolderDeploymentReplicasUnavailable
+    expr: |
+      (
+              min_over_time(
+                (
+                    kube_deployment_spec_replicas{deployment=~"standby-holder-.+"}
+                  -
+                    kube_deployment_status_replicas_available{deployment=~"standby-holder-.+"}
+                )[5m:]
+              )
+            >
+              0
+          )
+        * on (namespace, deployment) group_left (node_group_name)
+          label_replace(
+            kube_deployment_spec_replicas{deployment=~"standby-holder-.+"},
+            "node_group_name",
+            "$1",
+            "deployment",
+            "standby-holder-(.+)"
+          )
+      * on (node_group_name)
+        d8_node_group_standby{node_group_name=~".+"} > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,node_group_name={{ $labels.node_group_name }},kubernetes=~kubernetes"
+      summary: No available replicas in Deployment `standby-holder-{{$labels.node_group_name}}`.
+      description: |-
+        Deckhouse has detected that there are no available replicas in the `standby-holder-{{$labels.node_group_name}}` Deployment in the `d8-cloud-instance-manager` namespace.
+
+        Check the Deployment and associated Pods for issues.

@@ -1,0 +1,6 @@
+dirs:
+  - /certs/
+  - /var/run
+  - /hooks
+  - /.kube
+  - /deckhouse

@@ -1,0 +1,9 @@
+name: chrony
+critical: true
+weight: 470
+subsystems:
+  - infrastructure
+namespace: d8-chrony
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

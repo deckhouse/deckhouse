@@ -1,0 +1,74 @@
+# https://taskfile.dev
+version: "3"
+
+silent: true
+
+vars:
+  NAME: d8-shutdown-inhibitor
+  TOOLS_NAME: d8-shutdown-inhibitor-tools
+
+dotenv:
+  - .env
+
+tasks:
+  __check_connection_envs:
+    cmds:
+      - |
+        [ -z $SSH_USER ] && echo "Set SSH_USER in .env, see .env.example" && exit 1 || true
+        [ -z $SSH_HOST ] && echo "Set SSH_HOST in .env, see .env.example" && exit 1 || true
+        [ -z $NAMESPACE ] && echo "Set NAMESPACE in .env, see .env.example" && exit 1 || true
+
+  build:
+    desc: Build binary for Linux
+    cmds:
+      - |
+        GOOS=linux \
+        GOARCH=amd64 \
+        CGO_ENABLED=0 \
+          go build ./cmd/{{.NAME}}
+        echo "Build done for inhibitor."
+        ls -la {{.NAME}}
+        file {{.NAME}}
+      - |
+        GOOS=linux \
+        GOARCH=amd64 \
+        CGO_ENABLED=0 \
+          go build ./cmd/{{.TOOLS_NAME}}
+        echo "Build done for tools."
+        ls -la {{.TOOLS_NAME}}
+        file {{.TOOLS_NAME}}
+
+  build:prod:
+    desc: Build binary for Linux
+    cmds:
+      - |
+        GOOS=linux \
+        GOARCH=amd64 \
+        CGO_ENABLED=0 \
+          go build -ldflags="-s -w" ./cmd/{{.NAME}}
+        echo "Build done."
+        ls -la {{.NAME}}
+        file {{.NAME}}
+
+  transfer:
+    desc: Transfer binary into VM
+    cmds:
+      - task: __check_connection_envs
+      - |
+        d8 v scp ./{{.NAME}} {{.SSH_USER}}@{{.SSH_HOST}}:. -n {{ .NAMESPACE }} --preserve --local-ssh
+        d8 v scp ./{{.TOOLS_NAME}} {{.SSH_USER}}@{{.SSH_HOST}}:. -n {{ .NAMESPACE }} --preserve --local-ssh
+        echo "Transfer done."
+
+  deploy:
+    desc: Build and transfer to VM
+    cmds:
+      - task: __check_connection_envs
+      - task: build
+      - task: transfer
+
+  ssh:
+    desc: SSH into VM
+    cmds:
+      - task: __check_connection_envs
+      - |
+        d8 v ssh -n {{ .NAMESPACE }} {{.SSH_USER}}@{{.SSH_HOST}} --local-ssh

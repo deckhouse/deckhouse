@@ -1,0 +1,13 @@
+name: vertical-pod-autoscaler
+subsystems:
+  - infrastructure
+namespace: kube-system
+requirements:
+  deckhouse: ">= 1.68"
+  modules:
+    prometheus: ">= 0.0.0"
+    prometheus-metrics-adapter: ">= 0.0.0"
+stage: General Availability
+descriptions:
+  ru: 'Инструмент Kubernetes, который автоматически настраивает CPU и RAM для контейнеров.'
+  en: 'This is a Kubernetes tool that automatically adjusts CPU and RAM for containers.'

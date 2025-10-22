@@ -1,0 +1,91 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $image_version := $version | replace "." "-" }}
+  {{- $crictlPatch := toString $value.crictlPatch }}
+  {{- $full_version := printf "%s.%s" $version $crictlPatch }}
+  {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+  {{- $patch := false }}
+  {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+    {{- if contains $full_version $path }}
+      {{- $patch = true }}
+    {{- end }}
+  {{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+  {{- if $patch }}
+- add: {{ $patches }}/patches/{{ $full_version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+  {{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $full_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cri-tools.git /src/cri-tools
+  - cd /src/cri-tools
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
+  - rm -rf hack/tools .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - crictl
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "crictl": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /src/cri-tools/build
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make
+  setup:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src/cri-tools
+  - go mod vendor
+  - export VERSION={{ $full_version }}
+  - make install crictl
+  - mv /usr/local/bin/crictl /crictl
+  - mv /src/scripts/* /
+  - chmod +x /crictl /install /uninstall
+  - rm -rf vendor
+{{- end }}

@@ -1,0 +1,74 @@
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubeconfig-generator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+data:
+  config.yaml: |-
+    {{- include "kubeconfig_generator_conf" . | b64enc | nindent 4 }}
+{{- end }}
+
+
+{{- define "kubeconfig_generator_conf" }}
+# Base web settings (address, icon)
+listen: "http://0.0.0.0:5555"
+logo_uri: "https://kubernetes.io/images/favicon.png"
+web_path_prefix: /
+debug: false
+# Always add CA to validate the Dex internal cetificate
+  {{- with .Values.userAuthn.internal.dexTLS.ca }}
+trusted_root_ca: | {{- . | nindent 2 }}
+  {{- end }}
+# Optionally add discovered Dex CA to validate the Dex external cetificate (for kubeconfigs)
+  {{- with .Values.userAuthn.internal.discoveredDexCA }}
+idp_ca_pem: | {{- . | nindent 2 }}
+  {{- end }}
+
+# Specify the cluster Kubernetes version to have the right link to download kubectl
+kubectl_version: "v{{ .Values.global.discovery.kubernetesVersion }}"
+
+# Array with kubeconfig settings for different connection options
+clusters:
+  {{ $publish_api_cluster := dict }}
+  {{ $publish_api_master_url := (printf "https://%s" (include "helm_lib_module_public_domain" (list . "api"))) }}
+  {{- $_ := set $publish_api_cluster "masterURI" $publish_api_master_url }}
+  {{- $_ := set $publish_api_cluster "id" (include "helm_lib_module_public_domain" (list . "api")) }}
+  {{- $_ := set $publish_api_cluster "client_id" "kubeconfig-generator" }}
+  {{- $_ := set $publish_api_cluster "description" $publish_api_master_url }}
+  {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
+
+  {{- if and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry) }}
+{{- include "kubeconfig_settings" (list $ "" $publish_api_cluster) }}
+  {{- end }}
+
+  {{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
+{{- $_ := set $cluster "client_id" (printf "kubeconfig-generator-%d" $index) }}
+{{- $_ := set $cluster "masterCA" ($cluster.masterCA | default $.Values.global.discovery.kubernetesCA )}}
+{{- include "kubeconfig_settings" (list $ $index $cluster) }}
+  {{- end }}
+
+{{- end }}
+
+{{- define "kubeconfig_settings" }}
+  {{- $context := index . 0 }}
+  {{- $index := index . 1 }}
+  {{- $cluster := index . 2 }}
+
+- client_id: "{{ $cluster.client_id }}"
+  client_secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+
+  issuer: "https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/"
+  k8s_master_uri: "{{ $cluster.masterURI }}"
+
+  name: "{{ $cluster.id }}"
+  redirect_uri: "https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}"
+  short_description: "{{ $cluster.description }}"
+  scopes:
+  - audience:server:client_id:kubernetes
+  - federated:id
+
+  k8s_ca_pem: {{ $cluster.masterCA | quote }}
+{{- end }}

@@ -1,0 +1,99 @@
+{{- define "kubeconfig_generator_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: kubeconfig-generator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: kubeconfig-generator
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "kubeconfig-generator"
+      minAllowed:
+        {{- include "kubeconfig_generator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeconfig-generator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: kubeconfig-generator
+  template:
+    metadata:
+      labels:
+        app: kubeconfig-generator
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/kubeconfig-generator/config.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "kubeconfig-generator")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      volumes:
+      - name: config
+        secret:
+          secretName: kubeconfig-generator
+          items:
+          - key: config.yaml
+            path: config.yaml
+      {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
+      hostAliases:
+        - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP }}
+          hostnames:
+            - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+      {{- end }}
+      containers:
+      - name: kubeconfig-generator
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "kubeconfigGenerator") }}
+        command:
+        - "/app/bin/dex-k8s-authenticator"
+        - "--config=config.yaml"
+        ports:
+        - name: http
+          containerPort: 5555
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+        volumeMounts:
+        - name: config
+          subPath: config.yaml
+          mountPath: /app/config.yaml
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "kubeconfig_generator_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

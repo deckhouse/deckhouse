@@ -1,0 +1,108 @@
+
+#
+# Instructions may be outdated!
+#
+
+{{ $BASE_GOLANG_16_BUSTER := "golang:1.16.3-buster@sha256:9d64369fd3c633df71d7465d67d43f63bb31192193e671742fa1c26ebc3a6210" }}
+
+project: deckhouse-web
+configVersion: 1
+---
+# Base Images
+{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+  {{- range $k, $v := .Images }}
+    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Env "development") (eq $.Env "module") }}
+      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- end }}
+    {{- if ne $k "REGISTRY_PATH" }}
+      {{- $_ := set $.Images $k $baseImagePath }}
+    {{- end }}
+  {{- end }}
+
+---
+image: web-static
+from: {{ .Images.BASE_JEKYLL }}
+final: false
+shell:
+  install:
+  - |
+      apk add rsync
+      gem update bundler
+
+      # "Install Dependencies"
+      cd /srv/jekyll-data/site/
+      bundle install
+  beforeSetup:
+  - |
+      # "Build static files"
+      cd /srv/jekyll-data/site/
+      export JEKYLL_ENV=production
+      mkdir -m 777 -p /app/_site/
+      jekyll build -d /app/_site/ --config _config.yml --trace
+git:
+- add: /docs/site
+  to: /srv/jekyll-data/site
+  owner: jekyll
+  group: jekyll
+  excludePaths:
+  - '*.md'
+  - werf*.yaml
+  - docker-compose*.yml
+  - .werf
+  - .helm
+  - backends
+  - Makefile
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    beforeSetup: '**/*'
+---
+image: web-router
+from: {{ $BASE_GOLANG_16_BUSTER }}
+imageSpec:
+  config:
+    workingDir:  "/tmp"
+shell:
+  install:
+  - apt update && apt install -yq git curl jq
+  - cd /go/src/app
+  - go mod tidy
+  - go get github.com/go-delve/delve/cmd/dlv
+  setup:
+  - cd /go/src/app
+  - go build -gcflags "all=-N -l" -v -o /app/server /go/src/app/cmd/v-router
+git:
+  - url: https://github.com/flant/web-router.git
+    tag: v1.0.14
+    add: /
+    to: /go/src/app
+    stageDependencies:
+      install: 'go.mod'
+      setup: '**/*'
+import:
+  - image: web-static
+    add: /app/_site
+    to: /app/root
+    before: setup
+---
+image: web-frontend
+imageSpec:
+  config:
+    workingDir: "/app"
+from: {{ .Images.BASE_NGINX_ALPINE }}
+shell:
+  setup:
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
+import:
+- image: web-static
+  add: /app/_site
+  to: /app
+  before: setup
+  owner: nginx
+  group: nginx
+  excludePaths:
+  - en/includes/
+  - ru/includes/

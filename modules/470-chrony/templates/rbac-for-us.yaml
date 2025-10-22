@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chrony-exporter-master
+  namespace: d8-chrony
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chrony-exporter
+  namespace: d8-chrony
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:chrony:chrony-exporter:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: chrony-exporter
+  namespace: d8-chrony
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:chrony:chrony-exporter-master:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: chrony-exporter-master
+  namespace: d8-chrony

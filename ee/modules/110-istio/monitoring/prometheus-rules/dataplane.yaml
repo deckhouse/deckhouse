@@ -1,0 +1,196 @@
+- name: d8.istio.dataplane
+  rules:
+  - alert: D8IstioActualVersionIsNotInstalled
+    annotations:
+      summary: The control plane version for pods with injected sidecars isn't installed.
+      description: |
+        There are pods in the `{{$labels.namespace}}` namespace with injected sidecars of version `{{$labels.version}}` (revision `{{$labels.revision}}`), but the corresponding control plane version is not installed. As a result, these pods have lost synchronization with the state in Kubernetes.
+
+        To resolve this issue, install the required control plane version. Alternatively, update the namespace or pod configuration to match an installed control plane version.
+
+        To identify orphaned pods, run the following command:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} get pods -l 'service.istio.io/canonical-name' -o json | jq --arg revision {{ $labels.revision }} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        ```
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      (
+        max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
+        (
+          d8_istio_dataplane_metadata{ revision!="absent" }
+          unless on (revision)
+          (
+            istio_build{ component="pilot" }
+            * on (pod,namespace) group_left(revision)
+            (
+              label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+            )
+          )
+        )
+      # labels kube-state-metrics should exist
+      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+  - alert: D8IstioDesiredVersionIsNotInstalled
+    annotations:
+      summary: Desired control plane version isn't installed.
+      description: |
+        There is a desired Istio control plane version `{{$labels.desired_version}}` (revision `{{$labels.revision}}`) configured for pods in the `{{$labels.namespace}}` namespace, but that version isn't installed. As a result, pods can't be recreated in the `{{$labels.namespace}}` namespace.
+
+        To resolve this issue, install the desired control plane version. Alternatively, update the namespace or pod configuration to match an installed control plane version.
+
+        Use the following cheat sheet:
+
+        ```text
+        ### Namespace-wide configuration
+        # `istio.io/rev=vXYZ`: Use a specific revision.
+        # `istio-injection=enabled`: Use the global revision.
+        d8 k get ns {{$labels.namespace}} --show-labels
+
+        ### Pod-wide configuration
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.revision}}
+        ```
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      (
+        max by (dataplane_pod, namespace, revision, version, desired_version)
+        (
+          label_replace( d8_istio_dataplane_metadata{ desired_revision!="absent" }, "revision", "$1", "desired_revision", "(.+)" )
+          unless on (revision)
+          (
+            istio_build{ component="pilot" }
+            * on (pod,namespace) group_left(revision)
+            (
+              label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+            )
+          )
+        )
+      # labels kube-state-metrics should exist
+      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+  - alert: D8IstioDataPlaneWithoutIstioInjectionConfigured
+    annotations:
+      summary: Detected pods with Istio sidecars but istio-injection isn't configured.
+      description: |
+        There are pods in the `{{$labels.namespace}}` namespace with Istio sidecars, but istio-injection isn't configured. As a result, these pods will lose their Istio sidecars after being recreated.
+
+        To identify the affected pods, run the following command:
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get pods -o json | jq -r --arg revision {{$labels.revision}} '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson | .revision == $revision) | .metadata.name'
+        ```
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
+        (
+           d8_istio_dataplane_metadata{desired_revision="absent",revision!="absent"}
+        )
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+  - alert: D8IstioPodsWithoutIstioSidecar
+    annotations:
+      summary: Detected pods without Istio sidecars but with istio-injection configured.
+      description: |
+        There is a pod `{{$labels.dataplane_pod}}` in the `{{$labels.namespace}}` namespace without Istio sidecars, but with istio-injection configured.
+
+        To identify the affected pods, run the following command:
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get pods -l '!service.istio.io/canonical-name' -o json | jq -r '.items[] | select(.metadata.annotations."sidecar.istio.io/inject" != "false") | .metadata.name'
+        ```
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
+        (
+           d8_istio_dataplane_metadata{revision="absent", desired_revision!=""}
+        )
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+  - alert: D8IstioActualDataPlaneVersionNotEqualDesired
+    annotations:
+      summary: |
+        There are pods with Istio data plane version `{{$labels.version}}`,
+        but desired version is `{{$labels.desired_version}}`.
+      description: |
+        There are pods in the `{{$labels.namespace}}` namespace with Istio data plane version `{{$labels.version}}`, while the desired version is `{{$labels.desired_version}}`. As a result, the Istio version will be changed after the pod is restarted.
+
+        To resolve the issue, use the following cheat sheet:
+
+        ```text
+        ### Namespace-wide configuration
+        # `istio.io/rev=vXYZ`: Use a specific revision.
+        # `istio-injection=enabled`: Use the global revision.
+        d8 k get ns {{$labels.namespace}} --show-labels
+
+        ### Pod-wide configuration
+        d8 k -n {{$labels.namespace}} get pods -l istio.io/rev={{$labels.desired_revision}}
+        ```
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
+      (
+        d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent"}
+      )
+      unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster
+  - alert: D8IstioDataPlaneVersionMismatch
+    annotations:
+      summary: There are pods with data plane version different from the control plane version.
+      description: |
+        There are pods in the `{{$labels.namespace}}` namespace with Istio data plane version `{{$labels.full_version}}`, which is different from the control plane version `{{$labels.desired_full_version}}`.
+
+        Steps to resolve the issue:
+
+        1. Restart affected pods and use the following PromQL query to get a full list:
+
+           ```prometheus
+           max by (namespace, dataplane_pod) (d8_istio_dataplane_metadata{full_version="{{$labels.full_version}}"})
+           ```
+
+        1. Use the automatic Istio data plane upgrade described in the [guide](https://deckhouse.io/modules/istio/examples.html#upgrading-istio).
+      plk_create_group_if_not_exists__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__d8_istio_dataplane_misconfigurations: D8IstioDataplaneMisconfigurations,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+    expr: |
+      max by (dataplane_pod, namespace, full_version, desired_full_version)
+      (
+        (
+          d8_istio_dataplane_metadata{full_version!~"(unknown|absent)", desired_full_version!="absent"}
+          # ignore pods with different revisions
+          * on (namespace, dataplane_pod, full_version, desired_full_version, revision) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
+        )
+        unless on (full_version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "full_version", "$1", "desired_full_version", "(.+)")
+      )
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster

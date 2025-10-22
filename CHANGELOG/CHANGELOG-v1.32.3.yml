@@ -1,0 +1,30 @@
+chrony:
+  fixes:
+    - summary: Remove chronyd stale pid file on start
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1375
+cloud-provider-aws:
+  fixes:
+    - summary: Allow ssh access to master nodes only from bastion for with-nat layout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1400
+control-plane-manager:
+  features:
+    - summary: Update etcd to 3.5.3
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1387
+      impact: Restart etcd due to update to version 3.5.3.
+deckhouse:
+  fixes:
+    - summary: Fix kubernetes upgrades with feature gates and limits deckhouse modules revision up to 3
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1377
+    - summary: Fixed a bug for the case when the storage class is set to "false"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1364
+docs:
+  fixes:
+    - summary: Fix formatting in  a part of lists
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1393
+    - summary: Fixed broken links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1367
+linstor:
+  fixes:
+    - summary: automatically recover evicted nodes in LINSTOR
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1397
+

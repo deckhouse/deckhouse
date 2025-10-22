@@ -1,0 +1,64 @@
+- name: d8.prometheus.target_down
+  rules:
+  - alert: TargetDown
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+    for: 10m
+    labels:
+      severity_level: "7"
+    annotations:
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
+
+  - alert: TargetDown
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+    for: 30m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
+
+  - alert: TargetDown
+    expr: up == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
+    for: 60m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance,pod"
+      summary: A target is down.
+      description: Deckhouse has detected that the `{{ $labels.job }}` target is is currently unreachable.
+
+  - alert: TargetSampleLimitExceeded
+    expr: |
+      scrape_samples_post_metric_relabeling / scrape_sample_limit > 1
+      and scrape_sample_limit !=0
+    for: __SCRAPE_INTERVAL_X_2__
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Scrapes are exceeding the sample limit.
+      description: |
+        One or more targets are down because the Prometheus sample limit was exceeded during a scrape.
+
+  - alert: TargetSampleLimitExceeded
+    expr: |
+      scrape_samples_post_metric_relabeling / scrape_sample_limit > 0.9
+      and scrape_sample_limit !=0
+    for: __SCRAPE_INTERVAL_X_2__
+    labels:
+      severity_level: "7"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_labels_as_annotations: "instance,pod"
+      summary: Sampling limit is nearly reached.
+      description: |
+        The target is close to exceeding the Prometheus’s sampling limit. Less than 10% of the allowed samples are left.

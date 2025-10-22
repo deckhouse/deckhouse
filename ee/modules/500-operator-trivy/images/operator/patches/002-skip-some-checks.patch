@@ -1,0 +1,109 @@
+diff --git a/pkg/configauditreport/controller/helper.go b/pkg/configauditreport/controller/helper.go
+index 09f23e3..44b4add 100644
+--- a/pkg/configauditreport/controller/helper.go
++++ b/pkg/configauditreport/controller/helper.go
+@@ -3,6 +3,7 @@ package controller
+ import (
+ 	"context"
+ 	"fmt"
++	"regexp"
+ 	"strings"
+ 
+ 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
+@@ -55,6 +56,10 @@ func evaluate(ctx context.Context, policies *policy.Policies, resource client.Ob
+ 
+ 		id := policies.GetResultID(result)
+ 
++		if skipCheck(id, resource) {
++			continue
++		}
++
+ 		// record only misconfig failed checks
+ 		if cd.ReportRecordFailedChecksOnly() && result.Status() == scan.StatusPassed {
+ 			continue
+@@ -114,3 +119,85 @@ func hasInfraReport(ctx context.Context, node *corev1.Node, infraReadWriter infr
+ 	}
+ 	return report != nil, nil
+ }
++
++func skipCheck(id string, resource client.Object) bool {
++	// refer to https://github.com/aquasecurity/defsec repository
++	switch id {
++	// check name: `Ensure that the admission control plugin SecurityContextDeny is set if PodSecurityPolicy is not used`
++	// This is deprecated parameter: https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#securitycontextdeny
++	// and it breaks functionality in deckhouse
++	case "KCV0013", "AVD-KCV-0013":
++		return true
++	// Kubernetes service in default namespace is ok
++	case "KSV110", "AVD-KSV-0110":
++		return getResourceTargetName(resource) == "default/service-kubernetes"
++	}
++	return checkForSystemNsAndIgnoringCheck(id, resource)
++}
++
++func checkForSystemNsAndIgnoringCheck(id string, resource client.Object) bool {
++	// This checks can be ignored for system and d8 namespaces.
++	namespace := resource.GetNamespace()
++	checkIDs := []string{
++		// `Minimize the admission of containers with capabilities assigned`
++		// "KSV003", "AVD-KSV-0003",
++		// `Minimize the admission of HostPath volumes`
++		"KSV023", "AVD-KSV-0023",
++		// `Minimize the admission of containers which use HostPorts`
++		"KSV024", "AVD-KSV-0024",
++		// `Minimize the admission of privileged containers`
++		"KSV017", "AVD-KSV-0017",
++		// `Minimize the admission of containers wishing to share the host process ID namespace`
++		"KSV010", "AVD-KSV-0010",
++		// `Minimize the admission of containers wishing to share the host network namespace`
++		"KSV009", "AVD-KSV-0009",
++		// `Minimize the admission of containers with allowPrivilegeEscalation`
++		"KSV001", "AVD-KSV-0001",
++		// `Minimize the admission of root containers`
++		"KSV012", "AVD-KSV-0012",
++		// `Minimize the admission of containers with the NET_RAW capability`
++		"KSV022", "AVD-KSV-0022",
++		// `Enable docker/default seccomp profile in your pod definitions`
++		// "KSV104", "AVD-KSV-0104",
++		// `Apply Security Context to Your Pods and Containers`
++		// "KSV025", "AVD-KSV-0025", "KSV005", "AVD-KSV-0005", "KSV030", "AVD-KSV-0030",
++	}
++
++	additionalIDs := []string{"KSV021", "AVD-KSV-0021", "KSV020", "AVD-KSV-0020"}
++
++	for _, check := range checkIDs {
++		if check == id && isSystemNamespace(namespace) {
++			return true
++		}
++	}
++
++	for _, check := range additionalIDs {
++		if check == id && isReplicaset(getResourceTargetName(resource)) {
++			return true
++		}
++	}
++
++	return false
++}
++
++var (
++	d8NamespaceRegex = regexp.MustCompile("^d8-.*$")
++	replicasetRegex  = regexp.MustCompile("^d8-[^/]+/replicaset-.+")
++)
++
++func isSystemNamespace(namespace string) bool {
++	return d8NamespaceRegex.MatchString(namespace) || namespace == metav1.NamespaceSystem
++}
++
++func isReplicaset(name string) bool {
++	return replicasetRegex.MatchString(name)
++}
++
++func getResourceTargetName(resource client.Object) string {
++	// https://github.com/aquasecurity/trivy-operator/blob/v0.12.1/pkg/infraassessment/builder.go#L67
++	kind := resource.GetObjectKind().GroupVersionKind().Kind
++	name := resource.GetName()
++	reportName := fmt.Sprintf("%s-%s", strings.ToLower(kind), name)
++	// https://github.com/aquasecurity/trivy-operator/blob/v0.12.1/pkg/compliance/io.go#L144
++	return fmt.Sprintf("%s/%s", resource.GetNamespace(), reportName)
++}

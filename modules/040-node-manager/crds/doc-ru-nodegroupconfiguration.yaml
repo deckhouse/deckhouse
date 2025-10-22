@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodegroupconfigurations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodegroupconfigurations
+    singular: nodegroupconfiguration
+    kind: NodeGroupConfiguration
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для выполнения bash-скриптов на узлах.
+
+            [Подробнее](./#пользовательские-настройки-на-узлах) в документации модуля.
+          properties:
+            spec:
+              properties:
+                content:
+                  description: |
+                    Содержимое шага конфигурации в виде bash-скрипта.
+
+                    Для генерации скрипта возможно использовать [Go Template](https://pkg.go.dev/text/template).
+
+                    Получить список параметров, доступных для использования в шаблонах, можно из секрета `bashible-apiserver-context`:
+
+                    ```shell
+                    d8 k -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    Пример:
+
+                    ```shell
+                    {{- range .nodeUsers }}
+                    echo 'Tuning environment for user {{ .name }}'
+                    # Some code for tuning user environment
+                    {{- end }}
+                    ```
+
+                    Также в скрипте допустимо использовать подготовленные команды [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster). Например:
+
+                    ```shell
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
+
+                    Пример использования параметров proxy, указанных в ресурсе ClusterConfiguration:
+
+                    ```shell
+                    bb-set-proxy
+                    curl -I https://google.com
+                    bb-unset-proxy
+                    ```
+                    
+                    ```shell
+                    test-function-with-proxy() {
+                      bb-set-proxy
+                      trap bb-unset-proxy RETURN
+                      curl -I https://google.com
+                    }
+
+                    test-function-with-proxy
+                    ```
+                weight:
+                  description: Очередность выполнения шага конфигурации.
+                nodeGroups:
+                  description: Список NodeGroup, к которым нужно применять шаг конфигурации. Для выбора всех NodeGroups нужно указать '*'.
+                bundles:
+                  description: |
+                    Список bundle'ов, для которых будет выполняться скрипт. Для выбора всех bundle'ов нужно указать `'*'`.
+

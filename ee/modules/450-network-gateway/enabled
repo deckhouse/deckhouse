@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  enabled::fail_if_values_are_not_set global.discovery.podSubnet global.discovery.serviceSubnet
+  echo "true" > $MODULE_ENABLED_RESULT
+}
+
+enabled::run $@

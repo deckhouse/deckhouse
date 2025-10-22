@@ -1,0 +1,20 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      CACert:
+        type: string
+        x-examples: ["a"]
+      CAKey:
+        type: string
+        x-examples: ["b"]
+      serverCert:
+        type: string
+        x-examples: ["c"]
+      serverKey:
+        type: string
+        x-examples: ["d"]

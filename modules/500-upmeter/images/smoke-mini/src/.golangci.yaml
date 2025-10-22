@@ -1,0 +1,35 @@
+run:
+  timeout: 10m
+
+issues:
+  exclude:
+    - ST1005.*
+    - "should not use dot imports"
+    - "don't use an underscore in package name"
+
+linters-settings:
+  gci:
+    local-prefixes: d8.io/upmeter
+  goimports:
+    local-prefixes: d8.io/upmeter
+  golint:
+    min-confidence: 0
+  errcheck:
+    ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
+
+linters:
+  disable-all: true
+  enable:
+    # - errcheck
+    # - golint
+    # - gofumpt
+    - bodyclose
+    - gci
+    - gocritic
+    #- goimports
+    - gosimple
+    - govet
+    - misspell
+    - sqlclosecheck
+    - unparam
+

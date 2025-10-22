@@ -1,0 +1,61 @@
+positive:
+  configValues:
+    - {}
+  values:
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/1/
+          username: myuser
+          password: myPaSs
+          domainName: mydomain
+          tenantName: mytenantname
+          caCert: mycacert
+          region: myreg
+        internalNetworkNames:
+          - myintnetname
+          - myintnetname2
+        externalNetworkNames:
+          - myextnetname
+          - myextnetname2
+        podNetworkMode: VXLAN
+        instances:
+          sshKeyPairName: mysshkeypairname
+          securityGroups: [ "aaa","bbb" ]
+          mainNetwork: "aaa"
+          imageName: "bbb"
+          additionalTags: [ "aaa", "bbb" ]
+        zones: [ "zonea", "zoneb" ]
+        tags:
+          aaa: bbb
+          ccc: ddd
+    - internal:
+        connection:
+          authURL: http://my.cloud.lalla/2/
+          username: myuser
+          password: myPaSs
+          domainName: mydomain
+          tenantID: mytenantid
+          caCert: mycacert
+          region: myreg
+        internalNetworkNames:
+          - myintnetname
+          - myintnetname2
+        externalNetworkNames:
+          - myextnetname
+          - myextnetname2
+        podNetworkMode: DirectRouting
+        instances:
+          sshKeyPairName: mysshkeypairname
+          securityGroups: [ "aaa","bbb" ]
+          mainNetwork: "aaa"
+          imageName: "bbb"
+          additionalTags: [ "aaa", "bbb" ]
+        zones: [ "zonea", "zoneb" ]
+        tags:
+          aaa: bbb
+          ccc: ddd
+negative:
+  configValues:
+    - { somethingInConfig: yes }
+  values:
+    - { somethingInConfig: yes }

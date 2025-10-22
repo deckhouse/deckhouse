@@ -1,0 +1,16 @@
+{{- if .Values.istio.multicluster.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-proxy
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+spec:
+  ports:
+  - name: https
+    protocol: TCP
+    port: 4443
+  selector:
+    app: api-proxy
+{{- end }}

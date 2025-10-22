@@ -1,0 +1,105 @@
+###
+### controller
+###
+
+{{- define "csi_controller_args" }}
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
+{{- define "csi_controller_envs" }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: "/etc/credentials.json"
+{{- include "helm_lib_envs_for_proxy" . }}
+{{- end }}
+
+{{- define "csi_controller_volumes" }}
+- name: cloud-config
+  secret:
+    secretName: cloud-controller-manager
+{{- end }}
+
+{{- define "csi_controller_volume_mounts" }}
+- mountPath: /etc/credentials.json
+  name: cloud-config
+  readOnly: true
+  subPath: credentials.json
+{{- end }}
+
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list "pdCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- if $csiControllerImage }}
+
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "pd.csi.storage.gke.io" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+
+{{- end }}
+
+###
+### node
+###
+
+{{- define "csi_node_args" }}
+- "--endpoint=unix:///csi/csi.sock"
+{{- end }}
+
+{{- define "csi_node_envs" }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: "/etc/credentials.json"
+{{- include "helm_lib_envs_for_proxy" . }}
+{{- end }}
+
+{{- define "csi_node_volumes" }}
+# The following mounts are required to trigger host udevadm from container
+- name: udev-rules-etc
+  hostPath:
+    path: /etc/udev
+    type: Directory
+- name: udev-rules-lib
+  hostPath:
+    path: /lib/udev
+    type: Directory
+- name: udev-socket
+  hostPath:
+    path: /run/udev
+    type: Directory
+- name: sys
+  hostPath:
+    path: /sys
+    type: Directory
+- name: cloud-config
+  secret:
+    secretName: cloud-controller-manager
+{{- end }}
+
+{{- define "csi_node_volume_mounts" }}
+# The following mounts are required to trigger host udevadm from container
+- name: udev-rules-etc
+  mountPath: /etc/udev
+- name: udev-rules-lib
+  mountPath: /lib/udev
+- name: udev-socket
+  mountPath: /run/udev
+- name: sys
+  mountPath: /sys
+- mountPath: /etc/credentials.json
+  name: cloud-config
+  readOnly: true
+  subPath: credentials.json
+{{- end }}

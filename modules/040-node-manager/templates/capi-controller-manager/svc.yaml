@@ -1,0 +1,15 @@
+{{- if include "capi_controller_manager_enabled" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+  name: capi-webhook-service
+  namespace: d8-cloud-instance-manager
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook-server
+  selector:
+    app: capi-controller-manager
+{{- end }}

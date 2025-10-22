@@ -1,0 +1,8 @@
+version: 3
+conversions:
+  - .objectField.mapFieldInObjectValue.key1="val2"
+  - .mapField.mapFieldInObjectValue.k3=3
+  - del(.mapField.simpleFieldInObjectValue)
+  - .mapField.arrayFieldInMapValue[3]="v4"
+  - select(.objectFirst.check = true) | .objectFirst.objectSecond.objectThird.check=true
+  - del(.objectFirst.check)

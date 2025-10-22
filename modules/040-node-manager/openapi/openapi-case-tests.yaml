@@ -1,0 +1,44 @@
+defaults:
+  internal: &internalDefault
+    clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+    kubernetesCA: myclusterca
+    bashibleApiServerCA: myapiserverca
+    bashibleApiServerCrt: myapiservercrt
+    bashibleApiServerKey: myapiserverprivkey
+
+positive:
+  configValues:
+    - {}
+  values:
+    - { internal: {} }
+    - internal:
+        <<: *internalDefault
+        standbyNodeGroups:
+          - name: worker
+            reserveCPU: 12m
+            reserveMemory: 30%
+        cloudProvider:
+          type: aws
+          machineClassKind: AWSInstanceClass
+          aws:
+            providerAccessKeyId: myprovaccesskeyid
+            providerSecretAccessKey: myprovsecretaccesskey
+            region: myregion
+            loadBalancerSecurityGroupID: mylbsecuritygroupid
+            keyName: mykeyname
+            instances:
+              iamProfileName: myiamprofilename
+            internal:
+              zoneToSubnetIdMap:
+                zonea: mysubnetida
+                zoneb: mysubnetidb
+            tags:
+              aaa: aaa
+        allowedBundles: ["ubuntu-lts", "centos", "debian", "opensuse"]
+
+
+negative:
+  values:
+    - internal:
+        <<: *internalDefault
+        allowedBundles: "astra"

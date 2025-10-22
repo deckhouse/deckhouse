@@ -1,0 +1,54 @@
+{{ $imageAvailabilityExporterVersion := "0.14.0" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $imageAvailabilityExporterVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/k8s-image-availability-exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -a -ldflags '-s -w -extldflags "-static"' -o k8s-image-availability-exporter main.go
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/k8s-image-availability-exporter
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/k8s-image-availability-exporter
+    to: /k8s-image-availability-exporter
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/k8s-image-availability-exporter"]

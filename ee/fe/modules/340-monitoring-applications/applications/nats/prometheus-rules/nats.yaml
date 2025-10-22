@@ -1,0 +1,44 @@
+- name: applications.nats
+  rules:
+  - alert: NatsClusterNotEnoughRoutes-gnatsd
+    expr: >-
+      (min by (namespace, service, pod) (gnatsd_routez_num_routes{job="nats"})) - on (namespace, service) group_left()
+        (sum by (namespace, service) (up{job="nats"})) + 1 != 0
+    for: 2m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: Not enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
+      description: |-
+        There aren't enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
+        to form a full-mesh cluster. Consult the http://{{$labels.pod}}:8222/routez endpoint
+        to find the missing routes. The routes could be missing due to:
+        1. Network connectivity problems;
+        2. Internal NATS logic problems (frequently observed under high load).
+
+        Find out more about NATS clustering and debugging:
+        https://nats.io/documentation/server/gnatsd-cluster/
+        https://nats.io/documentation/tutorials/nats-monitoring/
+  - alert: NatsClusterNotEnoughRoutes
+    expr: >-
+      (min by (namespace, service, pod) (nats_routes{job="nats"})) - on (namespace, service) group_left()
+        (sum by (namespace, service) (nats_up{job="nats"})) + 1 != 0
+    for: 2m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: Not enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
+      description: |-
+        There aren't enough routes in NATS instance in Pod {{$labels.namespace}}/{{$labels.pod}}
+        to form a full-mesh cluster. Consult the http://{{$labels.pod}}:8222/routez endpoint
+        to find the missing routes. The routes could be missing due to:
+        1. Network connectivity problems;
+        2. Internal NATS logic problems (frequently observed under high load).
+
+        Find out more about NATS clustering and debugging:
+        https://nats.io/documentation/server/gnatsd-cluster/
+        https://nats.io/documentation/tutorials/nats-monitoring/

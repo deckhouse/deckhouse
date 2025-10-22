@@ -1,0 +1,78 @@
+{{/* Important! The iptables binaries from artifact are also used in other modules: kube-proxy, cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, ingress-nginx, openvpn, network-policy-engine and network-gateway. */}}
+{{- $version := "1.8.9" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
+  - rm -rf /src/libmnl/.git
+  - git clone -b libnftnl-1.2.6 --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
+  - rm -rf /src/libnftnl/.git
+  - git clone -b v{{ $version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
+  - rm -rf /src/iptables/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "iptables": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers bash pkgconf bzip2-dev libnl3 libc-dev libnl3-dev coreutils libuv utmps-libs glib-dev libmnl-static nghttp2-libs musl libbz2 gdbm pcre gcc perl-error zlib-dev libstdc++ ncurses-libs zlib file-dev linux-headers mpdecimal
+  setup:
+  - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+  - cd /src/libmnl
+  - ./autogen.sh
+  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+  - make && make install
+  - cd /src/libnftnl
+  - ./autogen.sh
+  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+  - make && make install
+  - cd /src/iptables
+  - ./autogen.sh
+  - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs
+  - make LDFLAGS='-all-static'
+  - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
+  - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi
+  - mv /src/scripts/* /
+  - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall

@@ -1,0 +1,12 @@
+{{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: d8-control-plane-manager-control-plane-arguments
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+data:
+  arguments.json: {{ .Values.controlPlaneManager.internal.arguments | toJson | b64enc | quote }}
+{{- end }}

@@ -1,0 +1,27 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedCapabilities
+metadata:
+  name: test-restricted
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: [ "true" ]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values:
+          - baseline
+          - restricted
+  parameters:
+    allowedCapabilities:
+    - NET_BIND_SERVICE
+    requiredDropCapabilities:
+    - ALL

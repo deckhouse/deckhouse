@@ -1,0 +1,35 @@
+{%- assign page_url_parts = page.url | split: '/' -%}
+{%- assign max_ind = page_url_parts.size | minus: 1 -%}
+{%- assign page_canonical_url = page.url | regex_replace_once: '^\/?(en|ru)/', '/' | regex_replace_once: '/index.html$', '/' %}
+{%- assign pageBreadcrumbs = site.data['breadcrumbs'][page_canonical_url] %}
+
+{%- if pageBreadcrumbs %}
+  {%- for breadcrumb in pageBreadcrumbs %}
+    <li class="breadcrumbs__item">
+        {%- if breadcrumb.url %}<a href="{{ breadcrumb.url | true_relative_url }}">{% endif %}
+        {{- breadcrumb.title[page.lang] }}
+        {%- if breadcrumb.url %}</a>{% endif %}
+    </li>
+  {%- endfor %}
+    <li class="breadcrumbs__item">{{ page.title }}</li>
+{%- else %}
+  {%- for i in (2..max_ind) %}
+    {%- if forloop.last %}
+      <li class="breadcrumbs__item">{{ page.title }}</li>
+    {%- else %}
+      {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+      {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+      {%- assign breadcrumb = site.data[page.product_code]['breadcrumbs'][current_breadcrumb_url] %}
+      {%- if breadcrumb %}
+          <li class="breadcrumbs__item">
+              {%- if breadcrumb.url %}<a href="{{ breadcrumb.url | true_relative_url }}">{% endif %}
+              {%- if breadcrumb.title[page.lang] %}{{ breadcrumb.title[page.lang] }}{% else %}{{ breadcrumb.title }}{% endif -%}
+              {%- if breadcrumb.url %}</a>{% endif %}
+          </li>
+      {%- else %}
+          {%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
+          {% comment %}{{ breadcrumb_err | raise_error }}{% endcomment %}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor %}
+{%- endif %}

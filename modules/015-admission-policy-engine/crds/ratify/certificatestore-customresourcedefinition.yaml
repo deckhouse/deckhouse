@@ -1,0 +1,129 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: certificatestores.config.ratify.deislabs.io
+spec:
+  group: config.ratify.deislabs.io
+  names:
+    kind: CertificateStore
+    listKind: CertificateStoreList
+    plural: certificatestores
+    singular: certificatestore
+  scope: Namespaced
+  versions:
+    - deprecated: true
+      deprecationWarning:
+        v1alpha1 of the CertificateStore API has been deprecated.
+        Please migrate to v1beta1.
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: CertificateStore is the Schema for the certificatestores API
+          properties:
+            apiVersion:
+              description:
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
+              description:
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: CertificateStoreSpec defines the desired state of CertificateStore
+              properties:
+                parameters:
+                  description: Parameters of the certificate store
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                provider:
+                  description: Name of the certificate store provider
+                  type: string
+              type: object
+            status:
+              description: CertificateStoreStatus defines the observed state of CertificateStore
+              type: object
+          type: object
+      served: true
+      storage: false
+      subresources:
+        status: {}
+    - additionalPrinterColumns:
+        - jsonPath: .status.issuccess
+          name: IsSuccess
+          type: boolean
+        - jsonPath: .status.brieferror
+          name: Error
+          type: string
+        - jsonPath: .status.lastfetchedtime
+          name: LastFetchedTime
+          type: date
+      name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: CertificateStore is the Schema for the certificatestores API
+          properties:
+            apiVersion:
+              description:
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
+              description:
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: CertificateStoreSpec defines the desired state of CertificateStore
+              properties:
+                parameters:
+                  description: Parameters of the certificate store
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                provider:
+                  description: Name of the certificate store provider
+                  type: string
+              type: object
+            status:
+              description: CertificateStoreStatus defines the observed state of CertificateStore
+              properties:
+                brieferror:
+                  description: Truncated error message if the message is too long
+                  type: string
+                error:
+                  description: Error message if operation was unsuccessful
+                  type: string
+                issuccess:
+                  description: Is successful in loading certificate files
+                  type: boolean
+                lastfetchedtime:
+                  description:
+                    The time stamp of last successful certificates fetch
+                    operation. If operation failed, last fetched time shows the time
+                    of error
+                  format: date-time
+                  type: string
+                properties:
+                  description: provider specific properties of the each individual certificate
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              required:
+                - issuccess
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

@@ -1,0 +1,82 @@
+{% assign revision=include.revision %}
+
+{% if revision != "ce" %}
+{% if page.ee_only == true and revision == 'ee' and page.se_support == nil %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% endif %}
+{% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+<div markdown="1">
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
+- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера, описание ресурсов для создания после установки,{% endif %} и начальные параметры кластера.
+
+**Обратите внимание**:
+- <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
+- <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
+- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемого YAML-файла конфигурации UTF-8 (либо удалите примечания на русском языке).
+{%- if page.platform_type == 'baremetal' %}
+- Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
+{%- endif %}
+{%- if page.platform_type == 'existing' %}
+- Ознакомьтесь с разделом *[Если что-то пошло не так](#если-что-то-пошло-не-так)*, возможно там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
+{%- endif %}
+
+Создайте файл `config.yml`.
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+{%- if page.platform_type == 'existing' %}
+{% offtopic title="Про nodeSelector, taints и tolerations..." %}
+Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.
+
+> Пример указания `nodeSelector` для модуля `deckhouse` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: deckhouse
+>   spec:
+>     version: 1
+>     enabled: true
+>   settings:
+>     nodeSelector:
+>       node-role.kubernetes.io/master: master
+> ```
+
+Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `.spec.settings.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
+
+> Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: global
+> spec:
+>   settings:
+>     modules:
+>       placement:
+>         customTolerationKeys:
+>         - Systemload
+>         - kubernetes.io/instance
+> ```
+{% endofftopic %}
+{% endif %}
+</div>
+
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
+</div>
+{% endif %}

@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Revert migration to cgroupfs driver for containerd CRI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5539
+helm:
+  fixes:
+    - summary: Find and notify deprecated helm releases for the current Kubernetes version + 2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5537
+

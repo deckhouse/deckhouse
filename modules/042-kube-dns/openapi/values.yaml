@@ -1,0 +1,31 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      enablePodAntiAffinity:
+        type: boolean
+        default: false
+      replicas:
+        type: integer
+        default: 2
+      specificNodeType:
+        type: string
+        enum: ["system", "kube-dns"]
+      stsNamespaces:
+        type: array
+        items:
+          type: string
+      stsPodsHostsAppenderWebhook:
+        type: object
+        default: {}
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string

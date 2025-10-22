@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Fix `istio-to-k8s` requirement checker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8098
+

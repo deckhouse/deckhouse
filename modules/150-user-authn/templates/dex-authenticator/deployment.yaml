@@ -1,0 +1,251 @@
+{{- define "dex_authenticator_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "redis_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $baseName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
+  {{- $truncated := (index $info "truncated") }}
+  {{- $hash := (index $info "hash") }}
+  {{- $secretName := (default (printf "dex-authenticator-%s" $crd.name) (index $info "secretName")) }}
+  {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $baseName }}
+  namespace: {{ $crd.namespace }}
+  {{- $vpaLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $vpaLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $vpaLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $vpaLabels) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: {{ $baseName }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "dex-authenticator"
+      minAllowed:
+        {{- include "dex_authenticator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "redis"
+      minAllowed:
+        {{- include "redis_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $baseName }}
+  namespace: {{ $crd.namespace }}
+  {{- $pdbLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $pdbLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $pdbLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $pdbLabels) | nindent 2 }}
+spec:
+  minAvailable: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}1{{ else }}0{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}{{ end }}
+  selector:
+    matchLabels:
+      app: dex-authenticator
+      name: {{ $crd.name | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $baseName }}
+  namespace: {{ $crd.namespace }}
+  {{- $depLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $depLabels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $depLabels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $depLabels) | nindent 2 }}
+spec:
+  replicas: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}2{{ else }}1{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}{{ end }}
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    {{- if or (and (ne $crd.spec.highAvailability nil) $crd.spec.highAvailability) (include "helm_lib_ha_enabled" $context) }}
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    {{- end }}
+  selector:
+    matchLabels:
+      app: dex-authenticator
+      name: {{ $crd.name | quote }}
+  template:
+    metadata:
+      labels:
+        app: dex-authenticator
+        name: {{ $crd.name | quote}}
+      annotations:
+        checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
+    spec:
+{{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+  {{- range $key, $value := $crd.spec.nodeSelector }}
+        {{ $key | quote }}: {{ $value | quote }}
+  {{- end }}
+{{- else }}
+      {{- include "helm_lib_node_selector" (tuple $context "system") | nindent 6 }}
+{{- end }}
+{{- if $crd.spec.tolerations }}
+      tolerations: {{ $crd.spec.tolerations | toJson }}
+{{- else }}
+      {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
+{{- end }}
+      {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+      - name: registry-dex-authenticator
+      volumes:
+      - name: tls
+        emptyDir: {}
+      initContainers:
+      - args:
+        - {{ $baseName }}.{{ $crd.namespace }}
+        - {{ $baseName }}.{{ $crd.namespace }}.svc
+        image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
+        name: self-signed-generator
+        volumeMounts:
+        - name: tls
+          mountPath: "/certs"
+        resources:
+          requests:
+            memory: 10Mi
+            cpu: 10m
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          limits:
+            memory: 10Mi
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+      containers:
+      - name: dex-authenticator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
+        args:
+        - --provider=oidc
+        - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+    {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
+        - --cookie-secure=false
+    {{- end }}
+        - --redirect-url=/dex-authenticator/callback
+        - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
+        # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
+        - --skip-oidc-discovery
+        - --redeem-url=https://dex.d8-user-authn/token
+        - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/auth
+        - --oidc-jwks-url=https://dex.d8-user-authn/keys
+    {{- if $crd.spec.sendAuthorizationHeader }}
+        - --set-authorization-header=true
+    {{- end }}
+        - --set-xauthrequest
+        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} federated:id audience:server:client_id:kubernetes{{- end }}
+        - --ssl-insecure-skip-verify=true
+        - --proxy-prefix=/dex-authenticator
+        - --email-domain=*
+    {{- range $app := $crd.spec.applications }}
+        - --whitelist-domain={{ $app.domain }}
+    {{- end }}
+        - --upstream=file:///dev/null
+        - --https-address=0.0.0.0:8443
+        - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
+        - --tls-key-file=/opt/dex-authenticator/tls/tls.key
+        - --skip-provider-button
+        - --silence-ping-logging
+        - --session-store-type=redis
+        - --redis-connection-url=redis://127.0.0.1/
+    {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
+    {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
+    {{- $delta := now }}
+        - --cookie-refresh={{ $idTokenTTL }}
+    {{- if gt ($delta | mustDateModify $keepUsersLoggedInFor | unixEpoch) ($delta | mustDateModify $idTokenTTL | unixEpoch) }}
+        - --cookie-expire={{ $keepUsersLoggedInFor }}
+    {{- else }}
+        - --cookie-expire={{ duration (add (sub ($delta | mustDateModify $idTokenTTL | unixEpoch) ($delta | unixEpoch)) 1) }}
+    {{- end }}
+        - --insecure-oidc-allow-unverified-email=true
+        - --approval-prompt=basic
+        - --reverse-proxy
+        env:
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secretName }}
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secretName }}
+              key: cookie-secret
+        - name: TRUSTED_ROOT_CA_FILE
+          value: /certs/ca.crt
+        volumeMounts:
+        - name: tls
+          mountPath: "/opt/dex-authenticator/tls"
+          readOnly: true
+        readinessProbe:
+          exec:
+            command:
+            - /usr/local/bin/url-exec-prober
+            - https://dex.d8-user-authn/.well-known/openid-configuration
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 5
+        livenessProbe:
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /ping
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "dex_authenticator_resources" . | nindent 12 }}
+  {{- end }}
+        ports:
+        - name: dex-https
+          containerPort: 8443
+          protocol: TCP
+      - name: redis
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list $context "redisStatic") }}
+        args:
+          - "--save"
+          - ""
+          - "--appendonly"
+          - "no"
+          - "--bind"
+          - "127.0.0.1"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "redis_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

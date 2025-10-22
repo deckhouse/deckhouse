@@ -1,0 +1,63 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  font-weight: variables.$font-weight-regular;
+  font-size: variables.$font-size-base;
+  line-height: 1.3;
+  color: variables.$color-main;
+
+  --wp--style--global--content-size: 1664px;
+  --wp--preset--font-size--medium: 16px;
+}
+
+.content,
+ul {
+  line-height: 1.5;
+}
+
+ul.nav {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  gap: 12px 32px;
+  align-items: center;
+  font-size: 14px;
+  list-style: none;
+
+  ul {
+    list-style: none;
+  }
+
+  a {
+    display: block;
+    text-decoration: none;
+  }
+}
+
+.heading {
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: 700;
+  @include mixins.color(mixins.$ntrl-800);
+
+  &--sup {
+    margin: 0 !important;
+    font-size: 1em;
+    line-height: 1.75;
+    text-transform: uppercase;
+    @include mixins.color(mixins.$ntrl-400);
+  }
+
+  &--medium {
+    margin-bottom: .6em;
+    font-size: 1.5em;
+  }
+
+  &--small {
+    margin-bottom: .3em;
+    font-size: 1.25em;
+  }
+}
+

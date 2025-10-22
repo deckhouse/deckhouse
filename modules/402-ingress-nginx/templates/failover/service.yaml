@@ -1,0 +1,23 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller-{{ $crd.name }}-failover
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | nindent 2 }}
+spec:
+  ports:
+  - name: http-proxy
+    port: 80
+    protocol: TCP
+  - name: https-proxy
+    port: 443
+    protocol: TCP
+  selector:
+    app: controller
+    name: {{ $crd.name }}-failover
+  {{- end }}
+{{- end }}

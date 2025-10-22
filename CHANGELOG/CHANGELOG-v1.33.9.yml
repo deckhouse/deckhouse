@@ -1,0 +1,27 @@
+cloud-provider-azure:
+  fixes:
+    - summary: Removed node-termination-handler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1862
+cni-cilium:
+  features:
+    - summary: Set `createNodeRoutes` to `true` everywhere except clouds other than openstack and vsphere.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1853
+deckhouse:
+  features:
+    - summary: Automatically apply the first release on Deckhouse bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1851
+docs:
+  fixes:
+    - summary: Some clarifications about the `ClusterLoggingConfig.destinationRefs`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1874
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Make the `kubelet-eviction-threshold-exporter` workable in managed Kubernetes platforms
+        (AWS, GKE, Yandex, etc).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1866
+snapshot-controller:
+  fixes:
+    - summary: Reduce the number of replicas for snapshot-controller to a maximum of 2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1864
+

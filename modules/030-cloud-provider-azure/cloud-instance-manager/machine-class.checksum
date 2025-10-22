@@ -1,0 +1,29 @@
+{{- $options := dict -}}
+{{- $_ := set $options "machineSize" .nodeGroup.instanceClass.machineSize -}}
+{{- $_ := set $options "urn" .nodeGroup.instanceClass.urn -}}
+
+{{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGb 50.0 -}}
+    {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSize -}}
+  {{- end }}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" -}}
+  {{- $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "acceleratedNetworking" -}}
+  {{- if ne .nodeGroup.instanceClass.acceleratedNetworking true -}}
+    {{- $_ := set $options "acceleratedNetworking" .nodeGroup.instanceClass.acceleratedNetworking -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

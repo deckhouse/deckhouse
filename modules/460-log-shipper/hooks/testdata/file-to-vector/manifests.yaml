@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-source
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-vector-dest
+    - non-existed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-vector-dest
+spec:
+  type: Vector
+  vector:
+    endpoint: "192.168.1.1:9200"
+    tls:
+      verifyCertificate: false
+      verifyHostname: false

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed
+  namespace: default
+spec:
+  containers:
+    - name: foo
+      image: gcr.io/app:latest
+      livenessProbe:
+        tcpSocket:
+          port: 8080
+        initialDelaySeconds: 15
+        periodSeconds: 20

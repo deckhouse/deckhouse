@@ -1,0 +1,9 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix discovery security groups and errors in hybrid clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5341
+helm_lib:
+  fixes:
+    - summary: Fix X.509 certificate common name generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5342
+

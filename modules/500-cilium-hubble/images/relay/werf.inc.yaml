@@ -1,0 +1,50 @@
+{{- $ciliumVersion := "1.17.4" }}
+---
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: cni-cilium/bin-cilium-src-artifact
+  add: /src/cilium
+  to: /src/cilium
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash binutils
+  setup:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  #
+  - cd /src/cilium
+  - go mod vendor && go mod download -x
+  - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
+  - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
+  - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
+---
+# Distroless Main Image
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /out/linux/amd64/usr/bin/hubble-relay
+  to: /usr/local/bin/hubble-relay
+  before: install
+- image: cni-cilium/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/hubble-relay", "serve"]

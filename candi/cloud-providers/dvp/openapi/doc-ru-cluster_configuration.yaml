@@ -1,0 +1,259 @@
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      description: |
+        Описывает конфигурацию облачного кластера в Deckhouse Virtualization Platform (DVP).
+
+        Используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке.
+
+        Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+        ```shell
+        d8 p edit provider-cluster-configuration
+        ```
+
+        > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду [`dhctl converge`](../../deckhouse-faq.html#изменение-конфигурации).
+      x-doc-search: |
+        ProviderClusterConfiguration
+      properties:
+        sshPublicKey:
+          description: |
+            Публичный ключ для доступа на узлы.
+        masterNodeGroup:
+          description: |
+            Спецификация для описания NodeGroup master-узлов.
+
+            > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+          properties:
+            replicas:
+              description: |
+                Количество создаваемых master-узлов.
+
+                Для обеспечения кворума важно, чтобы оно было нечетным.
+            zones:
+              description: |
+                Набор зон, в которых могут быть созданы узлы.
+
+                Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
+                [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+
+                > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            instanceClass:
+              description: |
+                Параметры виртуальной машины и ее дисков для созданного master-узла.
+              properties:
+                virtualMachine: &instanceClassVirtualMachine
+                  description: |
+                    Настройки виртуальной машины для созданного master-узла.
+                  properties:
+                    cpu:
+                      description: |
+                        Настройки процессора для виртуальной машины.
+                      properties:
+                        cores:
+                          description: |
+                            Количество ядер процессора для виртуальной машины.
+                        coreFraction:
+                          description: |
+                            Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
+                    memory:
+                      description: |
+                        Определяет параметры памяти для виртуальной машины.
+                      properties:
+                        size:
+                          description: |
+                            Количество ресурсов памяти, разрешенных для виртуальной машины.
+                    virtualMachineClassName:
+                      description: |
+                        Имя VirtualMachineClass.
+
+                        Предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Ресурс позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
+                    bootloader:
+                      description: |
+                        Определяет загрузчик для виртуальной машины.
+
+                        * `BIOS` — используется BIOS;
+                        * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
+                        * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                    ipAddresses:
+                      description: |
+                        Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
+                        Например, если задано 3 реплики и указаны IP-адреса: ip1, ip2, ip3, то ip1 будет назначен первой реплике, ip2 — второй, а ip3 — третьей.
+
+                        > Эти адреса должны принадлежать диапазону адресов, указанному в конфигурации модуля виртуализации в параметре `virtualMachineCIDRs`.
+                    additionalLabels:
+                      description: |
+                        Дополнительные метки для ресурса виртуальной машины.
+                    additionalAnnotations:
+                      description: |
+                        Дополнительные аннотации для ресурса виртуальной машины.
+                    nodeSelector:
+                      description: |
+                        Позволяет назначить виртуальную машину на указанные узлы DVP.
+                        [Подробнее](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) — как в параметре `spec.nodeSelector` подов в Kubernetes.
+                    priorityClassName:
+                      description: |
+                        [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) — как в параметре `spec.priorityClassName` подов в Kubernetes.
+                    tolerations:
+                      description: |
+                        Позволяет установить допуски для виртуальной машины для узла DVP.
+                        [Подробнее](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) — как в параметре `spec.tolerations` подов в Kubernetes;
+                rootDisk: &instanceClassRootDisk
+                  description: |
+                    Указывает настройки для корневого диска виртуальной машины.
+                  properties:
+                    size:
+                      description: |
+                        Размер корневого диска.
+                    storageClass:
+                      description: |
+                        Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../reference/api/global.html#parameters-modules-storageclass).
+                    image:
+                      description: |
+                        Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
+                      properties:
+                        kind:
+                          description: |
+                            Тип источника изображения.
+                        name:
+                          description: |
+                            Имя образа, который будет использоваться для создания корневого диска.
+                            > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+                additionalDisks:
+                  description: |
+                    Параметры дополнительных дисков виртуальной машины.
+
+                    Каждый элемент массива описывает отдельный дополнительный диск.
+                    Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                  type: array
+                  items:
+                    type: object
+                    required: [size, storageClass]
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Размер дополнительного диска.
+                        example: 10Gi
+                      storageClass:
+                        type: string
+                        description: |
+                          Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                        example: ceph-pool-r2-csi-rbd-immediate
+                etcdDisk:
+                  description: |
+                    Указание настроек для диска данных etcd.
+                  properties:
+                    size:
+                      description: |
+                        Размер диска etcd.
+                    storageClass:
+                      description: |
+                        Имя существующего StorageClass будет использоваться для создания диска данных etcd.
+
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+                additionalLabels:
+                  description: |
+                    Дополнительные метки.
+        nodeGroups:
+          description: |
+            Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+          items:
+            properties:
+              name:
+                description: |
+                  Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+              replicas:
+                description: |
+                  Количество узлов.
+              zones:
+                description: |
+                  Набор зон, в которых могут быть созданы узлы.
+
+                  Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
+                  [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+
+                  > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              nodeTemplate:
+                description: |
+                  Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+                properties:
+                  labels:
+                    description: |
+                      Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если ресурсы это поддерживают).
+
+                      Аналогично [стандартному полю `metadata.labels`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                      Если вы меняете лейблы в рабочем кластере, после применения изменений пересоздайте все машины.
+                  annotations:
+                    description: |
+                      Аналогично [стандартному полю `metadata.annotations`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  taints:
+                    description: |
+                      Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                      > Доступны только поля `effect`, `key`, `values`.
+              instanceClass:
+                description: |
+                  Параметры виртуальной машины и диска для созданного статического узла.
+                properties:
+                  virtualMachine: *instanceClassVirtualMachine
+                  rootDisk: *instanceClassRootDisk
+                  additionalDisks:
+                    description: |
+                      Параметры дополнительных дисков виртуальной машины.
+
+                      Каждый элемент массива описывает отдельный дополнительный диск.
+                      Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                    type: array
+                    items:
+                      type: object
+                      required: [size, storageClass]
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Размер дополнительного диска.
+                          example: 10Gi
+                        storageClass:
+                          type: string
+                          description: |
+                            Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                          example: ceph-pool-r2-csi-rbd-immediate
+        layout:
+          description: |
+            Название схемы размещения.
+
+            [Подробнее о возможных схемах размещения провайдера](/modules/cloud-provider-dvp/layouts.html).
+        region:
+          description: |
+            Название региона.
+
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
+            [Подробнее о топологических метках](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+
+            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+        zones:
+          description: |
+            Набор зон, в которых могут быть созданы узлы.
+
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
+            [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+
+            > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+        provider:
+          description: |
+            Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
+          properties:
+            kubeconfigDataBase64:
+              description: |
+                Kubeconfig для подключения к Deckhouse Kubernetes Platform API в кодировке Base64.
+            namespace:
+              description: |
+                Пространство имён, в котором будут созданы ресурсы кластера DKP.
+
+                > Если не указано явно, будет использоваться пространство имён по умолчанию для kubeconfig.

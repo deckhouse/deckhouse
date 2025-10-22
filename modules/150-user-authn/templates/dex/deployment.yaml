@@ -1,0 +1,187 @@
+{{- define "dex_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: dex
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dex
+      minAllowed:
+        {{- include "dex_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+      annotations:
+        {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
+        checksum/custom-logo: {{ .Values.userAuthn.internal.customLogo.checksum | quote }}
+        {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/dex/config.yaml") . | sha256sum }}
+        checksum/tls: {{ include (print $.Template.BasePath "/dex/secret-tls.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dex")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: dex
+      volumes:
+      - name: original-config
+        secret:
+          secretName: dex
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: tls
+        secret:
+          secretName: dex-tls
+      {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
+      - name: whitelabel-logo
+        configMap:
+          defaultMode: 292
+          name: whitelabel-custom-logo
+          items:
+            - key: dexLogo
+              path: deckhouse-logo-icon.svg
+      - name: whitelabel-logo-title
+        configMap:
+          defaultMode: 292
+          name: whitelabel-custom-logo
+          items:
+            - key: dexTitle
+              path: deckhouse-logo-title.svg
+      {{- end }}
+      containers:
+      - name: dex
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "dex") }}
+        command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
+        env:
+        - name: KUBERNETES_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DEX_EXPAND_ENV
+          value: "false"
+        - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
+          value: "true"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        ports:
+        - name: https
+          containerPort: 5556
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5559
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5559
+            scheme: HTTPS
+        volumeMounts:
+        - name: original-config
+          mountPath: /etc/dex/config
+        - name: tls
+          mountPath: /etc/dex/certs
+        {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
+        - mountPath: /web/static/img/deckhouse-logo-icon.svg
+          name: whitelabel-logo
+          subPath: deckhouse-logo-icon.svg
+        - mountPath: /web/static/img/deckhouse-logo-title.svg
+          name: whitelabel-logo-title
+          subPath: deckhouse-logo-title.svg
+        {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "dex_resources" . | nindent 12 }}
+{{- end }}
+
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5559"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz/live
+            - /healthz/ready
+            upstreams:
+            - upstream: http://127.0.0.1:5558/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-user-authn
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: dex
+        ports:
+        - containerPort: 5559
+          name: https-metrics
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5559
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5559
+            scheme: HTTPS

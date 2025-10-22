@@ -1,0 +1,653 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: deschedulers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: descheduler
+spec:
+  group: deckhouse.io
+  names:
+    kind: Descheduler
+    listKind: DeschedulerList
+    plural: deschedulers
+    singular: descheduler
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Descheduler is a description of a single descheduler instance.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+            spec:
+              description: Defines the behavior of a descheduler instance.
+              properties:
+                deploymentTemplate:
+                  description: Defines Template of a descheduler Deployment.
+                  properties:
+                    nodeSelector:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    tolerations:
+                      items:
+                        properties:
+                          effect:
+                            type: string
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          tolerationSeconds:
+                            format: int64
+                            type: integer
+                          value:
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                deschedulerPolicy:
+                  description: |
+                    `globalParameters` and `strategies` follow the [descheduler's documentation](https://github.com/kubernetes-sigs/descheduler#policy-and-strategies).
+                  properties:
+                    globalParameters:
+                      description: Parameters that apply to all policies.
+                      properties:
+                        evictFailedBarePods:
+                          description: Allows Pods without `ownerReferences` and in `failed` phase to be evicted.
+                          type: boolean
+                        evictLocalStoragePods:
+                          description: Allows Pods using local storage to be evicted.
+                          type: boolean
+                        evictSystemCriticalPods:
+                          description: Allows eviction of Pods of any priority (including Kubernetes system Pods).
+                          type: boolean
+                        ignorePvcPods:
+                          description: Prevents Pods with PVCs from being evicted.
+                          type: boolean
+                        maxNoOfPodsToEvictPerNamespace:
+                          description: Restricts maximum of Pods to be evicted per namespace.
+                          type: integer
+                        maxNoOfPodsToEvictPerNode:
+                          description: Restricts maximum of Pods to be evicted per node.
+                          type: integer
+                        nodeSelector:
+                          type: string
+                      type: object
+                    strategies:
+                      description: List of strategies with corresponding parameters for a given Descheduler instances.
+                      properties:
+                        highNodeUtilization:
+                          required: [ enabled ]
+                          description: >
+                            This strategy finds nodes that are under utilized and evicts Pods from the nodes in the hope
+                            that these Pods will be scheduled compactly into fewer nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: &node-filter
+                              description: Filters Nodes to which the strategy applies.
+                              labelSelector:
+                                properties:
+                                  matchExpressions:
+                                    type: array
+                                    description: List of label expressions that a node should have to qualify for the filter condition.
+                                    items:
+                                      properties:
+                                        key:
+                                          type: string
+                                          description: A label name.
+                                        operator:
+                                          type: string
+                                          description: A comparison operator.
+                                          enum:
+                                            - In
+                                            - NotIn
+                                            - Exists
+                                            - DoesNotExist
+                                        values:
+                                          type: array
+                                          description: A label value.
+                                          items:
+                                            type: string
+                                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                            minLength: 1
+                                            maxLength: 63
+                                      oneOf:
+                                        - properties:
+                                            operator:
+                                              enum: [ Exists, DoesNotExist ]
+                                          required: [ key, operator ]
+                                          not:
+                                            required: [ values ]
+                                        - properties:
+                                            operator:
+                                              enum: [ In, NotIn ]
+                                          required: [ key, operator, values ]
+                                      type: object
+                                    x-doc-examples:
+                                      - - key: tier
+                                          operator: In
+                                          values:
+                                            - production
+                                            - staging
+                                        - key: tier
+                                          operator: NotIn
+                                          values: [ production ]
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    type: object
+                                type: object
+                              type: object
+                            priorityFilter: &priority-filter
+                              description: Only Pods with priority lower than this will be descheduled.
+                              thresholdPriority:
+                                format: int32
+                                type: integer
+                              thresholdPriorityClassName:
+                                type: string
+                              type: object
+                            namespaceFilter: &namespace-filter
+                              description: Restricts Namespaces to which this strategy applies.
+                              namespaces:
+                                properties:
+                                  exclude:
+                                    items:
+                                      type: string
+                                    type: array
+                                  include:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              type: object
+                            nodeFit: &node-fit
+                              description: |-
+                                If set to `true`, the descheduler will consider whether or not the Pods
+                                that meet eviction criteria will fit on other nodes before evicting them.
+                              type: boolean
+                          type: object
+                        lowNodeUtilization:
+                          required: [ enabled ]
+                          description: >
+                            This strategy finds nodes that are under utilized and evicts Pods, if possible, from other nodes in the hope
+                            that recreation of evicted Pods will be scheduled on these underutilized nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removeDuplicates:
+                          required: [ enabled ]
+                          description: >
+                            This strategy makes sure that there is only one Pod associated with
+                            a ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job running on the same node.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removeFailedPods:
+                          required: [ enabled ]
+                          description: This strategy evicts Pods that are in `failed` status phase.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removePodsHavingTooManyRestarts:
+                          required: [ enabled ]
+                          description: This strategy makes sure that Pods having too many restarts are removed from nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removePodsViolatingInterPodAntiAffinity:
+                          required: [ enabled ]
+                          description: This strategy makes sure that Pods violating interpod anti-affinity are removed from nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removePodsViolatingNodeAffinity:
+                          required: [ enabled ]
+                          description: This strategy makes sure all Pods violating node affinity are eventually removed from nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removePodsViolatingNodeTaints:
+                          required: [ enabled ]
+                          description: This strategy makes sure that Pods violating `NoSchedule` taints on nodes are removed.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                        removePodsViolatingTopologySpreadConstraint:
+                          required: [ enabled ]
+                          description: This strategy makes sure that Pods violating topology spread constraints are evicted from nodes.
+                          properties:
+                            enabled:
+                              type: boolean
+                            nodeFilter: *node-filter
+                            priorityFilter: *priority-filter
+                            namespaceFilter: *namespace-filter
+                            nodeFit: *node-fit
+                          type: object
+                      type: object
+                  type: object
+              type: object
+            status:
+              description: Most recently observed status of a descheduler instance.
+              properties:
+                ready:
+                  type: boolean
+              required:
+                - ready
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: false
+      deprecated: true
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: Descheduler is a description of a single descheduler instance.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+            spec:
+              type: object
+              description: Defines the behavior of a descheduler instance.
+              properties:
+                nodeLabelSelector:
+                  description: |
+                    Limiting the pods which are processed to fit evicted pods by labels in set representation.
+                    If set, `nodeSelector` must not be set.
+                  type: object
+                  properties:
+                    matchExpressions:
+                      type: array
+                      description: List of label expressions that a node should have to qualify for the filter condition.
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                            description: A label name.
+                          operator:
+                            type: string
+                            description: A comparison operator.
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: A label value.
+                            items:
+                              type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [ Exists, DoesNotExist ]
+                            required: [ key, operator ]
+                            not:
+                              required: [ values ]
+                          - properties:
+                              operator:
+                                enum: [ In, NotIn ]
+                            required: [ key, operator, values ]
+                      x-doc-examples:
+                        - - key: tier
+                            operator: In
+                            values:
+                              - production
+                              - staging
+                          - key: tier
+                            operator: NotIn
+                            values: [ production ]
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                podLabelSelector:
+                  type: object
+                  description: Limiting the pods which are processed by labels.
+                  properties:
+                    matchExpressions:
+                      type: array
+                      description: List of label expressions that a node should have to qualify for the filter condition.
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                            description: A label name.
+                          operator:
+                            type: string
+                            description: A comparison operator.
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: A label value.
+                            items:
+                              type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [ Exists, DoesNotExist ]
+                            required: [ key, operator ]
+                            not:
+                              required: [ values ]
+                          - properties:
+                              operator:
+                                enum: [ In, NotIn ]
+                            required: [ key, operator, values ]
+                      x-doc-examples:
+                        - - key: tier
+                            operator: In
+                            values:
+                              - production
+                              - staging
+                          - key: tier
+                            operator: NotIn
+                            values: [ production ]
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                namespaceLabelSelector:
+                  type: object
+                  description: Limiting the pods which are processed by namespace labels.
+                  properties:
+                    matchExpressions:
+                      type: array
+                      description: List of label expressions that a node should have to qualify for the filter condition.
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                            description: A label name.
+                          operator:
+                            type: string
+                            description: A comparison operator.
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: A label value.
+                            items:
+                              type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [ Exists, DoesNotExist ]
+                            required: [ key, operator ]
+                            not:
+                              required: [ values ]
+                          - properties:
+                              operator:
+                                enum: [ In, NotIn ]
+                            required: [ key, operator, values ]
+                      x-doc-examples:
+                        - - key: tier
+                            operator: In
+                            values:
+                              - production
+                              - staging
+                          - key: tier
+                            operator: NotIn
+                            values: [ production ]
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                priorityClassThreshold:
+                  type: object
+                  description: |
+                    Limiting the pods which are processed by priority class.
+                    Only pods under the threshold can be evicted.
+
+                    You can specify either the name of the priority class ([priorityClassThreshold.name](#descheduler-v1alpha2-spec-priorityclassthreshold-name)), or the actual value of the priority class ([priorityThreshold.value](#descheduler-v1alpha2-spec-priorityclassthreshold-value)).
+
+                    By default, this threshold is set to the value of `system-cluster-critical` priority class.
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the priority class.
+                    value:
+                      type: integer
+                      description: Value of the priority class.
+                  oneOf:
+                    - required: ["name"]
+                    - required: ["value"]
+                evictLocalStoragePods:
+                  type: boolean
+                  default: false
+                  description: Allows Pods using local storage to be evicted.
+                strategies:
+                  type: object
+                  description: Settings of strategies for the Descheduler instances.
+                  properties:
+                    lowNodeUtilization:
+                      type: object
+                      description: |-
+                        This strategy identifies *under utilized nodes* and evicts pods from other *over utilized nodes*. The strategy assumes that the evicted pods will be recreated on the under utilized nodes (following normal scheduler behavior).
+
+                        **Under utilized node** — A node whose resource usage is below all the threshold values specified in the [thresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds) section.
+
+                        **Over utilized node** — A node whose resource usage exceeds at least one of the threshold values specified in the [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) section.
+
+                        Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is based on pod requests and limits, not actual consumption.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        thresholds:
+                          description: |-
+                            Sets threshold values to identify to identify under utilized nodes.
+
+                            If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: CPU fraction in percents
+                              default: 20
+                            memory:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Memory fraction in percents
+                              default: 20
+                            pods:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Pods count in percents
+                              default: 20
+                          additionalProperties: true
+                        targetThresholds:
+                          description: |-
+                            Sets threshold values to identify to identify over utilized nodes.
+
+                            If the resource usage of the node exceeds at least one of the threshold values, then the node is considered over utilized.
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: CPU fraction in percents
+                              default: 70
+                            memory:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Memory fraction in percents
+                              default: 70
+                            pods:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Pods count in percents
+                              default: 70
+                          additionalProperties: true
+                    highNodeUtilization:
+                      type: object
+                      description: |-
+                        This strategy finds nodes that are under utilized and evicts Pods from the nodes in the hope that these pods will be scheduled compactly into fewer nodes. When combined with node auto-scaling, it helps reduce the number of underutilized nodes. The strategy works with the `MostAllocated` scheduler.
+
+                        > In GKE, you cannot configure the default scheduler, but you can use the `optimize-utilization` strategy or deploy a second custom scheduler.
+
+                        Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is based on pod requests and limits, not actual consumption.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        thresholds:
+                          description: |-
+                            Sets threshold values to identify to identify under utilized nodes.
+
+                            If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: CPU fraction in percents
+                              default: 20
+                            memory:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Memory fraction in percents
+                              default: 20
+                            pods:
+                              type: integer
+                              minimal: 0
+                              maximal: 100
+                              description: Pods count in percents
+                              default: 20
+                          additionalProperties: true
+                    removeDuplicates:
+                      type: object
+                      description: |
+                        The strategy ensures that no more than one pod of a ReplicaSet, ReplicationController, StatefulSet, or pods of a single Job is running on the same node. If there are two or more such pods, the module evicts the excess pods so that they are better distributed across the cluster.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                    removePodsViolatingNodeAffinity:
+                      type: object
+                      description: |-
+                        The strategy makes sure all pods violating [node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) are eventually removed from nodes.
+
+                        Essentially, depending on the settings of the parameter [nodeAffinityType](#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-nodeaffinitytype), the strategy temporarily implement the rule `requiredDuringSchedulingIgnoredDuringExecution` of the pod's node affinity as the rule `requiredDuringSchedulingRequiredDuringExecution`, and the rule `preferredDuringSchedulingIgnoredDuringExecution` as the rule `preferredDuringSchedulingPreferredDuringExecution`.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        nodeAffinityType:
+                          type: array
+                          description: Defines the list of node affinity rules used.
+                          items:
+                            type: string
+                            enum: ["requiredDuringSchedulingIgnoredDuringExecution", "preferredDuringSchedulingIgnoredDuringExecution"]
+                          default: ["requiredDuringSchedulingIgnoredDuringExecution"]
+                    removePodsViolatingInterPodAntiAffinity:
+                      type: object
+                      description: |-
+                        The strategy ensures that pods violating [inter-pod affinity and anti-affinity rules](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) are evicted from nodes.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                  anyOf:
+                    - required: ["lowNodeUtilization"]
+                    - required: ["highNodeUtilization"]
+                    - required: ["removeDuplicates"]
+                    - required: ["removePodsViolatingNodeAffinity"]
+                    - required: ["removePodsViolatingInterPodAntiAffinity"]
+              required:
+                - strategies
+          required:
+            - spec
+      served: true
+      storage: true

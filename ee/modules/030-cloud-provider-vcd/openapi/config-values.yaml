@@ -1,0 +1,32 @@
+type: object
+properties:
+  storageClass:
+    type: object
+    default: {}
+    description: |
+      The module automatically creates StorageClasses that are available in VCD (VMware Cloud Director).
+    properties:
+      exclude:
+        type: array
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        items:
+          type: string
+        x-examples:
+          - [".*-hdd", "iscsi-fast"]
+      default:
+        type: string
+        deprecated: true
+        x-doc-deprecated: true
+        x-examples:
+          - "ceph-ssd"
+        description: |-
+          The name of StorageClass that will be used in the cluster by default.
+
+          If the parameter is omitted, the default StorageClass is either:
+
+          * an arbitrary StorageClass present in the cluster that has the default annotation;
+          * StorageClass for `default StorageProfile`;
+          * the first (in lexicographic order) StorageClass created by the module.
+
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).

@@ -1,0 +1,114 @@
+{{- define "controller_resources" }}
+cpu: 30m
+memory: 70Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: multitenancy-manager
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: multitenancy-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: multitenancy-manager
+        minAllowed:
+          {{- include "controller_resources" . | nindent 10 }}
+        maxAllowed:
+          cpu: 1000m
+          memory: 2000Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multitenancy-manager
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: multitenancy-manager
+  template:
+    metadata:
+      labels:
+        app: multitenancy-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "multitenancy-manager")) | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 60
+      serviceAccountName: multitenancy-manager
+      volumes:
+        - name: certs
+          secret:
+            secretName: admission-webhook-certs
+      containers:
+        - name: multitenancy-manager
+          image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          imagePullPolicy: 'IfNotPresent'
+          args:
+            - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
+          env:
+            - name: HA_MODE
+{{- if (include "helm_lib_ha_enabled" .) }}
+              value: "true"
+{{- else }}
+              value: "false"
+{{- end }}
+          ports:
+            - containerPort: 9090
+              name: healthz
+              protocol: TCP
+            - containerPort: 9443
+              name: webhook
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 9090
+          volumeMounts:
+            - mountPath: /certs
+              name: certs
+              readOnly: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "controller_resources" . | nindent 12 }}
+              {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: multitenancy-manager
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: multitenancy-manager

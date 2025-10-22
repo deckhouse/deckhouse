@@ -1,0 +1,20 @@
+cert-manager:
+  fixes:
+    - summary: Change annotations converter mutatingwebhook timeout to 10 sec
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1135
+deckhouse:
+  fixes:
+    - summary: Fix DeckhouseRelease CRD
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1133
+extended-monitoring:
+  fixes:
+    - summary: Start webserver immediately for the extended-monitoring-exporter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1137
+user-authn:
+  fixes:
+    - summary: Execute authenticator migration before all modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1141
+    - summary: Do not set ingress TLS certificate secret name if HTTPS mode is the OnlyInURI
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1128
+      impact: Fix deploy of DexAuthenticators to clusters with the OnlyInURI HTTPS mode
+

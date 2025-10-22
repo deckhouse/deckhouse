@@ -1,0 +1,130 @@
+{{- define "kube_router_resources" }}
+cpu: 20m
+memory: 50Mi
+{{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: kube-router
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: kube-router
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "kube-router"
+      minAllowed:
+        {{- include "kube_router_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 40m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-router
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-router")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: kube-router
+  template:
+    metadata:
+      labels:
+        app: kube-router
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      automountServiceAccountToken: true
+      serviceAccountName: network-policy-engine
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+{{- end }}
+      containers:
+      - name: kube-router
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "kubeRouter") }}
+        args:
+        - --run-router=false
+        - --run-firewall=true
+        - --run-service-proxy=false
+        - --metrics-path=/metrics
+        - --metrics-port=4213
+        - --health-port=10444
+        ports:
+        - containerPort: 4213
+          name: http-metrics
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10444
+          initialDelaySeconds: 10
+          periodSeconds: 3
+        volumeMounts:
+        - name: lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+          readOnly: false
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "kube_router_resources" . | nindent 12 }}
+{{- end }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      volumes:
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi

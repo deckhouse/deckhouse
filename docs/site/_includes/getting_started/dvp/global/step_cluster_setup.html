@@ -1,0 +1,167 @@
+{%- include getting_started/global/partials/NOTICES.liquid %}
+
+## Configure cluster
+
+<div class="form">
+{%- if page.platform_type == 'baremetal' %}
+  <div class="form__row">
+    <label class="label" title="Specify a template for DNS names that will be used by your cluster">
+      Template for DNS names
+    </label>
+    <input class="textfield"
+      type="text" id="clusterdomain"
+      name="domain" placeholder="%s.domain.my"
+      autocomplete="off" />
+    <span class="info invalid-message invalid-message-main">Enter a domain name template containing <code>%s</code>, e.g., <code>%s.domain.my</code> or <code>%s-kube.domain.my</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
+    <span class="info">
+      This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.domain.my</code> will be available as <code>grafana.domain.my</code>.<br />
+      This tutorial assumes the use of a public domain pointing to a public cluster address.
+      It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
+      If the existing certificates (including self-signed ones) are used, you need to adjust the <a href="/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https"><code>modules.https</code></a> section in the global settings.<br />
+      We recommend using the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+    </span>
+  </div>
+{%- endif %}
+
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+  <div class="form__row">
+    <label class="label" title="Specify public SSH key to access the cluster nodes">
+      Public SSH key to access the cluster nodes
+    </label>
+    <input
+      class="textfield"
+      type="text" id="sshkey"
+      name="sshkey" placeholder="ssh-rsa ..."
+      autocomplete="off" />
+    <span class="info">
+       This key is passed to the cloud provider during the virtual machine creation process.
+    </span>
+  </div>
+{%- endunless %}
+{%- if page.platform_code == 'bm-private' %}
+
+<!-- proxy block -->
+  <div class="form__row">
+    <label class="label" title="The address of the HTTP proxy server">
+      The address of the HTTP proxy server (examples: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpURI"
+      name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
+    <span class="info">
+         Leave it blank if you don't use the HTTP proxy server.
+      </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="The address of the HTTPS proxy server">
+      The address of the HTTPS proxy server (examples: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpsURI"
+      name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
+    <span class="info">
+        Leave it blank if you don't use the HTTP proxy server.
+      </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="List of IP addresses and domain names for which the proxy server is not used">
+        A comma-separated list of IP addresses and domain names for which a proxy server is not used. Also specify here the subnet of the cluster nodes if the cluster is supposed to have pods interacting with services located in the node network. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com". (e.g. — <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="noProxyAddressList"
+      name="noProxyAddressList" placeholder=""
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">The addresses must match the templates <code>127.0.0.1</code>, <code>192.168.0.0/24</code>, <code>example.com</code> and <code>".example.com"</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
+      <span class="info">
+         Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. Also specify here the subnet of the cluster nodes if the cluster is supposed to have pods interacting with services located in the node network. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+      </span>
+  </div>
+
+<!-- registry block -->
+<div markdown="1">
+### Parameters for accessing the container image registry (or proxy registry)
+
+> Read more about [configuring an external container registry](/products/kubernetes-platform/documentation/v1/installing/#installing-deckhouse-kubernetes-platform-from-an-external-registry), if necessary.
+</div>
+
+  <div class="form__row">
+    <label class="label" title="Specify the path prefix for Deckhouse container images">
+      The path prefix for Deckhouse container images (e.g., <code>registry.deckhouse.io/deckhouse/ee</code> for Deckhouse EE).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryImagesRepo"
+      name="registryImagesRepo" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       Note that Deckhouse container images must be available at the specified address and path.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Container image registry credentials, Base64-encoded">
+      Container image registry credentials, <strong>Base64-encoded</strong>.
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryDockerCfg"
+      name="registryDockerCfg" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+      It is a string from the Docker client configuration file (in Linux it is usually <code>$HOME/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter in the <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">InitConfiguration documentation</a>.
+    </span>
+    <span class="info">
+      If using anonymous access to the container registry, do not fill in this field.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <div class="form__row--wrap">
+      <label for="registryScheme" class="label" title="Check if the container image registry uses the HTTP protocol rather than HTTPS">
+        The container image registry uses the <code>HTTP</code> protocol.
+      </label>
+      <input
+        type="checkbox" id="registryScheme"
+        name="registryScheme" />
+    </div>
+    <span class="info">
+       Enable it if the container image registry works over HTTP rather than HTTPS.
+    </span>
+  </div>
+
+  <div class="form__row registryca-block" >
+    <label class="label" title="The root SSL certificate to verify the container image registry's SSL certificate">
+      The root SSL certificate to verify the container image registry's SSL certificate (e.g., if the registry uses a self-signed certificate).
+    </label>
+    <textarea
+      id="registryCA"
+      class="textfield"
+      name="registryCA" placeholder="" rows="10" cols="80" placeholder="-----BEGIN CERTIFICATE-----
+.....
+.....
+.....
+-----END CERTIFICATE-----" autocomplete="off"></textarea>
+    <span class="info">
+       Leave it blank, if the container image registry uses an SSL certificate issued by a public CA.
+    </span>
+  </div>
+
+{% endif %}
+</div>
+
+<script type="text/javascript">
+{% include getting_started/global/partials/getting-started-setup.js.liquid %}
+</script>

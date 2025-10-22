@@ -1,0 +1,103 @@
+{{/* Renders a module configuration.
+
+  Context:
+  .data — a map, containing the JSON schema.
+  .langData — map, containing the preferable language data. Can be empty.
+  */}}
+
+  {{- $data := .data }}
+  {{- $conversions := .conversions }}
+  {{- $langData := .langData }}
+
+  {{- $configVersion := 1 }}
+  {{- if index $data "x-config-version" }}
+    {{- $configVersion = index $data "x-config-version" }}
+  {{- end }}
+
+  {{/* TODO: format_examples $data */}}
+
+  {{/* Reading all conversions files */}}
+
+  {{/* Conversions rendering */}}
+  {{- if and $conversions (gt (len $conversions) 0) }}
+      <h2>{{ T "conversions_title" }}</h2>
+
+      <p>{{ T "conversion_action_message" | markdownify }}:</p>
+
+      {{- range $conversion := $conversions }}
+        {{- if $conversion }}
+        <ul>
+          <li>
+            <p>{{ T "conversion_from_version" }} <b>{{ sub $conversion.version 1 }}</b> {{ T "conversion_to" }} <b>{{ $conversion.version }}</b>:</p>
+
+            {{/* Check description availability*/}}
+            {{- $currentLang := site.Language.Lang | default "en" -}}
+            {{- $hasDescription := false -}}
+
+            {{- if $conversion.description -}}
+              {{- if reflect.IsMap $conversion.description -}}
+                {{- $description := index $conversion.description $currentLang | default $conversion.description.en -}}
+                {{- if $description -}}
+                  <p>{{ $description | markdownify }}</p>
+                  {{- $hasDescription = true -}}
+                {{- end -}}
+              {{- else -}}
+                <p>{{ $conversion.description | markdownify }}</p>
+                {{- $hasDescription = true -}}
+              {{- end -}}
+            {{- end -}}
+
+            {{/* If no description */}}
+            {{- if not $hasDescription -}}
+              <p>{{ T "conversion_missing_description" }}</p>
+
+              {{/* Rendering details block only if there is no description, but there are expressions */}}
+              {{- if $conversion.conversions -}}
+              <div class="details" markdown="0">
+                <p class="details__lnk">
+                  <a href="javascript:void(0)" class="details__summary">
+                    {{ T "conversion_expressions" }}
+                  </a>
+                </p>
+                <div class="details__content" markdown="0">
+                  <div class="expand" markdown="0">
+                    <ul>
+                      {{- range $conversionExpr := $conversion.conversions }}
+                      <li><code class="language-plaintext highlighter-rouge">{{ $conversionExpr }}</code></li>
+                      {{- end }}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {{- end -}}
+            {{- end -}}
+          </li>
+        </ul>
+        {{- end }}
+      {{- end }}
+  {{- end }}
+  {{/* END Conversions rendering */}}
+
+  {{- if gt (len $data.properties) 0 }}
+  <h2 style="text-transform: capitalize;">{{ T "parameters" }}</h2>
+  <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
+
+  <ul class="resources">
+    <li>
+      <div class="resources__prop_wrap"><div id="parameters-settings" data-anchor-id="parameters-settings" class="resources__prop_name anchored">
+        <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <div><span class="ancestors"></span><span>settings</span></div><a class="anchorjs-link " aria-label="Anchor" data-anchorjs-icon="" href="#parameters-settings" style="font: 1em / 1 anchorjs-icons; padding-left: 0.375em;"></a></div><span class="resources__prop_type">{{ T "object" }}</span></div>
+      <ul>
+      {{- range $property, $propertyData := $data.properties }}
+        {{- if eq $property "status" }}{{ continue }}{{ end }} {{/* skip .status for now*/}}
+        {{- $propertyLangData := index $langData.properties $property }}
+        {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "resourceName" "parameters" "type" "module_configuration") }}
+      {{- end }}
+      </ul>
+    <li>
+  </ul>
+
+  {{- else }}
+  <p>{{ T "no_custom_configuration" }}</p>
+  {{- end }}

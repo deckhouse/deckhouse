@@ -1,0 +1,26 @@
+linters-settings:
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:admission-policy-engine:gatekeeper
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.podSecurityStandards.properties.enforcementActions.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredProbes.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.limits.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedCapabilities.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredDropCapabilities.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.allowedVolumes.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.policies.properties.requiredResources.properties.requests.items"
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: Deployment
+          name: gatekeeper-audit
+          container: constraint-exporter
+      readiness-probe:
+        - kind: Deployment
+          name: gatekeeper-audit
+          container: constraint-exporter

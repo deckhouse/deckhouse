@@ -1,0 +1,24 @@
+type: object
+properties:
+  externalTargets:
+    type: array
+    description: |
+      A list of additional hosts to monitor.
+    items:
+      type: object
+      required: [host]
+      properties:
+        host:
+          type: string
+          description: IP address or host name to monitor.
+        name:
+          type: string
+          description: Monitoring record name.
+    x-doc-example: |
+      ```yaml
+      - name: google-primary
+        host: 8.8.8.8
+      - name: yaru
+        host: ya.ru
+      - host: youtube.com
+      ```

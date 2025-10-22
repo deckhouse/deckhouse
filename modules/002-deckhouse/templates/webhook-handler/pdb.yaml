@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: webhook-handler
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: webhook-handler

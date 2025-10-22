@@ -1,0 +1,45 @@
+{{- $gopsVersion := "v0.3.27" }}
+---
+# #####################################################################
+# Build gops binaries
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/build-gops.sh
+# #####################################################################
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops && rm -rf /src/gops/.git
+  - cd /src/gops
+---
+image: {{ .ModuleName }}/gops-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/gops
+  - mkdir -p "/out/linux/amd64/bin"
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops`) | indent 4 }}
+  - strip /out/linux/amd64/bin/gops
+---

@@ -1,0 +1,9 @@
+name: cni-flannel
+stage: "General Availability"
+critical: true
+weight: 35
+subsystems:
+  - networking
+namespace: d8-cni-flannel
+requirements:
+  deckhouse: ">= 1.68"

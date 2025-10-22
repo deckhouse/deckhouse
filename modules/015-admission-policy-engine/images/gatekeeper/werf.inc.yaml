@@ -1,0 +1,56 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /gatekeeper
+    to: /bin/gatekeeper
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/bin/gatekeeper" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v3.18.3 $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf website
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -mod vendor -ldflags="-s -w" -o /gatekeeper .`) | indent 6 }}
+  - chown 64535:64535 /gatekeeper
+  - chmod 0700 /gatekeeper

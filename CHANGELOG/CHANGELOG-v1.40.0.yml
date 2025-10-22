@@ -1,0 +1,113 @@
+candi:
+  features:
+    - summary: add additional bundles for deckhouse ee edition
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2946
+cert-manager:
+  features:
+    - summary: Removed deprecated legacy cert-manager (`certmanager.k8s.io` API group).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2947
+      impact: >-
+        Certificates in the old API group (you can check presence via `kubectl get
+        certificates.certmanager.k8s.io  -A`) will not be renewed anymore.
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix helm template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3010
+cni-cilium:
+  fixes:
+    - summary: Improved PodMonitors. Naming and apply them only if operator-prometheus-crd is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2883
+common:
+  features:
+    - summary: Updated kube-rbac-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2905
+      impact: >-
+        Pods in the following modules will be restarted: admission-policy-engine, cni-cilium,
+        kube-proxy, cloud-provider-yandex, node-local-dns, node-manager, metallb, terraform-manager,
+        linstor, kube-dns, snapshot-controller, cert-manager, user-authn, vertical-pod-autoscaler,
+        extended-monitoring, monitoring-kubernetes, ingress-nginx, log-shipper, pod-reloader,
+        dashboard, openvpn, upmeter.
+deckhouse:
+  features:
+    - summary: Check kernel version dependencies for sensitive modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2709
+      impact: >-
+        In case of unmet kernel dependencies, cilium or cilium + istio or cilium + openvpn or cilium
+        + node-local-dns  modules will be locked by special init-contaiters.
+  fixes:
+    - summary: Removed the `Approved` column from the status columns.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2958
+docs:
+  fixes:
+    - summary: Updated AWS AMI in the Getting Started to Ubuntu Server 22.04 LTS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2962
+    - summary: Fix the kind installation script in the Getting started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2960
+    - summary: Site updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2929
+    - summary: Reworked getting and entering license keys on the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2225
+extended-monitoring:
+  fixes:
+    - summary: Restart if metrics were last collected more than 15 minutes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2988
+    - summary: Fix a typo in CertificateSecretExpiredSoon alert's description
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2944
+ingress-nginx:
+  features:
+    - summary: Remove Ingress Nginx controllers of versions below 1.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2927
+  fixes:
+    - summary: Fix erroneous redirect to nil://example.com.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2970
+      impact: Ingress-nginx v1.1 pods will be restarted.
+linstor:
+  fixes:
+    - summary: fix spaas python dependencies
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2580
+monitoring-kubernetes:
+  fixes:
+    - summary: Reverting of "removed unschedulable nodes from K8SNodeNotReady alert"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2990
+monitoring-kubernetes-control-plane:
+  features:
+    - summary: The module has been entirely reworked.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2905
+      impact: >-
+        The `monitoring-kubernetes-control-plane` module now works only if the
+        `control-plane-manager` module is enabled.
+node-local-dns:
+  fixes:
+    - summary: >-
+        Disable `node-local-dns` for cilium installations on nodes with kernel < 5.7 due to problems
+        with `ebpf-socket` and resolved endpoints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2995
+      impact: >-
+        The node-local-dns module stops working for cilium installations on nodes with kernels <
+        5.7.
+node-manager:
+  features:
+    - summary: >-
+        Add ability to scale node groups from zero size. You can set minPerZone = 0 and maxPerZone >
+        0 now.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2762
+  fixes:
+    - summary: Fix OpenAPI tests after the split in
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3002
+prometheus:
+  features:
+    - summary: Updated Prometheus-(Self) dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2968
+    - summary: Added Prometheus benchmark dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2967
+testing:
+  fixes:
+    - summary: fix openapi cases for istio and cni-cilium modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2997
+    - summary: fix openapi cases tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2986
+user-authn:
+  features:
+    - summary: Added `RootCAData` and `InsecureSkipVerify` options for OIDC providers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2963
+

@@ -1,0 +1,565 @@
+From 41610843d105dce5a0d29484e9f723a49f4114f3 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 16 Apr 2025 09:32:48 +0300
+Subject: [PATCH] add dhcp server for pods
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ bpf/bpf_lxc.c                       |   8 +
+ bpf/lib/dhcp.h                      | 394 ++++++++++++++++++++++++++++
+ pkg/datapath/linux/config/config.go |  45 ++++
+ pkg/defaults/defaults.go            |   4 +
+ pkg/option/config.go                |  12 +
+ 5 files changed, 463 insertions(+)
+ create mode 100644 bpf/lib/dhcp.h
+
+diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
+index 878185780a..46919871f1 100644
+--- a/bpf/bpf_lxc.c
++++ b/bpf/bpf_lxc.c
+@@ -52,6 +52,10 @@
+ #include "lib/nodeport.h"
+ #include "lib/policy_log.h"
+
++#ifdef ENABLE_DHCPD
++#include "lib/dhcp.h"
++#endif
++
+ /* Per-packet LB is needed if all LB cases can not be handled in bpf_sock.
+  * Most services with L7 LB flag can not be redirected to their proxy port
+  * in bpf_sock, so we must check for those via per packet LB as well.
+@@ -1511,6 +1515,10 @@ int cil_from_container(struct __ctx_buff *ctx)
+ #endif /* ENABLE_IPV6 */
+ #ifdef ENABLE_IPV4
+ 	case bpf_htons(ETH_P_IP):
++#ifdef ENABLE_DHCPD
++		if (unlikely(handle_dhcp_request(ctx, &ret)))
++			break;
++#endif
+ 		edt_set_aggregate(ctx, LXC_ID);
+ 		ret = tail_call_internal(ctx, CILIUM_CALL_IPV4_FROM_LXC, &ext_err);
+ 		sec_label = SECLABEL_IPV4;
+diff --git a/bpf/lib/dhcp.h b/bpf/lib/dhcp.h
+new file mode 100644
+index 0000000000..682fc7e4c6
+--- /dev/null
++++ b/bpf/lib/dhcp.h
+@@ -0,0 +1,394 @@
++/*
++Copyright 2024 Flant JSC
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++	http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++/* - this module is a replacement for kubevirt embedded dhcp server
++ * https://github.com/kubevirt/kubevirt/blob/main/pkg/network/dhcp/server/server.go
++ * - server implement very restricted part of dhcp protocol,
++ * only offer/ack responses on discover/request
++ * - server is stateless
++ */
++
++#ifndef __LIB_DHCP__
++#define __LIB_DHCP__
++
++#define BOOT_REQUEST                          1
++#define BOOT_REPLY                            2
++
++/* DHCP HTYPE CODE */
++#define HTYPE_ETHER                           1
++#define HTYPE_IEEE802                         6
++#define HTYPE_FDDI                            8
++#define HTYPE_IEEE1394                       24
++
++/* DHCP MESSAGE CODES */
++#define DHCP_DISCOVER                         1
++#define DHCP_OFFER                            2
++#define DHCP_REQUEST                          3
++#define DHCP_ACK                              5
++
++#define DHO_PAD                               0
++#define DHO_SUBNET                            1
++#define DHO_TIME_OFFSET                       2
++#define DHO_ROUTERS                           3
++#define DHO_TIME_SERVERS                      4
++#define DHO_NAME_SERVERS                      5
++#define DHO_DOMAIN_NAME_SERVERS               6
++#define DHO_LOG_SERVER                        7
++#define DHO_COOKIE_SERVERS                    8
++#define DHO_LPR_SERVERS                       9
++#define DHO_IMPRESS_SERVER                   10
++#define DHO_RESOURCE_LOCATION_SERVERS        11
++#define DHO_HOST_NAME                        12
++#define DHO_BOOT_SIZE                        13
++#define DHO_MERIT_DUMP                       14
++#define DHO_DOMAIN_NAME                      15
++#define DHO_SWAP_SERVER                      16
++#define DHO_ROOT_PATH                        17
++#define DHO_EXTENSIONS_PATH                  18
++#define DHO_IP_FORWARDING                    19
++#define DHO_NON_LOCAL_SOURCE_ROUTING         20
++#define DHO_POLICY_FILTER                    21
++#define DHO_MAX_DGRAM_REASSEMBLY             22
++#define DHO_DEFAULT_IP_TTL                   23
++#define DHO_PATH_MTU_AGING_TIMEOUT           24
++#define DHO_PATH_MTU_PLATEAU_TABLE           25
++#define DHO_INTERFACE_MTU                    26
++#define DHO_ALL_SUBNETS_LOCAL                27
++#define DHO_BROADCAST_ADDRESS                28
++#define DHO_PERFORM_MASK_DISCOVERY           29
++#define DHO_MASK_SUPPLIER                    30
++#define DHO_ROUTER_DISCOVERY                 31
++#define DHO_ROUTER_SOLICITATION_ADDRESS      32
++#define DHO_STATIC_ROUTES                    33
++#define DHO_TRAILER_ENCAPSULATION            34
++#define DHO_ARP_CACHE_TIMEOUT                35
++#define DHO_IEEE802_3_ENCAPSULATION          36
++#define DHO_DEFAULT_TCP_TTL                  37
++#define DHO_TCP_KEEPALIVE_INTERVAL           38
++#define DHO_TCP_KEEPALIVE_GARBAGE            39
++#define DHO_NIS_SERVERS                      41
++#define DHO_NTP_SERVERS                      42
++#define DHO_VENDOR_ENCAPSULATED_OPTIONS      43
++#define DHO_NETBIOS_NAME_SERVERS             44
++#define DHO_NETBIOS_DD_SERVER                45
++#define DHO_NETBIOS_NODE_TYPE                46
++#define DHO_NETBIOS_SCOPE                    47
++#define DHO_FONT_SERVERS                     48
++#define DHO_X_DISPLAY_MANAGER                49
++#define DHO_DHCP_REQUESTED_ADDRESS           50
++#define DHO_DHCP_LEASE_TIME                  51
++#define DHO_DHCP_OPTION_OVERLOAD             52
++#define DHO_DHCP_MESSAGE_TYPE                53
++#define DHO_DHCP_SERVER_IDENTIFIER           54
++#define DHO_DHCP_PARAMETER_REQUEST_LIST      55
++#define DHO_DHCP_MESSAGE                     56
++#define DHO_DHCP_MAX_MESSAGE_SIZE            57
++#define DHO_DHCP_RENEWAL_TIME                58
++#define DHO_DHCP_REBINDING_TIME              59
++#define DHO_VENDOR_CLASS_IDENTIFIER          60
++#define DHO_DHCP_CLIENT_IDENTIFIER           61
++#define DHO_NWIP_DOMAIN_NAME                 62
++#define DHO_NWIP_SUBOPTIONS                  63
++#define DHO_NISPLUS_DOMAIN                   64
++#define DHO_NISPLUS_SERVER                   65
++#define DHO_TFTP_SERVER                      66
++#define DHO_BOOTFILE                         67
++#define DHO_MOBILE_IP_HOME_AGENT             68
++#define DHO_SMTP_SERVER                      69
++#define DHO_POP3_SERVER                      70
++#define DHO_NNTP_SERVER                      71
++#define DHO_WWW_SERVER                       72
++#define DHO_FINGER_SERVER                    73
++#define DHO_IRC_SERVER                       74
++#define DHO_STREETTALK_SERVER                75
++#define DHO_STDA_SERVER                      76
++#define DHO_USER_CLASS                       77
++#define DHO_FQDN                             81
++#define DHO_DHCP_AGENT_OPTIONS               82
++#define DHO_NDS_SERVERS                      85
++#define DHO_NDS_TREE_NAME                    86
++#define DHO_NDS_CONTEXT                      87
++#define DHO_CLIENT_LAST_TRANSACTION_TIME     91
++#define DHO_ASSOCIATED_IP                    92
++#define DHO_USER_AUTHENTICATION_PROTOCOL     98
++#define DHO_AUTO_CONFIGURE                  116
++#define DHO_NAME_SERVICE_SEARCH             117
++#define DHO_SUBNET_SELECTION                118
++#define DHO_DOMAIN_SEARCH                   119
++#define DHO_CLASSLESS_ROUTE                 121
++#define DHO_END                             255
++
++#define DHO_DHCP_MESSAGE_TYPE_LEN             3
++#define BOOTP_ABSOLUTE_MIN_LEN              240
++#define DHCP_VEND_SIZE                       60
++#define DHCP_LEASE_TIME              0x7FFFFFFE
++
++#ifndef IPV4_DNS_SERVER
++	/* default DNS address in cluster: 10.222.0.10 */
++	#define IPV4_DNS_SERVER          0x0ADE000a
++#endif
++
++#define COPY_DATA_IF_SAFE(data_dst, data_src, data_end)   \
++	do {                                                   \
++		if ((data_dst) + sizeof(data_src) > (data_end))     \
++			return false;                                   \
++		memcpy((data_dst), &(data_src), sizeof(data_src));  \
++		(data_dst) += sizeof(data_src);                     \
++	} while (0)
++
++struct dhcp_opt {
++	__u8 type;
++	__u8 len;
++	__u32 data;
++} __packed;
++
++struct dhcp_packet {
++	char op;
++	char htype;
++	char hlen;
++	char hops;
++	char xid[4];
++	char secs[2];
++	char flags[2];
++	char ciaddr[4];
++	char yiaddr[4];
++	char siaddr[4];
++	char giaddr[4];
++	char chaddr[16];
++	char sname[64];
++	char file[128];
++	char cookies[4];
++};
++
++#ifndef DOMAIN_SEARCH_LIST_VALUE
++	/* default domain in cluster: cluster.local */
++	#define DOMAIN_SEARCH_LIST_VALUE { 119, 15, 7, 'c', 'l', 'u', 's', 't', 'e', 'r', 5, 'l', 'o', 'c', 'a', 'l', 0 }
++#endif
++/* DHCP Option 119 */
++static __u8 domain_search_list[] = DOMAIN_SEARCH_LIST_VALUE;
++
++static __always_inline bool
++dhcp_prepare_options(__u8 request_type, void *options, void *data_end)
++{
++	__u8 end = DHO_END;
++	struct dhcp_opt srv_id = {
++		.type = DHO_DHCP_SERVER_IDENTIFIER,
++		.len = 4,
++		.data = IPV4_GATEWAY,
++	};
++	struct dhcp_opt lease_time = {
++		.type = DHO_DHCP_LEASE_TIME,
++		.len = 4,
++		.data = bpf_htonl(DHCP_LEASE_TIME),
++	};
++	struct dhcp_opt subnet_mask = {
++		.type = DHO_SUBNET,
++		.len = 4,
++		.data = bpf_htonl(0xFFFFFFFF),
++	};
++	struct dhcp_opt router = {
++		.type = DHO_ROUTERS,
++		.len = 4,
++		.data = IPV4_GATEWAY,
++	};
++	struct dhcp_opt dns_srv = {
++		.type = DHO_DOMAIN_NAME_SERVERS,
++		.len = 4,
++		.data = bpf_htonl(IPV4_DNS_SERVER),
++	};
++	__u8 msg_type[] = {
++		DHO_DHCP_MESSAGE_TYPE,
++		1,
++		request_type == DHCP_REQUEST ? DHCP_ACK : DHCP_OFFER
++	};
++
++	COPY_DATA_IF_SAFE(options, msg_type, data_end);
++	COPY_DATA_IF_SAFE(options, srv_id, data_end);
++	COPY_DATA_IF_SAFE(options, lease_time, data_end);
++	COPY_DATA_IF_SAFE(options, subnet_mask, data_end);
++	COPY_DATA_IF_SAFE(options, router, data_end);
++	COPY_DATA_IF_SAFE(options, dns_srv, data_end);
++	COPY_DATA_IF_SAFE(options, domain_search_list, data_end);
++	COPY_DATA_IF_SAFE(options, end, data_end);
++
++	return true;
++}
++
++static __always_inline bool
++dhcp_prepare_response(struct __ctx_buff *ctx, __u8 request_type)
++{
++	__u8 tmp_mac[ETH_ALEN];
++
++	struct ethhdr *eth;
++	struct iphdr *ip;
++	struct udphdr *udp;
++	struct dhcp_packet *dhcp;
++
++	void *dhcp_options;
++	void *data, *data_end;
++
++	union macaddr node_mac = THIS_INTERFACE_MAC;
++	__u32 yiaddr = LXC_IPV4;
++	/* manually calculated, based on dhcp_prepare_options implementation */
++	__u16 dhcp_options_len = 3 + 6 + 6 + 6 + 6 + 6 + sizeof(domain_search_list) + 1;
++	__u16 dhcp_padding_len = dhcp_options_len < DHCP_VEND_SIZE ?
++		DHCP_VEND_SIZE - dhcp_options_len : 0;
++	__u16 dhcp_options_with_pad_len = dhcp_options_len + dhcp_padding_len;
++
++	__u16 udp_len = sizeof(*udp) + sizeof(*dhcp) + dhcp_options_with_pad_len;
++	__u16 ip_len = sizeof(*ip) + udp_len;
++
++	__u32 len_new = sizeof(*eth) + ip_len;
++	__u32 len_old = ctx_full_len(ctx);
++	__s32 len_diff = -(len_old - len_new);
++	if (ctx_adjust_troom(ctx, len_diff) < 0)
++		return false;
++
++	if (!revalidate_data_pull(ctx, &data, &data_end, &ip))
++		return false;
++
++	if (data + len_new > data_end)
++		return false;
++
++	eth = data;
++	udp = (struct udphdr *)(ip + 1);
++	dhcp = (struct dhcp_packet *)(udp + 1);
++
++	dhcp->op = BOOT_REPLY;
++	dhcp->hops = 1;
++	memcpy(&dhcp->yiaddr, &yiaddr, sizeof(yiaddr));
++
++	dhcp_options = dhcp + 1;
++	if (!dhcp_prepare_options(request_type, dhcp_options, data_end))
++		return false;
++
++	if (dhcp_padding_len > 0) {
++		void *start_pad = dhcp_options + dhcp_options_len;
++		__bpf_memset_builtin(start_pad, 0, dhcp_padding_len);
++	}
++
++	udp->source = bpf_htons(67);
++	udp->dest = bpf_htons(68);
++	udp->len = bpf_htons(udp_len);
++	udp->check = 0;
++
++	ip->ihl = 5;
++	ip->version = IPVERSION;
++	ip->ttl = IPDEFTTL;
++	ip->protocol = IPPROTO_UDP;
++	ip->frag_off = bpf_htons(IP_DF);
++	ip->id = 0;
++	ip->tos = 0;
++	ip->tot_len = bpf_htons(ip_len);
++	ip->saddr = IPV4_GATEWAY;
++	ip->daddr = yiaddr;
++	ip->check = 0;
++	ip->check = csum_fold(csum_diff(NULL, 0, ip, sizeof(*ip), 0));
++
++	memcpy(tmp_mac, eth->h_source, ETH_ALEN);
++	memcpy(eth->h_source, &node_mac, ETH_ALEN);
++	memcpy(eth->h_dest, tmp_mac, ETH_ALEN);
++
++	return true;
++}
++
++static __always_inline bool
++is_valid_dhcp_request(__u8 type)
++{
++	return type == DHCP_DISCOVER || type == DHCP_REQUEST;
++}
++
++static __always_inline bool
++is_dhcp_request(struct __ctx_buff *ctx, __u8 *request_type)
++{
++	bool is_dhcp_flow;
++	struct iphdr *ip;
++	struct udphdr *udp;
++	struct dhcp_packet *dhcp;
++	__u32 dhcp_len;
++	__u8 *dhcp_options;
++
++	char dhcp_magic_cookie[4] = {0x63, 0x82, 0x53, 0x63};
++	void *data_end = ctx_data_end(ctx);
++	void *data = ctx_data(ctx);
++	/* skip eth check - it is already done in cil_from_container */
++	ip = (struct iphdr *) (data + ETH_HLEN);
++	if ((void *)(ip + 1) > data_end)
++		return false;
++
++	if (unlikely(ip->version != 4))
++		return false;
++
++	if (ip->protocol != IPPROTO_UDP)
++		return false;
++
++	udp = (struct udphdr *)(ip + 1);
++	if ((void *)(udp + 1) > data_end)
++		return false;
++
++	is_dhcp_flow = bpf_ntohs(udp->dest) == 67 && bpf_ntohs(udp->source) == 68;
++	if (likely(!is_dhcp_flow))
++		return false;
++
++	dhcp_len = sizeof(struct ethhdr) + sizeof(*ip) + sizeof(*udp) + sizeof(*dhcp);
++	if (data + dhcp_len > data_end)
++		return false;
++
++	dhcp = (struct dhcp_packet *)(udp + 1);
++	if (dhcp->op != BOOT_REQUEST)
++		return false;
++
++	if (memcmp(dhcp_magic_cookie, &dhcp->cookies, sizeof(dhcp->cookies)) != 0)
++		return false;
++
++	dhcp_options = (__u8 *)(dhcp + 1);
++	if ((void*)dhcp_options + DHO_DHCP_MESSAGE_TYPE_LEN > data_end)
++		return false;
++
++	if (dhcp_options[0] != DHO_DHCP_MESSAGE_TYPE && dhcp_options[1] != 1)
++		return false;
++
++	*request_type = dhcp_options[2];
++
++	return true;
++}
++
++static __always_inline bool
++handle_dhcp_request(struct __ctx_buff *ctx, int *ret)
++{
++	__u8 request_type;
++
++	if (likely(!is_dhcp_request(ctx, &request_type)))
++		return false;
++
++	if (!is_valid_dhcp_request(request_type)) {
++		/* drop unsupported request types: release, inform */
++		*ret = CTX_ACT_DROP;
++		return true;
++	}
++
++	if (!dhcp_prepare_response(ctx, request_type)) {
++		/* drop malformed packet */
++		*ret = CTX_ACT_DROP;
++		return true;
++	}
++
++	*ret = redirect_self(ctx);
++	return true;
++}
++
++
++#endif /* __LIB_DHCP__ */
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index a3243d93e3..a7dfd71a3d 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -100,6 +100,41 @@ func writeIncludes(w io.Writer) (int, error) {
+ 	return fmt.Fprintf(w, "#include \"lib/utils.h\"\n\n")
+ }
+
++func ipv4ToHex(ipString string) (string, error) {
++	ip := net.ParseIP(ipString)
++	if ip == nil {
++		return "", fmt.Errorf("invalid IPv4 address: %s", ipString)
++	}
++
++	ipBytes := ip.To4()
++	if ipBytes == nil {
++		return "", fmt.Errorf("not an IPv4 address: %s", ipString)
++	}
++
++	hexString := fmt.Sprintf("0x%02X%02X%02X%02X", ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3])
++	return hexString, nil
++}
++
++// implemented only single domain
++func generateDomainSearchList(domain string) string {
++	labels := strings.Split(domain, ".")
++	var result []string
++	result = append(result, "119") // option code
++	result = append(result, "0") // total length
++	totalLength := 1
++	for _, label := range labels {
++		labelLength := len(label)
++		result = append(result, fmt.Sprintf("%d", labelLength))
++		for _, c := range label {
++			result = append(result, fmt.Sprintf("'%c'", c))
++		}
++		totalLength += 1 + labelLength
++	}
++	result = append(result, "0")
++	result[1] = fmt.Sprintf("%d", totalLength)
++	return fmt.Sprintf("{ %s }", strings.Join(result, ", "))
++}
++
+ // WriteNodeConfig writes the local node configuration to the specified writer.
+ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeConfiguration) error {
+ 	extraMacrosMap := make(dpdef.Map)
+@@ -169,6 +204,16 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			cDefinesMap["IPV4_FRAG_DATAGRAMS_MAP"] = fragmap.MapName
+ 			cDefinesMap["CILIUM_IPV4_FRAG_MAP_MAX_ENTRIES"] = fmt.Sprintf("%d", option.Config.FragmentsMapEntries)
+ 		}
++
++		if option.Config.DhcpdEnabled {
++			cDefinesMap["ENABLE_DHCPD"] = "1"
++			ipv4DNS, err := ipv4ToHex(option.Config.DhcpdClusterDNS)
++			if err != nil {
++				return err
++			}
++			cDefinesMap["IPV4_DNS_SERVER"] = ipv4DNS
++			cDefinesMap["DOMAIN_SEARCH_LIST_VALUE"] = generateDomainSearchList(option.Config.DhcpdClusterDomain)
++		}
+ 	}
+
+ 	if option.Config.EnableIPv6 {
+diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
+index 1a25f14957..a79767f26c 100644
+--- a/pkg/defaults/defaults.go
++++ b/pkg/defaults/defaults.go
+@@ -595,6 +595,10 @@ const (
+
+ 	// EnableSourceIPVerification is the default value for source ip validation
+ 	EnableSourceIPVerification = true
++
++	DhcpdEnabled = false
++	DhcpdClusterDNS = ""
++	DhcpdClusterDomain = ""
+ )
+
+ var (
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index e4390c0622..b873f742b8 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -361,6 +361,11 @@ const (
+ 	// EnableIPMasqAgent enables BPF ip-masq-agent
+ 	EnableIPMasqAgent = "enable-ip-masq-agent"
+
++	// DdhcpdEnabled enables BPF dhcp server
++	DhcpdEnabled = "dhcpd-enabled"
++	DhcpdClusterDNS = "dhcpd-cluster-dns"
++	DhcpdClusterDomain = "dhcpd-cluster-domain"
++
+ 	// EnableIPv4EgressGateway enables the IPv4 egress gateway
+ 	EnableIPv4EgressGateway = "enable-ipv4-egress-gateway"
+
+@@ -1652,6 +1657,9 @@ type DaemonConfig struct {
+ 	EnableBPFMasquerade         bool
+ 	EnableMasqueradeRouteSource bool
+ 	EnableIPMasqAgent           bool
++	DhcpdEnabled                bool
++	DhcpdClusterDNS             string
++	DhcpdClusterDomain          string
+ 	IPMasqAgentConfigPath       string
+
+ 	EnableBPFClockProbe     bool
+@@ -2316,6 +2324,7 @@ var (
+ 		BPFEventsTraceEnabled:         defaults.BPFEventsTraceEnabled,
+ 		BPFConntrackAccounting:        defaults.BPFConntrackAccounting,
+ 		EnableEnvoyConfig:             defaults.EnableEnvoyConfig,
++		DhcpdEnabled:                  defaults.DhcpdEnabled,
+ 		EnableInternalTrafficPolicy:   defaults.EnableInternalTrafficPolicy,
+
+ 		EnableNonDefaultDenyPolicies: defaults.EnableNonDefaultDenyPolicies,
+@@ -2950,6 +2959,9 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 	c.LocalRouterIPv6 = vp.GetString(LocalRouterIPv6)
+ 	c.EnableBPFClockProbe = vp.GetBool(EnableBPFClockProbe)
+ 	c.EnableIPMasqAgent = vp.GetBool(EnableIPMasqAgent)
++	c.DhcpdEnabled = vp.GetBool(DhcpdEnabled)
++	c.DhcpdClusterDNS = vp.GetString(DhcpdClusterDNS)
++	c.DhcpdClusterDomain = vp.GetString(DhcpdClusterDomain)
+ 	c.EnableIPv4EgressGateway = vp.GetBool(EnableIPv4EgressGateway)
+ 	c.EnableEnvoyConfig = vp.GetBool(EnableEnvoyConfig)
+ 	c.IPMasqAgentConfigPath = vp.GetString(IPMasqAgentConfigPath)
+--
+2.34.1

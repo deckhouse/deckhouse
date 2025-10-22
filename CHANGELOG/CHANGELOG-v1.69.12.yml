@@ -1,0 +1,5 @@
+dashboard:
+  fixes:
+    - summary: fix display workload metrics on dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13604
+

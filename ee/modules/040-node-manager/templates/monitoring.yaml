@@ -1,0 +1,4 @@
+{{- if include "nvidia_gpu_enabled" . }}
+  {{- include "helm_lib_grafana_dashboard_definitions" . }}
+{{- end }}
+{{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager") }}

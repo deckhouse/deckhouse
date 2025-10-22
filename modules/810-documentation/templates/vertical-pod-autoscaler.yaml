@@ -1,0 +1,42 @@
+{{- define "web_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- define "builder_resources" }}
+cpu: 100m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: documentation
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: documentation
+  updatePolicy:
+    updateMode: "Initial"
+
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "web"
+      minAllowed:
+        {{- include "web_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 100Mi
+    - containerName: "builder"
+      minAllowed:
+        {{- include "builder_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 500Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}

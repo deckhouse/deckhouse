@@ -1,0 +1,10 @@
+- name: NGINX Ingress Controller
+  link: https://github.com/kubernetes/ingress-nginx
+  description: A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+- name: OpenKruise
+  link: https://openkruise.io/
+  description: OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.
+  logo: https://openkruise.io/img/openkruise.ico
+  license: Apache License 2.0

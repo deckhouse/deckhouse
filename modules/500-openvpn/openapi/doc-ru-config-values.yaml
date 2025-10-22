@@ -1,0 +1,170 @@
+type: object
+properties:
+  inlet:
+    description: |
+      Способы подключения из внешнего мира.
+
+      Поддерживаются следующие инлеты:
+      * `ExternalIP` — когда имеются узлы с публичными IP-адресами. Используется в комбинации с параметром `externalIP`;
+      * `LoadBalancer` — для всех облачных провайдеров и их схем размещения, в которых поддерживается заказ LoadBalancer'ов;
+      * `HostPort` — порт сервера OpenVPN будет доступен на узле, на котором находится под. За выбор порта отвечает параметр `hostPort`;
+      * `Direct` — для нестандартных случаев. В пространстве имен `d8-openvpn` необходимо создать сервис с именем `openvpn-external`, который отправляет трафик в под с лейблом `app: openvpn` на порт с именем `ovpn-tcp` (или просто 1194). Из этого сервиса парсится `externalIP`, IP-адрес балансировщика или его host. Если ничего этого нет, необходимо указать параметр `externalHost`.
+  loadBalancer:
+    description: |
+      Секция опциональных настроек для инлета `LoadBalancer`.
+    properties:
+      annotations:
+        description: |
+          Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+
+          > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа балансировщика применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет выключить и включить модуль.
+      sourceRanges:
+        description: |
+          Список адресов в формате CIDR, которым разрешен доступ на балансировщик.
+
+          Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+  hostPort:
+    description: |
+      Порт для подключения к OpenVPN-серверу, который будет доступен на узле, на котором запущен под OpenVPN.
+
+      Параметр доступен при выборе инлета `HostPort`.
+  externalIP:
+    description: |
+      IP-адрес одного из узлов кластера, который будет использоваться для подключения клиентов OpenVPN.
+
+      Требуется только при использовании инлета `ExternalIP`.
+  externalPort:
+    description: |
+      Порт, который вывешивается наружу на `externalIP` или балансировщике.
+  tunnelNetwork:
+    description: |
+      Подсеть, используемая для туннеля OpenVPN-сервера.
+  pushDefaultGatewayToClient:
+    description: |
+      Направить весь трафик клиентов через VPN. У клиентов при подключении будет добавлен маршрут по умолчанию через VPN-туннель.
+  pushToClientRoutes:
+    description: |
+      Список маршрутов, которые отправляются клиентам при подключении.
+
+      По умолчанию генерируется автоматически из локальной сети кластера, сервисной подсети и подсети подов.
+  pushToClientDNS:
+    description: |
+      Адрес DNS-сервера, который отправляется клиентам при подключении.
+
+      По умолчанию используется IP-адрес сервиса `kube-system/kube-dns`.
+  pushToClientSearchDomains:
+    description: |
+      Список доменов поиска, которые отправляются клиентам при подключении.
+
+      По умолчанию используется значение из переменной `global.discovery.clusterDomain`.
+  auth:
+    description: |
+      Опции, связанные с аутентификацией или авторизацией в приложении.
+    properties:
+      externalAuthentication:
+        description: |
+          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+        properties:
+          authURL:
+            description: |
+              URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+          authSignInURL:
+            description: |
+              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+      allowedUserEmails:
+        description: |
+          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+      allowedUserGroups:
+        description: |
+          Массив групп пользователей с доступом в панель администратора OpenVPN.
+
+          Используется, если включен модуль [user-authn](https://deckhouse.ru/modules/user-authn/) или параметр [externalAuthentication](#parameters-auth-externalauthentication).
+
+          > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+      whitelistSourceRanges:
+        description: |
+          Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
+  externalHost:
+    description: |
+      IP-адрес или домен, по которому клиенты подключаются к OpenVPN-серверу.
+
+      По умолчанию используются данные из сервиса с именем `openvpn-external`.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который используется для панели администратора OpenVPN.
+
+      По умолчанию используется глобальное значение `modules.ingressClass`.
+  https:
+    description: |
+      Тип сертификата, используемого для панели администратора OpenVPN.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          * `CertManager` — панель администратора OpenVPN будет работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          * `CustomCertificate` — панель администратора OpenVPN будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
+          * `Disabled` — панель администратора OpenVPN будет работать только по HTTP;
+          * `OnlyInURI` — панель администратора OpenVPN будет работать по HTTP (подразумевая, что перед ней стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для панели администратора OpenVPN.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для панели администратора OpenVPN (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  pmacctEnabled:
+    description: |
+      Включить логирование пользовательской активности через VPN в JSON-формате.
+
+      Все соединения внутри `tun`-интерфейсов будут собраны через `libpcap` и записаны в лог
+      в виде `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`.
+    type: boolean
+    default: false
+    x-examples: [true, false]
+  clientCertExpirationDays:
+    description: |
+      Срок действия клиентского сертификата для OpenVPN в днях. Указывает количество дней, на которое будет выпущен клиентский сертификат, сгенерированный с помощью EasyRSA.
+
+      Срок действия клиентского сертификата может быть не менее 1 дня и не более 10 лет.
+oneOf:
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [true]
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [false]
+  - properties:
+      tcpEnabled:
+        enum: [false]
+      udpEnabled:
+        enum: [true]

@@ -1,0 +1,26 @@
+---
+  {{- if semverCompare "> 1.29" .Values.global.discovery.kubernetesVersion }}
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+  {{- else if semverCompare "> 1.26" .Values.global.discovery.kubernetesVersion }}
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta3
+{{- else }}
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
+{{- end }}
+kind: PriorityLevelConfiguration
+metadata:
+  name: d8-serviceaccounts
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  type: Limited
+  limited:
+{{- if semverCompare ">= 1.26" .Values.global.discovery.kubernetesVersion }}
+    nominalConcurrencyShares: 5
+{{- else }}
+    assuredConcurrencyShares: 5
+{{- end }}
+    limitResponse:
+      queuing:
+        handSize: 8
+        queueLengthLimit: 50
+        queues: 32
+      type: Queue

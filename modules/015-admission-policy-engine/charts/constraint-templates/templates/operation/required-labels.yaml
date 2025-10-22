@@ -1,0 +1,62 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8requiredlabels
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Labels"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Requires resources to contain specified labels, with values matching
+      provided regular expressions.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8RequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              description: >-
+                A list of labels and values the object must specify.
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    description: >-
+                      The required label.
+                  allowedRegex:
+                    type: string
+                    description: >-
+                      If specified, a regular expression the annotation's value
+                      must match. The value must contain at least one match for
+                      the regular expression.
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg, "details": {"missing_labels": missing}}] {
+          provided := {label | input.review.object.metadata.labels[label]}
+          required := {label | label := input.parameters.labels[_].key}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("you must provide labels: %v", [missing])
+        }
+
+        violation[{"msg": msg}] {
+          value := input.review.object.metadata.labels[key]
+          expected := input.parameters.labels[_]
+          expected.key == key
+          # do not match if allowedRegex is not defined, or is an empty string
+          expected.allowedRegex != ""
+          not re_match(expected.allowedRegex, value)
+          msg := sprintf("Label <%v: %v> does not satisfy allowed regex: %v", [key, value, expected.allowedRegex])
+        }

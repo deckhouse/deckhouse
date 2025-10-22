@@ -1,0 +1,97 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/default-source: "true"
+  name: test-source-1
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: enabledmodule
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-alpha
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: disabledmodule
+properties:
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "False"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: enabledmodule
+properties:
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: bundlenabledmodule
+properties:
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "Unknown"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: withpolicymodule
+properties:
+  source: test-source-1
+  updatePolicy: test-alpha
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: notthissourcemodule
+properties:
+  source: test-source-2
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"

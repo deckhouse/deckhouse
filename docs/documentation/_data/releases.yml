@@ -1,0 +1,42 @@
+channels:
+  - name: alpha
+    stability: 0
+    title: Alpha
+    description:
+      en: The least stable release channel but with the most frequent appearance of new versions. Can bring new features but can be unstable.
+      ru: Наименее стабильный канал обновлений с наиболее частым появлением новых версий. Ориентирован на кластеры разработки с небольшим количеством разработчиков.
+    tooltip: Наименее стабильный канал обновлений
+  - name: beta
+    stability: 1
+    title: Beta
+    description:
+      en: For more broad testing of new features to catch regressions
+      ru: Ориентирован на кластеры разработки, как и канал обновлений Alpha. Получает версии, предварительно опробованные на канале обновлений Alpha.
+    tooltip: Чуть более стабильный, чем канал обновлений Alpha
+  - name: early-access
+    stability: 2
+    title: Early Access
+    description:
+      en: <b>Recommended</b> release channel. Is mostly safe and can be used in non-critical environments or for local development
+      ru: <b>Рекомендуемый</b> канал обновлений, если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются, дорабатываются новые приложения и т. п.). Обновления функционала до этого канала обновлений доходят не ранее чем через одну неделю после их появления в релизе.
+    tooltip:
+      en: Use it if not sure what release channel to choose.
+      ru: <b>Рекомендуемый</b> канал обновлений, если вы не уверены в выборе
+  - name: stable
+    stability: 3
+    title: Stable
+    description:
+      en: Is mostly safe and we encourage you to use this version everywhere
+      ru: Стабильный канал обновлений для кластеров, в которых закончена активная работа и преимущественно осуществляется эксплуатация. Обновления функционала до этого канала обновлений доходят не ранее чем через две недели после их появления в релизе.
+    tooltip:
+      en: For production clusters
+      ru: Стабильный канал обновлений для продуктивных кластеров
+  - name: rock-solid
+    stability: 4
+    title: Rock Solid
+    description:
+      en: The most stable release channel and recommended for usage in critical environments with tight SLA
+      ru: Наиболее стабильный канал обновлений. Подойдет для кластеров, которым необходимо обеспечить повышенный уровень стабильности. Обновления функционала до этого канала доходят не ранее чем через месяц после их появления в релизе.
+    tooltip:
+      en: The most stable release channel
+      ru: Наиболее стабильный канал обновлений

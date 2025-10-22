@@ -1,0 +1,193 @@
+type: object
+required: [virtualMachineCIDRs, dvcr]
+properties:
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  virtualMachineCIDRs:
+    type: array
+    description: |
+      List of CIDRs used to allocate static IP addresses for Virtual Machines.
+
+      It is important to note that the subnet for virtual machines should not be the same as the subnet used for pods and the subnet used for services. Address conflicts can lead to unpredictable behavior and networking problems.
+    x-examples:
+      - ["10.10.10.0/24", "10.10.20.0/24"]
+    items:
+      type: string
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The Ingress class that will be used to upload images.
+      By default, the `modules.ingressClass` global value is used.
+  https:
+    type: object
+    x-examples:
+      - mode: Disabled
+      - mode: OnlyInURI
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — the web UI is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter;
+          - `CustomCertificate` — the web UI is accessed over HTTPS using a certificate from the `d8-system` namespace;
+          - `Disabled` — in this mode, the documentation web UI can only be accessed over HTTP;
+          - `OnlyInURI` — the documentation web UI will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        description: |
+          Parameters for certmanager.
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            x-examples: ["letsencrypt", "letsencrypt-staging", "selfsigned"]
+            description: |
+              What ClusterIssuer to use for getting an SSL certificate (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+      customCertificate:
+        type: object
+        default: {}
+        description: |
+          Parameters for custom certificate usage.
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with CDI upload proxy.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+  dvcr:
+    type: object
+    description: |
+      Options for settings up Deckhouse virtualization container registry.
+      Internal service for storing all vms images.
+    required: [storage]
+    properties:
+      storage:
+        type: object
+        description: |
+          Options for setting up storage.
+        properties:
+          type:
+            type: string
+            description: |
+              The storage usage type:
+              - `persistentVolumeClaim` — Use PersistentVolumeClaim as store for dvcr.
+              - `objectStorage` — Use objectStorage as store for dvcr.
+            enum:
+              - "PersistentVolumeClaim"
+              - "ObjectStorage"
+          persistentVolumeClaim:
+            type: object
+            description: |
+              Parameters for PersistentVolumeClaim.
+            required: [size]
+            properties:
+              storageClassName:
+                type: string
+                x-examples: ["linstor", "nfs"]
+                description: |
+                  What StorageClass to use for creating persistentvolumeclaim.
+              size:
+                type: string
+                x-examples: ["10Gi"]
+                description: |
+                  Persistentvolumeclaim size
+          objectStorage:
+            type: object
+            description: |
+              Parameters for objectStorage.
+            properties:
+              type:
+                type: string
+                description: |
+                  What ObjectStorage to use as store for dvcr.
+                enum:
+                  - "S3"
+              s3:
+                type: object
+                description: |
+                  Parameters for S3.
+                required: [accessKey, secretKey, region, regionEndpoint, bucket]
+                properties:
+                  accessKey:
+                    type: string
+                    x-examples: ["YWNjZXNzS2V5Cg=="]
+                    description: |
+                      accessKey must be base64 encoded.
+                      accessKey is a unique identifier that identifies you as a user with access to S3.
+                    pattern: "^[A-Za-z0-9+/]*={0,2}$"
+                  secretKey:
+                    type: string
+                    x-examples: ["c2VjcmV0S2V5Cg=="]
+                    description: |
+                      secretKey must be base64 encoded.
+                      secretKey is a confidential secret key associated with your Access Key ID.
+                      Secret Access Key is used to sign HTTP requests to Amazon S3 to verify the authenticity of the request and ensure the security of your data.
+                    pattern: "^[A-Za-z0-9+/]*={0,2}$"
+                  region:
+                    type: string
+                    x-examples: ["us-east-2", "us-west-1"]
+                    description: |
+                      Geographical area.
+                  regionEndpoint:
+                    type: string
+                    x-examples: ["s3.example.com"]
+                    description: |
+                      Endpoint for connect to service S3.
+                    pattern: '^https?://[0-9a-zA-Z\.\-:@_]+$'
+                  bucket:
+                    type: string
+                    x-examples: ["dvcr"]
+                    description: |
+                      Bucket in which you can store your files and data objects.
+            oneOf:
+              - required: ["s3"]
+                properties:
+                  type:
+                    enum: ["S3"]
+        oneOf:
+          - required: ["persistentVolumeClaim"]
+            properties:
+              type:
+                enum: ["PersistentVolumeClaim"]
+          - required: ["objectStorage"]
+            properties:
+              type:
+                enum: ["ObjectStorage"]
+  logLevel:
+    type: string
+    description: |
+      Sets a logging level.
+
+      Working for this components:
+      - `virtualization-api`
+      - `virtualization-controller`
+      - `kube-api-proxy`
+      - `vm-route-forge`
+    enum:
+      - "debug"
+      - "info"
+      - "warning"
+      - "error"

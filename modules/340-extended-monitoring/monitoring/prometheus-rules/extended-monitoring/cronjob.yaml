@@ -1,0 +1,130 @@
+- name: cronjob.rules
+  rules:
+  - alert: CronJobFailed
+    expr: |
+      (
+        max by (namespace, job_name, owner_kind, owner_name) (
+          (kube_job_status_failed > 0)
+          * on (namespace, job_name) group_right()
+          # compare start time of a Job with the last schedule time of a CronJob
+          (
+            kube_job_status_start_time
+            >= on (namespace, job_name) group_left(owner_name)
+            (
+              max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time, "owner_name", "$1", "cronjob", "(.*)"))
+              * on (namespace, owner_name) group_right()
+              max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
+            )
+          ) ^ 0
+        )
+      )
+      * on (namespace, owner_name) group_left()
+      (
+        max by (namespace, owner_name) (
+          label_replace((extended_monitoring_cronjob_enabled == 1), "owner_name", "$1", "cronjob", "(.*)")
+        ) > 0
+      )
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cron_job_failed: "CronJobFailedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      plk_grouped_by__cron_job_failed: "CronJobFailedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      summary: Job `{{$labels.namespace}}/{{$labels.job_name}}` failed in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}`.
+      description: |
+        Deckhouse has detected that Job `{{$labels.namespace}}/{{$labels.job_name}}` failed in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}`.
+
+        Steps to resolve:
+
+        1. Print the job details:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
+
+  - alert: CronJobPodsNotCreated
+    expr: |
+      sum by (namespace, owner_name) (
+        (kube_job_status_active == 0)
+        * on (namespace, job_name) group_left(owner_name) (
+          kube_job_owner{owner_kind="CronJob"}
+        )
+        +
+        (kube_job_status_succeeded == 0)
+        * on (namespace, job_name) group_left(owner_name) (
+          kube_job_owner{owner_kind="CronJob"}
+        )
+        +
+        (kube_job_status_failed == 0)
+        * on (namespace, job_name) group_left(owner_name) (
+          kube_job_owner{owner_kind="CronJob"}
+        )
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__cron_job_pods_not_created: "CronJobPodsNotCreatedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      plk_grouped_by__cron_job_pods_not_created: "CronJobPodsNotCreatedGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      summary: Pods set in CronJob `{{$labels.namespace}}/{{$labels.job_name}}` haven't been created.
+      description: |
+        Deckhouse has detected that the pods set in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}` still haven't been created.
+
+        Steps to resolve:
+
+        1. Print the job details:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
+
+  - alert: CronJobSchedulingError
+    expr: |
+      (
+        floor(timestamp(kube_cronjob_next_schedule_time)) - kube_cronjob_next_schedule_time > 60
+      )
+      * on (namespace, cronjob)
+      (
+        max by (namespace, cronjob) (
+          (extended_monitoring_cronjob_enabled == 1)
+        )
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
+      description: |
+        Deckhouse has detected that CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
+
+        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}`
+        - Last scheduled time: `{{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
+        - Next projected schedule time: `{{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`

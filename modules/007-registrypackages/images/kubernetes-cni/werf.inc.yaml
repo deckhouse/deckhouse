@@ -1,0 +1,101 @@
+# The cni-flannel version corresponds to the flanneld version.
+# https://github.com/deckhouse/deckhouse/blob/main/modules/035-cni-flannel/images/flanneld/werf.inc.yaml
+# https://github.com/flannel-io/flannel/blob/v0.26.2/chart/kube-flannel/values.yaml#L18
+{{- $cni_flannel_version := "1.6.0-flannel1" }}
+{{- $cni_version := "1.6.2" }}
+{{- $image_version := $cni_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $cni_version }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
+  - cd /src/plugins
+  - git apply /patches/plugins/*.patch --verbose
+  - rm -rf .git
+  - git clone --depth 1 --branch v{{ $cni_flannel_version }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/cni-plugin.git /src/cni-plugin
+  - cd /src/cni-plugin
+  - git apply /patches/cni-plugins/*.patch --verbose
+  - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - bandwidth
+  - bridge
+  - dhcp
+  - dummy
+  - firewall
+  - host-device
+  - host-local
+  - ipvlan
+  - loopback
+  - macvlan
+  - portmap
+  - ptp
+  - sbr
+  - static
+  - tap
+  - tuning
+  - vlan
+  - vrf
+  - flannel
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "kubernetes-cni": "{{ $cni_version }}", "flannel": "{{ $cni_flannel_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  setup:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd /src/plugins
+    - go mod vendor
+    - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
+    - cp -f bin/* /
+    - cd /src/cni-plugin
+    - export VERSION=v{{ $cni_flannel_version }}
+    - make build_linux
+    - mv /src/scripts/* /
+    - cp -f /src/cni-plugin/dist/flannel-amd64 /flannel

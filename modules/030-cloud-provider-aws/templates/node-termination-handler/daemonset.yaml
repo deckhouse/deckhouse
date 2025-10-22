@@ -1,0 +1,83 @@
+{{- define "node_termination_handler_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-termination-handler
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: node-termination-handler
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "node-termination-handler"
+      minAllowed:
+        {{- include "node_termination_handler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: node-termination-handler
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-termination-handler")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: node-termination-handler
+  template:
+    metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+      labels:
+        app: node-termination-handler
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - operator: In
+                key: node.deckhouse.io/type
+                values: ["CloudEphemeral"]
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: node-termination-handler
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: node-termination-handler
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "nodeTerminationHandler") }}
+        args:
+        - --enable-rebalance-monitoring=true
+        - --enable-rebalance-draining=true
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "node_termination_handler_resources" . | nindent 12 }}
+{{- end }}
+

@@ -1,0 +1,27 @@
+{{- if include "publish_api_deploy_certificate" . }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "publish_api_certificate_name" . }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "publish_api_certificate_name" . }}
+  {{ include "helm_lib_module_generate_common_name" (list . "api") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "api") }}
+  issuerRef:
+  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+    {{- if .Values.global.enabledModules | has "cert-manager" }}
+    name: kubernetes-api
+    kind: Issuer
+    {{- else }}
+    {{ fail "cert-manager module must be enabled for publishAPI https SelfSigned mode" }}
+    {{- end }}
+  {{- end }}
+{{- end }}

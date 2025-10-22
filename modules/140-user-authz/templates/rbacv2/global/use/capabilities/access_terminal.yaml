@@ -1,0 +1,18 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:kubernetes:access_terminal
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/attach
+      - pods/exec
+    verbs:
+      - create
+      - get

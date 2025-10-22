@@ -1,0 +1,56 @@
+---
+Index: pkg/prometheus/promcfg.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/prometheus/promcfg.go b/pkg/prometheus/promcfg.go
+--- a/pkg/prometheus/promcfg.go	(revision 8eae904d83dc054310a99e5671da0a70cd7d10c2)
++++ b/pkg/prometheus/promcfg.go	(date 1695385336387)
+@@ -1177,6 +1177,9 @@
+ 	cfg = cg.addSafeAuthorizationToYaml(cfg, fmt.Sprintf("serviceMonitor/auth/%s/%s/%d", m.Namespace, m.Name, i), store, ep.Authorization)
+
+ 	relabelings := initRelabelings()
++	if cg.EndpointSliceSupported() {
++		relabelings = generateFallbackEndpointSliceRelabeling(relabelings)
++	}
+
+ 	// Filter targets by services selected by the monitor.
+
+@@ -2665,3 +2668,36 @@
+ 		Value: cfg,
+ 	}, nil
+ }
++
++func generateFallbackEndpointSliceRelabeling(relabelings []yaml.MapSlice) []yaml.MapSlice {
++	relabelings = append(relabelings, yaml.MapSlice{
++		{Key: "action", Value: "labelmap"},
++		{Key: "regex", Value: "^__meta_kubernetes_endpointslice_(label_.+|labelpresent_.+|annotation_.+|annotationpresent_.+)$"},
++		{Key: "replacement", Value: "__meta_kubernetes_endpoints_${1}"},
++	})
++	relabelings = append(relabelings, yaml.MapSlice{
++		{Key: "action", Value: "labelmap"},
++		{Key: "regex", Value: "^__meta_kubernetes_endpointslice_(port_name|port_protocol|address_target_kind|address_target_name)$"},
++		{Key: "replacement", Value: "__meta_kubernetes_endpoint_${1}"},
++	})
++	relabelings = append(relabelings, yaml.MapSlice{
++		{Key: "source_labels", Value: []string{"__meta_kubernetes_endpointslice_name"}},
++		{Key: "target_label", Value: "__meta_kubernetes_endpoints_name"},
++		{Key: "regex", Value: "(.+)"},
++		{Key: "replacement", Value: "${1}"},
++	})
++	relabelings = append(relabelings, yaml.MapSlice{
++		{Key: "source_labels", Value: []string{"__meta_kubernetes_endpointslice_endpoint_topology_kubernetes_io_hostname"}},
++		{Key: "target_label", Value: "__meta_kubernetes_endpoint_node_name"},
++		{Key: "regex", Value: "(.+)"},
++		{Key: "replacement", Value: "${1}"},
++	})
++	relabelings = append(relabelings, yaml.MapSlice{
++		{Key: "source_labels", Value: []string{"__meta_kubernetes_endpointslice_endpoint_conditions_ready"}},
++		{Key: "target_label", Value: "__meta_kubernetes_endpoint_ready"},
++		{Key: "regex", Value: "(.+)"},
++		{Key: "replacement", Value: "${1}"},
++	})
++
++	return relabelings
++}

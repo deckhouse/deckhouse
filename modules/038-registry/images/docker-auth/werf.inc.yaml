@@ -1,0 +1,75 @@
+{{- $version := "v1.14.0-deckhouse.0"}}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /src/scripts
+    stageDependencies:
+      install:
+        - '**/*'
+secrets:
+  - id: SOURCE_REPO
+    value: "{{ $.SOURCE_REPO }}"
+shell:
+  install:
+    - mkdir -m 1777 /src/tmp
+    - chmod +x /src/scripts/*
+    - git config --global advice.detachedHead false
+    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-docker_auth.git /src/docker_auth
+    - rm -rf /src/docker_auth/.git
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/docker_auth
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  beforeInstall:
+    {{- include "alpine packages proxy" . | nindent 4 }}
+    - apk add --no-cache make
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export GOOS=linux
+    - export GOARCH=amd64
+    - export CGO_ENABLED=0
+    - cd /src/docker_auth/auth_server
+    - make build
+    - chmod +x ./auth_server
+    - mv ./auth_server /auth_server
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/scripts
+    to: /
+    includePaths:
+    - install
+    - uninstall
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/tmp
+    to: /tmp
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /auth_server
+    to: /auth_server
+    before: setup
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/auth_server"]

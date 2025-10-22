@@ -1,0 +1,26 @@
+{%- unless page.hide_sidebar or jekyll.environment == "development-nosidebar" %}
+
+  {%- if page.product_code == kubernetes-platform %}
+    <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+        {%- unless site.mode == 'module' %}
+        <div><strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+        <!-- module-version-badge -->
+        <div id="doc-versions-menu" class="channel-menu submenu-parent">
+          <!--#include virtual="/includes/channel-menu-v2.html" -->
+        </div>
+        {%- endunless %}
+    </div>
+  {%- endif %}
+  <div class="sidebar__wrapper-inner">
+    <nav class="sidebar__container">
+
+      <ul class="sidebar" id="mysidebar">
+        {% sidebar_custom folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
+      </ul>
+
+    </nav>
+  </div>
+
+<!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
+<script>$("li.active").parents('li').toggleClass("active");</script>
+{% endunless %}

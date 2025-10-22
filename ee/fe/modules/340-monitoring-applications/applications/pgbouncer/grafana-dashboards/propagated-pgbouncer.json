@@ -1,0 +1,905 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "gnetId": 9760,
+  "graphTooltip": 0,
+  "id": 104,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 16,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (pgbouncer_databases_current_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Current connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "none",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 18,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (pgbouncer_pools_client_active_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Active clients",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "none",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 19,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (irate(pgbouncer_stats_queries_duration_seconds_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Query time",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "s",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 20,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": true,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (irate(pgbouncer_stats_queries_pooled_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "reqps",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 25,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
+        "min": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (pgbouncer_pools_server_active_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Active: {{service}} / database: {{database}}",
+          "range": true,
+          "refId": "Active"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (pgbouncer_pools_server_idle_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"} + pgbouncer_pools_server_active_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"} )",
+          "hide": false,
+          "legendFormat": "Total: {{service}} / database: {{database}}",
+          "range": true,
+          "refId": "Total"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (pgbouncer_pools_server_idle_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"})",
+          "hide": false,
+          "legendFormat": "Idle: {{service}} / database: {{database}}",
+          "range": true,
+          "refId": "Idle"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Total connections to serverer",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "none",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "binBps"
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 22,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum by (service, database) (irate(pgbouncer_stats_sent_bytes_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Sent: {{database}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(sum by (service, database) (irate(pgbouncer_stats_received_bytes_total{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))) / -1",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Data rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "binBps",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "binBps",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "fill": 2,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "hiddenSeries": false,
+      "id": 21,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.5.13",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (service, database) (irate(pgbouncer_pools_client_waiting_connections{namespace=~\"$namespace\", database=~\"$db\", service=~\"$service\"}[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{service}} / database: {{database}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Waiting clients",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:385",
+          "format": "none",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:386",
+          "format": "short",
+          "logBase": 1,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "main",
+          "value": "main"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(pgbouncer_databases_current_connections, namespace)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Namespace",
+        "multi": true,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "label_values(pgbouncer_databases_current_connections, namespace)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\"}, service)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": {
+          "query": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\"}, service)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\",service=~\"$service\"}, database)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Database",
+        "multi": true,
+        "name": "db",
+        "options": [],
+        "query": {
+          "query": "label_values(pgbouncer_databases_current_connections{namespace=~\"$namespace\",service=~\"$service\"}, database)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Pgbouncer / Odyssey",
+  "uid": "CVukofiIz",
+  "version": 1
+}

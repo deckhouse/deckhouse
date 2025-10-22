@@ -1,0 +1,16 @@
+---
+type: object
+default: {}
+additionalProperties: false
+required: [paramBool]
+properties:
+  paramStr:
+    type: string
+  paramNum:
+    type: number
+  paramBool:
+    type: boolean
+  # Add default value to test instantiation of default values in the Validate method.
+  paramDef:
+    type: string
+    default: "defaultValue"

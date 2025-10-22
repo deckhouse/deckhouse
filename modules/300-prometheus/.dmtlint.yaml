@@ -1,0 +1,22 @@
+linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.grafana.properties.alertsChannelsConfig.properties.notifiers.items.properties.type"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.access"
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: StatefulSet
+          name: memcached
+          container: exporter
+      liveness-probe:
+        - kind: Deployment
+          name: grafana-v10
+          container: dashboard-provisioner
+        - kind: Deployment
+          name: grafana-v10
+          container: grafana
+        - kind: StatefulSet
+          name: memcached
+          container: exporter

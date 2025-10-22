@@ -1,0 +1,207 @@
+global:
+  revisions:
+    - be
+    - se
+    - se-plus
+    - ee
+  step1:
+    name:
+      en: Selecting installation method
+      ru: Выбор варианта установки
+  layout: page-nosidebar-notitle
+  step:
+    header: getting_started/global/HEADER.md
+    footer: getting_started/global/FOOTER.md
+    output_dir_template: '<LANG>/stronghold/gs/<INSTALL_CODE>/'
+
+presets:
+  minimal:
+    name:
+      en: Minimal
+      ru: Минимальный
+    recommended: true
+    description:
+      en: |
+        - The cluster consists of one master node and one worker node.
+        - Kubernetes Control Plane and Deckhouse controller run on the master node.
+        - Deckhouse deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Your applications should run on the worker node.
+      ru: |
+        - Кластер состоит из одного master-узла и одного worker-узла.
+        - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
+        - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
+        - Ваши приложения должны работать на worker-узле.
+
+installTypes:
+  existing-dkp:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
+    type: existing-dkp
+    name:
+      en: Existing DKP cluster
+      ru: Существующий кластер DKP
+    pages_title:
+      en: "Deckhouse Stronghold in an existing Deckhouse Kubernetes Platform cluster"
+      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Kubernetes Platform"
+    #layout:
+    #  code: standard
+    #  name: Standard
+    steps:
+      step2:
+        name:
+          en: Enabling the module
+          ru: Включение модуля
+        template: getting_started/stronghold/<INSTALL_CODE>/ENABLE.md
+      step3:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md
+  vsphere:
+    iconPath: images/icons/platforms/corp_cloud_vmware.png
+    ee_only: true
+    se_support: true
+    type: cloud
+    name:
+      en: VMware vSphere
+      ru: VMware vSphere
+    pages_title:
+      en: "Deckhouse Stronghold on VMware vSphere"
+      ru: "Deckhouse Stronghold на VMware vSphere"
+    layout:
+      code: standard
+      name: Standard
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/stronghold/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/stronghold/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/stronghold/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/stronghold/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md
+  yandex:
+    iconPath: images/icons/platforms/yandex_cloud.png
+    layout:
+      code: standard
+      name: Standard
+    pages_title:
+      en: "Deckhouse Stronghold in Yandex Cloud"
+      ru: "Deckhouse Stronghold в Yandex Cloud"
+    type: cloud
+    name:
+      en: "Yandex Cloud"
+      ru: "Yandex Cloud"
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/stronghold/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/stronghold/<INSTALL_CODE>/STEP_ENV.md
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/stronghold/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Getting access to the cluster
+          ru: Получаем доступ к кластеру
+        template: getting_started/stronghold/global/STEP_CLUSTER_ACCESS.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md
+  bm-private:
+    iconPath: images/icons/platforms/lock.png
+    ce_only: true
+    pages_title:
+      en: "Deckhouse Stronghold in a private environment"
+      ru: "Deckhouse Stronghold в закрытом окружении"
+    type: baremetal
+    name:
+      en: Private environment
+      ru: Закрытое окружение
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/stronghold/bm/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Preparing for installation
+          ru: Подготовка к установке
+        template: getting_started/stronghold/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/stronghold/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/stronghold/bm/STEP_FINALIZE.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md
+  bm:
+    iconPath: images/icons/platforms/bare_metal.png
+    pages_title:
+      en: "Deckhouse Stronghold for bare metal"
+      ru: "Deckhouse Stronghold на bare metal"
+    type: baremetal
+    name:
+      en: Bare metal
+      ru: Bare metal
+    steps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/stronghold/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Setting up cluster
+          ru: Настройка кластера
+        template: getting_started/stronghold/global/step_cluster_setup.html
+      step4:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/stronghold/global/STEP_INSTALL.md
+      step5:
+        name:
+          en: Finishing installation
+          ru: Завершение установки
+        template: getting_started/stronghold/<INSTALL_CODE>/STEP_FINALIZE.md
+      step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/global/STEP_FINISH.md

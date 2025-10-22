@@ -1,0 +1,45 @@
+[
+	{
+		"drop_on_abort": false,
+		"inputs": [
+			"testit"
+		],
+		"source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}",
+		"type": "remap"
+	},
+	{
+		"drop_on_abort": false,
+		"inputs": [
+			"d8_tf_testit_00_clean_up"
+		],
+		"source": "structured, err = parse_json(.message)\nif err == null {\n    .parsed_data = structured\n} else {\n    .parsed_data = .message\n}",
+		"type": "remap"
+	},
+	{
+		"hooks": {
+			"process": "process"
+		},
+		"inputs": [
+			"d8_tf_testit_01_json_parse"
+		],
+		"source": "\nfunction process(event, emit)\n\tif event.log.pod_labels == nil then\n\t\treturn\n\tend\n\tdedot(event.log.pod_labels)\n\temit(event)\nend\nfunction dedot(map)\n\tif map == nil then\n\t\treturn\n\tend\n\tlocal new_map = {}\n\tlocal changed_keys = {}\n\tfor k, v in pairs(map) do\n\t\tlocal dedotted = string.gsub(k, \"%.\", \"_\")\n\t\tif dedotted ~= k then\n\t\t\tnew_map[dedotted] = v\n\t\t\tchanged_keys[k] = true\n\t\tend\n\tend\n\tfor k in pairs(changed_keys) do\n\t\tmap[k] = nil\n\tend\n\tfor k, v in pairs(new_map) do\n\t\tmap[k] = v\n\tend\nend",
+		"type": "lua",
+		"version": "2"
+	},
+	{
+		"drop_on_abort": false,
+		"inputs": [
+			"d8_tf_testit_02_elastic_dedot"
+		],
+		"source": " if exists(.parsed_data.app) { .app=.parsed_data.app } \n .foo=\"bar\" \n",
+		"type": "remap"
+	},
+	{
+		"drop_on_abort": false,
+		"inputs": [
+			"d8_tf_testit_03_extra_fields"
+		],
+		"source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+		"type": "remap"
+	}
+]

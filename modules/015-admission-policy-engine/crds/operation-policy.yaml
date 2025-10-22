@@ -1,0 +1,331 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: operationpolicies.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: operationpolicies
+    singular: operationpolicy
+    kind: OperationPolicy
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          description: |
+            Describes an operation policy for a cluster.
+
+            Each CustomResource `OperationPolicy` describes rules for objects in a cluster.
+          properties:
+            spec:
+              type: object
+              required: ["match", "policies"]
+              properties:
+                enforcementAction:
+                  type: string
+                  default: "Deny"
+                  description: |
+                    The enforcement action to control what to do with the result of the constraint.
+                    - `Deny` — Deny action.
+                    - `Dryrun` — No action. It is used when debugging. Information about the event can be viewed in Grafana in dashboard `Security/Admission policy engine`.
+                    - `Warn` — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+                  enum:
+                    - Warn
+                    - Deny
+                    - Dryrun
+                policies:
+                  type: object
+                  properties:
+                    allowedRepos:
+                      type: array
+                      description: |
+                        The list of prefixes a container image is allowed to have.
+                      items:
+                        type: string
+                        x-doc-examples: ["registry.deckhouse.io"]
+                    requiredResources:
+                      type: object
+                      description: |
+                        Requires containers to have defined resources set.
+                      anyOf:
+                        - required: [ limits, requests ]
+                        - required: [ limits ]
+                        - required: [ requests ]
+                      properties:
+                        limits:
+                          type: array
+                          description: "A list of limits that should be enforced (CPU, memory, or both)."
+                          items:
+                            type: string
+                            enum:
+                              - cpu
+                              - memory
+                        requests:
+                          type: array
+                          description: "A list of requests that should be enforced (CPU, memory, or both)."
+                          items:
+                            type: string
+                            enum:
+                              - cpu
+                              - memory
+                    disallowedImageTags:
+                      type: array
+                      description: "Requires container images to have an image tag different from the ones in the specified list."
+                      x-doc-examples: ["latest"]
+                      items:
+                        type: string
+                    disallowedTolerations:
+                      type: array
+                      description: |
+                        Deny Pods that have tolerations from the ones in the specified list.
+
+                        See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                            enum: [Exists, Equal]
+                          value:
+                            type: string
+                          effect:
+                            type: string
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                    requiredLabels:
+                      type: object
+                      description: |
+                        A list of labels and values the object must specify.
+                      properties:
+                        labels:
+                          type: array
+                          minItems: 1
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                description: >-
+                                  The required label.
+                              allowedRegex:
+                                type: string
+                                description: >-
+                                  If specified, a regular expression, the label's value
+                                  must match. The value must contain at least one match for
+                                  the regular expression.
+                        watchKinds:
+                          type: array
+                          description: |
+                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
+                          minItems: 1
+                          items:
+                            type: string
+                            pattern: '^[a-z]*/[a-zA-Z]+$'
+                            x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
+                    requiredAnnotations:
+                      type: object
+                      description: |
+                        A list of annotations and values the object must specify.
+                      properties:
+                        annotations:
+                          type: array
+                          minItems: 1
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                description: >-
+                                  The required annotation.
+                              allowedRegex:
+                                type: string
+                                description: >-
+                                  If specified, a regular expression, the annotation's value
+                                  must match. The value must contain at least one match for
+                                  the regular expression.
+                        watchKinds:
+                          type: array
+                          description: |
+                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
+                          minItems: 1
+                          items:
+                            type: string
+                            pattern: '^[a-z]*/[a-zA-Z]+$'
+                            x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
+                    requiredProbes:
+                      type: array
+                      x-doc-examples:
+                        - - readinessProbe
+                          - livenessProbe
+                      description: "The list of probes that are required (e.g. `readinessProbe` and `livenessProbe`)"
+                      items:
+                        type: string
+                        enum:
+                          - livenessProbe
+                          - readinessProbe
+                          - startupProbe
+                    maxRevisionHistoryLimit:
+                      type: integer
+                      description: "A maximum value for a revision history."
+                    priorityClassNames:
+                      type: array
+                      description: "List of allowed priority class names."
+                      items:
+                        type: string
+                    ingressClassNames:
+                      type: array
+                      description: "List of allowed ingress class names."
+                      items:
+                        type: string
+                    storageClassNames:
+                      type: array
+                      description: "List of allowed storage class names."
+                      items:
+                        type: string
+                    imagePullPolicy:
+                      type: string
+                      description: "Required image pull policy for containers."
+                      enum:
+                        - Always
+                        - IfNotPresent
+                    checkHostNetworkDNSPolicy:
+                      type: boolean
+                      description: "Check `ClusterFirstWithHostNet` dnsPolicy is set for Pods with `hostNetwork: true`."
+                    checkContainerDuplicates:
+                      type: boolean
+                      description: "Check container names and env variables for duplicates."
+                    replicaLimits:
+                      type: object
+                      description: "A range of allowed replicas.  Values are inclusive."
+                      properties:
+                        minReplicas:
+                          description: "The minimum number of replicas allowed, inclusive."
+                          type: integer
+                        maxReplicas:
+                          description: "The maximum number of replicas allowed, inclusive."
+                          type: integer
+                match:
+                  type: object
+                  anyOf:
+                  - required: [namespaceSelector]
+                  - required: [labelSelector]
+                  properties:
+                    namespaceSelector:
+                      anyOf:
+                        - required: [matchNames]
+                        - required: [excludeNames]
+                        - required: [labelSelector]
+                      type: object
+                      description: Specifies the Namespace selector to filter objects with.
+                      properties:
+                        matchNames:
+                          type: array
+                          description: "Include only a particular set of namespaces. Supports glob pattern."
+                          items:
+                            type: string
+                        excludeNames:
+                          type: array
+                          description: "Include all namespaces except a particular set. Support glob pattern."
+                          items:
+                            type: string
+                        labelSelector:
+                          type: object
+                          description: |
+                            Specifies the label selector to filter namespaces.
+
+                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          anyOf:
+                            - required: [ matchLabels ]
+                            - required: [ matchExpressions ]
+                          properties:
+                            matchLabels:
+                              type: object
+                              description: List of labels which a namespace should have.
+                              x-doc-examples: [{ "foo": "bar", "baz": "who"}]
+                              additionalProperties:
+                                type: string
+                            matchExpressions:
+                              type: array
+                              description: List of label expressions for namespaces.
+                              x-doc-examples:
+                              - - key: tier
+                                  operator: In
+                                  values:
+                                  - production
+                                  - staging
+                              items:
+                                type: object
+                                required:
+                                  - key
+                                  - operator
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                    enum:
+                                      - In
+                                      - NotIn
+                                      - Exists
+                                      - DoesNotExist
+                                  values:
+                                    type: array
+                                    items:
+                                      type: string
+                    labelSelector:
+                      type: object
+                      description: |
+                        Specifies the label selector to filter Pods with.
+
+                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      anyOf:
+                        - required:
+                            - matchLabels
+                        - required:
+                            - matchExpressions
+                      properties:
+                        matchLabels:
+                          type: object
+                          description: List of labels which Pod should have.
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          additionalProperties:
+                            type: string
+                        matchExpressions:
+                          type: array
+                          description: List of label expressions for Pods.
+                          x-doc-examples:
+                          - - key: tier
+                              operator: In
+                              values:
+                              - production
+                              - staging
+                          items:
+                            type: object
+                            required:
+                              - key
+                              - operator
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string

@@ -1,0 +1,67 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "openvpn"
+    web.deckhouse.io/export-icon: "/public/img/openvpn.png"
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.openvpn.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.openvpn.auth.externalAuthentication.authSignInURL }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.openvpn.auth.externalAuthentication.authURL }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth
+{{- end }}
+{{- if .Values.openvpn.auth.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.openvpn.auth.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              name: https
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: admin
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "openvpn-admin") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}

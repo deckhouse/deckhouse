@@ -1,0 +1,31 @@
+control-plane-manager:
+  fixes:
+    - summary: audit-log-maxage value to 30 days
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14044
+deckhouse:
+  fixes:
+    - summary: Fix obsolete config alert stuck after deleting module config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14066
+    - summary: Remove unnecessary modules downloading.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14003
+docs:
+  fixes:
+    - summary: Rendered SSHHost and SSHConfig specs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14052
+ingress-nginx:
+  fixes:
+    - summary: fixed an issue with the snapshot retrieval mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14076
+    - summary: fix missing proxy client cert in validator deployment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14060
+    - summary: Ingress resource validation in ingress-nginx controller re-enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13648
+openvpn:
+  fixes:
+    - summary: Added a migration hook to mitigate false positive `OpenVPNClientCertificateExpired` alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13987
+user-authz:
+  fixes:
+    - summary: Add patch verb for service accounts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14065
+

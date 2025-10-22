@@ -1,0 +1,41 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /pause-linux-amd64
+  to: /pause
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/pause"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/alpine-3.20
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache build-base
+  install:
+  - cd /src
+  - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 pause.c
+  - strip /pause-linux-amd64

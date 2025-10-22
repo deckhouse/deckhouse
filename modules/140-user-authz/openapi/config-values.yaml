@@ -1,0 +1,33 @@
+type: object
+properties:
+  enableMultiTenancy:
+    type: boolean
+    default: false
+    x-doc-d8Editions:
+      - be
+      - se
+      - se+
+      - ee
+      - cse-lite
+      - cse-pro
+    description: |
+      Enable namespace-based authorization (multi-tenancy mode).
+
+      All the `kube-apiserver` settings required for namespace-based authorization are performed automatically by the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module ([more details](https://deckhouse.io/modules/user-authz/usage.html#configuring-kube-apiserver-for-multi-tenancy-mode)).
+    x-doc-default: false
+    x-examples: [true, false]
+  controlPlaneConfigurator:
+    type: object
+    description: |
+      Parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: |
+          Passes parameters for configuring `authz-webhook` to the `control-plane-manager` module (see the parameters of the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters) module).
+
+          If this parameter is disabled, the `control-plane-manager` module assumes that Webhook-based authorization is disabled by default. In this case (if no additional settings are provided), the `control-plane-manager` module will try to delete all references to the Webhook plugin from the manifest (even if you configure the manifest manually).
+        x-doc-default: true
+        x-examples: [true, false]

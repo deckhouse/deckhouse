@@ -1,0 +1,5 @@
+name: basic-auth
+stage: "General Availability"
+namespace: kube-basic-auth
+requirements:
+  deckhouse: ">= 1.68"

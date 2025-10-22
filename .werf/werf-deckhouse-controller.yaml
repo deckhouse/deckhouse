@@ -1,0 +1,89 @@
+---
+image: deckhouse-controller-src-artifact
+final: false
+fromImage: builder/src
+git:
+- add: /
+  to: /deckhouse
+  includePaths:
+    {{ include "controller_src_git_imports_include_paths" . | nindent 4}}
+  excludePaths:
+  {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 4 }}
+  {{ include "controller_src_git_imports_exclude_paths" . | nindent 4}}
+  stageDependencies:
+    install:
+      {{ include "controller_src_git_imports_stage_deps" . | nindent 6}}
+{{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+shell:
+  install:
+  # Migrate internal packages imports
+{{- range $_, $edition := $.Editions }}
+  {{- if not $edition.skipFixingImports }}
+  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+  {{- end }}
+{{- end }}
+---
+image: deckhouse-controller-artifact
+final: false
+fromImage: base-for-go
+import:
+- image: deckhouse-controller-src-artifact
+  add: /deckhouse
+  to: /deckhouse
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+shell:
+  beforeInstall:
+  - mkdir /deckhouse /out
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  setup:
+  - |
+    CI_COMMIT_TAG="{{- env "CI_COMMIT_TAG" "" }}"
+    CI_COMMIT_REF_SLUG="{{- env "CI_COMMIT_REF_SLUG" "" }}"
+    if [ -z "$CI_COMMIT_TAG" ]; then
+      if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-([0-9]+\.[0-9]+)$ ]]; then
+          # CI_COMMIT_REF_SLUG for release branch `release-X.Y`. Need for e2e testing
+          version="${BASH_REMATCH[1]}"
+          # `release-1.69` branch will become `v1.69.0`
+          CI_COMMIT_TAG="v${version}.0"
+      else
+          # for dev branches - create release as next prerelease version. Get the latest branch and increment the minor version
+          {{- if .DistroPackagesProxy }}
+          export DOMAIN=git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):
+          {{- else }}
+          export DOMAIN=https://github.com/
+          {{- end }}
+          latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --sort='version:refname' --refs --heads ${DOMAIN}deckhouse/deckhouse.git 'refs/heads/release-[0-9]\.[0-9]?' | tail --lines=1 | cut --delimiter='/' --fields=3 | sed 's/release-/v/').0
+          IFS='.' read -r -a version_parts <<< "$latest_tag"
+          major=${version_parts[0]}
+          minor=${version_parts[1]}
+          new_minor=$((minor + 1))
+          new_patch=0
+          prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
+          new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
+          CI_COMMIT_TAG=${new_version}
+      fi
+      export CI_COMMIT_TAG
+    fi
+  - cd /deckhouse
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  # Generate hooks imports for particular edition
+  - go generate ./tools/register.go
+  # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
+  # into separate phases.
+  - go mod download
+  - cd /deckhouse/deckhouse-controller
+  - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
+  - mv deckhouse-controller /out
+  - cp /out/deckhouse-controller /out/caps-deckhouse-controller
+  - setcap "cap_sys_chroot=ep cap_sys_admin=ep cap_mknod=ep" /out/caps-deckhouse-controller
+---

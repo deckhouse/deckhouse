@@ -1,0 +1,62 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/vcd
+  to: /deckhouse/candi/cloud-providers/vcd
+import:
+{{- range $version := .TF.vcd.versions }}
+- image: terraform-provider-vcd-artifact
+  add: /terraform-provider-vcd-v{{ $version }}
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
+  before: setup
+{{- end }}
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+{{- range $version := .TF.vcd.versions }}
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/terraform-provider-vcd.git /src/v{{ $version }}
+  - cd /src/v{{ $version }}
+  - git apply /patches/v{{ $version }}/*.patch --verbose
+  - rm -rf .git
+{{- end }}
+---
+image: terraform-provider-vcd-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+{{- range $version := .TF.vcd.versions }}
+  - cd /src/v{{ $version }}
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X 'github.com/vmware/terraform-provider-vcd/v3/vcd.BuildVersion={{ $version }}'" -o /terraform-provider-vcd-v{{ $version }}  .
+  - chmod -R 755 /terraform-provider-vcd-v{{ $version }}
+  - chown 64535:64535 /terraform-provider-vcd-v{{ $version }}
+{{- end }}

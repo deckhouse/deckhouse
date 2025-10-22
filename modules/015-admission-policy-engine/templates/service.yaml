@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatekeeper-webhook-service
+  namespace: d8-admission-policy-engine
+  annotations:
+    service.kubernetes.io/topology-aware-hints: "auto"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+spec:
+  ports:
+  - name: https-webhook-server
+    port: 443
+    targetPort: webhook-server
+  selector:
+    app: 'gatekeeper'
+    control-plane: controller-manager
+    gatekeeper.sh/operation: webhook

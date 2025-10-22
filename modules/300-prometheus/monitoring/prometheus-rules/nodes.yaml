@@ -1,0 +1,16 @@
+- name: d8.nodes
+  rules:
+  - alert: K8STooManyNodes
+    expr: |
+      count(kube_node_info) > max(d8_max_nodes_amount_by_pod_cidr) * 0.9
+        or
+      count(kube_node_info) >= max(d8_max_nodes_amount_by_pod_cidr) - 1
+    for: 10m
+    labels:
+      severity_level: "7"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Node count is approaching the maximum allowed.
+      description: |-
+        The cluster is currently running {{ $value }} nodes,
+        which is close to the maximum of {{ print "d8_max_nodes_amount{}" | query | first | value }} allowed nodes.

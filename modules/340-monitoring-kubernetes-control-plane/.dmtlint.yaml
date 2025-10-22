@@ -1,0 +1,21 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      controller-security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
+      security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
+      resources:
+        - kind: DaemonSet
+          name: control-plane-proxy
+          container: kube-rbac-proxy
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: control-plane-proxy

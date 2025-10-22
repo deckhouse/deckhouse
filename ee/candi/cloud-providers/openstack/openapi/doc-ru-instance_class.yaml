@@ -1,0 +1,75 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Параметры группы OpenStack servers, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                flavorName:
+                  description: |
+                    Тип заказываемых виртуальных машин.
+
+                    Получить список всех доступных flavor'ов можно с помощью команды: `openstack flavor list`.
+
+                    Для всех не master-узлов желательно использовать flavor'ы с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком использования таких flavor'ов является невозможность миграции узлов между гипервизорами.
+
+                    Пример создания flavor'а: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
+                capacity:
+                  description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `flavorName`).
+
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`m1.medium`, `m1.large` и т. п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
+                imageName:
+                  description: |
+                    Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                    Получить список всех доступных образов можно с помощью команды: `openstack image list`.
+
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+
+                    По умолчанию используется значение либо из `OpenStackCloudDiscoveryData`, либо из настроек `instances.imageName`.
+                rootDiskSize:
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+
+                    Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
+
+                    По умолчанию используется значение из `OpenStackCloudDiscoveryData`.
+                additionalNetworks:
+                  description: |
+                    Список сетей, которые будут подключены к инстансу.
+
+                    По умолчанию используется значение из `OpenStackCloudDiscoveryData`.
+                additionalSecurityGroups:
+                  description: |
+                    Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass`. Default-группа также должна быть добавлена в этот список.
+
+                    Используется для задания правил firewall по отношению к заказываемым инстансам.
+
+                    `SecurityGroups` могут не поддерживаться провайдером.
+                additionalTags:
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

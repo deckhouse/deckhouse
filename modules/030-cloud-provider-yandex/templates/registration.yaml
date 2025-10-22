@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  # obligatory
+  type: {{ b64enc "yandex" | quote }}
+  region: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.region | b64enc | quote }}
+  zones: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
+
+  # Yandex
+  {{- $yandexValues := dict }}
+  {{- $_ := set $yandexValues "serviceAccountJSON" .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.serviceAccountJSON }}
+  {{- $_ := set $yandexValues "region" .Values.cloudProviderYandex.internal.providerDiscoveryData.region }}
+  {{- $_ := set $yandexValues "folderID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
+  {{- $_ := set $yandexValues "sshKey" .Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey }}
+  {{- $_ := set $yandexValues "shouldAssignPublicIPAddress" .Values.cloudProviderYandex.internal.providerDiscoveryData.shouldAssignPublicIPAddress }}
+  {{- $_ := set $yandexValues "zoneToSubnetIdMap" .Values.cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap }}
+  {{- $_ := set $yandexValues "labels" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.labels | default dict) }}
+  {{- $_ := set $yandexValues "nodeNetworkCIDR" .Values.cloudProviderYandex.internal.providerClusterConfiguration.nodeNetworkCIDR }}
+
+  {{- $_ := set $yandexValues "instanceClassDefaults" dict }}
+  {{- $_ := set $yandexValues.instanceClassDefaults "imageID" .Values.cloudProviderYandex.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.imageID }}
+  yandex: {{ $yandexValues | toJson | b64enc | quote }}

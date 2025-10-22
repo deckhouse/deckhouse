@@ -1,0 +1,111 @@
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 15Gi
+    requests.cpu: 1
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: isolated
+  namespace: test
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  - ports:
+    - port: 53
+      protocol: UDP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-ingress-nginx
+      podSelector:
+        matchLabels:
+          app: controller
+  podSelector:
+    matchLabels: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: default
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory

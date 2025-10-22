@@ -1,0 +1,5 @@
+deckhouse-controller:
+  fixes:
+    - summary: Skip DeckhouseRelease requirement if it's not registered.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11908
+

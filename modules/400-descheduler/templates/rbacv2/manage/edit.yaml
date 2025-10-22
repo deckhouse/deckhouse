@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: descheduler
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-descheduler
+  name: d8:manage:permission:module:descheduler:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - deschedulers
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - descheduler
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

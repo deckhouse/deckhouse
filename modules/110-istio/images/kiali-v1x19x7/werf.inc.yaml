@@ -1,0 +1,71 @@
+---
+{{- $istioVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
+{{- $kialiVersion := "v1.67.2" }}
+---
+# Based on https://github.com/kiali/kiali/blob/v1.67.2/deploy/docker/Dockerfile-distroless
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/alt-p11
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
+  add: /src/kiali/out/kiali
+  to: /opt/kiali/kiali
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+  add: /src/kiali/frontend/build
+  to: /opt/kiali/console
+  before: install
+git:
+{{- include "image mount points" . }}
+shell:
+  install:
+  - adduser --no-create-home --uid 1000 kiali
+  - chown -R kiali:kiali /opt/kiali/console
+  - chmod -R g=u /opt/kiali/console
+imageSpec:
+  config:
+    user: "1000"
+    workingDir: "/opt/kiali"
+    entrypoint: ["/opt/kiali/kiali"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kiali
+  to: /src/kiali
+  before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  setup:
+  - cd /src/kiali/
+  - echo {{ $kialiVersion }} > version
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-X main.version=${kialiVersion}'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -o /src/kiali/out/kiali /src/kiali/
+  - strip /src/kiali/out/kiali
+  - chmod 0755 /src/kiali/out/kiali
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+final: false
+from: {{ .Images.BASE_NODE_16_ALPINE }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kiali
+  to: /src/kiali
+  before: setup
+shell:
+  setup:
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /src/kiali/frontend
+  - yarn install --frozen-lockfile
+  - yarn run build

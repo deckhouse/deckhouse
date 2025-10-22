@@ -1,0 +1,5 @@
+user-authn:
+  fixes:
+    - summary: Fix error in dexClient internal openapi spec.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11285
+

@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: cluster-authorization-rules.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterauthorizationrules"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  message="error:"
+
+  IFS=$'\n'
+  for subject in $(context::jq -rc '.review.request.object.spec.subjects // [] | .[]'); do
+    # ServiceAccount name must be a valid domain name
+    domain_failed=$(jq -rc '
+    if
+      .kind == "ServiceAccount" and
+      (.name | test("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$") | not)
+    then .name
+    else false
+    end
+    ' <<< "$subject")
+
+    if [[ "$domain_failed" != "false" ]]; then
+      message="$message ServiceAccount name is invalid - $domain_failed ;"
+    fi
+
+    # ServiceAccount has to have namespace
+    namespace_required=$(jq -rc '
+    if .kind == "ServiceAccount" and .namespace == null
+    then .name
+    else false
+    end
+    ' <<< "$subject")
+
+    if [[ "$namespace_required" != "false" ]]; then
+      message="$message Namespace for the ServiceAccount $namespace_required is not provided ;"
+    fi
+
+    # Group and User should not have a namespace
+    namespace_failed=$(jq -rc '
+    if .kind != "ServiceAccount" and .namespace != null
+    then "\(.kind) \(.name)"
+    else false
+    end
+    ' <<< "$subject")
+
+    if [[ "$namespace_failed" != "false" ]]; then
+      message="$message Namespace for the $namespace_failed must not be provided ;"
+    fi
+  done
+  unset IFS
+
+  if context::jq -er '.review.request.object.spec.subjects // [] | length == 0' >/dev/null 2>&1; then
+    message="$message Field <.spec.subjects> must not be empty"
+  fi
+
+  if [[ "$message" == "error:" ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+  else
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"$message"}
+EOF
+  fi
+}
+
+hook::run "$@"

@@ -1,0 +1,24 @@
+linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.podNetworkMode"
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: flannel
+          container: kube-flannel
+      liveness-probe:
+        - kind: DaemonSet
+          name: flannel
+          container: kube-flannel
+      readiness-probe:
+        - kind: DaemonSet
+          name: flannel
+          container: kube-flannel
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: flannel

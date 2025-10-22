@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - del(.)
+description:
+  ru: "Удалите `settings`."
+  en: "Delete `settings`."

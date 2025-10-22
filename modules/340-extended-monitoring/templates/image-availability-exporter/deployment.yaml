@@ -1,0 +1,196 @@
+{{- define "image_availability_exporter_resources" }}
+cpu: 64m
+memory: 100Mi
+{{- end }}
+
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: image-availability-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "image-availability")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: image-availability-exporter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: image-availability-exporter
+      minAllowed:
+        {{- include "image_availability_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 128Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-availability-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "image-availability")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: image-availability-exporter
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: image-availability-exporter
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: image-availability-exporter
+      containers:
+      - name: image-availability-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "imageAvailabilityExporter") }}
+        args:
+        - --bind-address=127.0.0.1:8080
+        # The exporter checks for string equality.
+        # https://github.com/deckhouse/k8s-image-availability-exporter/blob/b1589b40c18290b9d105f0ac39ddc3fc554884d9/pkg/registry_checker/checker.go#L212
+        # Among known inexisting images, there is the one from Upmeter probe where we don't want a container to start.
+        {{- $ignoredImages := list ".*upmeter-nonexistent.*" }}
+        {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
+          {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
+        {{- end }}
+        - '--ignored-images={{ $ignoredImages | join "~" }}'
+        - --namespace-label=extended-monitoring.deckhouse.io/enabled
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify }}
+        - --skip-registry-cert-verification
+        {{- end }}
+        {{- if eq .Values.extendedMonitoring.imageAvailability.registry.scheme "HTTP" }}
+        - --allow-plain-http
+        {{- end }}
+        {{- with .Values.global.modulesImages.registry.CA }}
+        - --capath=/deckhouse-registry-root-ca/ca.crt
+        {{- end }}
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+        - --capath=/registry-root-ca/ca.crt
+        {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers }}
+        - '--force-check-disabled-controllers={{ .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers | join "," | replace "All" "*" }}'
+        {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.mirrors }}
+        {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrors }}
+        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
+        {{- end }}
+        {{- end }}
+        env:
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "image_availability_exporter_resources" . | nindent 12 }}
+            {{- end }}
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8081
+        volumeMounts:
+        {{- with .Values.global.modulesImages.registry.dockercfg }}
+        - name: deckhouse-registry-dockercfg
+          mountPath: /.docker
+        {{- end }}
+        {{- with .Values.global.modulesImages.registry.CA }}
+        - name: deckhouse-registry-root-ca
+          mountPath: /deckhouse-registry-root-ca
+        {{- end }}
+        {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+        - name: registry-root-ca
+          mountPath: /registry-root-ca
+        {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8081"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 8081
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            - /ready
+            upstreams:
+            - upstream: http://127.0.0.1:8080/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: image-availability-exporter
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+      {{- with .Values.global.modulesImages.registry.dockercfg }}
+      - name: deckhouse-registry-dockercfg
+        secret:
+          secretName: deckhouse-registry
+          items:
+          - key: .dockerconfigjson
+            path: config.json
+      {{- end }}
+      {{- with .Values.global.modulesImages.registry.CA }}
+      - name: deckhouse-registry-root-ca
+        configMap:
+          name: deckhouse-registry-root-ca.crt
+      {{- end }}
+      {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
+      - name: registry-root-ca
+        configMap:
+          name: registry-root-ca.crt
+      {{- end }}
+{{- end }}

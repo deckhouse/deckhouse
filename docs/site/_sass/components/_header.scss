@@ -1,0 +1,581 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+html {
+    scroll-padding-top: 80px;
+}
+
+.header-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header {
+@include mixins.bg-color(mixins.$white);
+transition: .2s ease-in-out;
+font-family: 'Noto Sans', sans-serif;
+
+&_float {
+  @include mixins.box-shadow;
+}
+
+&__content {
+  display: flex;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+
+  @include breakpoints.min-w(xl) {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}
+
+&__logo {
+  width: 40px;
+  overflow: hidden;
+  transition: .2s;
+
+  @include breakpoints.min-w(xs) {
+    width: auto;
+  }
+
+  body.sidebar-opened & {
+    width: inherit;
+  }
+
+  img, svg {
+    display: block;
+    height: 32px;
+    width: auto;
+
+    @include breakpoints.min-w(s) {
+      height: 40px;
+    }
+
+    @include breakpoints.min-w(l) {
+      height: 24px;
+    }
+
+    @include breakpoints.min-w(xl) {
+      height: 36px;
+    }
+
+    @include breakpoints.min-w(xxl) {
+      height: 43px;
+    }
+
+    @include breakpoints.min-w(xxxl) {
+      height: 52px;
+    }
+  }
+}
+
+&__nav {
+  &.nav {
+    @include breakpoints.min-w(xl) {
+      display: flex;
+      gap: .75rem .95rem;
+    }
+
+    @include breakpoints.min-w(xxl) {
+      gap: .75rem 1.17rem;
+    }
+  }
+
+  .menu-item {
+    &:not(.menu-item-has-children):hover {
+      & > a {
+        @include mixins.color(mixins.$primary-700);
+      }
+    }
+
+    &--primary {
+      background-color: mixins.$primary-700;
+    }
+  }
+
+  .header__navigation-item {
+
+    &.active {
+    position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        padding: .375rem .75rem;
+        top: -.375rem;
+        left: -.75rem;
+        width: 100%;
+        height: 100%;
+        background-color: mixins.$primary-100;
+        border-radius: 2rem;
+      }
+    }
+
+
+    > a {
+      font-size: .875em;
+      position: relative;
+
+      @include breakpoints.min-w(xl) {
+        font-size: 14px;
+      }
+
+      @include breakpoints.min-w(xxl) {
+        font-size: 15px;
+      }
+
+      @include breakpoints.min-w(xxxl) {
+        font-size: 16px;
+      }
+    }
+  }
+
+  .sub-menu {
+    display: flex;
+    margin: 0;
+    padding: 1.5rem;
+    min-width: 180px;
+    gap: .6rem;
+    flex-direction: column;
+    @include mixins.bg-color(mixins.$white);
+    border-radius: 4px;
+    @include mixins.box-shadow;
+
+    @include breakpoints.min-w(xl) {
+      gap: 1rem;
+    }
+
+    &-container {
+      position: absolute;
+      left: -2em;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    &_products {
+      display: grid;
+      margin: 0;
+      gap: 1.5rem;
+      grid-template-columns: repeat(2, 300px);
+
+      @include breakpoints.min-w(xl) {
+        grid-template-columns: repeat(3, 290px);
+      }
+
+      a {
+        display: grid;
+        gap: .35rem .5rem;
+        align-items: center;
+        grid-template-columns: 20px 1fr;
+        white-space: wrap;
+
+        @include breakpoints.min-w(xl) {
+          font-size: 1em;
+        }
+
+        @include breakpoints.min-w(xxl) {
+          font-size: 1rem;
+        }
+
+
+        &:hover {
+          span {
+            color: mixins.$primary-700;
+          }
+        }
+      }
+
+      .products__icon {
+        width: 20px;
+        height: 20px;
+      }
+
+      span {
+        font-weight: 500;
+      }
+
+      p {
+        margin: 0;
+        grid-column: 2/-1;
+        font-size: .875rem;
+        color: mixins.$ntrl-600;
+      }
+    }
+  }
+
+  a {
+    @include mixins.color(mixins.$ntrl-800);
+    white-space: nowrap;
+  }
+
+  .menu-item-has-children {
+    position: relative;
+    display: inline-block;
+
+    &:hover {
+      a:after {
+        transform: translateY(2px);
+      }
+
+      .sub-menu-container {
+        display: flex;
+        padding-top: 1em;
+        visibility: visible;
+        opacity: 1;
+        transition: .2s;
+        z-index: 11;
+
+        a {
+          color: mixins.$ntrl-700;
+
+          &:hover {
+            color: mixins.$primary-700;
+          }
+        }
+      }
+    }
+
+    > a:after {
+      content: '';
+      display: inline-block;
+      margin-bottom: .125px;
+      margin-left: 5px;
+      width: 8px;
+      height: 5px;
+      background: bottom / contain no-repeat url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=");
+      transition: .15s;
+
+      @include breakpoints.min-w(xl) {
+        margin-left: .3rem;
+        width: 10px;
+        height: 7px;
+      }
+
+      @include breakpoints.min-w(xxl) {
+        margin-left: .5rem;
+        width: 12px;
+        height: 8px;
+      }
+    }
+
+    > a:where(.button--primary) {
+      &:after {
+        width: 7px;
+        height: 4px;
+        filter: grayscale(1) brightness(20);
+      }
+    }
+  }
+}
+
+&__left-box {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+
+  @include breakpoints.min-w(xxl) {
+    gap: 2.5rem;
+  }
+}
+
+&__right-box {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+
+  @include breakpoints.min-w(xl) {
+    gap: 1rem;
+  }
+
+  .header__nav {
+    gap: 18px;
+
+    @include breakpoints.min-w(xl) {
+      gap: 24px;
+    }
+  }
+
+  .button, .lang-switcher {
+    display: flex;
+    align-items: center;
+    font-size: .875rem;
+    font-weight: 400;
+
+    @include breakpoints.min-w(m) {
+      padding: .25rem .4rem;
+      font-size: .635rem;
+    }
+
+    @include breakpoints.min-w(xl) {
+      padding: .5rem .625rem;
+      font-size: .75rem;
+    }
+
+    @include breakpoints.min-w(xxl) {
+      padding: .5rem .75rem;
+      font-size: .875rem;
+    }
+
+    @include breakpoints.min-w(xxxl) {
+      padding: .625rem 1rem;
+    }
+  }
+}
+
+&__buttons {
+  display: flex;
+  gap: .65rem;
+
+  @include breakpoints.min-w(xxxl) {
+    gap: 1rem;
+  }
+}
+
+.language-links {
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
+}
+
+.language-button {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  text-decoration: none;
+  text-transform: uppercase;
+  border-radius: 50px;
+  background-color: mixins.$primary-700;
+  color: mixins.$white;
+
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
+}
+
+.lang-switcher {
+  position: relative;
+  display: flex;
+  padding: .125rem;
+  width: .9rem;
+  gap: .6rem;
+  align-items: center;
+  font-weight: 500;
+  line-height: 1.5;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: mixins.$primary-700 solid 2px;
+  border-top: transparent solid 2px;
+  overflow: hidden;
+  color: mixins.$primary-700;
+
+  @include breakpoints.min-w(xl) {
+    width: 1.4rem;
+    gap: .5rem;
+  }
+
+  @include breakpoints.min-w(xxl) {
+    width: 1.25rem;
+    font-size: .875rem;
+  }
+
+  &:hover {
+    span {
+      transform: translateX(-1.5rem);
+    }
+  }
+
+  span {
+    position: relative;
+    width: 1rem;
+    transition: .2s;
+  }
+}
+
+//&__hamburger {
+//  width: 24px;
+//  height: 16px;
+//  position: relative;
+//  transition: .3s;
+//  cursor: pointer;
+//  display: inline-block;
+//  flex-shrink: 0;
+//
+//  @include min-w(l) {
+//    display: none;
+//  }
+//
+//  span {
+//    width: 100%;
+//    height: 2px;
+//    display: block;
+//    border-radius: 8px;
+//    position: absolute;
+//    background: #141f2e;
+//    transition: .5s cubic-bezier(.8, .5, .2, 1.4);
+//
+//    &:first-child {
+//      left: 0;
+//      top: 0;
+//    }
+//
+//    &:nth-child(2) {
+//      top: 50%;
+//      left: 0;
+//      transform: translateY(-50%);
+//    }
+//
+//    &:nth-child(3) {
+//      left: 0;
+//      bottom: 0;
+//    }
+//  }
+//
+//  body.sidebar-opened & {
+//    transition: .2s cubic-bezier(.8, .5, .2, 1.4);
+//
+//    span {
+//      &:first-child {
+//        transform: rotate(-45deg) translate(-4px, 6px);
+//      }
+//
+//      &:nth-child(2) {
+//        transform: translate(100%, -50%);
+//        opacity: 0;
+//      }
+//
+//      &:nth-child(3) {
+//        transform: rotate(45deg) translate(-4px, -6px);
+//      }
+//    }
+//  }
+//}
+
+.socials {
+  display: none;
+
+  @include breakpoints.min-w(l) {
+    display: flex;
+    margin-left: 8px;
+    gap: 18px;
+    align-items: center;
+
+    @include breakpoints.min-w(xl) {
+      gap: 24px;
+    }
+
+    a {
+      width: 24px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+
+      path {
+        fill: mixins.$primary-700;
+      }
+    }
+  }
+}
+
+&__product-menu {
+  padding: 1.25rem 0;
+  background-color: #F6FAFE;
+  box-shadow: inset rgba(34, 42, 94, .11) 0 4px 14px -10px;
+  line-height: normal;
+
+  .container {
+    display: flex;
+    gap: 1.25rem 2.1rem;
+    flex-direction: column;
+    flex-direction: row;
+  }
+
+  &-logo {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    font-weight: 600;
+    color: mixins.$ntrl-800;
+    font-size: 16px;
+
+    @include breakpoints.min-w(xxl) {
+      font-size: 1.1rem;
+    }
+
+    svg {
+      width: 1.25rem;
+
+      @include breakpoints.min-w(xl) {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+    }
+  }
+
+  ul {
+    flex-wrap: wrap;
+
+    &.nav {
+      gap: 1.15rem 1.5rem;
+
+      @include breakpoints.min-w(xl) {
+        gap: .75rem 1.3rem;
+      }
+
+      @include breakpoints.min-w(xxl) {
+        gap: .75rem 1.43rem;
+      }
+    }
+
+    li {
+      &.active {
+        position: relative;
+
+        &::before {
+          content: '';
+          position: absolute;
+          padding: .375rem .75rem;
+          top: -.375rem;
+          left: -.75rem;
+          width: 100%;
+          height: 100%;
+          background-color: mixins.$primary-100;
+          border-radius: 2rem;
+        }
+      }
+
+      a {
+        position: relative;
+        color: mixins.$ntrl-800;
+      }
+    }
+  }
+}
+}
+
+.language-links {
+user-select: none;
+
+a {
+  text-decoration: none;
+  text-transform: uppercase;
+  @include mixins.color(mixins.$ntrl-800);
+
+  &.active {
+    @include mixins.color(mixins.$primary-700);
+  }
+}
+}

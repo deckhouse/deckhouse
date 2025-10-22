@@ -1,0 +1,41 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Позволяет приложениям, поддерживающим DC-аутентификацию, взаимодействовать с Dex.
+
+            После появления в кластере объекта `DexClient`:
+            * в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-<NAME>@<NAMESPACE>`, где `<NAME>` и `<NAMESPACE>` — `metadata.name` и `metadata.namespace` объекта DexClient соответственно;
+            * в соответствующем namespace будет создан Secret `dex-client-<NAME>` (где `<NAME>` — `metadata.name` объекта DexClient), содержащий пароль доступа к клиенту (**clientSecret**).
+
+            [Пример использования...](usage.html#настройка-oauth2-клиента-в-dex-для-подключения-приложения)
+          properties:
+            spec:
+              properties:
+                allowedEmails:
+                  description: |-
+                    Email'ы пользователей, которым разрешено проходить аутентификацию.
+
+                    **По умолчанию** разрешено всем пользователям.
+                allowedGroups:
+                  description: |
+                    Группы, пользователям которых разрешено проходить аутентификацию.
+
+                    **По умолчанию** разрешено всем группам.
+                redirectURIs:
+                  description: |
+                    Список адресов, на которые допустимо редиректить Dex'у после успешного прохождения аутентификации.
+                trustedPeers:
+                  description: |
+                    ID клиентов, которым позволена cross-аутентификация.
+
+                    [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth)
+                secretMetadata:
+                    description: |
+                        Список лейблов и аннотаций, которые будут перенесены в метаданные секретов ресурса DexClient.
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

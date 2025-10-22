@@ -1,0 +1,41 @@
+{%- if page.lang == "ru" %}
+{%- if page.platform_code == "spacevm" or  page.platform_code == "red" %}
+{%- alert level="warning" %}
+Доступно начиная с версии 1.65 Deckhouse Kubernetes Platform.
+{% endalert %}
+{%- endif %}
+{%- if page.platform_code == "red" %}
+{%- alert level="info" %}
+Перед установкой Deckhouse Kubernetes Platform в среде РЕД виртуализации необходимо предварительно создать нужное количество виртуальных машин с требуемыми параметрами.
+{% endalert %}
+{%- endif %}
+{%- if page.platform_code == "dynamix" %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{%- alert level="warning" %}
+Доступно начиная с версии 1.66 Deckhouse Kubernetes Platform.
+{% endalert %}
+{%- endif %}
+{%- if page.platform_code == "azure" %}
+{% alert level="warning" %}
+Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region) в которых доступны `Availability Zones`.
+{% endalert %}
+{%- endif %}
+{%- if page.platform_code == 'bm-private' %}
+{% alert level="warning" %}
+Доступно в редакциях SE, SE+, EE, CSE Lite, CSE Pro.
+{% endalert %}
+{%- endif %}
+{%- else %}
+{%- if page.platform_code == "azure" %}
+{% alert level="warning" %}
+Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
+{% endalert %}
+{%- endif %}
+{%- if page.platform_code == 'bm-private' %}
+{% alert level="warning" %}
+This feature is available in Standard and Enterprise Edition only.
+{% endalert %}
+{%- endif %}
+{%- endif %}

@@ -1,0 +1,862 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает runtime-параметры группы узлов.
+          properties:
+            spec:
+              properties:
+                nodeType:
+                  description: |
+                    Тип узлов, которые представляет эта группа:
+                    - `Cloud` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
+                    - `Static` — статический узел, размещенный на железном сервере или виртуальной машине. Узел не управляется
+                      cloud-controller-manager'ом, даже если включен один из облачных провайдеров;
+                    - `Hybrid` — статический узел (созданный вручную или любыми внешними инструментами), размещенный в том же облаке, с
+                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
+                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
+                      данным, полученным от облака; при удалении узла из облака соответствующий ему объект `Node` будет удален в Kubernetes.
+                kubernetesVersion:
+                  description: |
+                    Желаемая минорная версия Kubernetes.
+
+                    По умолчанию соответствует глобально выбранной для кластера версии (см. документацию по установке) или, если таковая не определена, текущей версии `control plane`.
+                cri:
+                  description: |
+                    Параметры container runtime.
+                  properties:
+                    type:
+                    description: |
+                        Тип container runtime.
+
+                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
+                    containerd:
+                      description: |
+                        Параметры работы containerd.
+
+                        При настройке этих параметров `cri.type` должен быть `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                cloudInstances:
+                  description: |
+                    Параметры заказа облачных виртуальных машин.
+
+                    > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
+                  properties:
+                    zones:
+                      description: |
+                        Переопределение перечня зон, в которых создаются инстансы.
+
+                        Значение по умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого региона.
+                    minPerZone:
+                      description: |
+                        Минимальное количество инстансов в зоне.
+
+                        Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
+
+                        При значении 0 для некоторых `InstanceClass` нужно задавать capacity. Более подробно можно узнать в описании нужных `InstanceClass`.
+                    maxPerZone:
+                      description: |
+                        Максимальное количество инстансов в зоне.
+
+                        Проставляется как верхняя граница в `cluster-autoscaler`.
+                    maxUnavailablePerZone:
+                      description: |
+                        Недоступное количество инстансов при RollingUpdate'е.
+                    maxSurgePerZone:
+                      description: |
+                        Количество одновременно создаваемых инстансов при scale-up.
+                    standby:
+                      description: |
+                        Количество резервных (*подогретых*) узлов в этой `NodeGroup` во всех зонах.
+
+                        Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster autoscaler'у не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
+
+                        Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Если указан процент, абсолютное значение рассчитывается исходя из процента от максимального количества узлов (параметр `maxPerZone`), округленного в меньшую сторону, но не менее одного.
+                    standbyHolder:
+                      description: |
+                        Объем резервируемых ресурсов.
+
+                        Используется для определения необходимости заказа резервных узлов.
+                      properties:
+                        notHeldResources:
+                          deprecated: true
+                          description: |
+                            Резервируемые ресурсы.
+                          properties:
+                            cpu:
+                              description: |
+                                Количество CPU.
+
+                                Значение может быть абсолютным (например, `1`) или в *millicore-формате* (например, `1500m`).
+                            memory:
+                              description: |
+                                Количество памяти.
+
+                                Значение может быть абсолютным в байтах (например, `128974848`) или в Kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
+                    classReference:
+                      description: |
+                        Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
+                      properties:
+                        kind:
+                          description: |
+                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        name:
+                          description: |
+                            Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                nodeTemplate:
+                  description: |
+                    Настройки `Node`-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+                  properties:
+                    labels:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    annotations:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    taints:
+                      description: |
+                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                        > Доступны только поля `effect`, `key`, `value`.
+                static:
+                  description: |
+                    Параметры статического узла.
+                  properties:
+                    internalNetworkCIDRs:
+                      description: |
+                        CIDR подсети.
+                chaos:
+                  description: |
+                    Настройки Chaos Monkey.
+                  properties:
+                    mode:
+                      description: |
+                        Режим работы Chaos Monkey:
+                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
+                        - `Disabled` — не трогает данную NodeGroup.
+                    period:
+                      description: |
+                        Интервал времени срабатывания Chaos Monkey.
+
+                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+                operatingSystem:
+                  description: |
+                    Параметры операционной системы.
+                  properties:
+                    manageKernel:
+                      description: |
+                        Этот параметр не используется. Раньше он включал автоматическое управление ядром операционной системы.
+                disruptions:
+                  description: |
+                    Параметры обновлений, приводящих к возможному простою.
+                  properties:
+                    approvalMode:
+                      description: |
+                        Режим выдачи разрешения на disruptive-обновление (обновление, требующее прерывания работы узла):
+                        - `Manual` — отключить автоматическую выдачу разрешений на disruptive-обновление. Если потребуется disruptive-обновление, загорится специальный алерт. **Внимание!** Для группы узлов `master` режим выдачи разрешения всегда должен быть `Manual`, чтобы избежать проблем при drain'е узла.
+                        - `Automatic` — автоматически выдавать разрешения на disruptive-обновление.
+                        - `RollingUpdate` — в этом режиме будет создан **новый** узел с обновленными настройками, а старый узел будет удален. Разрешено только для облачных узлов.
+
+                        Когда не используется режим `RollingUpdate`, при обновлении узел освобождается от нагрузки (drain), после чего обновляется (перезагружается) и вводится в работу. Обратите внимание, что в этом случае в кластере должно быть место для размещения нагрузки на время, пока обновляемый узел недоступен. В режиме `RollingUpdate` узел **заменяется** на обновленный, то есть на время обновления в кластере появляется дополнительный узел. В облачной инфраструктуре режим `RollingUpdate` удобен, например, если в кластере нет ресурсов для временного размещения нагрузки с обновляемого узла.
+                    automatic:
+                      description: |
+                        Дополнительные параметры для режима `Automatic`.
+                      properties:
+                        drainBeforeApproval:
+                          description: |
+                            Выгон (draining) подов с узла перед выдачей разрешения на disruption.
+
+                            **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
+                            - для nodeGroup `master` с единственным узлом;
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                        windows:
+                          description: |
+                            Список окон disruption-обновлений узлов.
+                          items:
+                            properties:
+                              from:
+                                description: |
+                                  Время начала окна обновления (в часовом поясе UTC).
+                              to:
+                                description: |
+                                  Время окончания окна обновления (в часовом поясе UTC).
+                              days:
+                                description: |
+                                  Дни недели, в которые применяется окно обновлений.
+                                items:
+                                  description: День недели.
+                docker:
+                  description: |
+                    Параметры настройки Docker.
+
+                    При настройке этих параметров `cri.type` должен быть `Docker`.
+
+                    > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+                  properties:
+                    maxConcurrentDownloads:
+                      description: |
+                        Максимальное количество потоков одновременного скачивания Docker-образов.
+                    manage:
+                      description: |
+                        Автоматическое управление версией и параметрами Docker.
+                kubelet:
+                  description: |
+                    Параметры настройки kubelet.
+                  properties:
+                    maxPods:
+                      description: |
+                        Максимальное количество подов на узлах данной `NodeGroup`.
+                    rootDir:
+                      description: |
+                        Путь к каталогу для файлов kubelet (volume mounts и т. д.).
+                    containerLogMaxSize:
+                      description: |
+                        Максимальный размер файла журнала до того, как он будет ротирован.
+
+                        Внимание! Параметр не влияет на работу, если тип CRI — `Docker`.
+
+                        > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+                    containerLogMaxFiles:
+                      description: |
+                        Максимальное количество файлов журналов с учетом ротации.
+
+                        > **Внимание!** Параметр не влияет на работу, если тип CRI — `Docker`.
+
+                        > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает runtime-параметры группы узлов.
+          properties:
+            spec:
+              properties:
+                nodeType:
+                  description: |
+                    Тип узлов, которые представляет эта группа:
+                    - `Cloud` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
+                    - `Static` — статический узел, размещенный на железном сервере или виртуальной машине. Узел не управляется
+                      cloud-controller-manager'ом, даже если включен один из облачных провайдеров;
+                    - `Hybrid` — статический узел (созданный вручную или любыми внешними инструментами), размещенный в том же облаке, с
+                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
+                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
+                      данным, полученным от облака; при удалении узла из облака соответствующий ему объект `Node` будет удален в Kubernetes.
+                cri:
+                  description: |
+                    Параметры container runtime.
+                  properties:
+                    type:
+                      description: |
+                        Тип container runtime.
+
+                        Если не указан, используется значение параметра `defaultCRI` общих параметров кластера (ClusterConfiguration).
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
+                    containerd:
+                      description: |
+                        Параметры работы containerd.
+
+                        При настройке этих параметров `cri.type` должен быть `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                    docker:
+                      description: |
+                        Параметры настройки Docker.
+
+                        > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество потоков одновременного скачивания Docker-образов.
+                        manage:
+                          description: |
+                            Автоматическое управление версией и параметрами Docker.
+                    notManaged:
+                      type: object
+                      description: Настройки для CRI, установленных на узлах вручную.
+                      properties:
+                        criSocketPath:
+                          type: string
+                          description: |
+                            Путь к сокету CRI.
+                cloudInstances:
+                  description: |
+                    Параметры заказа облачных виртуальных машин.
+
+                    > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
+                  properties:
+                    zones:
+                      description: |
+                        Переопределение перечня зон, в которых создаются инстансы.
+
+                        Значение по умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого региона.
+                    minPerZone:
+                      description: |
+                        Минимальное количество инстансов в зоне.
+
+                        Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
+
+                        При значении 0 для некоторых `InstanceClass` нужно задавать capacity. Более подробно можно узнать в описании нужных `InstanceClass`.
+                    maxPerZone:
+                      description: |
+                        Максимальное количество инстансов в зоне.
+
+                        Проставляется как верхняя граница в cluster-autoscaler.
+                    maxUnavailablePerZone:
+                      description: |
+                        Недоступное количество инстансов при RollingUpdate'е.
+                    maxSurgePerZone:
+                      description: |
+                        Количество одновременно создаваемых инстансов при scale-up.
+                    standby:
+                      description: |
+                        Количество резервных (*подогретых*) узлов в этой `NodeGroup` во всех зонах.
+
+                        Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster autoscaler'у не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
+
+                        Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Если указан процент, абсолютное значение рассчитывается исходя из процента от максимального количества узлов (параметр maxPerZone), округленного в меньшую сторону, но не менее одного.
+                    standbyHolder:
+                      description: |
+                        Объем резервируемых ресурсов.
+
+                        Используется для определения необходимости заказа резервных узлов.
+                      properties:
+                        notHeldResources:
+                          deprecated: true
+                          description: |
+                            Резервируемые ресурсы.
+                          properties:
+                            cpu:
+                              description: |
+                                Количество CPU.
+
+                                Значение может быть абсолютным (например, `1`) или в *millicore-формате* (например, `1500m`).
+                            memory:
+                              description: |
+                                Количество памяти.
+
+                                Значение может быть абсолютным в байтах (например, `128974848`) или в Kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
+                    classReference:
+                      description: |
+                        Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
+                      properties:
+                        kind:
+                          description: |
+                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        name:
+                          description: |
+                            Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                nodeTemplate:
+                  description: |
+                    Настройки `Node`-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+                  properties:
+                    labels:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    annotations:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    taints:
+                      description: |
+                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                        > Доступны только поля `effect`, `key`, `value`.
+                chaos:
+                  description: |
+                    Настройки Chaos Monkey.
+                  properties:
+                    mode:
+                      description: |
+                        Режим работы Chaos Monkey:
+                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
+                        - `Disabled` — не трогает данную NodeGroup.
+                    period:
+                      description: |
+                        Интервал времени срабатывания Chaos Monkey.
+
+                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+                operatingSystem:
+                  description: |
+                    Параметры операционной системы.
+                  properties:
+                    manageKernel:
+                      description: |
+                        Этот параметр не используется. Раньше он включал автоматическое управление ядром операционной системы.
+                disruptions:
+                  description: |
+                    Параметры обновлений, приводящих к возможному простою.
+                  properties:
+                    approvalMode:
+                      description: |
+                        Режим выдачи разрешения на disruptive-обновление (обновление, требующее прерывание работы узла):
+                        - `Manual` — отключить автоматическую выдачу разрешений на disruptive-обновление. Если потребуется disruptive-обновление, загорится специальный алерт. **Внимание!** Для группы узлов `master` режим выдачи разрешения всегда должен быть `Manual`, чтобы избежать проблем при drain'е узла.
+                        - `Automatic` — автоматически выдавать разрешения на disruptive-обновление.
+                        - `RollingUpdate` — в этом режиме будет создан **новый** узел с обновленными настройками, а старый узел будет удален. Разрешено только для облачных узлов.
+
+                        Когда не используется режим `RollingUpdate`, при обновлении узел освобождается от нагрузки (drain), после чего обновляется (перезагружается) и вводится в работу. Обратите внимание, что в этом случае в кластере должно быть место для размещения нагрузки на время, пока обновляемый узел недоступен. В режиме `RollingUpdate` узел **заменяется** на обновленный, то есть на время обновления в кластере появляется дополнительный узел. В облачной инфраструктуре режим `RollingUpdate` удобен, например, если в кластере нет ресурсов для временного размещения нагрузки с обновляемого узла.
+                    automatic:
+                      description: |
+                        Дополнительные параметры для режима `Automatic`.
+                      properties:
+                        drainBeforeApproval:
+                          description: |
+                            Выгон (draining) подов с узла перед выдачей разрешения на disruption.
+
+                            **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
+                            - для nodeGroup `master` с единственным узлом;
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                        windows:
+                          description: |
+                            Список окон disruption-обновлений узлов.
+                          items:
+                            properties:
+                              from:
+                                description: |
+                                  Время начала окна обновления (в часовом поясе UTC).
+                              to:
+                                description: |
+                                  Время окончания окна обновления (в часовом поясе UTC).
+                              days:
+                                description: |
+                                  Дни недели, в которые применяется окно обновлений.
+                                items:
+                                  description: День недели.
+                kubelet:
+                  description: |
+                    Параметры настройки kubelet.
+                  properties:
+                    maxPods:
+                      description: |
+                        Максимальное количество подов на узлах данной `NodeGroup`.
+                    rootDir:
+                      description: |
+                        Путь к каталогу для файлов kubelet (volume mounts и т. д.).
+                    containerLogMaxSize:
+                      description: |
+                        Максимальный размер файла журнала до того, как он будет ротирован.
+
+                        Внимание! Параметр не влияет на работу, если тип CRI — `Docker`.
+
+                        > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+                    containerLogMaxFiles:
+                      description: |
+                        Максимальное количество файлов журналов с учетом ротации.
+
+                        > **Внимание!** Параметр не влияет на работу, если тип CRI — `Docker`.
+
+                        > **Внимание!** `Docker` считается **устаревшим**, не используйте его.
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает runtime-параметры группы узлов.
+          properties:
+            spec:
+              properties:
+                nodeType:
+                  description: |
+                    Тип узлов, которые представляет эта группа:
+                    - `CloudEphemeral` — узлы для этой группы будут автоматически создаваться (и удаляться) в настроенном облачном провайдере;
+                    - `CloudPermanent` — узлы этой группы берутся из `ProviderClusterConfiguration` и создаются/удаляются через dhctl;
+                    - `CloudStatic` — узел, созданный *вручную или любыми внешними инструментами*, размещенный в том же облаке, с
+                      которым настроена интеграция у одного из облачных провайдеров. На таком узле работает CSI и такой узел
+                      управляется cloud-controller-manager'ом: объект `Node` автоматически обогащается информацией о зоне и регионе по
+                      данным, полученным от облака; при удалении узла из облака, соответствующий ему объект `Node` будет
+                      удален в Kubernetes;
+                    - `Static` — статический узел, размещенный на физическом сервере или виртуальной машине. Узел не управляется
+                      cloud-controller-manager'ом, даже если включен один из облачных провайдеров.
+                  type: string
+                  enum:
+                    - CloudEphemeral
+                    - CloudPermanent
+                    - CloudStatic
+                    - Static
+                nodeDrainTimeoutSecond:
+                  description: |
+                    Максимальная продолжительность периода (в секундах), в течение которого контроллер будет пытаться переселить поды на новую машину в процессе выполнения drain на узле.
+                gpu:
+                  description: |
+                    Параметры GPU.
+                  properties:
+                    sharing:
+                      description: |
+                        Стратегия разделения GPU:
+                        - `Exclusive` — без разделения (каждый GPU полностью выделяется одному поду).
+                        - `TimeSlicing` — разделение GPU по времени (несколько подов могут одновременно использовать один GPU, поочередно получая доступ к его вычислительным ресурсам).
+                        - `MIG` — разделение одного GPU на несколько экземпляров (технология NVIDIA MIG, при наличии поддержки).
+                    mig:
+                      description: |
+                        Параметры для стратегии `MIG`.
+                      properties:
+                        partedConfig:
+                          description: |
+                            Имя используемой конфигурация MIG.
+                    timeSlicing:
+                      description: |
+                        Параметры для стратегии `TimeSlicing`.
+                      properties:
+                        partitionCount:
+                          description: |
+                            Количество разделов (виртуальных GPU) на один физический GPU.
+                    exclusive:
+                      description: |
+                        Режим без разделения GPU.
+                cri:
+                  type: object
+                  description: |
+                    Параметры container runtime.
+                  properties:
+                    type:
+                      description: |
+                        Тип container runtime.
+
+                        Если не указан, используется значение параметра `defaultCRI` ClusterConfiguration.
+
+                        > **Внимание.** Поддержка Docker считается устаревшей.
+                    containerd:
+                      description: |
+                        Параметры работы containerd.
+
+                        При настройке этих параметров `cri.type` должен быть `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                    containerdV2:
+                      description: |
+                        Параметры работы containerd V2.
+
+                        При настройке этих параметров `cri.type` должен быть `ContainerdV2`.
+
+                        При использовании `ContainerdV2` будет использоваться `CgroupsV2` (обеспечивает улучшенную безопасность и управление ресурсами).
+
+                        Для использования `ContainerdV2` в качестве container runtime узлы в группе должны соответствовать следующим требованиям:
+
+                        - поддержка `CgroupsV2`;
+                        - ядро Linux версии `5.8` и новее;
+                        - systemd версии `244` и новее;
+                        - поддержка модуля ядра `erofs`.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество параллельных потоков загрузки для каждой операции pull.
+                    docker:
+                      type: object
+                      description: |
+                        Параметры настройки Docker.
+                      properties:
+                        maxConcurrentDownloads:
+                          description: |
+                            Максимальное количество потоков одновременного скачивания Docker-образов.
+                        manage:
+                          description: |
+                            Автоматическое управление версией и параметрами Docker.
+                    notManaged:
+                      description: Настройки для CRI, установленных на узлах вручную.
+                      properties:
+                        criSocketPath:
+                          description: Путь к сокету CRI.
+                staticInstances:
+                  description: |
+                    Параметры настройки машин статических узлов кластера.
+                  properties:
+                    labelSelector:
+                      description: |
+                        Настройка фильтра меток (label) по ресурсам `staticInstances`.
+
+                        Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
+
+                         Пустое значение `labelSelector` соответствует всем объектам. Нулевое — никаким.
+                      properties:
+                        matchExpressions:
+                          description: |
+                            Список фильтров на основе выражений.
+
+                            Итоговый результат — результат пересечения множеств, определяемых всеми фильтрами в списке (операция `И`).
+                          items:
+                            description: Требования к селектору лейблов — он должен
+                              содержать значения, ключ и оператор, связывающий
+                              ключ и значения.
+                            oneOf:
+                              - properties:
+                                  operator:
+                            properties:
+                              key:
+                                description: Имя метки.
+                              operator:
+                                description: Оператор сравнения.
+                              values:
+                                description: Значение метки.
+                        matchLabels:
+                          description: |
+                            Фильтр на основе совпадения/несовпадения меток.
+                    count:
+                      description: |
+                        Количество узлов `staticInstances`, которые нужно автоматически настроить и включить в кластер. В NodeGroup с типами Static и CloudStatic вы можете явно указать количество узлов в этом параметре. Это позволяет задать ожидаемое количество узлов — DKP использует это значение для контроля состояния и автоматизации.
+                cloudInstances:
+                  description: |
+                    Параметры заказа облачных виртуальных машин.
+
+                    > **Внимание!** Допустимо использовать только совместно с `nodeType: CloudEphemeral`.
+                  properties:
+                    quickShutdown:
+                      description: Снижает время drain'а CloudEphemeral-машин до 5 минут.
+                    zones:
+                      description: |
+                        Переопределение перечня зон, в которых создаются инстансы.
+
+                        Значение по умолчанию зависит от выбранного облачного провайдера и обычно соответствует всем зонам используемого региона.
+                    minPerZone:
+                      description: |
+                        Минимальное количество инстансов в зоне.
+
+                        Проставляется в объект `MachineDeployment` и в качестве нижней границы в cluster autoscaler.
+                    maxPerZone:
+                      description: |
+                        Максимальное количество инстансов в зоне. Проставляется как верхняя граница в cluster-autoscaler.
+                    priority:
+                      description: |
+                        Приоритет группы узлов.
+
+                        При масштабировании кластера cluster autoscaler будет выбирать сначала группы узлов с установленным бОльшим приоритетом. Если существует несколько групп узлов с одинаковым приоритетом, группа будет выбрана из них случайным образом.
+
+                        Использование приоритетов может быть удобно, например, для предпочтения заказа более дешевых узлов (например, spot-инстансов) перед более дорогими.
+                    maxUnavailablePerZone:
+                      description: |
+                        Недоступное количество инстансов при RollingUpdate'е.
+                    maxSurgePerZone:
+                      description: |
+                        Количество одновременно создаваемых инстансов при scale-up.
+                    standby:
+                      description: |
+                        Количество резервных (*подогретых*) узлов в этой `NodeGroup` во всех [зонах](#nodegroup-v1-spec-cloudinstances-zones).
+
+                        Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster autoscaler'у не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
+
+                        Значение может быть абсолютным (например, `2`) или процентом желаемых узлов (например, `10%`). Если указан процент, абсолютное значение рассчитывается исходя из процента от максимального количества узлов (параметр [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone)), округленного в меньшую сторону, но не менее одного.
+                    standbyHolder:
+                      description: |
+                        Объем резервируемых ресурсов.
+
+                        Используется для определения необходимости заказа [резервных узлов](#nodegroup-v1-spec-cloudinstances-standby).
+                      properties:
+                        overprovisioningRate:
+                          description: |
+                            Процент резервируемых ресурсов, рассчитываемый от ресурсов узла в `NodeGroup`.
+                        notHeldResources:
+                          description: |
+                            Устарело: параметр больше не используется. Используйте параметр [overprovisioningRate](#nodegroup-v1-spec-cloudinstances-standbyholder-overprovisioningrate).
+
+                            Резервируемые ресурсы.
+                          properties:
+                            cpu:
+                              description: |
+                                Количество CPU.
+
+                                Значение может быть абсолютным (например, `1`) или в *millicore-формате* (например, `1500m`).
+                            memory:
+                              description: |
+                                Количество памяти.
+
+                                Значение может быть абсолютным в байтах (например, `128974848`) или в Kubernetes-формате с суффиксами: `G`, `Gi`, `M`, `Mi` (например, `750Mi`).
+                    classReference:
+                      description: |
+                        Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
+                      properties:
+                        kind:
+                          description: |
+                            Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        name:
+                          description: |
+                            Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                nodeTemplate:
+                  description: |
+                    Настройки `Node`-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+                  properties:
+                    labels:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    annotations:
+                      description: |
+                        Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    taints:
+                      description: |
+                        Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                        > Доступны только поля `effect`, `key`, `value`.
+                chaos:
+                  description: |
+                    Настройки Chaos Monkey.
+                  properties:
+                    mode:
+                      description: |
+                        Режим работы Chaos Monkey:
+                        - `DrainAndDelete` — при срабатывании делает узлу drain, затем удаляет его.
+                        - `Disabled` — не трогает данную NodeGroup.
+                    period:
+                      description: |
+                        Интервал времени срабатывания Chaos Monkey.
+
+                        Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+                operatingSystem:
+                  description: |
+                    Параметры операционной системы.
+                  properties:
+                    manageKernel:
+                      description: |
+                        Этот параметр не используется. Раньше он включал автоматическое управление ядром операционной системы.
+                disruptions:
+                  description: |
+                    Параметры обновлений, приводящих к возможному простою.
+                  properties:
+                    approvalMode:
+                      description: |
+                        Режим выдачи разрешения на disruptive-обновление (обновление, требующее прерывание работы узла):
+                        - `Manual` — отключить автоматическую выдачу разрешений на disruptive-обновление. Если потребуется disruptive-обновление, появится специальный алерт. При выборе этого режима не происходит автоматический drain узла. Если требуется drain узла, сделайте это вручную перед установкой аннотации `update.node.deckhouse.io/disruption-approved=` на ресурс `node`. **Внимание!** Для группы узлов `master` режим выдачи разрешения всегда должен быть `Manual`, чтобы избежать проблем при drain'е узла.
+                        - `Automatic` — автоматически выдавать разрешения на disruptive-обновление. При этом возможен автоматический drain узла, управляющийся настройкой [drainBeforeApproval](#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).
+                        - `RollingUpdate` — в этом режиме будет создан **новый** узел с обновленными настройками, а старый узел будет удален. Разрешено только для облачных узлов.
+
+                        Когда не используется режим `RollingUpdate`, при обновлении узел освобождается от нагрузки (drain), после чего обновляется (перезагружается) и вводится в работу. Обратите внимание, что в этом случае в кластере должно быть место для размещения нагрузки на время, пока обновляемый узел недоступен. В режиме `RollingUpdate` узел **заменяется** на обновленный, то есть на время обновления в кластере появляется дополнительный узел. В облачной инфраструктуре режим `RollingUpdate` удобен, например, если в кластере нет ресурсов для временного размещения нагрузки с обновляемого узла.
+                    automatic:
+                      description: |
+                        Дополнительные параметры для режима `Automatic`.
+                      properties:
+                        drainBeforeApproval:
+                          description: |
+                            Выгон (draining) подов с узла перед выдачей разрешения на disruption.
+
+                            **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
+                            - для nodeGroup `master` с единственным узлом;
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                        windows:
+                          description: |
+                            Список окон disruption-обновлений узлов.
+                          items:
+                            properties:
+                              from:
+                                description: |
+                                  Время начала окна обновления (в часовом поясе UTC).
+                              to:
+                                description: |
+                                  Время окончания окна обновления (в часовом поясе UTC).
+                              days:
+                                description: |
+                                  Дни недели, в которые применяется окно обновлений.
+                                items:
+                                  description: День недели.
+                    rollingUpdate:
+                      description: |
+                        Дополнительные параметры для режима `RollingUpdate`.
+                      properties:
+                        windows:
+                          description: |
+                            Список окон disruption-обновлений узлов.
+                          items:
+                            properties:
+                              from:
+                                description: |
+                                  Время начала окна обновления (в часовом поясе UTC).
+                              to:
+                                description: |
+                                  Время окончания окна обновления (в часовом поясе UTC).
+                              days:
+                                description: |
+                                  Дни недели, в которые применяется окно обновлений.
+                                items:
+                                  description: День недели.
+                kubelet:
+                  description: |
+                    Параметры настройки kubelet.
+                  properties:
+                    maxPods:
+                      description: |
+                        Максимальное количество подов на узлах данной `NodeGroup`.
+                    rootDir:
+                      description: |
+                        Путь к каталогу для файлов kubelet (volume mounts и т. д.).
+                    containerLogMaxSize:
+                      description: |
+                        Максимальный размер файла журнала до того, как он будет ротирован.
+                    containerLogMaxFiles:
+                      description: |
+                        Максимальное количество файлов журналов с учетом ротации.
+                    resourceReservation:
+                      description: |
+                        Управление резервированием ресурсов для системных служб на узле.
+
+                        Больше информации в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                      properties:
+                        mode:
+                          description: |
+                            Выбор режима резервирования системных ресурсов:
+
+                            * `Off` — отключение резервирования системных ресурсов.
+                            * `Auto` — автоматический подсчет резервирования через алгоритм, основанный на размере узла.
+                            * `Static` — указание статических значений через параметр `static`.
+
+                            Обратите внимание, что Deckhouse не использует выделенную `cgroup` для резервирования ресурсов (флаг `-system-reserved-cgroup` не используется).
+                        static:
+                          description: |
+                            Параметры резервирования ресурсов в режиме `Static`.
+                    topologyManager:
+                      description: |
+                        Управление менеджером топологии.
+
+                        Менеджер топологии позволяет планировщику Kubernetes учитывать данные о топологии ресурсов при планировании подов.
+
+                        В кластере с [NUMA](https://ru.wikipedia.org/wiki/Non-Uniform_Memory_Access)-узлами менеджер топологии может повысить производительность приложения, размещая контейнеры пода на том NUMA-узле, который эффективней работает с ресурсами.
+
+                        Дополнительная информация в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                      properties:
+                        enabled:
+                          description: |
+                            Включение использования менеджера топологий.
+                        scope:
+                          description: |
+                            Определение гранулярности выравнивания ресурсов:
+                            - `Container`. Вычисление предпочтительных ресурсов выполняется для контейнера. При вычислении не учитывается, что несколько контейнеров относятся к одному поду.
+                            - `Pod`. Вычисление предпочтительных ресурсов выполняется для пода. Все контейнеры пода рассматриваются как единое целое при вычислении.
+                        policy:
+                          description: |
+                            Определение политики выравнивания ресурсов с учетом топологии узлов при планировании пода.
+
+                            Поддерживаются четыре политики:
+                            - `None` — выравнивание ресурсов не выполняется (используется по умолчанию).
+                            - `BestEffort` — для каждого контейнера определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под будет запланирован на узел без учета данных менеджера топологии, а уже запущенный под продолжит работу.
+                            - `Restricted` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если предпочтительные узлы для планирования пода отсутствуют, то новый под не будет запланирован на узел, а уже запущенный под будет остановлен.
+                            - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
+
+                            Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                update:
+                  properties:
+                    maxConcurrent:
+                      description: |
+                        Максимальное количество одновременно обновляемых узлов.
+
+                        Можно указать число узлов или процент от общего количества узлов в данной группе.
+                fencing:
+                  description: |
+                    Включить fencing для этой группы.
+                  properties:
+                    mode:
+                      description: |
+                        Fencing поддерживает единственный режим работы: `Watchdog`. В этом режиме используется модуль ядра watchdog (сторожевой таймер).
+
+                        Реализация Watchdog включает в себя следующие компоненты:
+
+                        - Fencing-agent — DaemonSet, который разворачивается на определенной группе узлов (NodeGroup).
+
+                          После запуска агент активирует Watchdog и устанавливает специальную метку `node-manager.deckhouse.io/fencing-enabled` на узле, где он функционирует. Агент регулярно проверяет доступность Kubernetes API. Если API доступен, агент отправляет сигнал в Watchdog, что сбрасывает сторожевой таймер. Также агент отслеживает специальные метки обслуживания на узле и, в зависимости от их наличия, включает или отключает Watchdog.
+
+                          В качестве Watchdog используется модуль ядра softdog с параметрами `soft_margin=60` и `soft_panic=1`. Это означает, что время таймаута сторожевого таймера составляет 60 секунд. По истечении этого времени происходит kernel-panic, и узел остается в этом состоянии до тех пор, пока пользователь не выполнит его перезагрузку.
+
+                        - Fencing-controller — контроллер, который отслеживает все узлы с установленной меткой `node-manager.deckhouse.io/fencing-enabled`. Если какой-либо из узлов становится недоступным на протяжении более 60 секунд, контроллер удаляет все поды с этого узла и затем удаляет сам узел.

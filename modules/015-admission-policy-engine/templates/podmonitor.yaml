@@ -1,0 +1,70 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: gatekeeper-controller
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+  selector:
+    matchLabels:
+      app: gatekeeper
+      control-plane: controller-manager
+  namespaceSelector:
+    matchNames:
+    - d8-{{ .Chart.Name }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: gatekeeper-audit
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+    - port: https-metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+    - port: https-metrics
+      scheme: https
+      path: /exporter-metrics
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
+      honorLabels: true
+      relabelings:
+        - targetLabel: tier
+          replacement: cluster
+  selector:
+    matchLabels:
+      app: gatekeeper
+      control-plane: audit-controller
+  namespaceSelector:
+    matchNames:
+      - d8-{{ .Chart.Name }}
+{{- end }}

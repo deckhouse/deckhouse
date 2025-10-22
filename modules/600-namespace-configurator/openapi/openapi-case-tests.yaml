@@ -1,0 +1,32 @@
+positive:
+  configValues:
+  - configurations:
+    - annotations:
+        test: "true"
+      labels:
+        foo: bar
+      includeNames:
+      - "prod-.*"
+      - "infra-.*"
+      excludeNames:
+      - "infra-test"
+  - configurations:
+    - annotations:
+        test: null
+      labels:
+        foo: null
+      includeNames:
+      - "test1"
+negative:
+  configValues:
+  - configurations:
+    - []
+  - configurations:
+    - annotations:
+      - "test=true"
+      includeNames:
+      - "abc"
+  - configurations:
+    - annotations:
+      - "test": "true"
+      includeNames: []

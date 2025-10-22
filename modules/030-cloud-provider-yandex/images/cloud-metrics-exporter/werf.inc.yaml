@@ -1,0 +1,54 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/exporter
+  to: /exporter
+  after: setup
+imageSpec:
+  config:
+    entrypoint: [ "/exporter"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/030-{{ .ModuleName }}/images/{{ .ImageName }}
+    to: /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - hack
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+        - "*.go"
+shell:
+  install:
+    - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o exporter .
+  - chown 64535:64535 /src/exporter
+  - chmod 0755 /src/exporter

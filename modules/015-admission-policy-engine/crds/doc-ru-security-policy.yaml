@@ -1,0 +1,265 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает политику безопасности для кластера.
+
+            Каждый custom resource `SecurityPolicy` задает правила для объектов в кластере.
+          properties:
+            spec:
+              properties:
+                enforcementAction:
+                  description: |
+                    Реакция на нарушение политики:
+                    - `Deny` — запрет;
+                    - `Dryrun` — событие без действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana в Dashboard `Security/Admission policy engine`;
+                    - `Warn` — событие без действия, аналогичное `Dryrun`. Содержит информацию об ограничении (constraint), которое вызвало бы запрет, если бы было использовано действие `Deny`.
+                policies:
+                  type: object
+                  description: Набор политик, условиям которых должны соответствовать поды и контейнеры.
+                  properties:
+                    allowedHostPaths:
+                      description: Список префиксов путей, разрешенных для монтирования в контейнерах. Если список пуст, то можно использовать любой путь.
+                      items:
+                        properties:
+                          pathPrefix:
+                            description: |
+                              Префикс определяет, какие директории хоста доступны для монтирования в контейнерах.
+
+                              Использование маски `*` недопустимо. Завершающие слеши отбрасываются при сопоставлении пути и префикса.
+
+                              Например, префикс `/foo` разрешает пути `/foo`, `/foo/` и `/foo/bar`. Напротив, пути `/food` или `/etc/foo` будут недоступны.
+                          readOnly:
+                            description: |
+                              Проверяет, что все `volumeMount`, попадающие в префикс (с параметром [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix)), монтируются только на чтение (`readOnly: true`).
+                    allowHostIPC:
+                      description: Разрешает контейнерам доступ к IPC-пространству имен хоста.
+                    allowHostPID:
+                      description: Разрешает контейнерам доступ к PID-пространству имен хоста.
+                    allowHostNetwork:
+                      description: Разрешает контейнерам доступ к Network-пространству имен хоста.
+                    allowRbacWildcards:
+                      description: |
+                        Разрешает использование wildcard (`*`) в ресурсах Role и RoleBinding (namespace scope).
+
+                        Ресурсы ClusterRole и ClusterRoleBinding политикой SecurityPolicy не валидируются.
+
+                        **По умолчанию** (если значение не указано) — `true`. Это означает, что при отсутствии данного поля или его явного указания, использование wildcard разрешено. Если вы хотите запретить использование wildcard, задайте для данного параметра значение `false`.
+                    allowedHostPorts:
+                      description: Cписок диапазонов портов хоста (`hostPort`), разрешенных для использования в контейнерах.
+                      items:
+                        properties:
+                          min:
+                            description: Минимальное значение диапазона.
+                          max:
+                            description: Максимальное значение диапазона.
+                    allowPrivileged:
+                      description: |
+                        Разрешает запускать контейнеры в привилегированном режиме.
+
+                        **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
+                    allowPrivilegeEscalation:
+                      description: |
+                        Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
+                        
+                        **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
+                    allowedProcMount:
+                      description: Разрешает монтирование `/proc` для контейнеров.
+                    allowedCapabilities:
+                      description: |
+                        Список привилегий (linux capabilities), доступных контейнерам.
+
+                        Используйте `ALL`, чтобы разрешить все привилегии.
+                      items:
+                        description: Привилегия (linux capability).
+                    requiredDropCapabilities:
+                      description: |
+                        Список привилегий (linux capabilities), обязательных к исключению.
+
+                        Используйте `ALL`, чтобы исключить все привилегии.
+                      items:
+                        description: Привилегия (linux capability).
+                    allowedAppArmor:
+                      type: array
+                      description: |
+                        Список разрешенных для контейнеров профилей AppArmor.
+                      example: ["runtime/default", "unconfined"]
+                      items:
+                        type: string
+                        description: Профиль AppArmor.
+                    allowedFlexVolumes:
+                      description: Список разрешенных драйверов Flex Volumes.
+                      items:
+                        properties:
+                          driver:
+                            description: Название драйвера.
+                    allowedUnsafeSysctls:
+                      description: |
+                        Список разрешенных небезопасных ключей sysctl.
+
+                        Используйте `*`, чтобы разрешить все ключи.
+                    forbiddenSysctls:
+                      description: |
+                        Список запрещенных ключей sysctl.
+
+                        Имеет преимущество перед параметром [allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls).
+                    fsGroup:
+                      description: Задает группы, разрешенные для использования как `fsGroup` в параметре `securityContext`.
+                      properties:
+                        rule:
+                          description: Правило определения разрешенных значений `fsGroup`.
+                        ranges:
+                          description: Список диапазонов идентификаторов для `fsGroup`, разрешенных в режиме `MustRunAs`.
+                          items:
+                            properties:
+                              min:
+                                description: Минимальное значение диапазона.
+                              max:
+                                description: Максимальное значение диапазона.
+                    runAsUser:
+                      description: Задает разрешенные в параметре `securityContext` идентификаторы пользователей (`runAsUser`).
+                      properties:
+                        rule:
+                          description: Правило определения разрешенных значений `runAsUser`.
+                        ranges:
+                          description: Список диапазонов идентификаторов пользователей для `runAsUser`, разрешенных в режиме `MustRunAs`.
+                          items:
+                            properties:
+                              min:
+                                description: Минимальное значение диапазона.
+                              max:
+                                description: Максимальное значение диапазона.
+                    runAsGroup:
+                      description: Задает основные группы (`runAsGroup`), разрешенные для использования в параметре `securityContext`.
+                      properties:
+                        rule:
+                          description: Правило определения разрешенных значений `runAsGroup`.
+                        ranges:
+                          description: Список диапазонов идентификаторов групп для `runAsGroup`, разрешенных в режиме `MustRunAs`.
+                          items:
+                            properties:
+                              min:
+                                description: Минимальное значение диапазона.
+                              max:
+                                description: Максимальное значение диапазона.
+                    supplementalGroups:
+                      description: Задает дополнительные группы (`supplementalGroups`), разрешенные для использования в параметре `securityContext`.
+                      properties:
+                        rule:
+                          description: Правило определения разрешенных значений `supplementalGroups`.
+                        ranges:
+                          description: Список диапазонов идентификаторов групп для `supplementalGroups`, разрешенных в режиме `MustRunAs`.
+                          items:
+                            properties:
+                              min:
+                                description: Минимальное значение диапазона.
+                              max:
+                                description: Максимальное значение диапазона.
+                    readOnlyRootFilesystem:
+                      description: |
+                        Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в [документации Kubernetes](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core).
+                    automountServiceAccountToken:
+                      description: Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
+                    seccompProfiles:
+                      description: Задает список разрешенных seccomp-профилей для аннотаций подов и контейнеров.
+                      properties:
+                        allowedProfiles:
+                          description: |
+                            Список разрешенных seccomp-профилей для подов и контейнеров.
+
+                            Поддерживаются оба формата:
+                            - Через аннотации: `runtime/default`, `docker/default`, `nconfined`, `localhost/some-profile.json`.
+                              `localhost/*` — разрешает любые локальные профили.
+                            - Через securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              Для Localhost укажите разрешённые профили в параметре `allowedLocalhostFiles`.
+
+                            Типы профилей:
+                            - `Unconfined` — без ограничений (небезопасно).
+                            - `RuntimeDefault` — стандартный профиль среды выполнения (Docker, CRI-O).
+                            - `Localhost` — пользовательский профиль на узле (гибко и точно под приложение).
+
+                            Использование `*` разрешает все профили. Не обязательно указывать оба формата — они автоматически сопоставляются.
+                        allowedLocalhostFiles:
+                          description: |
+                            Определяет локальные профили seccomp (в формате JSON), разрешенные после указания `Localhost` в параметре `allowedProfiles`.
+
+                            Пустой список запрещает использование локальных профилей.
+                    seLinux:
+                      description: Определяет разрешенные для использования в параметре `secutiryContext` значения SELinux-меток.
+                      items:
+                        properties:
+                          level:
+                            description: Значения для SELinux level-меток.
+                          role:
+                            description: Значения для SELinux role-меток.
+                          type:
+                            description: Значения для SELinux type-меток.
+                          user:
+                            description: Значения для SELinux user-меток.
+                    allowedClusterRoles:
+                      description: "Список разрешенных ролей кластера для связывания с пользователями."
+                    allowedVolumes:
+                      description: Список разрешенных volume-плагинов.
+                    allowedServiceTypes:
+                      description: Список разрешенных типов сервисов.
+                    blockWildcardDomains:
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.                      
+                    verifyImageSignatures:
+                      description: |
+                        Список политик проверки подписи образов контейнеров.
+
+                        Образы контейнеров должны быть подписаны с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          dockerCfg:
+                            description: |
+                              Строка в формате Base64 с данными аутентификации в хранилище образов контейнеров.
+
+                              Не указывается, если образы контейнеров доступны анонимно.
+                          publicKeys:
+                            description: |
+                              Список публичных ключей Cosign.
+                          ca:
+                            description: |
+                              Пользовательский `certificate authority` для подключения к хранилищу образов контейнеров.
+                          reference:
+                            description: |
+                              Адрес или шаблон адресов образов контейнеров.
+
+                              Если содержит символ `*`, то считается шаблоном адресов образов контейнеров. Символ `*` может быть только один и только в конце. Например, для значения `company.registry.com/*` с указанными ключами и параметрами доступа будут проверяться любые образы контейнеров из хранилища `company.registry.com`.
+
+                              Если не содержит символа `*`, то считается абсолютным адресом образа контейнера. Например, для значения `company.registry.com/nginx` с указанными ключами и параметрами доступа будет проверяться только образ nginx из хранилища `company.registry.com`.
+                match:
+                  description: Условия фильтрации контейнеров. С помощью условий можно выбрать группу подов или контейнеров, к которой будут применены политики.
+                  properties:
+                    namespaceSelector:
+                      description: Указывает селектор пространства имен для фильтрации объектов.
+                      properties:
+                        matchNames:
+                          description: Выбирает пространства имен, соответствующие списку. Допускается использование шаблонов (glob patterns).
+                        excludeNames:
+                          description: Выбирает все пространства имен, которых нет в списке. Допускается использование шаблонов (glob patterns).
+                        labelSelector:
+                          description: |
+                            Указывает селектор меток для фильтрации пространств имен.
+
+                            Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          properties:
+                            matchLabels:
+                              description: Список лейблов, которые должно иметь пространство имен.
+                            matchExpressions:
+                              description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для пространств имен.
+                    labelSelector:
+                      description: |
+                        Указывает селектор лейблов для фильтрации подов.
+
+                        Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      properties:
+                        matchLabels:
+                          description: Список лейблов, которые должен иметь под.
+                        matchExpressions:
+                          description: Список [условий](https://kubernetes.io/ru/docs/concepts/overview/working-with-objects/labels/#ресурсы-поддерживающие-условия-набора) лейблов для подов.

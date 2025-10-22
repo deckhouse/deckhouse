@@ -1,0 +1,38 @@
+Index: main.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.go b/main.go
+--- a/main.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
++++ b/main.go	(revision fc5e64971dc4a67af488cd00848b1be8b75c457c)
+@@ -142,6 +142,7 @@
+ 		},
+ 	}
+ 	configFileName := ""
++	livezPath := ""
+
+ 	// Add klog flags
+ 	klogFlags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+@@ -160,6 +161,7 @@
+ 	flagset.StringSliceVar(&cfg.allowPaths, "allow-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy matches the incoming request. If the request doesn't match, kube-rbac-proxy responds with a 404 status code. If omitted, the incoming request path isn't checked. Cannot be used with --ignore-paths.")
+ 	flagset.StringSliceVar(&cfg.ignorePaths, "ignore-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy will proxy without performing an authentication or authorization check. Cannot be used with --allow-paths.")
+ 	flagset.DurationVar(&cfg.staleCacheTTL, "stale-cache-interval", 0*time.Minute, "The interval to keep auth request review results for in case of unavailability of kube-apiserver.")
++	flagset.StringVar(&livezPath, "livez-path", "", "Path for liveness probes.")
+
+ 	// TLS flags
+ 	flagset.StringVar(&cfg.tls.certFile, "tls-cert-file", "", "File containing the default x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert)")
+@@ -264,6 +266,13 @@
+ 	klog.Infof("Ignored paths: %v", cfg.ignorePaths)
+
+ 	mux := http.NewServeMux()
++	if livezPath != "" {
++		mux.Handle(livezPath, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
++			klog.V(10).Infof("Liveness probe URL requested: %s", req.URL.Path)
++			_, _ = w.Write([]byte("OK"))
++		}))
++		klog.Infof("Added liveness probe: path=%s", livezPath)
++	}
+ 	for _, upstreamConfig := range upstreams {
+ 		upstreamURL, err := url.Parse(upstreamConfig.Upstream)
+ 		if err != nil {

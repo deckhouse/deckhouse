@@ -1,0 +1,135 @@
+{!{ define "unit_run_args" }!}
+# <template: unit_run_args>
+args: 'make tests-controller tests-modules'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+# <template: unit_run_args>
+{!{- end -}!}
+
+{!{ define "dhctl_run_args" }!}
+# <template: dhctl_run_args>
+args: 'make ci'
+docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
+# </template: dhctl_run_args>
+{!{- end -}!}
+
+{!{ define "golangci_lint_run_args" }!}
+# <template: golangci_lint_run_args>
+args: 'sh -c "go generate tools/register.go && golangci-lint version && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+# </template: golangci_lint_run_args>
+{!{- end -}!}
+
+{!{ define "openapi_test_cases_run_args" }!}
+# <template: openapi_test_cases_run_args>
+args: 'ginkgo -vet=off ./testing/openapi_cases/'
+docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+# </template: openapi_test_cases_run_args>
+{!{- end -}!}
+
+{!{ define "validators_run_args" }!}
+# <template: validators_run_args>
+args: 'go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
+docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+# </template: validators_run_args>
+{!{- end -}!}
+
+{!{ define "tests_template" }!}
+# <template: tests_template>
+{!{- $ctx       := index . 0 }!}
+{!{- $args_name := index . 1 }!}
+{!{- $build_job := index . 2 }!}
+{!{- $args_tmpl := printf "%s_run_args" $args_name }!}
+{!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
+{!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run tests
+    env:
+      TESTS_IMAGE_NAME: ${{needs.{!{$build_job}!}.outputs.tests_image_name}}
+    run: |
+      if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+        echo "TESTS_IMAGE_NAME is empty"
+        exit 1
+      fi
+
+      # Decode image name from gzip+base64.
+      TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
+
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      echo "⚓️ 🏎 [$(date -u)] Run tests..."
+      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
+# </template: tests_template>
+{!{- end -}!}
+
+{!{/* TODO change args in tests_template and merge two templates */}!}
+{!{ define "tests_before_build_template" }!}
+# <template: tests_before_build_template>
+{!{- $ctx       := index . 0 }!}
+{!{- $args_name := index . 1 }!}
+{!{- $args_tmpl := printf "%s_run_args" $args_name }!}
+{!{- $default   := dict "image" "tests" "args" "echo no args" "docker_options" "" }!}
+{!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run tests
+    env:
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "base_images").REGISTRY_PATH (index (datasource "base_images") "builder/golang-bullseye") | quote }!}
+    run: |
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      echo "⚓️ 🏎 [$(date -u)] Run tests..."
+      docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
+# </template: tests_before_build_template>
+{!{- end -}!}
+
+{!{ define "tests_webhooks_template" }!}
+# <template: tests_webhooks_template>
+{!{- $ctx       := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+  - name: Run python webhook tests
+    run: |
+      make tests-webhooks
+# </template: tests_webhooks_template>
+{!{- end -}!}
+
+{!{ define "tests_dmt_lint" }!}
+# <template: tests_dmt_lint>
+{!{- $ctx       := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+  - name: DMT lint
+    env:
+      DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+      DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+    run: |
+      make dmt-lint
+# </template: tests_dmt_lint>
+{!{- end -}!}

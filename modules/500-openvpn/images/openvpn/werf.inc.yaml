@@ -1,0 +1,124 @@
+{{- $openvpnVersion := "2.6.12" }}
+{{- $opensslVersion := "3.3.2" }}
+{{- $libcapNgVersion := "0.8.5" }}
+{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/openvpn/src/openvpn/openvpn
+  to: /usr/sbin/openvpn
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+  add: /src/entrypoint
+  to: /entrypoint
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+git:
+{{- include "image mount points" . }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 -b openssl-{{ $opensslVersion }} $(cat /run/secrets/SOURCE_REPO)/openssl/openssl.git /src/openssl && cd /src/openssl && rm -rf .git
+  - git clone --depth 1 -b v{{ $libcapNgVersion }} $(cat /run/secrets/SOURCE_REPO)/stevegrubb/libcap-ng.git /src/libcap-ng && cd /src/libcap-ng && rm -rf .git
+  - git clone --depth 1 -b v{{ $openvpnVersion }} $(cat /run/secrets/SOURCE_REPO)/OpenVPN/openvpn.git /src/openvpn && cd /src/openvpn && rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -ldflags '-s -w' .
+  - chown -R 64535:64535 /src
+  - chmod 0755 /src/entrypoint
+---
+image: {{ .ModuleName }}/openssl-artifact
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/openssl
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers
+  install:
+  - cd /src/
+  - ./Configure gcc -static -no-shared
+  - make -j4
+  - make install_sw DESTDIR=/openssl
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/openssl-artifact
+  add: /openssl
+  to: /
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
+  install:
+  - cd /src/libcap-ng
+  - ./autogen.sh
+  - ./configure --enable-static
+  - make
+  - make install
+  - cd /src/openvpn
+  - autoreconf -vi
+  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root --disable-dco
+  - make LIBS="-all-static -lcap-ng"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y conntrack-tools coreutils
+  - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

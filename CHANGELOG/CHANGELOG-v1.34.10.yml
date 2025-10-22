@@ -1,0 +1,39 @@
+candi:
+  features:
+    - summary: Forbid using Docker 18.*
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2134
+      impact: >-
+        After upgrading Deckhouse all nodes with Docker 18.* will request `disruptive update`. You
+        will receive `NodeRequiresDisruptionApprovalForUpdate` if you have manual `approvalMode` in
+        NodeGroup.
+  fixes:
+    - summary: Use Debian buster containerd package by default.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2135
+    - summary: Start kubelet manually if it is not running.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2132
+cilium-hubble:
+  fixes:
+    - summary: Fix description in used software.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2143
+cni-cilium:
+  fixes:
+    - summary: >-
+        Bandwidth controller metrics are not erroring out now. Also added logging to three
+        controllers so that we can diagnose possible issues better.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2155
+    - summary: Fix description in used software.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2143
+control-plane-manager:
+  features:
+    - summary: Added feature gate `EndpointSliceTerminatingCondition` for Kubernetes 1.20.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2112
+      impact: all control-plane components should be restarted.
+docs:
+  fixes:
+    - summary: Updated CRD's of the prometheus module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1990
+monitoring-kubernetes:
+  fixes:
+    - summary: Added alert `NodeSUnreclaimBytesUsageHigh`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2154
+

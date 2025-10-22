@@ -1,0 +1,103 @@
+---
+image: tests-prebuild
+fromImage: base-for-go
+git:
+- add: /
+  to: /deckhouse
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+  includePaths:
+  - deckhouse-controller
+  - dhctl
+  - candi
+  - modules
+  - global-hooks
+  - go_lib
+  - pkg
+  - shell_lib.sh
+  - shell_lib
+  - jq_lib
+  - helm_lib
+  - testing
+  - go.mod
+  - go.sum
+  - editions.yaml
+  - candi/cloud-providers/*/layouts
+  - candi/cloud-providers/*/terraform-modules
+  excludePaths:
+  {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
+  - docs
+  - modules/*/docs
+  - modules/*/README.md
+  - modules/*/images
+  - modules/*/webhooks
+  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
+  - modules/[1-9][0-9][0-9]-*/crds
+- url: {{ .SOURCE_REPO }}/flant/shell-operator
+  tag: v1.4.10
+  add: /frameworks/shell
+  to: /deckhouse/shell-operator/frameworks/shell
+  {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+import:
+- image: deckhouse-controller-artifact
+  add: /out/deckhouse-controller
+  to: /usr/bin/deckhouse-controller
+  after: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
+- image: version-map-artifact
+  add: /version_map_{{ $.Env }}.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
+- image: golangci-lint-artifact
+  add: /usr/local/bin/golangci-lint
+  to: /usr/local/bin/golangci-lint
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  install:
+  - go install github.com/onsi/ginkgo/ginkgo@latest
+  - go install github.com/go-delve/delve/cmd/dlv@latest
+  setup:
+    {{- range $_, $edition := $.Editions }}
+      {{- if not $edition.skipFixingImports }}
+    - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+      {{- end }}
+      {{- end }}
+imageSpec:
+  config:
+    env: { "ADDON_OPERATOR_NAMESPACE": "tests", "DECKHOUSE_POD": "tests", "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PATH": "${PATH}:/usr/local/go/bin:/root/go/bin" }
+---
+image: tests
+fromImage: tests-prebuild
+import:
+- image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /terraform/terraform
+  to: /dhctl-tests/bin/terraform
+  before: setup
+- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /opentofu/opentofu
+  to: /dhctl-tests/bin/opentofu
+  before: setup
+- image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.yandex.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
+  before: setup
+- image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.gcp.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
+  before: setup
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
+  after: setup
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
+  after: setup

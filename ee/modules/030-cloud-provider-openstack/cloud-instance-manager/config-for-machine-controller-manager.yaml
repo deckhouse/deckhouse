@@ -1,0 +1,18 @@
+authURL: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.authURL | b64enc }}
+username: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.username | b64enc }}
+password: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.password | b64enc }}
+domainName: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.domainName | b64enc }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "tenantID" }}
+  {{- if .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantID }}
+tenantID: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantID | b64enc }}
+  {{- end }}
+{{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "tenantName" }}
+  {{- if .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantName }}
+tenantName: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantName | b64enc }}
+  {{- end }}
+{{- end }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "caCert" }}
+  {{- if .Values.nodeManager.internal.cloudProvider.openstack.connection.caCert }}
+caCert: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.caCert | b64enc }}
+  {{- end }}
+{{- end }}

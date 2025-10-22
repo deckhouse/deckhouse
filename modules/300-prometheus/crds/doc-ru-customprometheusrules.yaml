@@ -1,0 +1,27 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Ресурс хранения `PrometheusRule`.
+
+            [Подробнее...](https://deckhouse.ru/modules/prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
+          properties:
+            spec:
+              properties:
+                groups:
+                  description: |
+                    Описание группы алертов.
+
+                    Структура групп полностью совпадает с аналогичной в [prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
+                  items:
+                    description: Список последовательно применяемых recording- и alerting-правил.
+                    properties:
+                      rules:
+                        items:
+                          description: Alerting- или recording-правило.
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

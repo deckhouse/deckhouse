@@ -1,0 +1,10 @@
+# Next lines are for local build only
+modules_items: &modules_items
+  - title: deckhouse
+    url: /modules/deckhouse/
+
+entries:
+- title: Документация
+  folders:
+  - title: Модули
+    subfolders: *modules_items

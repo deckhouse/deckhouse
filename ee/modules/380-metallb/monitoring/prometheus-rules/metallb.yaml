@@ -1,0 +1,64 @@
+- name: d8.metallb
+  rules:
+    - alert: D8MetallbConfigNotLoaded
+      expr: metallb_k8s_client_config_loaded_bool == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetallbConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_failed: ClusterHasD8MetallbConfigNotLoaded,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} hasn't been loaded.
+
+          To find the cause of the issue, review the controller logs:
+
+          ```bash
+          d8 k -n d8-metallb logs deploy/controller -c controller
+          ```
+        summary: The MetalLB configuration hasn't been loaded.
+
+    - alert: D8MetallbConfigStale
+      expr: metallb_k8s_client_config_stale_bool == 1
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetallbConfigStales,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_failed: ClusterHasD8MetallbConfigStales,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} is running on a stale configuration because the latest configuration failed to load.
+
+          To find the cause of the issue, review the controller logs:
+
+          ```bash
+          d8 k -n d8-metallb logs deploy/controller -c controller
+          ```
+        summary: MetalLB is running on a stale configuration.
+
+    - alert: D8MetallbBGPSessionDown
+      expr: metallb_bgp_session_up == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_metallb_failed: ClusterHasD8MetallbBGPSessionsDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_failed: ClusterHasD8MetallbBGPSessionsDown,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          {{ $labels.job }}, MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
+
+          Check the logs for details:
+
+          ```bash
+          d8 k -n d8-metallb logs daemonset/speaker -c speaker
+          ```
+        summary: MetalLB BGP session is down.

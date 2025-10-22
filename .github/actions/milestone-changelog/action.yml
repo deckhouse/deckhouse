@@ -1,0 +1,99 @@
+name: Milestone Changelog
+description: Re-generates changelog for given milestone
+inputs:
+  milestone:
+    description: Milestone object containing number and title
+    required: true
+  token:
+    description: Github token
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Parse input
+      id: args
+      shell: bash
+      run: |
+        echo "milestone_title=${{ fromJSON(inputs.milestone).title }}" >> $GITHUB_OUTPUT
+        echo "milestone_number=${{ fromJSON(inputs.milestone).number }}" >> $GITHUB_OUTPUT
+
+    - name: Find possible sections in project structure
+      id: sections
+      uses: actions/github-script@v6.4.1
+      with:
+        result-encoding: string
+        script: |
+          const { find } = require('./.github/scripts/js/changelog-find-sections.js')
+          const rootDirs = [
+            ".",
+            "modules",
+            "ee/modules",
+            "ee/be/modules",
+            "ee/se/modules",
+            "ee/fe/modules",
+            "ee/se-plus/modules"
+          ]
+          const excludePatterns = [
+            "^\\.",
+            "CHANGELOG",
+            "^ee$",
+            "^modules$"
+          ]
+          const sections = find(rootDirs, excludePatterns)
+          return sections.join("\n")
+
+    - name: Collect Changelog
+      id: changelog
+      uses: deckhouse/changelog-action@v2
+      with:
+        token: ${{ inputs.token }}
+        repo: ${{ github.repository }}
+        milestone: ${{ steps.args.outputs.milestone_title }}
+        # section:forced_impact_level
+        allowed_sections: |
+          ${{ steps.sections.outputs.result }}
+          ci:low
+          dependabot:low
+          testing:low
+          tools:low
+
+    # Patch-version YAML changelog
+    - name: Write Changelog YAML
+      id: yaml_file
+      shell: bash
+      run: |
+        mkdir -p ./CHANGELOG
+        filename='./CHANGELOG/CHANGELOG-${{ steps.args.outputs.milestone_title }}.yml'
+        cat > "$filename" <<"EOF"
+        ${{ steps.changelog.outputs.release_yaml }}
+        EOF
+
+    # Cumulative markdown changelog
+    - name: Write Changelog Markdown
+      id: md_file
+      shell: bash
+      run: |
+        filename='./CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md'
+        cat > "$filename" <<"EOF"
+        ${{ steps.changelog.outputs.branch_markdown }}
+        EOF
+
+    # Patch-version markdown changelog + malformed and impact digest
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3.10.1
+      with:
+        commit-message: |
+          Re-generate changelog ${{ steps.args.outputs.milestone_title }}
+
+          Signed-off-by: deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>
+        base: main
+        branch: changelog/${{ steps.args.outputs.milestone_title }}
+        milestone: ${{ steps.args.outputs.milestone_number }}
+        title: Changelog ${{ steps.args.outputs.milestone_title }}
+        body: |
+          ${{ steps.changelog.outputs.release_markdown }}
+
+          For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
+        labels: changelog, auto, status/backport
+        token: ${{ inputs.token }}
+        delete-branch: true

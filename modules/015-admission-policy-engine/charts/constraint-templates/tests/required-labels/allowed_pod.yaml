@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed
+  namespace: default
+  labels:
+    foo: bar
+    bar: zcx.example.com
+spec:
+  containers:
+    - name: nginx
+      image: nginx

@@ -1,0 +1,88 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanaalertschannels.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    app: grafana
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: grafanaalertschannels
+    singular: grafanaalertschannel
+    kind: GrafanaAlertsChannel
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: The resource for adding alert notification channels to Grafana.
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              required:
+              - type
+              - alertManager
+              properties:
+                description:
+                  type: string
+                  default: ""
+                  description: Small and optional description about this alerts channel.
+                type:
+                  type: string
+                  enum: ["PrometheusAlertManager"]
+                disableResolveMessage:
+                  type: boolean
+                  default: false
+                  description: When true, this option disables the resolve message [OK] that is sent when the alerting state returns to false.
+                isDefault:
+                  type: boolean
+                  default: false
+                  description: Use this notification channel for all alerts.
+                alertManager:
+                  type: object
+                  description: Alert manager settings.
+                  required:
+                  - address
+                  properties:
+                    address:
+                      type: string
+                      x-doc-examples: [ "http://alerts.mycompany.com", "https://alerts.company.com", "http://192.168.1.1" ]
+                      pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+                      description: URL of an external Alertmanager.
+                    auth:
+                      type: object
+                      description: Authorization properties.
+                      required:
+                      - basic
+                      properties:
+                        basic:
+                          type: object
+                          description: Basic authorization properties.
+                          required:
+                          - username
+                          - password
+                          properties:
+                            username:
+                              description: User name.
+                              type: string
+                            password:
+                              description: Password.
+                              type: string
+                              format: password
+      additionalPrinterColumns:
+        - jsonPath: .spec.type
+          name: Type
+          description: Alerts channel type.
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          description: Alerts channel description.
+          type: string

@@ -1,0 +1,14 @@
+{{- if .Values.extendedMonitoring.events.exporterEnabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: events-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "events-exporter")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: events-exporter
+{{- end }}

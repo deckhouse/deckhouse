@@ -1,0 +1,57 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PodLoggingConfig
+metadata:
+  name: whispers-logs
+  namespace: tests-whispers
+spec:
+  labelSelector:
+    matchLabels:
+      app: test
+  logFilter:
+    - field: foo
+      operator: Exists
+    - field: foo
+      operator: DoesNotExist
+    - operator: In
+      field: foo
+      values:
+        - wvrr
+    - operator: NotIn
+      field: foo
+      values:
+        - wvrr
+    - operator: Regex
+      field: foo
+      values:
+        - ^wvrr
+    - operator: NotRegex
+      field: foo
+      values:
+        - ^wvrr
+  clusterDestinationRefs:
+    - loki-storage
+    - test-es-dest
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  extraLabels:
+    foo: bar
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-es-dest
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    index: "logs-%F"
+    endpoint: "http://192.168.1.1:9200"
+  extraLabels:
+    foo: bar

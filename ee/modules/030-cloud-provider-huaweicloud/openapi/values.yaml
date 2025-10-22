@@ -1,0 +1,434 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      cniSecretData:
+        type: string
+      providerClusterConfiguration:
+        type: object
+        additionalProperties: false
+        description: |
+          Describes the configuration of a cloud cluster in Huawei Cloud.
+
+          Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+          Run the following command to change the configuration in a running cluster:
+
+          ```shell
+          d8 platform edit provider-cluster-configuration
+          ```
+        x-doc-search: |
+          ProviderClusterConfiguration
+        x-examples:
+          - apiVersion: deckhouse.io/v1
+            kind: HuaweiCloudClusterConfiguration
+            layout: Standard
+            sshPublicKey: "<SSH_PUBLIC_KEY>"
+            zones:
+              - eu-3a
+            standard:
+              externalNetworkName: "external-network"
+            provider:
+              domainName: '<DOMAIN_NAME>'
+              region: 'eu-3'
+              accessKey: '<USERNAME>'
+              secretKey: '<PASSWORD>'
+            masterNodeGroup:
+              replicas: 1
+              instanceClass:
+                rootDiskSize: 50
+                imageName: "debian-11-genericcloud-amd64-20220911-1135"
+            nodeGroups:
+              - name: front
+                replicas: 2
+                instanceClass:
+                  flavorName: m1.large
+                  imageName: "debian-11-genericcloud-amd64-20220911-1135"
+                  rootDiskSize: 50
+                  configDrive: false
+                  floatingIPPools:
+                    - public
+                    - shared
+                  additionalSecurityGroups:
+                    - sec_group_1
+                    - sec_group_2
+                zones:
+                  - eu-1a
+                  - eu-1b
+        required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
+        properties:
+          apiVersion:
+            type: string
+            enum: [deckhouse.io/v1]
+          kind:
+            type: string
+            enum: [HuaweiCloudClusterConfiguration]
+          sshPublicKey:
+            type: string
+            description: |
+              A public key for accessing nodes.
+          zones:
+            type: array
+            items:
+              type: string
+            minItems: 1
+            uniqueItems: true
+            description: |
+              The globally restricted set of zones that this cloud provider works with.
+            x-doc-required: false
+          masterNodeGroup:
+            description: |
+              The definition of a NodeGroup for master nodes.
+
+              > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+            x-doc-required: true
+            x-unsafe-rules: [updateMasterImage]
+            additionalProperties: false
+            required: [replicas, instanceClass, volumeTypeMap]
+            properties:
+              replicas:
+                type: integer
+                minimum: 1
+                description: |
+                  The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+                x-unsafe-rules: [updateReplicas]
+              instanceClass:
+                description: |
+                  Partial contents of the fields of the [HuaweiCloudInstanceClass](./cr.html#huaweicloudinstanceclass).
+                type: object
+                required: [flavorName, imageName]
+                additionalProperties: false
+                properties: &instanceClassProperties
+                  flavorName: &instanceClassFlavorName
+                    type: string
+                    description: |
+                      The flavor of Huawei Cloud servers.
+                    x-doc-required: true
+                  imageName: &instanceClassImageName
+                    description: |
+                      The image to use while provisioning Huawei Cloud servers.
+
+                      For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
+                    type: string
+                    x-doc-required: true
+                  rootDiskSize: &instanceClassRootDiskSize
+                    description: |
+                      The size of a root disk in gigabytes.
+
+                      This parameter also affects the type of a root disk.
+                    example: 50
+                    default: 50
+                    type: integer
+                  etcdDiskSizeGb:
+                    description: |
+                      Etcd disk size in gigabytes.
+                    example: 10
+                    default: 10
+                    type: integer
+              volumeTypeMap:
+                description: |
+                  A dictionary mapping availability zones to disk types for the group’s worker nodes.
+
+                  Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
+
+                  If the `rootDiskSize` parameter is specified, the same disk type is used for the VM’s boot disk.
+
+                  We recommend using the fastest disk type offered by the provider whenever possible.
+
+                  If `volumeTypeMap` is not specified for a node group, the `masterNodeGroup`’s `volumeTypeMap` is used as a fallback for that group.
+
+                  If the replicas value exceeds the number of entries in the dictionary, assignment wraps around from the beginning. For example, if `replicas: 5` for the `front` group and the dictionary lists `fast-eu-1a` first and `fast-eu-1b` second, then front-0, front-2, front-4 will use `fast-eu-1a`, while front-1, front-3 will use `fast-eu-1b`.
+                x-examples:
+                  - eu-1a: fast-eu-1a
+                    eu-1b: fast-eu-1b
+                type: object
+                minProperties: 1
+                additionalProperties:
+                  type: string
+                  minLength: 1
+              serverGroup:
+                type: object
+                description: |
+                  The ServerGroup object groups instances together. The instances in the group are placed on the same hypervisor (affinity) or different hypervisors (anti-affinity). This allows you to increase the fault tolerance of the cluster.
+                required: [policy]
+                properties:
+                  policy:
+                    type: string
+                    enum: [AntiAffinity]
+                    description: |
+                      The policy that determines how instances are distributed among hypervisors.
+
+                      - `AntiAffinity`: Instances are placed on different hypervisors. This policy is managed by Deckhouse.
+          nodeGroups:
+            type: array
+            description: |
+              An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+            items:
+              type: object
+              required: [name, replicas, instanceClass]
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the NodeGroup to use for generating node names.
+                replicas:
+                  type: integer
+                  description: |
+                    The number of nodes to create.
+                nodeTemplate:
+                  description: |
+                    Parameters of Node objects in Kubernetes to add after registering the node.
+                  properties:
+                    labels:
+                      type: object
+                      description: |
+                        A list of labels to attach to all cluster resources, if they support it.
+
+                        The same as the [`metadata.labels` standard field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                        If you change a label on a running cluster, recreate all virtual machines after the changes come into effect.
+                      x-examples:
+                        - environment: production
+                          app: warp-drive-ai
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |
+                        The same as the [`metadata.annotations` standard field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                      x-examples:
+                        - ai.fleet.com/discombobulate: "true"
+                      additionalProperties:
+                        type: string
+                    taints:
+                      type: array
+                      description: |
+                        The same as the [`.spec.taints` field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) of the Node object.
+
+                        > Available fields: `effect`, `key`, and `values`.
+                      x-examples:
+                        - - effect: NoExecute
+                            key: ship-class
+                            value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                          key:
+                            type: string
+                          value:
+                            type: string
+                instanceClass:
+                  type: object
+                  additionalProperties: false
+                  required: [flavorName, imageName]
+                  description: |
+                    Partial contents of the fields.
+                  properties:
+                    !!merge <<: *instanceClassProperties
+                volumeTypeMap:
+                  description: |
+                    A dictionary of disk types for worker nodes of the group.
+
+                    Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
+
+                    If the `rootDiskSize` parameter is specified, the same disk type will be used for the VM's boot drive.
+
+                    We recommend using the fastest disks provided by the provider in all cases.
+
+                    If the `volumeTypeMap` property is not specified for a node group, the `volumeTypeMap` from `masterNodeGroup` will be used as a fallback for that node group.
+
+                    If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5` for the front group, then front-0, front-2, front-4 will have the `fast-eu-1a` disk type, while front-1, front-3 will have the `fast-eu-1b` disk type.
+                  x-examples:
+                    - eu-1a: fast-eu-1a
+                      eu-1b: fast-eu-1b
+                  type: object
+                  minProperties: 1
+                  additionalProperties:
+                    type: string
+                    minLength: 1
+          layout:
+            description: |
+              The layout name.
+
+              For details about possible provider layouts, refer to [Layouts](./layouts.html).
+            type: string
+            x-unsafe: true
+          standard:
+            type: object
+            description: |
+              Settings for the [`Standard` layout](./layouts.html#standard).
+            additionalProperties: false
+            required: [internalNetworkCIDR]
+            properties:
+              internalNetworkCIDR: &internalNetworkCIDR
+                description: |
+                  Routing for the internal cluster node network.
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                x-unsafe: true
+              internalNetworkDNSServers:
+                description: |
+                  A list of addresses of the recursive DNSs for the internal cluster node network.
+                type: array
+                items:
+                  type: string
+                  pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+              internalNetworkSecurity: &internalNetworkSecurity
+                description: |
+                  Defines whether [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) must be configured for the internal network ports.
+                type: boolean
+                default: true
+              enableEIP:
+                description: |
+                  Enable Elastic IP for the master nodes.
+                type: boolean
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                x-unsafe: true
+          vpcPeering:
+            type: object
+            description: |
+              Settings for the [`VpcPeering` layout](./layouts.html#vpcpeering).
+            additionalProperties: false
+            required: [internalNetworkCIDR]
+            properties:
+              internalNetworkCIDR: &internalNetworkCIDR
+                description: |
+                  Routing for the internal cluster node network.
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                x-unsafe: true
+              internalNetworkDNSServers:
+                description: |
+                  A list of addresses of the recursive DNSs for the internal cluster node network.
+                type: array
+                items:
+                  type: string
+                  pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+              internalNetworkSecurity: &internalNetworkSecurity
+                description: |
+                  Defines whether [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) must be configured for the internal network ports.
+                type: boolean
+                default: true
+              subnet:
+                description: |
+                  The name of the subnet in the VPC.
+                type: string
+          provider:
+            description: |
+              Huawei Cloud API [connection settings](./environment.html).
+
+              These settings match the ones in the `connection` field of the [cloud-provider-huaweicloud](./configuration.html) module.
+            type: object
+            additionalProperties: false
+            required: [cloud, region, accessKey, secretKey]
+            properties:
+              cloud:
+                type: string
+                description: |
+                  The endpoint of the cloud provider.
+              region:
+                type: string
+                description: |
+                  The Huawei Cloud region where the cluster will be deployed.
+                x-unsafe: true
+              accessKey:
+                type: string
+                description: |
+                  The Huawei Cloud access key.
+              secretKey:
+                type: string
+                description: |
+                  The Huawei Cloud secret key.
+              insecure:
+                type: boolean
+                description: |
+                  Trust self-signed SSL certificates.
+              authURL:
+                type: string
+                description: |
+                  The identity authentication URL.
+              domainName:
+                type: string
+                description: |
+                  The account name of IAM to scope to.
+              projectID:
+                type: string
+                description: |
+                  The project ID.
+              enterpriseProjectID:
+                type: string
+                description: |
+                  The enterprise project ID.
+      providerDiscoveryData:
+        type: object
+        additionalProperties: false
+        required: [apiVersion, kind]
+        x-examples:
+          - apiVersion: deckhouse.io/v1
+            kind: HuaweiCloudDiscoveryData
+            layout: Standard
+            zones:
+              - eu-3a
+            instances:
+              vpcIPv4SubnetId: "00000000-0000-0000-0000-000000000000"
+            volumeTypes:
+              - id: "00000000-0000-0000-0000-000000000000"
+                name: "ssd"
+                isPublic: true
+        properties:
+          apiVersion:
+            type: string
+            enum: [deckhouse.io/v1]
+          kind:
+            type: string
+            enum: [HuaweiCloudDiscoveryData]
+          layout:
+            type: string
+            enum: [Standard, VpcPeering]
+          zones:
+            type: array
+            items:
+              type: string
+              minLength: 1
+            minItems: 1
+            uniqueItems: true
+          instances:
+            type: object
+          volumeTypes:
+            type: array
+            description: |
+              A list of volume types in the cloud.
+            items:
+              type: object
+              required: [name]
+              properties:
+                id:
+                  type: string
+                  description: |
+                    The volume type ID.
+                name:
+                  type: string
+                  description: |
+                    The volume type name.
+                isPublic:
+                  type: boolean
+                  description: |
+                    The flag that indicates whether the volume type is public.
+      storageClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+            allowVolumeExpansion:
+              type: boolean

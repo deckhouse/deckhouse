@@ -1,0 +1,14 @@
+---
+# Destination rule to disable (m)TLS when talking to API server, as API server doesn't have sidecar.
+# Customer should add similar destination rules for other services that don't have sidecar.
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: kube-apiserver
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  host: kubernetes.default.svc.{{ .Values.global.discovery.clusterDomain }}
+  trafficPolicy:
+    tls:
+      mode: DISABLE

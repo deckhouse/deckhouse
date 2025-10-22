@@ -1,0 +1,121 @@
+{{- define "keepalived_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- range $instance_name, $instance := .Values.keepalived.internal.instances }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: keepalived-{{ $instance_name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: keepalived-{{ $instance_name }}
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: keepalived
+      minAllowed:
+        {{- include "keepalived_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keepalived-{{ $instance_name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" (printf "keepalived-%s" $instance_name))) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: keepalived-{{ $instance_name }}
+  serviceName: keepalived-{{ $instance_name }}
+  replicas: {{ $instance.replicas }}
+  template:
+    metadata:
+      annotations:
+        checksum/instance-config: {{ $instance | toYaml | sha256sum }}
+      labels:
+        app: keepalived-{{ $instance_name }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_priority_class" (tuple $ "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
+        readOnlyRootFilesystem: true
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: keepalived-{{ $instance_name }}
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        {{- $instance.nodeSelector | toYaml | nindent 8 }}
+    {{- if $instance.tolerations }}
+      tolerations:
+        {{- $instance.tolerations | toYaml | nindent 8 }}
+    {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 8 }}
+        command: ['/usr/bin/python3', '/prepare-config.py']
+        image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: config
+          mountPath: /etc/keepalived
+        - name: template
+          mountPath: /etc/keepalived-instance-config
+        - name: auth-pass
+          mountPath: /etc/keepalived-instance-secret
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      containers:
+      - name: keepalived
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list $ (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
+        command: ['/usr/sbin/keepalived', '-n', '-l']
+        image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/keepalived
+        - name: run
+          mountPath: /run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "keepalived_resources" $ | nindent 12 }}
+{{- end }}
+
+      volumes:
+      - name: config
+        emptyDir: {}
+      - name: template
+        configMap:
+          name: keepalived-instance-config-{{ $instance_name }}
+      - name: auth-pass
+        secret:
+          secretName: keepalived-instance-secret-{{ $instance_name }}
+      - name: run
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
+{{- end }}

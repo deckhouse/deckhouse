@@ -1,0 +1,55 @@
+ci:
+  fixes:
+    - summary: Use fixed werf version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12970
+cloud-provider-vcd:
+  fixes:
+    - summary: Add a hook to set `legacyMode` based on the detected `VCD API` version
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13015
+deckhouse:
+  features:
+    - summary: enable UnmetCloudConditions check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12957
+      impact: >-
+        release upgrade will be blocked on AWS-based clusters where SA doesn't have
+        DescribeAddressesAttribute and DescribeInstanceTopology roles. They are required for new
+        Terraform AWS Provider version.
+  fixes:
+    - summary: Clear deployed release`s message.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13011
+    - summary: Delete deckhouse epslices.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12976
+deckhouse-controller:
+  features:
+    - summary: rename module flag `managementState` to `maintenance`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13004
+  fixes:
+    - summary: Fix runtime handling for the global config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12985
+dhctl:
+  features:
+    - summary: add variable time range to request counter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13006
+  fixes:
+    - summary: fix bootstrap and abort config preparation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13008
+docs:
+  fixes:
+    - summary: Fix d8 install commands.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12962
+loki:
+  fixes:
+    - summary: fix storage capacity calculator hook for Loki
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13003
+      impact: fixes the bug introduced in v1.69.0
+node-manager:
+  features:
+    - summary: enable UnmetCloudConditions check
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12845
+    - summary: UnmetCloudConditions requirement and alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12530
+operator-trivy:
+  fixes:
+    - summary: Add proxy env variables support to the trivy server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13036
+

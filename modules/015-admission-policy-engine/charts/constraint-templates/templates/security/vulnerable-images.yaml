@@ -1,0 +1,54 @@
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: d8vulnerableimages
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: external-data
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8VulnerableImages
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.vulnerableimages
+
+        violation[{"msg": msg}] {
+          images := [img | img = retrieve_images[_]]
+          response := external_data({"provider": "trivy-provider", "keys": images})
+
+          response_deny_request(response)
+          msg := sprintf("request denied: %v", [response])
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.containers[_].image) > 0
+          imgs := input.review.object.spec.containers[_].image
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.initContainers[_].image) > 0
+          imgs := input.review.object.spec.initContainers[_].image
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.template.spec.containers) > 0
+          imgs := input.review.object.spec.template.spec.containers[_].image
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.template.spec.initContainers) > 0
+          imgs := input.review.object.spec.template.spec.initContainers[_].image
+        }
+
+        response_deny_request(response) {
+          count(response.errors) > 0
+        }
+
+        response_deny_request(response) {
+          count(response.system_error) > 0
+        }

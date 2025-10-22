@@ -1,0 +1,156 @@
+---
+image: {{ .ModuleName }}/modules-embedded/static-artifact
+from: {{ .Images.BASE_JEKYLL }}
+final: false
+shell:
+  setup:
+  - |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
+        jekyll -version
+        yq -V
+        echo "jq: $(jq -V)"
+
+        cd /srv/jekyll-data/documentation/
+
+        echo '[] Creating modules list...'
+        export MODULES_DIR=/src/modules-metadata
+        _tools/modules_list.sh > _data/modules/internal.json
+        # Creating list of ALL the modules...
+        cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+
+        #echo '[] Creating modules.yml ...'
+        #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
+        ## Creating list of ALL the modules...
+        #cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+
+        ## The list of modules, which documentation should be excluded from the site...
+        ## TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
+        #cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+
+        echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
+        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+
+        echo '[] Preparing modules structure...'
+        export MODULES_SRC_DIR=/src/modules
+        export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
+        export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
+        bash _tools/modules_prepare.sh
+
+        echo '[] Adding permalinks for modules...'
+        for file in $(find . -regex '.*modules_\(ru\|en\)/\([0-9]\+-\)\?[^/]\+/docs/[^/]\+\.\(md\|MD\)' -print | grep -i '\.md$'); do
+          ## Has frontmatter in the file
+          if $(awk 'BEGIN { in_fm = 0; has_fm = 0 }
+                    NR == 1 && /^---$/ { in_fm = 1; next }
+                    in_fm == 1 && /^---$/ { if (NR > 2) { has_fm = 1 } ; exit }
+                    END { exit !has_fm }' "${file}"); then
+          #  #if cat $file | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
+          # Remove existing permalink if it exists
+          sed -i '0,/^permalink: .*$/ {/^permalink: .*$/d;}' "${file}"
+          # Add permalink
+          PERMALINK="/$(echo "${file}" | sed -E 's#(.*/)?modules_(en|ru)/([0-9]+-)?([^/]+)/docs/(.+)\.md#\2/modules/\4/\5.html#I' | tr '[:upper:]' '[:lower:]' | sed 's#readme\.html$##I')"
+          sed -i "1apermalink: ${PERMALINK}" "${file}"
+          fi
+        done
+
+        echo '[] Generating configuration schemas...'
+        export MODULES_DIR=/src/modules
+        export MODULES_DIR=modules_en
+        bash _tools/modules_generate_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash _tools/modules_generate_configuration.sh
+
+        echo
+        echo '[] Generating cluster configuration schemas...'
+        export MODULES_DIR=modules_en
+        bash _tools/generate_cluster_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash _tools/generate_cluster_configuration.sh
+
+        echo
+        echo "[] Generating CR schemas..."
+        export MODULES_DIR=modules_en
+        bash _tools/modules_generate_cr.sh
+        export MODULES_DIR=modules_ru
+        bash _tools/modules_generate_cr.sh
+
+        mkdir -p _data/schemas/crds/
+        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
+
+        echo '[] Converting editions structure...'
+        cd /srv/jekyll-data/documentation/_data
+        yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+
+{{ if eq .ModuleName "documentation" }}
+        # "Converting public documentation links to modules to the internal relative..."
+        grep -rl '](https://deckhouse.\(io\|ru\)' /srv/jekyll-data/documentation/_data/schemas/ | \
+          xargs sed -Ei 's$\]\(https?://deckhouse.(ru|io)/(/ru|/en)?(products/kubernetes-platform/)?documentation/(v[0-9]+/|v[0-9]+\.[0-9]+/)?(modules/)$](/\5$'
+
+        cat <<'EOD' > /tmp/_config_additional.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
+        EOD
+        cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
+        EOD
+{{ end }}
+        # Creating additional config...
+        echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
+
+        echo '[] Generating static files of the documentation part...'
+        cd ..
+        mkdir -m 777 -p /app/_site/
+{{ if eq .ModuleName "documentation" }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        rm -rf /app/_site/documentation/compare/
+{{ else }}
+        {{- if eq .Mode "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
+        {{- else }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        {{- end }}
+{{ end }}
+        echo "Moving images and presentations to be accessible as local from the module pages (like in Hugo)..."
+        cd /app/_site/
+        find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
+        rm -rf modules_en modules_ru
+git:
+- add: /{{ .ModulePath }}docs
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  includePaths:
+    - site/_includes/head.html
+{{ if eq .ModuleName "documentation" }}
+    - site/_includes/header.html
+{{ end }}
+    - documentation
+  excludePaths:
+    - '**/werf*.yaml'
+    - '**/docker-compose*.yml'
+    - '**/Makefile'
+    - '**/.werf'
+    - '**/.helm'
+    - documentation/pages
+    - documentation/config
+    - documentation/assets
+    - documentation/search.json
+    - documentation/search-ru.json
+    - documentation/*.png
+    - documentation/*.ico
+    - documentation/*.svg
+    - documentation/browserconfig.xml
+    - documentation/site.webmanifest
+  stageDependencies:
+    install: ['site/Gemfile','site/Gemfile.lock']
+    setup: '**/*'
+{{ if eq .ModuleName "documentation" }}
+- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
+  to: /srv/jekyll-data/site/_includes/footer.html
+  stageDependencies:
+    setup:
+    - '**/*'
+{{ end }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules-bundles.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}

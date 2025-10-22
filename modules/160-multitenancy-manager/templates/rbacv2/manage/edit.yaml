@@ -1,0 +1,35 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-multitenancy-manager
+  name: d8:manage:permission:module:multitenancy-manager:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projects
+  - projecttemplates
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - multitenancy-manager
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

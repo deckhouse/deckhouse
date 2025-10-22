@@ -1,0 +1,157 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    backup.deckhouse.io/cluster-config: "true"
+  name: projects.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Project
+    listKind: ProjectList
+    plural: projects
+    singular: project
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: false
+      storage: false
+      deprecated: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.sync
+          name: Ready
+          type: boolean
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  description: |
+                    Arbitrary description of the project's purpose. Specify an empty string if no description is required.
+                  type: string
+                projectTypeName:
+                  description: |
+                    The name of the ProjectType resource that defines which resources will be created in the project.
+                  type: string
+                template:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Values passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                  type: object
+            status:
+              type: object
+              properties:
+                message:
+                  description: Message indicating the cause of the current status.
+                  type: string
+                state:
+                  description: Brief description of the project status, such as Ready, Error, Pending, etc.
+                  type: string
+                sync:
+                  description: Indicates that the project parameters have been successfully applied after creation or modification.
+                  type: boolean
+    - name: v1alpha2
+      served: true
+      storage: true
+      deprecated: false
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .spec.projectTemplateName
+          name: Project template
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  description: |
+                    Arbitrary description of the project's purpose. Specify an empty string if no description is required.
+                  type: string
+                projectTemplateName:
+                  description: |
+                    The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+                  type: string
+                parameters:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+
+                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                  type: object
+            status:
+              type: object
+              properties:
+                namespaces:
+                  description: Used namespaces.
+                  type: array
+                  items:
+                    type: string
+                observedGeneration:
+                  description: The last observed project`s generation
+                  type: integer
+                templateGeneration:
+                  description: The last observed template`s generation
+                  type: integer
+                resources:
+                  description: Rendered and skipped resources.
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        installed:
+                          type: boolean
+                          description: Indicates if the resources were successfully rendered.
+                        names:
+                          type: array
+                          description: List of resource names.
+                          items:
+                            type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
+                state:
+                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
+                  type: string

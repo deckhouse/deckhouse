@@ -1,0 +1,13 @@
+{{- if and (.Values.userAuthz.enableMultiTenancy) (.Values.userAuthz.controlPlaneConfigurator.enabled) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook" "control-plane-configurator" "")) | nindent 2 }}
+data:
+  url: https://127.0.0.1:40443/
+  ca: |
+    {{- .Values.userAuthz.internal.webhookCertificate.ca | nindent 4 }}
+{{- end }}

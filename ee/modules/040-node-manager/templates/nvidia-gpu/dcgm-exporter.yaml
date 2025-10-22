@@ -1,0 +1,109 @@
+{{- if include "nvidia_gpu_enabled" . }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+    {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-dcgm-exporter")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      role: master
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-dcgm-exporter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: nvidia-dcgm-exporter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: nvidia-dcgm-exporter
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: nvidia-dcgm-exporter
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+spec:
+  selector:
+    matchLabels:
+      app: nvidia-dcgm-exporter
+  template:
+    metadata:
+      labels:
+        app: nvidia-dcgm-exporter
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "nvidia_node_selector" (tuple . "any" "") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      serviceAccountName: nvidia-dcgm-exporter
+      automountServiceAccountToken: true
+      containers:
+      - image: {{ include "helm_lib_module_image" (list . "nvidiaDcgmExporter") }}
+        name: nvidia-dcgm-exporter
+        command: ["/usr/bin/dcgm-exporter-entrypoint.sh"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 200m
+            memory: 512Mi
+        {{- end }}
+        env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_DISABLE_REQUIRE
+          value: "true"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility,compat32"
+        - name: NO_SETCAP
+          value: ""
+        - name: DCGM_EXPORTER_LISTEN
+          value: ":9400"
+        - name: DCGM_EXPORTER_KUBERNETES
+          value: "true"
+        - name: DCGM_EXPORTER_COLLECTORS
+          value: "/etc/dcgm-exporter/dcp-metrics-included.csv"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "spec.nodeName"
+        securityContext:
+          privileged: true
+          runAsNonRoot: false
+          runAsUser: 0
+          capabilities:
+            add: ["SYS_ADMIN"]
+        ports:
+        - name: "metrics"
+          containerPort: 9400
+        volumeMounts:
+        - name: "pod-gpu-resources"
+          readOnly: true
+          mountPath: "/var/lib/kubelet/pod-resources"
+      volumes:
+      - name: "pod-gpu-resources"
+        hostPath:
+          path: "/var/lib/kubelet/pod-resources"
+{{- end }}

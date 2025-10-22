@@ -1,0 +1,149 @@
+{{- define "trivy_provider_resources" }}
+cpu: 100m
+memory: 128Mi
+{{- end }}
+
+{{- if include "trivy.provider.enabled" $ }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: trivy-provider
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: trivy-provider
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: trivy-provider
+      minAllowed:
+        {{- include "trivy_provider_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: trivy-provider
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trivy-provider
+      app.kubernetes.io/part-of: gatekeeper
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/trivy-provider/configmap.yaml") . | sha256sum }}
+      labels:
+        app: trivy-provider
+        app.kubernetes.io/part-of: gatekeeper
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "trivy-provider")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      containers:
+      - image: {{ include "helm_lib_module_image" (list . "trivyProvider") }}
+        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list)) | nindent 8 }}
+          readOnlyRootFilesystem: true
+        name: trivy-provider
+        args:
+          - --port=8443
+          - --key-file=/certs/tls.key
+          - --cert-file=/certs/tls.crt
+          - --client-ca-file=/client-cert/ca.crt
+          - --timeout=25
+        env:
+        - name: TRIVY_REMOTE_URL
+          value: "http://trivy-server.d8-operator-trivy:4954"
+        - name: TRIVY_JAVA_DB_IMAGE
+          value: {{ printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
+        envFrom:
+        - configMapRef:
+            name: trivy-provider
+        ports:
+        - containerPort: 8443
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /certs
+          name: cert
+          readOnly: true
+        - mountPath: /client-cert
+          name: client-cert
+          readOnly: true
+        - mountPath: /.docker
+          name: docker-config
+          readOnly: true
+        - mountPath: /home/javadb
+          name: data
+          readOnly: false
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
+      dnsPolicy: ClusterFirst
+      hostNetwork: false
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 60
+      serviceAccountName: admission-policy-engine
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: trivy-provider-webhook-server-cert
+      - name: client-cert
+        secret:
+          defaultMode: 420
+          secretName: gatekeeper-webhook-server-cert
+      - name: docker-config
+        secret:
+          defaultMode: 420
+          secretName: trivy-provider-registry-secret
+{{- $storageClass := .Values.admissionPolicyEngine | dig "internal" "effectiveStorageClass" false }}
+{{- if $storageClass }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ $storageClass }}
+        resources:
+          requests:
+            storage: 2Gi
+{{- else }}
+      - name: data
+        emptyDir: {}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: trivy-provider
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "trivy-provider" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: trivy-provider
+      app.kubernetes.io/part-of: gatekeeper
+{{- end }}

@@ -1,0 +1,130 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/kube-audit/audit.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/destination/test-socket1-dest/00_extra_fields": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.cef.severity=\"1\"",
+      "type": "remap"
+    },
+    "transform/destination/test-socket1-dest/01_cef_values": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-socket1-dest/00_extra_fields"
+      ],
+      "source": "if !exists(.cef) {\n  .cef = {};\n};\n\nif !exists(.cef.name) {\n  .cef.name = \"Deckhouse Event\";\n};\n\nif !exists(.cef.severity) {\n  .cef.severity = \"5\";\n} else if is_string(.cef.severity) {\n  if .cef.severity == \"Debug\" {\n    .cef.severity = \"0\";\n  };\n  if .cef.severity == \"Informational\" {\n    .cef.severity = \"3\";\n  };\n  if .cef.severity == \"Notice\" {\n    .cef.severity = \"4\";\n  };\n  if .cef.severity == \"Warning\" {\n    .cef.severity = \"6\";\n  };\n  if .cef.severity == \"Error\" {\n    .cef.severity = \"7\";\n  };\n  if .cef.severity == \"Critical\" {\n    .cef.severity = \"8\";\n  };\n  if .cef.severity == \"Emergency\" {\n    .cef.severity = \"10\";\n  };\n};",
+      "type": "remap"
+    },
+    "transform/destination/test-socket1-dest/02_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-socket1-dest/01_cef_values"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-socket2-dest/00_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-socket2-dest/01_gelf_host": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-socket2-dest/00_del_parsed_data"
+      ],
+      "source": "if !exists(.host) {\n  .host = .node\n};\n\nif exists(.timestamp_end) {\n  del(.timestamp_end)\n};\n\n.timestamp = parse_timestamp!(.\"timestamp\", format: \"%+\");\n\n. = flatten(.);\n\n. = map_keys(., recursive: true) -\u003e |key| {\n  key = replace(key, \".\", \"_\");\n  key = replace(key, \"/\", \"_\");\n  key = replace(key, \"-\", \"_\");\n  key\n};\n\n. = map_values(., true) -\u003e |value| {\n  if is_timestamp(value) {\n    value\n  } else if is_float(value) {\n    value\n  } else if is_integer(value) {\n    value\n  } else {\n    join(value, \", \") ?? to_string(value) ?? value\n  }\n};",
+      "type": "remap"
+    },
+    "transform/source/test-source/00_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/test-socket1-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/destination/test-socket1-dest/02_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "cef",
+        "timestamp_format": "rfc3339",
+        "cef": {
+          "device_vendor": "Deckhouse",
+          "device_product": "log-shipper-agent",
+          "device_version": "1",
+          "device_event_class_id": "Log event",
+          "name": "cef.name",
+          "severity": "cef.severity",
+          "version": "V1",
+          "extensions": {
+            "cefseverity": "cef.severity",
+            "container": "container",
+            "host": "host",
+            "image": "image",
+            "message": "message",
+            "namespace": "namespace",
+            "node": "node",
+            "pod": "pod",
+            "podip": "pod_ip",
+            "podowner": "pod_owner",
+            "timestamp": "timestamp"
+          }
+        }
+      },
+      "mode": "tcp",
+      "address": "192.168.1.1:9200",
+      "tls": {
+        "verify_hostname": false,
+        "verify_certificate": true
+      }
+    },
+    "destination/cluster/test-socket2-dest": {
+      "type": "socket",
+      "inputs": [
+        "transform/destination/test-socket2-dest/01_gelf_host"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "codec": "gelf",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "tcp",
+      "address": "graylog.svc.cluster.local:9200",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      }
+    }
+  }
+}

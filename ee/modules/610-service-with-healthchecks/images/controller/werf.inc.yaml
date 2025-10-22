@@ -1,0 +1,11 @@
+---
+image: {{ $.ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
+    add: /controller
+    to: /controller
+    before: install
+imageSpec:
+  config:
+    entrypoint: ["/controller"]

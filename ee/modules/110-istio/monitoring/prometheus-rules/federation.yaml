@@ -1,0 +1,32 @@
+- name: d8.istio.federation
+  rules:
+    - alert: D8IstioFederationMetadataEndpointDoesntWork
+      expr: max by (federation_name, endpoint) (d8_istio_federation_metadata_endpoints_fetch_error_count == 1)
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_federation_metadata_endpoint_failed: D8IstioFederationMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_federation_metadata_endpoint_failed: D8IstioFederationMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Federation metadata endpoint failed.
+        description: |
+          The metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch via the Deckhouse hook.
+
+          To reproduce the request to the public endpoint, run the following command:
+
+          ```bash
+          curl {{$labels.endpoint}}
+          ```
+
+          To reproduce the request to private endpoints (run from the Deckhouse pod), run the following:
+
+          ```bash
+          KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
+          LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
+          REMOTE_CLUSTER_UUID="$(d8 k get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+          TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-federation --ttl 1h)"
+          curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
+          ```

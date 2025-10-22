@@ -1,0 +1,30 @@
+{%- if page.platform_type == 'cloud' and page.platform_code == 'aws' %}
+{% if include.mode == 'hosts' %}
+<div markdown="1">
+```shell
+BALANCER_HOSTNAME=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') && \
+BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1) && echo "Balancer IP is ${BALANCER_IP}"
+```
+</div>
+{% else %}
+<div markdown="1">
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname'
+```
+</div>
+{%- endif -%}
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+{% if include.mode == 'hosts' %}
+<div markdown="1">
+```shell
+BALANCER_IP=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+```
+</div>
+{% else %}
+<div markdown="1">
+```shell
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip'
+```
+</div>
+{%- endif -%}
+{%- endif -%}

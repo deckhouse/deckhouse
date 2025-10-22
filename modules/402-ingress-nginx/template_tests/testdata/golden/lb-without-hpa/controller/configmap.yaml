@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+data:
+  allow-snippet-annotations: "true"
+  annotations-risk-level: Critical
+  body-size: 64m
+  gzip-level: "1"
+  hsts: "false"
+  http-redirect-code: "301"
+  large-client-header-buffers: 4 16k
+  log-format-escape-json: "true"
+  log-format-upstream: '{ "time": "$time_iso8601", "request_id": "$request_id", "user":
+    "$remote_user", "address": "$remote_addr", "bytes_received": $request_length,
+    "bytes_sent": $bytes_sent, "protocol": "$server_protocol", "scheme": "$scheme",
+    "method": "$request_method", "host": "$host", "path": "$uri", "request_query":
+    "$args", "referrer": "$http_referer", "user_agent": "$http_user_agent", "request_time":
+    $request_time, "status": $formatted_status, "content_kind": "$content_kind", "upstream_response_time":
+    $total_upstream_response_time, "upstream_retries": $upstream_retries, "namespace":
+    "$namespace", "ingress": "$ingress_name", "service": "$service_name", "service_port":
+    "$service_port", "vhost": "$server_name", "location": "$location_path", "nginx_upstream_addr":
+    "$upstream_addr", "nginx_upstream_bytes_received": "$upstream_bytes_received",
+    "nginx_upstream_response_time": "$upstream_response_time", "nginx_upstream_status":
+    "$upstream_status" }'
+  proxy-connect-timeout: "2"
+  proxy-next-upstream: error timeout invalid_header http_502 http_503 http_504
+  proxy-read-timeout: "3600"
+  proxy-send-timeout: "3600"
+  proxy-set-headers: d8-ingress-nginx/test-without-hpa-custom-headers
+  server-name-hash-bucket-size: "256"
+  server-tokens: "false"
+  use-gzip: "true"
+  variables-hash-bucket-size: "256"
+  worker-shutdown-timeout: "300"
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test-without-hpa-config
+  namespace: d8-ingress-nginx
+---
+apiVersion: v1
+data:
+  X-Request-Start: t=${msec}
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test-without-hpa-custom-headers
+  namespace: d8-ingress-nginx
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test-without-hpa-custom-headers-reload
+  namespace: d8-ingress-nginx
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: reload-test-without-hpa.deckhouse.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: fakeservice
+            port:
+              name: https
+        path: /e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        pathType: ImplementationSpecific
+---
+apiVersion: v1
+data:
+  telemetry_config.yml: |-
+    discard:
+      namespaces:
+        []
+      ingresses:
+        []
+kind: ConfigMap
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: d8-ingress-telemetry-config
+  namespace: d8-ingress-nginx

@@ -1,0 +1,63 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-required-for-helm:
+    - currentReleaseImageName
+    properties:
+      namespaces:
+        type: array
+        default: []
+        items:
+          type: string
+        x-examples:
+        - ["test1", "test2"]
+      chrootMode:
+        type: boolean
+        default: false
+      releaseVersionImageHash:
+        type: string
+      currentReleaseImageName:
+        type: string
+        pattern: '^[a-zA-Z0-9\.\/@:\-_]+$'
+        x-examples: ["registry.example.com/deckhouse:imageHash-deckhouse"]
+      webhookHandlerCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+        - crt
+        - key
+        - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      admissionWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      configMapName:
+        type: string
+        x-examples: ["deckhouse"]

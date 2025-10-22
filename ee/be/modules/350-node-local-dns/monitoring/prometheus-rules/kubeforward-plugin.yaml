@@ -1,0 +1,19 @@
+- name: d8.node-local-dns.kubeforward
+  rules:
+    - alert: D8NodeLocalDNSKubeforwardRequestLatencyP95High
+      expr: |
+        histogram_quantile(0.95,
+          sum by (le, node) (
+            rate(coredns_kubeforward_request_duration_seconds_bucket{job="node-local-dns", qtype="A"}[5m])
+          )
+        ) > 0.3
+      for: 2m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        summary: "High DNS request latency in kubeforward (p95 > 300ms)."
+        description: |
+          The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
+          exceeded 300 milliseconds over the last 5 minutes.
+          This may indicate slow upstreams, network issues, or DNS overload on this node.

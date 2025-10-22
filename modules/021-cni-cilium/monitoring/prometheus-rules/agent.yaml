@@ -1,0 +1,123 @@
+- name: d8.cni-cilium.agent
+  rules:
+  - alert: CiliumAgentUnreachableHealthEndpoints
+    # Select all current `cilium_unreachable_health_endpoints` if the condition is met:
+    # no changes in pod states for the last N minutes (number of pods including changes - number of pods N minutes ago)
+    expr: |
+      max by (namespace, pod) (cilium_unreachable_health_endpoints) > 0
+      and on()
+      (
+        (
+          count(changes(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"}[2m])) -
+          count(kube_pod_info{created_by_name="agent",namespace="d8-cni-cilium"} offset 2m)
+        ) == 0
+      )
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: Agent `{{ $labels.namespace }}`/`{{ $labels.pod }}` can't reach some of the node health endpoints.
+      description: |
+        For details, refer to the logs of the agent:
+
+        ```bash
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```
+  - alert: CiliumAgentMetricNotFound
+    expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints) OR count by (namespace,pod) (cilium_endpoint_state)) != 1
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: Agent `{{ $labels.namespace }}`/`{{ $labels.pod }}` isn't sending some metrics.
+      description: |
+        Steps to troubleshoot:
+        
+        1. Check the logs of the agent:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
+           ```
+        
+        1. Verify the agent's health status:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
+           ```
+
+        1. Compare the metrics with those of a neighboring agent.
+
+        > Note that the absence of metrics can indirectly indicate that new pods can't be created on the node due to connectivity issues with the agent.
+  - alert: CiliumAgentEndpointsNotReady
+    expr: sum by (namespace, pod) (cilium_endpoint_state{endpoint_state="ready"} / cilium_endpoint_state) < 0.5
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: Over 50% of all known endpoints aren't ready in agent `{{ $labels.namespace }}`/`{{ $labels.pod }}`.
+      description: |
+        For details, refer to the logs of the agent:
+        
+        ```bash
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```
+  - alert: CiliumAgentMapPressureCritical
+    expr: sum by (namespace, pod, map_name) (cilium_bpf_map_pressure > 0.9)
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      experimental: "true"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: eBPF map `{{ $labels.map_name }}` exceeds 90% utilization in agent `{{ $labels.namespace }}`/`{{ $labels.pod }}`.
+      description: |
+        The eBPF map resource utilization limit has almost been reached.
+        
+        Check with the vendor for potential remediation steps.
+  - alert: CiliumAgentPolicyImportErrors
+    expr: sum by (namespace, pod) (rate(cilium_policy_import_errors_total[2m]) > 0)
+    for: 5m
+    labels:
+      d8_module: cni-cilium
+      d8_component: agent
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_grouped_by__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      plk_create_group_if_not_exists__main: CiliumAgentMalfunctioning,prometheus=deckhouse,tier=~tier,kubernetes=~kubernetes
+      summary: Agent `{{ $labels.namespace }}`/`{{ $labels.pod }}` fails to import policies.
+      description: |
+        For details, refer to the logs of the agent:
+        
+        ```bash
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        ```

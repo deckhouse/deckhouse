@@ -1,0 +1,14 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    x-examples: [clusterMasterAddresses: ["1.2.3.4"]]
+    properties:
+      clusterMasterAddresses:
+        type: array
+        items:
+          type: string
+          x-examples: ["10.2.3.4", "10.5.6.7"]

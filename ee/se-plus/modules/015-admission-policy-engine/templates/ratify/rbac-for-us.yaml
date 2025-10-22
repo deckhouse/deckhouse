@@ -1,0 +1,320 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: ratify
+  namespace: d8-{{ .Chart.Name }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: "d8:admission-policy-engine:ratify"
+rules:
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - stores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - stores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - stores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedstores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedstores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedstores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - verifiers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - verifiers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - verifiers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedverifiers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedverifiers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedverifiers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - certificatestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - certificatestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - certificatestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - keymanagementproviders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - keymanagementproviders/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - keymanagementproviders/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedkeymanagementproviders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedkeymanagementproviders/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedkeymanagementproviders/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - policies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - policies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - policies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedpolicies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - config.ratify.deislabs.io
+  resources:
+  - namespacedpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - externaldata.gatekeeper.sh
+  resources:
+  - providers
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# Secrets access is used for k8s auth provider to access secrets across namespaces.
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: "d8:admission-policy-engine:ratify"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "d8:admission-policy-engine:ratify"
+subjects:
+  - kind: ServiceAccount
+    name: ratify
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ratify-manager
+  namespace: d8-{{ .Chart.Name }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+# Secrets access is used by cert-controller to manipulate TLS related secrets.
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - list
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: ratify-manager
+  namespace: d8-{{ .Chart.Name }}
+subjects:
+- kind: ServiceAccount
+  name: ratify
+  namespace: d8-{{ .Chart.Name }}
+roleRef:
+  kind: Role
+  name: ratify-manager
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

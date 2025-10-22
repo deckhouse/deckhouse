@@ -1,0 +1,41 @@
+positive:
+  configValues:
+    - nodeSelector:
+        type: network-gateway
+      subnet: "192.168.43.0/24"
+      publicAddress: "10.220.243.240"
+      dns:
+        servers:
+          - 8.8.8.8
+        search:
+          - office.example.com
+  values:
+    - nodeSelector:
+        type: network-gateway
+      subnet: "192.168.43.0/24"
+      publicAddress: "10.220.243.240"
+      internal:
+        effectiveStorageClass: 'test'
+negative:
+  configValues:
+    # no subnet is set
+    - nodeSelector:
+        type: network-gateway
+      publicAddress: "10.220.203.240"
+    # no publicAddress is set
+    - nodeSelector:
+        type: network-gateway
+      subnet: "192.168.42.0/24"
+    # no nodeSelector is set
+    - subnet: "192.168.42.0/24"
+      publicAddress: "10.220.203.240"
+    # wrong subnet format
+    - subnet: "192.168.1.0"
+      publicAddress: "10.220.203.240"
+      nodeSelector:
+        type: network-gateway
+    # wrong publicAddress format
+    - subnet: "192.168.1.0/24"
+      publicAddress: "gw.example.com"
+      nodeSelector:
+        type: network-gateway

@@ -1,0 +1,13 @@
+diff --git a/pkg/capisdk/defined_entity.go b/pkg/capisdk/defined_entity.go
+index e6e1c05b..07df7b56 100644
+--- a/pkg/capisdk/defined_entity.go
++++ b/pkg/capisdk/defined_entity.go
+@@ -13,7 +13,7 @@ import (
+ 	"github.com/vmware/cluster-api-provider-cloud-director/pkg/vcdtypes/rde_type_1_1_0"
+ 	rdeType "github.com/vmware/cluster-api-provider-cloud-director/pkg/vcdtypes/rde_type_1_1_0"
+ 	"github.com/vmware/cluster-api-provider-cloud-director/release"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"net/url"
+ 	"reflect"

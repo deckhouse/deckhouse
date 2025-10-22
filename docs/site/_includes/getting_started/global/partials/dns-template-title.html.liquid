@@ -1,0 +1,5 @@
+{%- if page.lang == "ru" -%}
+<b title="Например, для шаблона DNS-имен <em>&quot;%s&#8209;kube.company.my&quot;</em>, URL для доступа будет <em>&quot;{{ include.name }}&#8209;kube.company.my{{ include.path }}&quot;.</em>">{% unless include.path and include.onlyPath == "true" %}{{ include.name }}{% endunless %}{{ include.path }}</b>
+{% else %}
+<b title="For example, for the <em>&quot;%s&#8209;kube.company.my&quot;</em> DNS names template, the URL to access will be <em>&quot;{{ include.name }}&#8209;kube.company.my{{ include.path }}&quot;.</em>">{% unless include.path and include.onlyPath == "true" %}{{ include.name }}{% endunless %}{{ include.path }}</b>
+{% endif %}

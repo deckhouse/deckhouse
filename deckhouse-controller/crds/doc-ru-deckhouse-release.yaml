@@ -1,0 +1,54 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию релизов Deckhouse.
+          properties:
+            approved:
+              description: |
+                Разрешает или запрещает ручное обновление.
+
+                Игнорируется, если в конфигурации модуля установлен режим обновления `Auto` (`update.mode: Auto`).
+            spec:
+              properties:
+                version:
+                  description: Версия Deckhouse.
+                applyAfter:
+                  description: Время, до которого отложено обновление, если релиз является частью canary-release.
+                requirements:
+                  description: Требования для установки релиза.
+                disruptions:
+                  x-doc-deprecated: true
+                  description: Изменения в релизе, которые могут привести к кратковременному простою в работе системных компонентов.
+                changelog:
+                  description: Изменения включенных модулей в данном релизе.
+                changelogLink:
+                  description: Ссылка на страницу со всеми изменениями данного релиза.
+            status:
+              properties:
+                phase:
+                  description: Текущий статус релиза.
+                message:
+                  description: Детальное сообщение об ошибки или статусе релиза.
+                transitionTime:
+                  description: Время изменения статуса релиза
+                approved:
+                  description: |
+                    Статус готовности релиза к обновлению. Используется только для режима обновления Manual (`update.mode: Manual`).
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Показывает текущий статус релиза.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          description: 'Показывает, когда статус релиза изменился.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Детали статуса релиза.'

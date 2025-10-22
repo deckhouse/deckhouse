@@ -1,0 +1,7 @@
+istio:
+  fixes:
+    - summary: >-
+        Switching default iptables in proxyv2 to iptables-legacy (after switching from Debian to
+        Ubuntu).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3579
+

@@ -1,0 +1,138 @@
+{%- include getting_started/global/partials/NOTICES.liquid %}
+
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
+
+The minimal preset will be used during the installation:
+{%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
+<div id="preset_minimal" markdown="1">
+{{ preset.description[page.lang] }}
+</div>
+
+{%- assign layout_platform_code = page.platform_code | regex_replace: "^(openstack)_.+$", "\1" %}
+{%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
+{%- offtopic title="Used layout..." %}
+{%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
+{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
+Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
+
+The `{{ layout.name }}` layout will be used during the installation.
+
+{% include  {{ layout_path }} %}
+{%- endofftopic %}
+{%- endunless %}
+
+{% if include.presentation -%}
+The presentation contains an overview of the actions required to install Deckhouse.
+
+<div data-presentation="{{ include.presentation }}"></div>
+{%- endif %}
+
+{% if page.platform_type == "existing" %}
+If you want to install Deckhouse into a **new** cluster, we recommend going back to the previous step and sticking to the section that describes how to deploy a cluster using Deckhouse.
+
+Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse in such clusters is to install the minimal Deckhouse configuration first, and then enable the necessary modules.
+
+This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/modules/documentation/) (for a sample web application) and [cert-manager](/modules/cert-manager/) module enabled.
+
+After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/products/kubernetes-platform/documentation/v1/) to learn more or reach out to the Deckhouse [community](/community/about.html).
+
+{% elsif page.platform_code == "bm-private" %}
+## Installation scheme
+This guide focuses on deploying a Kubernetes cluster using Deckhouse in a private environment from which there is no direct access to the public container image registry (registry.deckhouse.io) or public deb/rpm packages repositories.
+
+Installation in a private environment is generally similar to installation on [bare metal](../bm/step2.html). The only difference is in some additional settings.
+
+Scheme of Deckhouse installation in a private environment:<br />
+<img src="/images/gs/private-env-schema.svg" alt="Scheme of Deckhouse installation in a private environment">
+
+{% alert %}An internal repository of OS packages is necessary to install curl on future cluster nodes (if there is no access to the official repositories via a proxy server).
+{% endalert %}
+{% endif %}
+
+## Installation requirements
+
+<ol>
+  <li><p><strong>Personal computer.</strong> The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer and will not be part of the cluster.{% endunless %}</p>
+
+   {% offtopic title="Requirements..." %}
+   - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 18.04+, Fedora 35+);
+   - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+{% if page.platform_code == "bm-private" %}
+   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
+{%- else %}
+   - HTTPS access to the `registry.deckhouse.io` container image registry;
+{%- endif %}
+{%- if page.platform_type == 'cloud' %}
+   - access to the API of the cloud provider, an account with rights to create resources, and a configured
+     {%- if page.platform_code == 'aws' %} [awscli](https://aws.amazon.com/cli/) utility
+     {%- elsif page.platform_code == "gcp" %} [gcloud](https://cloud.google.com/sdk/docs/install) utility
+     {%- elsif page.platform_code == "azure" %} [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) utility
+     {%- elsif page.platform_code == "yandex" %} [Yandex Cloud (CLI)](https://cloud.yandex.ru/docs/cli/quickstart) utility
+     {%- elsif page.platform_code == "openstack" %} management [utility](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) via CLI
+     {%- elsif page.platform_code == "vsphere" %} [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) utility
+     {%- else %} management utility via CLI
+     {%- endif %};
+{%- endif %}
+{%- if page.platform_type == "existing" %}
+   - the `kubectl` command-line tool must be configured to communicate with your cluster.
+{%- elsif page.platform_type == "baremetal"  %}
+   - SSH key access to the node, the **master node** of the future cluster.
+{%- endif %}
+   {% endofftopic %}
+  </li>
+<li>
+{% if page.platform_type == "existing" %}
+  <p><strong>The existing Kubernetes cluster.</strong></p>
+  <p>The Kubernetes versions and OS of cluster nodes should be on <a href="/products/kubernetes-platform/documentation/v1/supported_versions.html">the list of supported</a>.</p>
+  <p>During the installation, the Deckhouse installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse.</p>
+  <p><strong>Note</strong> that master node-based installation is not currently supported.</p>
+{%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
+  <p><strong>Cloud Provider Resources.</strong></p>
+   {% offtopic title="Minimum recommended resources..." %}
+   - 8 CPU cores
+   - 16 GB of RAM
+   - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_code == 'zvirt' %}
+  <p><strong>Hypervisor Resources.</strong></p>
+   {% offtopic title="Minimum recommended resources..." %}
+   - 8 CPU cores
+   - 16 GB of RAM
+   - 100 GB of disk space
+   {%- if page.platform_code == 'aws' %}
+   - Linux kernel version >= `5.7`
+   {%- endif %}
+   {% endofftopic %}
+{%- elsif page.platform_type == 'baremetal' %}
+   <p><strong>Physical server or virtual machine for the master node.</strong></p>
+   {% offtopic title="Requirements..." %}
+   - at least 4 CPU cores
+   - at least 8 GB of RAM
+   - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
+   - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
+   - Linux kernel version >= `5.7`
+   - **Unique hostname** within servers (virtual machines) of the cluster
+   {% if page.platform_code == "bm-private" %}
+   - access to a proxy registry or to a private container image registry containing Deckhouse images
+   - access to the default OS package repositories (via a proxy server or an internal package repository server);
+   {%- else %}
+   - HTTPS access to the `registry.deckhouse.io` container image registry
+   - access to the default package repositories for the operating system you are using;
+   {%- endif %}
+   - SSH key access from the **personal computer** (section 1)
+   - network access from the **personal computer** (section 1) via port <code>22/TCP</code>
+   - container runtime packages, such as containerd or docker, should not be installed on the node
+   - `cloud-utils` and `cloud-init` packages should be installed on the node
+   {% endofftopic %}
+{%- endif %}
+</li>
+{% if page.platform_type == "baremetal" or page.platform_type == "baremetal" %}
+<li>
+   <p><strong>Physical server or virtual machine for the worker node.</strong></p>
+   <p>The requirements are similar to the requirements for the master node but also depend on the applications running on the nodes.</p>
+</li>
+{%- endif %}
+</ol>

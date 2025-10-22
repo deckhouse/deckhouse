@@ -1,0 +1,209 @@
+admission-policy-engine:
+  features:
+    - summary: Add a separate queue and throttling for bootstrap hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8028
+candi:
+  features:
+    - summary: Add preflight check containerd restart.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8312
+    - summary: Forbid to use Debian 9.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7710
+  fixes:
+    - summary: >-
+        Set the default `standard.bastion.instanceClass.rootDiskSize` property to 50 gigabytes in
+        the `OpenStackClusterConfiguration` schema.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8309
+ci:
+  fixes:
+    - summary: Add go.mod and go.sum from everywhere in go_lib
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8280
+    - summary: Add chown temp directories owner in Cleanup temp directory job.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8055
+      impact: low
+cloud-provider-azure:
+  features:
+    - summary: Add tags support for additional StorageClasses.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8175
+cloud-provider-vsphere:
+  fixes:
+    - summary: Update `govmomi` lib to fix discoverer for vSphere `8.0.2`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8204
+cloud-provider-yandex:
+  features:
+    - summary: Add option to create nodes with SSD IO root disks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8382
+    - summary: Add custom target group node annotation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8171
+      impact: Yandex CCM should be restarted.
+  fixes:
+    - summary: Prepare  orphaned disks discovery feature for YandexCloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8224
+deckhouse:
+  features:
+    - summary: Replace go-based conversions with jq-based.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8193
+    - summary: Add validation webhook for `publicDomainTemplate`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8107
+  fixes:
+    - summary: Remove stale errors in a ModuleSource status.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8430
+    - summary: Print the right source for doubled (Embedded + External) modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8425
+    - summary: Validate that registry address is always present in the DKP configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8242
+    - summary: Fix annotantions on ns `d8-cloud-intance-manager` to move to the another module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8196
+    - summary: Update documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7478
+deckhouse-controller:
+  features:
+    - summary: Use CRD for render modules documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8351
+    - summary: Move validation logic to the module object.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8218
+    - summary: Reapply modules' registry settings after update their module source.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8067
+    - summary: Add a module release mechanism similar to the Deckhouse release mechanism.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7348
+  fixes:
+    - summary: Fix MPO _out of sync_ in HA mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8370
+    - summary: >-
+        Fix updates to module loading statistics and an error related to concurrent requests for
+        module documentation building.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8235
+    - summary: >-
+        Repeated queries with a limited number of attempts to get CRDs and apply conversion
+        strategies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7949
+dhctl:
+  features:
+    - summary: Add debug log file for all commands.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8303
+    - summary: One flag for resources and configs in bootstrap command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8277
+      impact: >-
+        You can use multiple `--config` flag in bootstrap command for logical separation bootstrap
+        configuration. The `--resources` flag is now deprecated.
+    - summary: Control-plane readiness check after bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8230
+    - summary: Create `DeckhouseRelease` for a new cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8143
+    - summary: Add preflight check for `publicDomainTemplate`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8107
+  fixes:
+    - summary: Print invalid YAML documents.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8296
+    - summary: Fix preflight ports checking when static cluster is bootstrapping.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7917
+docs:
+  features:
+    - summary: Use CAPS for bare metal.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8233
+  fixes:
+    - summary: Update kube-bench documentation to use `kubectl` and `jq` instead of `yq`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8439
+documentation:
+  fixes:
+    - summary: Clean old documentation files when updating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8307
+ingress-nginx:
+  features:
+    - summary: Add open-telemetry support to 1.9 ingress nginx.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8232
+      impact: If an ingress nginx of 1.9 version is used, its pods will be recreated.
+  fixes:
+    - summary: Digital ocean Kubernetes upgrade, update `timeoutSeconds`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8413
+    - summary: Replace status with formatted status in logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8385
+kube-dns:
+  features:
+    - summary: Add validation webhook for `clusterDomainAliases`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8107
+kube-proxy:
+  fixes:
+    - summary: Start `kube-proxy` only if `cni-flannel` or `cni-simple-bridge` modules is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8258
+log-shipper:
+  features:
+    - summary: Add extraLabels validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8031
+metallb:
+  fixes:
+    - summary: Switched to state-timeline plugin in MetalLB  Grafana dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8389
+monitoring-applications:
+  fixes:
+    - summary: Fix rabbitmq dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7979
+monitoring-kubernetes:
+  features:
+    - summary: Add 'Storage Filesystem' -> 'Filesystem size' in grafana-dashboard node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7816
+multitenancy-manager:
+  features:
+    - summary: >-
+        Set `heritage: deckhouse` label to embedded ProjectTemplates. Deny ProjectTemplates copying
+        with this label.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8141
+node-manager:
+  features:
+    - summary: Drain advanced DaemonSet pods when a node is deleted or updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8194
+  fixes:
+    - summary: Fix temporary disable alert alert orphan disks for yandex.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8283
+    - summary: Errors when adding a NodeUser do not block bashible.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8054
+okmeter:
+  features:
+    - summary: >-
+        Add `okagent` module for FE with customized environment variables to communicate with
+        Deckhouse Observability platform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8313
+      impact: >-
+        Okagent will update from the Deckhouse Observability platform source and will start sending
+        metrics to DOP for FE installations.
+  fixes:
+    - summary: Respect `nodeSelector` and `tolerations` configuration options from the `ModuleConfig`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8377
+    - summary: Restart okagent pods on API token change.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8343
+operator-trivy:
+  features:
+    - summary: Аdd ability to explicitly set storageClass.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8373
+    - summary: Add flag to create vulnerability reports only with desired severity levels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8096
+  fixes:
+    - summary: Fix incorrect reports links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7997
+prometheus:
+  fixes:
+    - summary: >-
+        Change `ignore_error` value from `true` to `false` in the aggregation proxy config to
+        prevent caching empty results.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8415
+    - summary: Drop the metrics named `memcached_slab_*` from memcached.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8342
+registry-packages-proxy:
+  features:
+    - summary: Add in-cluster proxy for registry packages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7751
+  fixes:
+    - summary: Fix panic when using custom CA.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8276
+testing:
+  fixes:
+    - summary: Increase execution time for matrix tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8033
+upmeter:
+  fixes:
+    - summary: 'Fix agent error "cannot add series for probe <probename>: limit reached".'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8304
+user-authn:
+  fixes:
+    - summary: Fix boundary value when `idTokenTTL` is too large.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7903
+

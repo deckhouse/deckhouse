@@ -1,0 +1,168 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 2e782f485..09fa1563a 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -774,7 +774,7 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
+ 					continue
+ 				}
+ 
+-				upsName := upstreamName(ing.Namespace, path.Backend.Service)
++				upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+ 
+ 				ups := upstreams[upsName]
+ 
+@@ -1006,10 +1006,11 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 
+ 		var defBackend string
+ 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+-			defBackend = upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++			defBackend = upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+ 
+ 			klog.V(3).Infof("Creating upstream %q", defBackend)
+ 			upstreams[defBackend] = newUpstream(defBackend)
++			upstreams[defBackend].Ingress = &ing.Ingress
+ 
+ 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
+ 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
+@@ -1066,7 +1067,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 					continue
+ 				}
+ 
+-				name := upstreamName(ing.Namespace, path.Backend.Service)
++				name := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+ 				svcName, svcPort := upstreamServiceNameAndPort(path.Backend.Service)
+ 				if _, ok := upstreams[name]; ok {
+ 					continue
+@@ -1075,6 +1076,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 				klog.V(3).Infof("Creating upstream %q", name)
+ 				upstreams[name] = newUpstream(name)
+ 				upstreams[name].Port = svcPort
++				upstreams[name].Ingress = &ing.Ingress
+ 
+ 				upstreams[name].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
+ 				upstreams[name].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
+@@ -1307,7 +1309,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
+ 		}
+ 
+ 		if ing.Spec.DefaultBackend != nil && ing.Spec.DefaultBackend.Service != nil {
+-			defUpstream := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++			defUpstream := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+ 
+ 			if backendUpstream, ok := upstreams[defUpstream]; ok {
+ 				// use backend specified in Ingress as the default backend for all its rules
+@@ -1583,7 +1585,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ ) {
+ 	// merge catch-all alternative backends
+ 	if ing.Spec.DefaultBackend != nil {
+-		upsName := upstreamName(ing.Namespace, ing.Spec.DefaultBackend.Service)
++		upsName := upstreamName(ing.Namespace, ing.Name, ing.Spec.DefaultBackend.Service)
+ 
+ 		altUps := upstreams[upsName]
+ 
+@@ -1630,7 +1632,7 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
+ 				continue
+ 			}
+ 
+-			upsName := upstreamName(ing.Namespace, path.Backend.Service)
++			upsName := upstreamName(ing.Namespace, ing.Name, path.Backend.Service)
+ 
+ 			altUps := upstreams[upsName]
+ 
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index b81734154..f135ded1b 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -39,6 +39,8 @@ import (
+ 	proxyproto "github.com/armon/go-proxyproto"
+ 	"github.com/eapache/channels"
+ 	apiv1 "k8s.io/api/core/v1"
++	networking "k8s.io/api/networking/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/util/intstr"
+ 	"k8s.io/client-go/kubernetes/scheme"
+ 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+@@ -905,8 +907,12 @@ func configureBackends(rawBackends []*ingress.Backend) error {
+ 
+ 	for i, backend := range rawBackends {
+ 		var service *apiv1.Service
++		var networkingIngress *networking.Ingress
+ 		if backend.Service != nil {
+-			service = &apiv1.Service{Spec: backend.Service.Spec}
++			service = &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: backend.Service.ObjectMeta.Name}, Spec: backend.Service.Spec}
++		}
++		if backend.Ingress != nil {
++			networkingIngress = &networking.Ingress{ObjectMeta: metav1.ObjectMeta{Name: backend.Ingress.ObjectMeta.Name}}
+ 		}
+ 		luaBackend := &ingress.Backend{
+ 			Name:                 backend.Name,
+@@ -916,6 +922,7 @@ func configureBackends(rawBackends []*ingress.Backend) error {
+ 			UpstreamHashBy:       backend.UpstreamHashBy,
+ 			LoadBalancing:        backend.LoadBalancing,
+ 			Service:              service,
++			Ingress:              networkingIngress,
+ 			NoServer:             backend.NoServer,
+ 			TrafficShapingPolicy: backend.TrafficShapingPolicy,
+ 			AlternativeBackends:  backend.AlternativeBackends,
+diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
+index 8851f323f..51f1ff8a2 100644
+--- a/internal/ingress/controller/util.go
++++ b/internal/ingress/controller/util.go
+@@ -47,13 +47,13 @@ func newUpstream(name string) *ingress.Backend {
+ }
+ 
+ // upstreamName returns a formatted upstream name based on namespace, service, and port
+-func upstreamName(namespace string, service *networking.IngressServiceBackend) string {
++func upstreamName(namespace string, ingress string, service *networking.IngressServiceBackend) string {
+ 	if service != nil {
+ 		if service.Port.Number > 0 {
+-			return fmt.Sprintf("%s-%s-%d", namespace, service.Name, service.Port.Number)
++			return fmt.Sprintf("%s-%s-%s-%d", namespace, ingress, service.Name, service.Port.Number)
+ 		}
+ 		if service.Port.Name != "" {
+-			return fmt.Sprintf("%s-%s-%s", namespace, service.Name, service.Port.Name)
++			return fmt.Sprintf("%s-%s-%s-%s", namespace, ingress, service.Name, service.Port.Name)
+ 		}
+ 	}
+ 	return fmt.Sprintf("%s-INVALID", namespace)
+diff --git a/pkg/apis/ingress/types.go b/pkg/apis/ingress/types.go
+index 269814d34..c26f8945d 100644
+--- a/pkg/apis/ingress/types.go
++++ b/pkg/apis/ingress/types.go
+@@ -80,9 +80,10 @@ type Configuration struct {
+ // +k8s:deepcopy-gen=true
+ type Backend struct {
+ 	// Name represents an unique apiv1.Service name formatted as <namespace>-<name>-<port>
+-	Name    string             `json:"name"`
+-	Service *apiv1.Service     `json:"service,omitempty"`
+-	Port    intstr.IntOrString `json:"port"`
++	Name    string              `json:"name"`
++	Service *apiv1.Service      `json:"service,omitempty"`
++	Port    intstr.IntOrString  `json:"port"`
++	Ingress *networking.Ingress `json:"ingress,omitempty"`
+ 	// SSLPassthrough indicates that Ingress controller will delegate TLS termination to the endpoints.
+ 	SSLPassthrough bool `json:"sslPassthrough"`
+ 	// Endpoints contains the list of endpoints currently running
+diff --git a/pkg/apis/ingress/zz_generated.deepcopy.go b/pkg/apis/ingress/zz_generated.deepcopy.go
+index 410173e26..01ad86190 100644
+--- a/pkg/apis/ingress/zz_generated.deepcopy.go
++++ b/pkg/apis/ingress/zz_generated.deepcopy.go
+@@ -23,6 +23,7 @@ package ingress
+ 
+ import (
+ 	v1 "k8s.io/api/core/v1"
++	networking "k8s.io/api/networking/v1"
+ )
+ 
+ // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+@@ -33,6 +34,11 @@ func (in *Backend) DeepCopyInto(out *Backend) {
+ 		*out = new(v1.Service)
+ 		(*in).DeepCopyInto(*out)
+ 	}
++	if in.Ingress != nil {
++		in, out := &in.Ingress, &out.Ingress
++		*out = new(networking.Ingress)
++		(*in).DeepCopyInto(*out)
++	}
+ 	out.Port = in.Port
+ 	if in.Endpoints != nil {
+ 		in, out := &in.Endpoints, &out.Endpoints

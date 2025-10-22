@@ -1,0 +1,31 @@
+{{- if .Values.istio.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: "istio"
+  namespace: "d8-istio"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "istio" )) | nindent 2 }}
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "istio") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  sendAuthorizationHeader: true
+  {{- with .Values.istio.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- with .Values.istio.auth.allowedUserGroups }}
+  allowedGroups:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  highAvailability: true
+  {{- else }}
+  highAvailability: false
+  {{- end }}
+{{- end }}

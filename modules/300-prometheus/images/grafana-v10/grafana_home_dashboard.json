@@ -1,0 +1,1637 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": null,
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 31,
+  "iteration": 1668117398181,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 23,
+      "options": {
+        "content": "<center>\n  <img src=/public/img/deckhouse-logo.svg/>\n</center>\n",
+        "mode": "html"
+      },
+      "pluginVersion": "8.5.13",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 4,
+        "y": 0
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (version, edition) (deckhouse_build_info{job=\"deckhouse\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ version }} {{ edition }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Deckhouse",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#770b5a",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "pattern": "",
+                "result": {
+                  "index": 0,
+                  "text": "Unknown"
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 6,
+        "y": 0
+      },
+      "id": 25,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (release_channel) (label_replace(deckhouse_release_channel{job=\"deckhouse\"}, \"release_channel\", \"Undefined\", \"release_channel\", \"\"))",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{label_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Release Channel",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "dark-yellow",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 8,
+        "y": 0
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "limit": 1,
+          "values": true
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (container_runtime_version) (kube_node_info)",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ container_runtime_version }}",
+          "refId": "A"
+        }
+      ],
+      "title": "CRI Version",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 10,
+        "y": 0
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "limit": 1,
+          "values": true
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (os_image) (kube_node_info)",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ git_version }}",
+          "refId": "A"
+        }
+      ],
+      "title": "OS Image",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#3b3b6f",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 12,
+        "y": 0
+      },
+      "id": 19,
+      "options": {
+        "displayLabels": [],
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "count by (phase) (kube_pod_status_phase == 1)",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Pods",
+      "transparent": true,
+      "type": "piechart"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-purple",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "count by (label_node_deckhouse_io_group) (label_replace(kube_node_labels, \"label_node_deckhouse_io_group\", \"unknown\", \"label_node_deckhouse_io_group\", \"\"))",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Nodes",
+      "transparent": true,
+      "type": "piechart"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "light-green",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 18,
+        "y": 0
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "right"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "count by (controller_type) (count by (controller_type, controller_name, namespace) (kube_controller_pod))",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Controllers",
+      "transparent": true,
+      "type": "piechart"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "super-light-blue",
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "count by (type) (kube_service_spec_type)",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Services",
+      "transparent": true,
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 4,
+        "y": 3
+      },
+      "id": 15,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (version) (deckhouse_kubernetes_version)",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Kubernetes",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#14386f",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 6,
+        "y": 3
+      },
+      "id": 24,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max by (server_version) (etcd_server_version{job=\"kube-etcd3\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ version }}",
+          "refId": "A"
+        }
+      ],
+      "title": "etcd",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 8,
+        "y": 3
+      },
+      "id": 17,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max by (version, namespace) (prometheus_build_info{service=\"prometheus\", namespace=\"d8-monitoring\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ version }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Prometheus",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "semi-dark-orange",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 2,
+        "x": 10,
+        "y": 3
+      },
+      "id": 16,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "max by (version, namespace) (grafana_build_info{service=\"grafana-v10\", namespace=\"d8-monitoring\"})",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ version }} {{ edition }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Grafana",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 0,
+        "y": 6
+      },
+      "id": 13,
+      "links": [],
+      "options": {
+        "maxItems": 30,
+        "query": "Deckhouse",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": []
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Overview of Deckhouse controller",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 6
+      },
+      "id": 32,
+      "links": [],
+      "options": {
+        "maxItems": 1,
+        "query": "Prometheus-(self)",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": []
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Prometheus Metrics",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "description": "Drill down is an analytics capability that allows users to instantly shift from an overview of data to a more detailed and granular view within the same dataset they are analyzing by clicking on a metric in a dashboard or report.\n\nNamespaces -> Namespace -> Namespace / Controller -> Namespace / Controller / Pod",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 8,
+        "y": 6
+      },
+      "id": 3,
+      "links": [],
+      "options": {
+        "maxItems": 30,
+        "query": "",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": [
+          "main"
+        ]
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Main",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "gridPos": {
+        "h": 12,
+        "w": 4,
+        "x": 12,
+        "y": 6
+      },
+      "id": 29,
+      "links": [],
+      "options": {
+        "maxItems": 7,
+        "query": "",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": [
+          "nodes"
+        ]
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Nodes",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "gridPos": {
+        "h": 12,
+        "w": 4,
+        "x": 16,
+        "y": 6
+      },
+      "id": 4,
+      "links": [],
+      "options": {
+        "maxItems": 30,
+        "query": "",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": [
+          "ingress"
+        ]
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Ingress Nginx",
+      "transparent": true,
+      "type": "dashlist"
+    },
+    {
+      "description": "List of all enabled modules (explicitly enabled and enabled by default).  If you click on a module name, the documentation for the module will be opened.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false
+          },
+          "links": [
+            {
+              "title": "",
+              "url": "${__data.fields.docs_url}/${__data.fields.module_name}/"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "module_name"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "docs_url"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 4,
+        "x": 20,
+        "y": 6
+      },
+      "id": 12,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": false
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(\n  max by (module, module_name, docs_url) (\n    (\n      label_replace(\n        deckhouse_web_interfaces{job=\"deckhouse\", name=\"documentation\"},\n        \"docs_url\", \n        \"$1/en/platform/modules\",\n        \"url\", \n        \"(.*?)(/)?$\"\n      )\n      + on (job) group_right(docs_url) (\n        label_replace(\n          deckhouse_binding_count{\n            module!=\"\", \n            module!~\".+-crd\", \n            module!=\"helm\", \n            module!=\"deckhouse-config\", \n            module!=\"basic-auth\", \n            module!=\"monitoring-applications\",\n            hook!~\"^[A-Za-z].*\"\n          },\n          \"module_name\", \n          \"$1\", \n          \"module\", \n          \"(.*)\"\n        )\n      )\n    )\n    or\n    (\n      label_replace(\n        deckhouse_web_interfaces{job=\"deckhouse\", name=\"documentation\"},\n        \"docs_url\", \n        \"$1/en/modules\",\n        \"url\", \n        \"(.*?)(/)?$\"\n      )\n      + on (job) group_right(docs_url) (\n        label_replace(\n          deckhouse_binding_count{\n            module!=\"\", \n            module!~\".+-crd\",\n            module!=\"operator-ceph\",\n            module!=\"operator-postgres\",\n            module!=\"helm\", \n            module!=\"deckhouse-config\", \n            module!=\"basic-auth\", \n            module!=\"monitoring-applications\",\n            hook=~\"^[A-Za-z].*\"\n          },\n          \"module_name\", \n          \"$1/stable\", \n          \"module\", \n          \"(.*)\"\n        )\n      )\n    )\n  )\n  and on() (deckhouse_web_interfaces{job=\"deckhouse\", name=\"documentation\"} >0)\n)\nor on()\n(max by (module, module_name, docs_url) (\n(label_replace(label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\", hook!~\"^[A-Za-z].*\"}, \"module_name\", \"$1\", \"module\", \"(.*)\"), \"docs_url\", \"deckhouse.io/products/kubernetes-platform/documentation/v1/modules\", \"\", \"\")) or (label_replace(label_replace(deckhouse_binding_count{module!=\"\", module!~\".+-crd\", module!=\"helm\", module!=\"deckhouse-config\", module!=\"basic-auth\", module!=\"monitoring-applications\", hook=~\"^[A-Za-z].*\"}, \"module_name\", \"$1/stable\", \"module\", \"(.*)\"), \"docs_url\", \"deckhouse.io/products/kubernetes-platform/modules\", \"\", \"\"))\n))\n",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{ module }}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Enabled modules",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "module",
+                "module_name",
+                "docs_url"
+              ]
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "module"
+              }
+            ]
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
+      "columns": [],
+      "description": "Links to web interfaces of Deckhouse modules. An interface is added to the list automatically if module is enabled.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "displayMode": "auto",
+            "filterable": false,
+            "inspect": false,
+            "width": 200
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "icon"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "image"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 1
+              },
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": true,
+                    "title": "",
+                    "url": "${__data.fields.url}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 0,
+        "y": 9
+      },
+      "id": 22,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": false,
+        "sortBy": []
+      },
+      "pluginVersion": "8.5.13",
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "styles": [
+        {
+          "$$hashKey": "object:28",
+          "alias": "",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "url",
+          "type": "hidden"
+        },
+        {
+          "$$hashKey": "object:29",
+          "alias": "",
+          "align": "right",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "/.*/",
+          "thresholds": [],
+          "type": "number",
+          "unit": "short"
+        }
+      ],
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (icon, name, url) (deckhouse_web_interfaces{job=\"deckhouse\"})",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Web Interfaces",
+      "transform": "table",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "icon",
+                "name",
+                "url"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "icon": false,
+              "url": false
+            },
+            "indexByName": {},
+            "renameByName": {
+              "url": ""
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
+      "description": "Difference between the oldest timestamp in the Prometheus tsdb and the current time. It shows how far in the past Prometheus instance collect the stats.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "color-text",
+            "filterable": false,
+            "inspect": false
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "pattern": "prometheus",
+                "result": {
+                  "color": "light-purple",
+                  "index": 0
+                }
+              },
+              "type": "regex"
+            },
+            {
+              "options": {
+                "pattern": "prometheus-longterm",
+                "result": {
+                  "color": "light-blue",
+                  "index": 1
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "days"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.inspect",
+                "value": false
+              },
+              {
+                "id": "custom.filterable",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "center"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 9
+      },
+      "id": 31,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": false
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (service) (time() - prometheus_tsdb_lowest_timestamp_seconds{service=~\"prometheus|prometheus-longterm\", namespace=\"d8-monitoring\"}) / 60 / 60 / 24",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Oldest metrics in Prometheus",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "service",
+                "Value"
+              ]
+            }
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#265d43",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "pattern": "",
+                "result": {
+                  "index": 0,
+                  "text": "Unknown"
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 4,
+        "y": 12
+      },
+      "id": 34,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (mode) (label_replace(d8_telemetry_update_window_approval_mode, \"mode\", \"Auto\", \"mode\", \"\"))",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Update Mode",
+      "transformations": [],
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "Intervals in which Deckhouse can start its updating. No Data means that Deckhouse can be updated anytime.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "json-view",
+            "filterable": false,
+            "inspect": false,
+            "width": 20
+          },
+          "decimals": 0,
+          "mappings": [
+            {
+              "options": {
+                "pattern": "prometheus",
+                "result": {
+                  "color": "light-purple",
+                  "index": 0
+                }
+              },
+              "type": "regex"
+            },
+            {
+              "options": {
+                "pattern": "prometheus-longterm",
+                "result": {
+                  "color": "light-blue",
+                  "index": 1
+                }
+              },
+              "type": "regex"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "days"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "days"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 4,
+        "y": 14
+      },
+      "id": 33,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": false
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max by (from, to, days) (d8_telemetry_update_window)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Update Windows",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "days",
+                "from",
+                "to"
+              ]
+            }
+          }
+        }
+      ],
+      "transparent": true,
+      "type": "table"
+    },
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 4,
+        "x": 8,
+        "y": 14
+      },
+      "id": 5,
+      "links": [],
+      "options": {
+        "maxItems": 1,
+        "query": "Capacity Planning",
+        "showHeadings": false,
+        "showRecentlyViewed": false,
+        "showSearch": true,
+        "showStarred": false,
+        "tags": []
+      },
+      "pluginVersion": "8.5.13",
+      "tags": [],
+      "title": "Resources management",
+      "transparent": true,
+      "type": "dashlist"
+    }
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "hidden": true,
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ],
+    "type": "timepicker"
+  },
+  "timezone": "browser",
+  "title": "Home",
+  "uid": "M5QPqhtnz",
+  "version": 1,
+  "weekStart": ""
+}

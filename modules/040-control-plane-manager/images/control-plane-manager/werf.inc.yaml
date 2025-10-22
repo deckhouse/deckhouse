@@ -1,0 +1,55 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+fromCacheVersion: "2025-07-25-3"
+import:
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin
+  to: /
+  includePaths:
+  - kubeadm
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/controller
+  to: /controller
+  before: install
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/controller"]
+{{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+fromCacheVersion: "2025-07-25-3"
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromCacheVersion: "2025-07-25-3"
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'

@@ -1,0 +1,1465 @@
+{
+  "format_version": "0.1",
+  "terraform_version": "0.14.8",
+  "variables": {
+    "cloudConfig": {
+      "value": ""
+    },
+    "clusterConfiguration": {
+      "value": {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "cloud": {
+          "prefix": "kube",
+          "provider": "Yandex"
+        },
+        "clusterDomain": "cluster.local",
+        "clusterType": "Cloud",
+        "defaultCRI": "Containerd",
+        "kind": "ClusterConfiguration",
+        "kubernetesVersion": "1.29",
+        "podSubnetCIDR": "0.0.0.0/16",
+        "podSubnetNodeCIDRPrefix": "24",
+        "serviceSubnetCIDR": "0.0.0.0/16"
+      }
+    },
+    "clusterUUID": {
+      "value": "000000-ed62-4723-9814-a686e1cd6ece"
+    },
+    "nodeIndex": {
+      "value": 0
+    },
+    "providerClusterConfiguration": {
+      "value": {
+        "apiVersion": "deckhouse.io/v1alpha1",
+        "existingNetworkID": "enp3rgpigukmn45l2chc",
+        "kind": "YandexClusterConfiguration",
+        "layout": "WithNATInstance",
+        "masterNodeGroup": {
+          "instanceClass": {
+            "cores": 4,
+            "diskSizeGB": 45,
+            "imageID": "test",
+            "memory": 8192
+          },
+          "replicas": 3
+        },
+        "nodeNetworkCIDR": "0.0.0.0/22",
+        "provider": {
+          "cloudID": "test",
+          "folderID": "test",
+          "serviceAccountJSON": ""
+        },
+        "sshPublicKey": "",
+        "withNATInstance": {
+          "internalSubnetID": "test",
+          "natInstanceExternalAddress": "0.0.0.0",
+          "natInstanceInternalAddress": "0.0.0.0"
+        }
+      }
+    }
+  },
+  "planned_values": {
+    "outputs": {
+      "cloud_discovery_data": {
+        "sensitive": false,
+        "value": {
+          "apiVersion": "deckhouse.io/v1",
+          "defaultLbTargetGroupNetworkId": "test",
+          "internalNetworkIDs": [
+            "test"
+          ],
+          "kind": "YandexCloudDiscoveryData",
+          "region": "ru-central1",
+          "routeTableID": "test",
+          "shouldAssignPublicIPAddress": false,
+          "zoneToSubnetIdMap": {
+            "ru-central1-a": "test",
+            "ru-central1-b": "test",
+            "ru-central1-c": "test"
+          },
+          "zones": [
+            "ru-central1-a",
+            "ru-central1-b",
+            "ru-central1-c"
+          ]
+        }
+      }
+    },
+    "root_module": {
+      "child_modules": [
+        {
+          "resources": [
+            {
+              "address": "module.vpc_components.yandex_compute_instance.nat_instance[0]",
+              "mode": "managed",
+              "type": "yandex_compute_instance",
+              "name": "nat_instance",
+              "index": 0,
+              "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+              "schema_version": 1,
+              "values": {
+                "allow_stopping_for_update": null,
+                "boot_disk": [
+                  {
+                    "auto_delete": true,
+                    "device_name": "test",
+                    "disk_id": "test",
+                    "initialize_params": [
+                      {
+                        "description": "",
+                        "image_id": "test",
+                        "name": "",
+                        "size": 20,
+                        "snapshot_id": "",
+                        "type": "network-hdd"
+                      }
+                    ],
+                    "mode": "READ_WRITE"
+                  }
+                ],
+                "created_at": "2020-06-29T09:17:25Z",
+                "description": "",
+                "folder_id": "test",
+                "fqdn": "nat-instance-a.ru-central1.internal",
+                "hostname": "nat-instance-a",
+                "id": "test",
+                "labels": {},
+                "metadata": {
+                  "serial-port-enable": "0",
+                  "ssh-keys": "",
+                  "user-data": ""
+                },
+                "name": "kube-nat",
+                "network_acceleration_type": "standard",
+                "network_interface": [
+                  {
+                    "index": 0,
+                    "ip_address": "0.0.0.0",
+                    "ipv4": true,
+                    "ipv6": false,
+                    "ipv6_address": "",
+                    "mac_address": "00:00:00:00:00:00",
+                    "nat": true,
+                    "nat_ip_address": "0.0.0.0",
+                    "nat_ip_version": "IPV4",
+                    "security_group_ids": [],
+                    "subnet_id": "test"
+                  }
+                ],
+                "platform_id": "standard-v2",
+                "resources": [
+                  {
+                    "core_fraction": 100,
+                    "cores": 2,
+                    "gpus": 0,
+                    "memory": 2
+                  }
+                ],
+                "scheduling_policy": [
+                  {
+                    "preemptible": false
+                  }
+                ],
+                "secondary_disk": [],
+                "service_account_id": "",
+                "status": "running",
+                "timeouts": {
+                  "create": null,
+                  "delete": null,
+                  "update": null
+                },
+                "zone": "ru-central1-a"
+              }
+            },
+            {
+              "address": "module.vpc_components.yandex_vpc_route_table.kube",
+              "mode": "managed",
+              "type": "yandex_vpc_route_table",
+              "name": "kube",
+              "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+              "schema_version": 0,
+              "values": {
+                "created_at": "2020-01-15T11:47:00Z",
+                "description": "",
+                "folder_id": "test",
+                "id": "test",
+                "labels": {},
+                "name": "kube",
+                "network_id": "test",
+                "static_route": [
+                  {
+                    "destination_prefix": "0.0.0.0/0",
+                    "next_hop_address": "0.0.0.0"
+                  }
+                ],
+                "timeouts": {
+                  "create": null,
+                  "delete": null,
+                  "update": null
+                }
+              }
+            },
+            {
+              "address": "module.vpc_components.yandex_vpc_subnet.kube_a",
+              "mode": "managed",
+              "type": "yandex_vpc_subnet",
+              "name": "kube_a",
+              "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+              "schema_version": 0,
+              "values": {
+                "created_at": "2020-09-04T16:19:53Z",
+                "description": "",
+                "dhcp_options": [],
+                "folder_id": "test",
+                "id": "test",
+                "labels": {},
+                "name": "kube-a",
+                "network_id": "test",
+                "route_table_id": "test",
+                "timeouts": null,
+                "v4_cidr_blocks": [
+                  "0.0.0.0/24"
+                ],
+                "v6_cidr_blocks": [],
+                "zone": "ru-central1-a"
+              }
+            },
+            {
+              "address": "module.vpc_components.yandex_vpc_subnet.kube_b",
+              "mode": "managed",
+              "type": "yandex_vpc_subnet",
+              "name": "kube_b",
+              "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+              "schema_version": 0,
+              "values": {
+                "created_at": "2020-09-04T16:20:01Z",
+                "description": "",
+                "dhcp_options": [],
+                "folder_id": "test",
+                "id": "test",
+                "labels": {},
+                "name": "kube-b",
+                "network_id": "test",
+                "route_table_id": "test",
+                "timeouts": null,
+                "v4_cidr_blocks": [
+                  "0.0.0.0/24"
+                ],
+                "v6_cidr_blocks": [],
+                "zone": "ru-central1-b"
+              }
+            },
+            {
+              "address": "module.vpc_components.yandex_vpc_subnet.kube_c",
+              "mode": "managed",
+              "type": "yandex_vpc_subnet",
+              "name": "kube_c",
+              "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+              "schema_version": 0,
+              "values": {
+                "created_at": "2020-09-04T16:19:56Z",
+                "description": "",
+                "dhcp_options": [],
+                "folder_id": "test",
+                "id": "test",
+                "labels": {},
+                "name": "kube-c",
+                "network_id": "test",
+                "route_table_id": "test",
+                "timeouts": null,
+                "v4_cidr_blocks": [
+                  "0.0.0.0/24"
+                ],
+                "v6_cidr_blocks": [],
+                "zone": "ru-central1-c"
+              }
+            }
+          ],
+          "address": "module.vpc_components"
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.vpc_components.yandex_compute_instance.nat_instance[0]",
+      "module_address": "module.vpc_components",
+      "mode": "managed",
+      "type": "yandex_compute_instance",
+      "name": "nat_instance",
+      "index": 0,
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "allow_stopping_for_update": null,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "device_name": "test",
+              "disk_id": "test",
+              "initialize_params": [
+                {
+                  "description": "",
+                  "image_id": "test",
+                  "name": "",
+                  "size": 20,
+                  "snapshot_id": "",
+                  "type": "network-hdd"
+                }
+              ],
+              "mode": "READ_WRITE"
+            }
+          ],
+          "created_at": "2020-06-29T09:17:25Z",
+          "description": "",
+          "folder_id": "test",
+          "fqdn": "nat-instance-a.ru-central1.internal",
+          "hostname": "nat-instance-a",
+          "id": "test",
+          "labels": {},
+          "metadata": {
+            "serial-port-enable": "0",
+            "ssh-keys": "",
+            "user-data": ""
+          },
+          "name": "kube-nat",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "index": 0,
+              "ip_address": "0.0.0.0",
+              "ipv4": true,
+              "ipv6": false,
+              "ipv6_address": "",
+              "mac_address": "00:00:00:00:00:00",
+              "nat": true,
+              "nat_ip_address": "0.0.0.0",
+              "nat_ip_version": "IPV4",
+              "security_group_ids": [],
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 2,
+              "gpus": 0,
+              "memory": 2
+            }
+          ],
+          "scheduling_policy": [
+            {
+              "preemptible": false
+            }
+          ],
+          "secondary_disk": [],
+          "service_account_id": "",
+          "status": "running",
+          "timeouts": {
+            "create": null,
+            "delete": null,
+            "update": null
+          },
+          "zone": "ru-central1-a"
+        },
+        "after": {
+          "allow_stopping_for_update": null,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "device_name": "test",
+              "disk_id": "test",
+              "initialize_params": [
+                {
+                  "description": "",
+                  "image_id": "test",
+                  "name": "",
+                  "size": 20,
+                  "snapshot_id": "",
+                  "type": "network-hdd"
+                }
+              ],
+              "mode": "READ_WRITE"
+            }
+          ],
+          "created_at": "2020-06-29T09:17:25Z",
+          "description": "",
+          "folder_id": "test",
+          "fqdn": "nat-instance-a.ru-central1.internal",
+          "hostname": "nat-instance-a",
+          "id": "test",
+          "labels": {},
+          "metadata": {
+            "serial-port-enable": "0",
+            "ssh-keys": "",
+            "user-data": ""
+          },
+          "name": "kube-nat",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "index": 0,
+              "ip_address": "0.0.0.0",
+              "ipv4": true,
+              "ipv6": false,
+              "ipv6_address": "",
+              "mac_address": "00:00:0:0:0:0",
+              "nat": true,
+              "nat_ip_address": "0.0.0.0",
+              "nat_ip_version": "IPV4",
+              "security_group_ids": [],
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 2,
+              "gpus": 0,
+              "memory": 2
+            }
+          ],
+          "scheduling_policy": [
+            {
+              "preemptible": false
+            }
+          ],
+          "secondary_disk": [],
+          "service_account_id": "",
+          "status": "running",
+          "timeouts": {
+            "create": null,
+            "delete": null,
+            "update": null
+          },
+          "zone": "ru-central1-a"
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "module.vpc_components.yandex_vpc_route_table.kube",
+      "module_address": "module.vpc_components",
+      "mode": "managed",
+      "type": "yandex_vpc_route_table",
+      "name": "kube",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2020-01-15T11:47:00Z",
+          "description": "",
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube",
+          "network_id": "test",
+          "static_route": [
+            {
+              "destination_prefix": "0.0.0.0/0",
+              "next_hop_address": "0.0.0.0"
+            }
+          ],
+          "timeouts": {
+            "create": null,
+            "delete": null,
+            "update": null
+          }
+        },
+        "after": {
+          "created_at": "2020-01-15T11:47:00Z",
+          "description": "",
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube",
+          "network_id": "test",
+          "static_route": [
+            {
+              "destination_prefix": "0.0.0.0/0",
+              "next_hop_address": "0.0.0.0"
+            }
+          ],
+          "timeouts": {
+            "create": null,
+            "delete": null,
+            "update": null
+          }
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "module.vpc_components.yandex_vpc_subnet.kube_a",
+      "module_address": "module.vpc_components",
+      "mode": "managed",
+      "type": "yandex_vpc_subnet",
+      "name": "kube_a",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2020-09-04T16:19:53Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-a",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-a"
+        },
+        "after": {
+          "created_at": "2020-09-04T16:19:53Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-a",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-a"
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "module.vpc_components.yandex_vpc_subnet.kube_b",
+      "module_address": "module.vpc_components",
+      "mode": "managed",
+      "type": "yandex_vpc_subnet",
+      "name": "kube_b",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2020-09-04T16:20:01Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-b",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-b"
+        },
+        "after": {
+          "created_at": "2020-09-04T16:20:01Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-b",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-b"
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "module.vpc_components.yandex_vpc_subnet.kube_c",
+      "module_address": "module.vpc_components",
+      "mode": "managed",
+      "type": "yandex_vpc_subnet",
+      "name": "kube_c",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2020-09-04T16:19:56Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-c",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-c"
+        },
+        "after": {
+          "created_at": "2020-09-04T16:19:56Z",
+          "description": "",
+          "dhcp_options": [],
+          "folder_id": "test",
+          "id": "test",
+          "labels": {},
+          "name": "kube-c",
+          "network_id": "test",
+          "route_table_id": "test",
+          "timeouts": null,
+          "v4_cidr_blocks": [
+            "0.0.0.0/24"
+          ],
+          "v6_cidr_blocks": [],
+          "zone": "ru-central1-c"
+        },
+        "after_unknown": {}
+      }
+    }
+  ],
+  "output_changes": {
+    "cloud_discovery_data": {
+      "actions": [
+        "create"
+      ],
+      "before": null,
+      "after": {
+        "apiVersion": "deckhouse.io/v1",
+        "defaultLbTargetGroupNetworkId": "test",
+        "internalNetworkIDs": [
+          "test"
+        ],
+        "kind": "YandexCloudDiscoveryData",
+        "region": "ru-central1",
+        "routeTableID": "test",
+        "shouldAssignPublicIPAddress": false,
+        "zoneToSubnetIdMap": {
+          "ru-central1-a": "test",
+          "ru-central1-b": "test",
+          "ru-central1-c": "test"
+        },
+        "zones": [
+          "ru-central1-a",
+          "ru-central1-b",
+          "ru-central1-c"
+        ]
+      },
+      "after_unknown": false
+    }
+  },
+  "prior_state": {
+    "format_version": "0.1",
+    "terraform_version": "0.14.8",
+    "values": {
+      "outputs": {
+        "cloud_discovery_data": {
+          "sensitive": false,
+          "value": {
+            "apiVersion": "deckhouse.io/v1",
+            "defaultLbTargetGroupNetworkId": "test",
+            "internalNetworkIDs": [
+              "test"
+            ],
+            "kind": "YandexCloudDiscoveryData",
+            "region": "ru-central1",
+            "routeTableID": "test",
+            "shouldAssignPublicIPAddress": false,
+            "zoneToSubnetIdMap": {
+              "ru-central1-a": "test",
+              "ru-central1-b": "test",
+              "ru-central1-c": "test"
+            },
+            "zones": [
+              "ru-central1-a",
+              "ru-central1-b",
+              "ru-central1-c"
+            ]
+          }
+        }
+      },
+      "root_module": {
+        "child_modules": [
+          {
+            "resources": [
+              {
+                "address": "module.vpc_components.data.yandex_compute_image.nat_image[0]",
+                "mode": "data",
+                "type": "yandex_compute_image",
+                "name": "nat_image",
+                "index": 0,
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2021-02-08T21:22:42Z",
+                  "description": "Image with pre-configured routing and IP address translation rules.",
+                  "family": "nat-instance-ubuntu",
+                  "folder_id": "standard-images",
+                  "id": "test",
+                  "image_id": "test",
+                  "labels": {},
+                  "min_disk_size": 3,
+                  "name": "nat-instance-ubuntu-1612818947",
+                  "os_type": "linux",
+                  "product_ids": [
+                    "test"
+                  ],
+                  "size": 2,
+                  "status": "ready"
+                }
+              },
+              {
+                "address": "module.vpc_components.data.yandex_vpc_subnet.internal_subnet",
+                "mode": "data",
+                "type": "yandex_vpc_subnet",
+                "name": "internal_subnet",
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2020-06-29T09:10:21Z",
+                  "description": "",
+                  "dhcp_options": [],
+                  "folder_id": "test",
+                  "id": "test",
+                  "labels": {},
+                  "name": "k8s-public-network-central-1a",
+                  "network_id": "test",
+                  "route_table_id": "",
+                  "subnet_id": "test",
+                  "v4_cidr_blocks": [
+                    "0.0.0.0/24"
+                  ],
+                  "v6_cidr_blocks": [],
+                  "zone": "ru-central1-a"
+                }
+              },
+              {
+                "address": "module.vpc_components.yandex_compute_instance.nat_instance[0]",
+                "mode": "managed",
+                "type": "yandex_compute_instance",
+                "name": "nat_instance",
+                "index": 0,
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 1,
+                "values": {
+                  "allow_stopping_for_update": null,
+                  "boot_disk": [
+                    {
+                      "auto_delete": true,
+                      "device_name": "test",
+                      "disk_id": "test",
+                      "initialize_params": [
+                        {
+                          "description": "",
+                          "image_id": "test",
+                          "name": "",
+                          "size": 20,
+                          "snapshot_id": "",
+                          "type": "network-hdd"
+                        }
+                      ],
+                      "mode": "READ_WRITE"
+                    }
+                  ],
+                  "created_at": "2020-06-29T09:17:25Z",
+                  "description": "",
+                  "folder_id": "test",
+                  "fqdn": "nat-instance-a.ru-central1.internal",
+                  "hostname": "nat-instance-a",
+                  "id": "test",
+                  "labels": {},
+                  "metadata": {
+                    "serial-port-enable": "0",
+                    "ssh-keys": "",
+                    "user-data": ""
+                  },
+                  "name": "kube-nat",
+                  "network_acceleration_type": "standard",
+                  "network_interface": [
+                    {
+                      "index": 0,
+                      "ip_address": "0.0.0.0",
+                      "ipv4": true,
+                      "ipv6": false,
+                      "ipv6_address": "",
+                      "mac_address": "00:00:00:00:00:00",
+                      "nat": true,
+                      "nat_ip_address": "0.0.0.0",
+                      "nat_ip_version": "IPV4",
+                      "security_group_ids": [],
+                      "subnet_id": "test"
+                    }
+                  ],
+                  "platform_id": "standard-v2",
+                  "resources": [
+                    {
+                      "core_fraction": 100,
+                      "cores": 2,
+                      "gpus": 0,
+                      "memory": 2
+                    }
+                  ],
+                  "scheduling_policy": [
+                    {
+                      "preemptible": false
+                    }
+                  ],
+                  "secondary_disk": [],
+                  "service_account_id": "",
+                  "status": "running",
+                  "timeouts": {
+                    "create": null,
+                    "delete": null,
+                    "update": null
+                  },
+                  "zone": "ru-central1-a"
+                },
+                "depends_on": [
+                  "module.vpc_components.data.yandex_compute_image.nat_image",
+                  "module.vpc_components.data.yandex_vpc_subnet.external_subnet",
+                  "module.vpc_components.data.yandex_vpc_subnet.internal_subnet",
+                  "module.vpc_components.yandex_vpc_route_table.kube",
+                  "module.vpc_components.yandex_vpc_subnet.kube_c",
+                  "yandex_vpc_network.kube"
+                ]
+              },
+              {
+                "address": "module.vpc_components.yandex_vpc_route_table.kube",
+                "mode": "managed",
+                "type": "yandex_vpc_route_table",
+                "name": "kube",
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2020-01-15T11:47:00Z",
+                  "description": "",
+                  "folder_id": "test",
+                  "id": "test",
+                  "labels": {},
+                  "name": "kube",
+                  "network_id": "test",
+                  "static_route": [
+                    {
+                      "destination_prefix": "0.0.0.0/0",
+                      "next_hop_address": "0.0.0.0"
+                    }
+                  ],
+                  "timeouts": {
+                    "create": null,
+                    "delete": null,
+                    "update": null
+                  }
+                },
+                "depends_on": [
+                  "yandex_vpc_network.kube"
+                ]
+              },
+              {
+                "address": "module.vpc_components.yandex_vpc_subnet.kube_a",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_a",
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2020-09-04T16:19:53Z",
+                  "description": "",
+                  "dhcp_options": [],
+                  "folder_id": "test",
+                  "id": "test",
+                  "labels": {},
+                  "name": "kube-a",
+                  "network_id": "test",
+                  "route_table_id": "test",
+                  "timeouts": null,
+                  "v4_cidr_blocks": [
+                    "0.0.0.0/24"
+                  ],
+                  "v6_cidr_blocks": [],
+                  "zone": "ru-central1-a"
+                },
+                "depends_on": [
+                  "module.vpc_components.yandex_vpc_route_table.kube",
+                  "yandex_vpc_network.kube"
+                ]
+              },
+              {
+                "address": "module.vpc_components.yandex_vpc_subnet.kube_b",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_b",
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2020-09-04T16:20:01Z",
+                  "description": "",
+                  "dhcp_options": [],
+                  "folder_id": "test",
+                  "id": "test",
+                  "labels": {},
+                  "name": "kube-b",
+                  "network_id": "test",
+                  "route_table_id": "test",
+                  "timeouts": null,
+                  "v4_cidr_blocks": [
+                    "0.0.0.0/24"
+                  ],
+                  "v6_cidr_blocks": [],
+                  "zone": "ru-central1-b"
+                },
+                "depends_on": [
+                  "module.vpc_components.yandex_vpc_route_table.kube",
+                  "yandex_vpc_network.kube"
+                ]
+              },
+              {
+                "address": "module.vpc_components.yandex_vpc_subnet.kube_c",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_c",
+                "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+                "schema_version": 0,
+                "values": {
+                  "created_at": "2020-09-04T16:19:56Z",
+                  "description": "",
+                  "dhcp_options": [],
+                  "folder_id": "test",
+                  "id": "test",
+                  "labels": {},
+                  "name": "kube-c",
+                  "network_id": "test",
+                  "route_table_id": "test",
+                  "timeouts": null,
+                  "v4_cidr_blocks": [
+                    "0.0.0.0/24"
+                  ],
+                  "v6_cidr_blocks": [],
+                  "zone": "ru-central1-c"
+                },
+                "depends_on": [
+                  "module.vpc_components.yandex_vpc_route_table.kube",
+                  "yandex_vpc_network.kube"
+                ]
+              }
+            ],
+            "address": "module.vpc_components"
+          }
+        ]
+      }
+    }
+  },
+  "configuration": {
+    "provider_config": {
+      "yandex": {
+        "name": "yandex",
+        "expressions": {
+          "cloud_id": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          },
+          "folder_id": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          },
+          "service_account_key_file": {
+            "references": [
+              "var.providerClusterConfiguration"
+            ]
+          }
+        }
+      }
+    },
+    "root_module": {
+      "outputs": {
+        "cloud_discovery_data": {
+          "expression": {
+            "references": [
+              "module.vpc_components.route_table_id",
+              "local.network_id",
+              "local.network_id",
+              "var.providerClusterConfiguration",
+              "module.vpc_components.zone_to_subnet_id_map",
+              "var.providerClusterConfiguration",
+              "module.vpc_components.zone_to_subnet_id_map",
+              "module.vpc_components.zone_to_subnet_id_map"
+            ]
+          }
+        }
+      },
+      "resources": [
+        {
+          "address": "yandex_vpc_network.kube",
+          "mode": "managed",
+          "type": "yandex_vpc_network",
+          "name": "kube",
+          "provider_config_key": "yandex",
+          "expressions": {
+            "labels": {
+              "references": [
+                "local.labels"
+              ]
+            },
+            "name": {
+              "references": [
+                "local.prefix"
+              ]
+            }
+          },
+          "schema_version": 0,
+          "count_expression": {
+            "references": [
+              "local.existing_network_id"
+            ]
+          }
+        }
+      ],
+      "module_calls": {
+        "vpc_components": {
+          "source": "../../../terraform-modules/vpc-components",
+          "expressions": {
+            "dhcp_domain_name": {
+              "references": [
+                "local.dhcp_domain_name"
+              ]
+            },
+            "dhcp_domain_name_servers": {
+              "references": [
+                "local.dhcp_domain_name_servers"
+              ]
+            },
+            "labels": {
+              "references": [
+                "local.labels"
+              ]
+            },
+            "nat_instance_external_address": {
+              "references": [
+                "local.nat_instance_external_address"
+              ]
+            },
+            "nat_instance_external_subnet_id": {
+              "references": [
+                "local.nat_instance_external_subnet_id"
+              ]
+            },
+            "nat_instance_internal_address": {
+              "references": [
+                "local.nat_instance_internal_address"
+              ]
+            },
+            "nat_instance_internal_subnet_id": {
+              "references": [
+                "local.nat_instance_internal_subnet_id"
+              ]
+            },
+            "nat_instance_ssh_key": {
+              "references": [
+                "var.providerClusterConfiguration"
+              ]
+            },
+            "network_id": {
+              "references": [
+                "local.network_id"
+              ]
+            },
+            "node_network_cidr": {
+              "references": [
+                "local.node_network_cidr"
+              ]
+            },
+            "prefix": {
+              "references": [
+                "local.prefix"
+              ]
+            },
+            "should_create_nat_instance": {
+              "constant_value": true
+            }
+          },
+          "module": {
+            "outputs": {
+              "route_table_id": {
+                "expression": {
+                  "references": [
+                    "yandex_vpc_route_table.kube"
+                  ]
+                }
+              },
+              "zone_to_subnet_id_map": {
+                "expression": {
+                  "references": [
+                    "yandex_vpc_subnet.kube_a",
+                    "yandex_vpc_subnet.kube_a",
+                    "yandex_vpc_subnet.kube_b",
+                    "yandex_vpc_subnet.kube_b",
+                    "yandex_vpc_subnet.kube_c",
+                    "yandex_vpc_subnet.kube_c"
+                  ]
+                }
+              }
+            },
+            "resources": [
+              {
+                "address": "yandex_compute_instance.nat_instance",
+                "mode": "managed",
+                "type": "yandex_compute_instance",
+                "name": "nat_instance",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "boot_disk": [
+                    {
+                      "initialize_params": [
+                        {
+                          "image_id": {
+                            "references": [
+                              "data.yandex_compute_image.nat_image[0]"
+                            ]
+                          },
+                          "size": {
+                            "constant_value": 13
+                          },
+                          "type": {
+                            "constant_value": "network-hdd"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "hostname": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "metadata": {
+                    "references": [
+                      "local.user_data"
+                    ]
+                  },
+                  "name": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "network_interface": [
+                    {
+                      "ip_address": {
+                        "references": [
+                          "local.nat_instance_internal_address_calculated"
+                        ]
+                      },
+                      "nat": {
+                        "references": [
+                          "local.assign_external_ip_address"
+                        ]
+                      },
+                      "nat_ip_address": {
+                        "references": [
+                          "local.assign_external_ip_address",
+                          "var.nat_instance_external_address"
+                        ]
+                      },
+                      "subnet_id": {
+                        "references": [
+                          "data.yandex_vpc_subnet.internal_subnet"
+                        ]
+                      }
+                    }
+                  ],
+                  "platform_id": {
+                    "constant_value": "standard-v2"
+                  },
+                  "resources": [
+                    {
+                      "cores": {
+                        "constant_value": 2
+                      },
+                      "memory": {
+                        "constant_value": 2
+                      }
+                    }
+                  ],
+                  "zone": {
+                    "references": [
+                      "var.nat_instance_external_subnet_id",
+                      "local.internal_subnet_zone",
+                      "local.external_subnet_zone"
+                    ]
+                  }
+                },
+                "schema_version": 1,
+                "count_expression": {
+                  "references": [
+                    "var.should_create_nat_instance"
+                  ]
+                },
+                "depends_on": [
+                  "yandex_vpc_subnet.kube_c"
+                ]
+              },
+              {
+                "address": "yandex_vpc_route_table.kube",
+                "mode": "managed",
+                "type": "yandex_vpc_route_table",
+                "name": "kube",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "labels": {
+                    "references": [
+                      "var.labels"
+                    ]
+                  },
+                  "name": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "network_id": {
+                    "references": [
+                      "var.network_id"
+                    ]
+                  }
+                },
+                "schema_version": 0
+              },
+              {
+                "address": "yandex_vpc_subnet.kube_a",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_a",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "labels": {
+                    "references": [
+                      "var.labels"
+                    ]
+                  },
+                  "name": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "network_id": {
+                    "references": [
+                      "var.network_id"
+                    ]
+                  },
+                  "route_table_id": {
+                    "references": [
+                      "yandex_vpc_route_table.kube"
+                    ]
+                  },
+                  "v4_cidr_blocks": {
+                    "references": [
+                      "local.kube_a_v4_cidr_block"
+                    ]
+                  },
+                  "zone": {
+                    "constant_value": "ru-central1-a"
+                  }
+                },
+                "schema_version": 0
+              },
+              {
+                "address": "yandex_vpc_subnet.kube_b",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_b",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "labels": {
+                    "references": [
+                      "var.labels"
+                    ]
+                  },
+                  "name": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "network_id": {
+                    "references": [
+                      "var.network_id"
+                    ]
+                  },
+                  "route_table_id": {
+                    "references": [
+                      "yandex_vpc_route_table.kube"
+                    ]
+                  },
+                  "v4_cidr_blocks": {
+                    "references": [
+                      "local.kube_b_v4_cidr_block"
+                    ]
+                  },
+                  "zone": {
+                    "constant_value": "ru-central1-b"
+                  }
+                },
+                "schema_version": 0
+              },
+              {
+                "address": "yandex_vpc_subnet.kube_c",
+                "mode": "managed",
+                "type": "yandex_vpc_subnet",
+                "name": "kube_c",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "labels": {
+                    "references": [
+                      "var.labels"
+                    ]
+                  },
+                  "name": {
+                    "references": [
+                      "var.prefix"
+                    ]
+                  },
+                  "network_id": {
+                    "references": [
+                      "var.network_id"
+                    ]
+                  },
+                  "route_table_id": {
+                    "references": [
+                      "yandex_vpc_route_table.kube"
+                    ]
+                  },
+                  "v4_cidr_blocks": {
+                    "references": [
+                      "local.kube_c_v4_cidr_block"
+                    ]
+                  },
+                  "zone": {
+                    "constant_value": "ru-central1-c"
+                  }
+                },
+                "schema_version": 0
+              },
+              {
+                "address": "data.yandex_compute_image.nat_image",
+                "mode": "data",
+                "type": "yandex_compute_image",
+                "name": "nat_image",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "family": {
+                    "constant_value": "nat-instance-ubuntu"
+                  }
+                },
+                "schema_version": 0,
+                "count_expression": {
+                  "references": [
+                    "var.should_create_nat_instance"
+                  ]
+                }
+              },
+              {
+                "address": "data.yandex_vpc_subnet.external_subnet",
+                "mode": "data",
+                "type": "yandex_vpc_subnet",
+                "name": "external_subnet",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "subnet_id": {
+                    "references": [
+                      "var.nat_instance_external_subnet_id"
+                    ]
+                  }
+                },
+                "schema_version": 0,
+                "count_expression": {
+                  "references": [
+                    "var.nat_instance_external_subnet_id"
+                  ]
+                }
+              },
+              {
+                "address": "data.yandex_vpc_subnet.internal_subnet",
+                "mode": "data",
+                "type": "yandex_vpc_subnet",
+                "name": "internal_subnet",
+                "provider_config_key": "vpc_components:yandex",
+                "expressions": {
+                  "subnet_id": {
+                    "references": [
+                      "var.nat_instance_internal_subnet_id",
+                      "yandex_vpc_subnet.kube_c",
+                      "var.nat_instance_internal_subnet_id"
+                    ]
+                  }
+                },
+                "schema_version": 0
+              }
+            ],
+            "variables": {
+              "dhcp_domain_name": {
+                "default": null
+              },
+              "dhcp_domain_name_servers": {
+                "default": null
+              },
+              "labels": {},
+              "nat_instance_external_address": {
+                "default": null
+              },
+              "nat_instance_external_subnet_id": {
+                "default": null
+              },
+              "nat_instance_internal_address": {
+                "default": null
+              },
+              "nat_instance_internal_subnet_id": {
+                "default": null
+              },
+              "nat_instance_ssh_key": {
+                "default": ""
+              },
+              "network_id": {},
+              "node_network_cidr": {},
+              "prefix": {},
+              "should_create_nat_instance": {
+                "default": false
+              }
+            }
+          }
+        }
+      },
+      "variables": {
+        "cloudConfig": {
+          "default": ""
+        },
+        "clusterConfiguration": {},
+        "clusterUUID": {},
+        "nodeIndex": {
+          "default": 0
+        },
+        "providerClusterConfiguration": {}
+      }
+    }
+  }
+}

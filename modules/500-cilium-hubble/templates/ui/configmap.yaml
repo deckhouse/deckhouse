@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hubble-ui-nginx
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui")) | nindent 2 }}
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    pid       /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+      multi_accept on;
+    }
+
+    http {
+        include       /usr/conf/mime.types;
+        default_type  application/octet-stream;
+
+        client_body_temp_path /tmp/client_temp;
+        proxy_temp_path       /tmp/proxy_temp;
+        fastcgi_temp_path     /tmp/fastcgi_temp;
+        uwsgi_temp_path       /tmp/uwsgi_temp;
+        scgi_temp_path        /tmp/scgi_temp;
+
+        log_format json_combined escape=json '{ "time_local": "$time_local", '
+          '"host": "$host", '
+          '"remote_addr": "$remote_addr", '
+          '"remote_user": "$remote_user", '
+          '"request": "$request", '
+          '"status": "$status", '
+          '"body_bytes_sent": "$body_bytes_sent", '
+          '"request_time": "$request_time", '
+          '"http_referrer": "$http_referer", '
+          '"http_user_agent": "$http_user_agent" }';
+
+        access_log off;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        keepalive_timeout  65;
+
+        ssi on;
+        gzip off;
+
+        server {
+          listen 8081;
+          server_name localhost;
+          root /app;
+          index index.html;
+          client_max_body_size 1G;
+
+          location / {
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+
+            location /api {
+              proxy_http_version 1.1;
+              proxy_pass_request_headers on;
+              proxy_pass http://127.0.0.1:8090;
+            }
+
+            location / {
+              try_files $uri $uri/ /index.html;
+            }
+
+            # Liveness probe
+            location /healthz {
+              access_log off;
+              add_header Content-Type text/plain;
+              return 200 'ok';
+            }
+          }
+        }
+    }

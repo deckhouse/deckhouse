@@ -1,0 +1,53 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /ratify
+    to: /ratify
+    before: setup
+imageSpec:
+  config:
+    entrypoint: [ "/ratify" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v1.3.1 $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /ratify cmd/ratify/main.go`) | indent 4 }}
+  - chown 64535:64535 /ratify
+  - chmod 0700 /ratify

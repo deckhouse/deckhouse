@@ -1,0 +1,121 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kubelet
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: k8s-app
+  endpoints:
+  # API metrics
+  - port: https-metrics
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
+      targetLabel: node
+    - targetLabel: scrape_endpoint
+      replacement: kubelet
+    - targetLabel: tier
+      replacement: cluster
+  # CRI metrics
+  - port: https-metrics
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    path: /metrics/cadvisor
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
+      targetLabel: node
+    - targetLabel: scrape_endpoint
+      replacement: cadvisor
+    - targetLabel: tier
+      replacement: cluster
+    metricRelabelings:
+    # For Containerd metrics, the `container` label is empty for pause containers, but Docker sets the POD value.
+    # This relabeling rule is required to keep both CRI metrics in sync.
+    - sourceLabels: [image, name, container]
+      regex: '(.+);(.+);'
+      action: replace
+      targetLabel: container
+      replacement: "POD"
+    - sourceLabels: [namespace]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [pod]
+      regex: '^$'
+      action: drop
+    - sourceLabels: [container]
+      regex: '^$'
+      action: drop
+    - regex: container_name|pod_name|id|image|name
+      action: labeldrop
+    # Drop a bunch of metrics which are disabled but still sent, see https://github.com/google/cadvisor/issues/1925
+    - sourceLabels: [__name__]
+      regex: 'container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)'
+      action: drop
+    # Drop cAdvisor metrics with no (pod, namespace) labels while preserving ability to monitor system services resource usage (cardinality estimation)
+    # 'container_spec_.*',  // everything related to cgroup specification and thus static data (nodes*services*5)
+    # 'container_file_descriptors',  // file descriptors limits and global numbers are exposed via (nodes*services)
+    # 'container_sockets',  // used sockets in cgroup. Usually not important for system services (nodes*services)
+    # 'container_threads_max',  // max number of threads in cgroup. Usually for system services it is not limited (nodes*services)
+    # 'container_threads',  // used threads in cgroup. Usually not important for system services (nodes*services)
+    # 'container_start_time_seconds',  // container start. Possibly not needed for system services (nodes*services)
+    # 'container_last_seen',  // not needed as system services are always running (nodes*services)
+    - sourceLabels: [__name__, pod, namespace]
+      regex: '(container_spec_.*|container_file_descriptors|container_sockets|container_threads_max|container_threads|container_start_time_seconds|container_last_seen);;'
+      action: drop
+    # https://github.com/prometheus-operator/kube-prometheus/blob/b1c474d8a1d7cd73df9bf4efe1680f1e6d9f5c17/jsonnet/kube-prometheus/components/k8s-control-plane.libsonnet#L150-L157
+    - sourceLabels: [__name__, container]
+      regex: '(container_blkio_device_usage_total);.+'
+      action: drop
+  # Probes metrics
+  - port: https-metrics
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    path: /metrics/probes
+    honorLabels: true
+    relabelings:
+      - regex: endpoint|namespace|pod|service
+        action: labeldrop
+      - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
+        targetLabel: node
+      - targetLabel: scrape_endpoint
+        replacement: probes
+      - targetLabel: tier
+        replacement: cluster
+  # Pods resources metrics
+  - port: https-metrics
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    path: /metrics/resource
+    honorLabels: true
+    relabelings:
+      - regex: endpoint|namespace|pod|service
+        action: labeldrop
+      - sourceLabels: [__meta_kubernetes_endpointslice_address_target_name]
+        targetLabel: node
+      - targetLabel: scrape_endpoint
+        replacement: resources
+      - targetLabel: tier
+        replacement: cluster
+  selector:
+    matchLabels:
+      k8s-app: kubelet
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring

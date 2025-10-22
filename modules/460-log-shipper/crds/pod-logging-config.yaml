@@ -1,0 +1,328 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: podloggingconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Namespaced
+  names:
+    plural: podloggingconfigs
+    singular: podloggingconfig
+    kind: PodLoggingConfig
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          description: |
+            Custom resource for namespaced Kubernetes source.
+
+            Each custom resource `PodLoggingConfig` describes rules for log fetching from specified namespace.
+          properties:
+            spec:
+              type: object
+              required:
+                - clusterDestinationRefs
+              properties:
+                keepDeletedFilesOpenedFor:
+                  type: string
+                  description: |
+                    Specifies the time to keep deleted files opened for reading.
+                    Vector will keep pods metadata for this time as well to read logs from deleted pods.
+                    This option is useful in cases of a log storage unavailability or a network partition. Vector will keep log files opened until finally sending them to the destination.
+
+                    Enabling this option may affect the resource consumption of the Vector and also flood a disk with deleted logs. Use it with caution.
+
+                    The format is a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+                  format: duration
+                  pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
+                labelSelector:
+                  type: object
+                  description: |
+                    Specifies the label selector to filter Pods.
+
+                    You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                  anyOf:
+                    - required:
+                        - matchLabels
+                    - required:
+                        - matchExpressions
+                  properties:
+                    matchLabels:
+                      type: object
+                      description: List of labels which Pod should have.
+                      x-doc-examples: [{"foo": "bar", "baz": "who"}]
+                      additionalProperties:
+                        type: string
+                    matchExpressions:
+                      type: array
+                      description: List of label expressions for Pods.
+                      x-doc-examples:
+                      - - key: tier
+                          operator: In
+                          values:
+                          - production
+                          - staging
+                      items:
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: [Exists, DoesNotExist]
+                            required: [key, operator]
+                            not:
+                              required: [values]
+                          - properties:
+                              operator:
+                                enum: [In, NotIn]
+                            required: [key, operator, values]
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                            description: A label name.
+                          operator:
+                            type: string
+                            description: A comparison operator.
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: A label value.
+                            items:
+                              type: string
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              minLength: 1
+                              maxLength: 63
+                labelFilter:
+                  type: array
+                  description: |
+                    Rules to filter log lines by their [metadata labels](./#metadata).
+                  x-doc-examples:
+                  - - field: container
+                      operator: In
+                      values:
+                      - nginx
+                    - field: pod_labels.tier
+                      operator: Regex
+                      values:
+                      - prod-.+
+                      - stage-.+
+                    - field: message
+                      operator: Regex
+                      values:
+                      - .*search_text.*
+                  items:
+                    type: object
+                    required:
+                      - field
+                      - operator
+                    properties:
+                      field:
+                        description: |
+                          Label name for filtering.
+
+                          Must not be empty.
+                        type: string
+                        pattern: '.+'
+                      operator:
+                        type: string
+                        description: |
+                          Operator for log field comparations:
+                          * `In` — finds a substring in a string.
+                          * `NotIn` — is a negative version of the `In` operator.
+                          * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                          * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                          * `Exists` — drops log event if it contains some fields.
+                          * `DoesNotExist` — drops log event if it does not contain some fields.
+                        enum:
+                          - In
+                          - NotIn
+                          - Regex
+                          - NotRegex
+                          - Exists
+                          - DoesNotExist
+                      values:
+                        type: array
+                        description: |
+                          Array of values or regexes for corresponding operations. Does not work for `Exists` and `DoesNotExist` operations.
+
+                          Fields with a float or boolean values will be converted to strings during comparison.
+                        items:
+                          x-kubernetes-int-or-string: true
+                          anyOf:
+                            - type: integer
+                            - type: string
+                    oneOf:
+                      - properties:
+                          operator:
+                            enum: ["Exists", "DoesNotExist"]
+                          values:
+                            maxItems: 0
+                      - properties:
+                          operator:
+                            enum: ["Regex", "NotRegex", "In", "NotIn"]
+                          values:
+                            minItems: 1
+                logFilter:
+                  type: array
+                  description: |
+                    A list of filters for logs that are applied to messages in JSON format.
+
+                    Only matched lines would be stored to log destination.
+                  x-doc-examples:
+                  - - field: tier
+                      operator: Exists
+                    - field: foo
+                      operator: NotIn
+                      values:
+                      - dev
+                      - 42
+                      - "true"
+                      - "3.14"
+                    - field: bar
+                      operator: Regex
+                      values:
+                      - ^abc
+                      - ^\d.+$
+                  items:
+                    type: object
+                    required:
+                      - field
+                      - operator
+                    properties:
+                      field:
+                        description: Field name for filtering. It should be empty for non-JSON messages.
+                        type: string
+                      operator:
+                        type: string
+                        description: |
+                          Operator for log field comparations:
+                          * `In` — finds a substring in a string.
+                          * `NotIn` — is a negative version of the `In` operator.
+                          * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                          * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                          * `Exists` — drops log event if it contains some fields.
+                          * `DoesNotExist` — drops log event if it does not contain some fields.
+                        enum:
+                          - In
+                          - NotIn
+                          - Regex
+                          - NotRegex
+                          - Exists
+                          - DoesNotExist
+                      values:
+                        type: array
+                        description: |
+                          Array of values or regexes for corresponding operations. Does not work for `Exists` and `DoesNotExist` operations.
+
+                          Fields a with float or boolean values will be converted to strings during comparison.
+                        items:
+                          x-kubernetes-int-or-string: true
+                          anyOf:
+                            - type: integer
+                            - type: string
+                    oneOf:
+                      - properties:
+                          operator:
+                            enum: ["Exists", "DoesNotExist"]
+                          values:
+                            maxItems: 0
+                      - properties:
+                          operator:
+                            enum: ["Regex", "NotRegex", "In", "NotIn"]
+                          values:
+                            minItems: 1
+                multilineParser:
+                  type: object
+                  description: Multiline parser for different patterns.
+                  required:
+                    - type
+                  oneOf:
+                    - properties:
+                        type:
+                          enum:
+                            - None
+                            - General
+                            - Backslash
+                            - LogWithTime
+                            - MultilineJSON
+                      required:
+                        - type
+                    - properties:
+                        custom: {}
+                        type:
+                          enum: [Custom]
+                      required:
+                        - type
+                        - custom
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Parser types:
+                        * `None` — do not parse logs.
+                        * `General` — tries to match general multiline logs with space or tabulation on extra lines.
+                        * `Backslash` — tries to match bash style logs with backslash on all lines except the last event line.
+                        * `LogWithTime` — tries to detect events by timestamp.
+                        * `MultilineJSON` — tries to match JSON logs, assuming the event starts with the `{` symbol.
+                        * `Custom` - tries to match logs with the user provided regex in `spec.multilineParser.custom` field.
+                      enum:
+                        - None
+                        - General
+                        - Backslash
+                        - LogWithTime
+                        - MultilineJSON
+                        - Custom
+                      default: None
+                    custom:
+                      type: object
+                      description: Multiline parser custom regex rules.
+                      oneOf:
+                        - required: [startsWhen]
+                        - required: [endsWhen]
+                      properties:
+                        startsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the first log line of multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match the regex.
+                        endsWhen:
+                          type: object
+                          description: |
+                            It's a condition to distinguish the last log line of the multiline log.
+                          oneOf:
+                            - required: [regex]
+                            - required: [notRegex]
+                          properties:
+                            notRegex:
+                              type: string
+                              description: Regex string, which treats as match only strings that DON'T match the regex.
+                            regex:
+                              type: string
+                              description: Regex string, which treats as match only strings that match the regex.
+                clusterDestinationRefs:
+                  type: array
+                  description: Array of `ClusterLogDestination` custom resource names which this source will output with.
+                  minItems: 1
+                  items:
+                    type: string

@@ -1,0 +1,13 @@
+{{- $version := "1.17.1" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+  add: /webhook-linux-amd64
+  to: /bin/webhook
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bin/webhook"]

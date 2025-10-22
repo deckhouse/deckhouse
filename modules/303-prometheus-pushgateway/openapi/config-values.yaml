@@ -1,0 +1,39 @@
+type: object
+required: [instances]
+properties:
+  instances:
+    type: array
+    items:
+      type: string
+    description: |
+      This parameter contains a list of instances; a separate PushGateway will be created for each instance.
+    x-examples:
+    - [first, second]
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

@@ -1,0 +1,40 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: custom-service
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  sampleLimit: 5000
+  endpoints:
+  # HTTP target with samples limited to 1000
+  - relabelings:
+    {{- include "service_label_selector" . | nindent 4 }}
+    {{- include "keep_targets_for_schema" (list "service" "http") | nindent 4}}
+    {{- include "endpoint_by_service_port_name" "http" | nindent 4 }}
+    {{- include "base_relabeling" "service" | nindent 4 }}
+
+  # HTTPS target with samples limited to 5000
+  - scheme: https
+    {{- include "tls_config" "" | nindent 4 }}
+    relabelings:
+    {{- include "service_label_selector" . | nindent 4 }}
+    {{- include "keep_targets_for_schema" (list "service" "https") | nindent 4 }}
+    {{- include "endpoint_by_service_port_name" "https" | nindent 4 }}
+    {{- include "base_relabeling" "service" | nindent 4 }}
+
+    {{- if .Values.monitoringCustom.internal.prometheusScraperIstioMTLSEnabled }}
+  # Istio mTLS target with samples limited to 5000
+  - scheme: https
+    {{- include "tls_config" "prometheus-scraper-istio-mtls" | nindent 4 }}
+    relabelings:
+    {{- include "service_label_selector" . | nindent 4 }}
+    {{- include "keep_targets_for_schema" (list "service" "istio-mtls") | nindent 4 }}
+    {{- include "endpoint_by_service_port_name" "http" | nindent 4 }}
+    {{- include "base_relabeling" "service" | nindent 4 }}
+    {{- end }}
+
+  selector: {}
+  namespaceSelector:
+    any: true

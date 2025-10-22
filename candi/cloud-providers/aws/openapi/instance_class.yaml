@@ -1,0 +1,131 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: awsinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-aws
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of the AWS instance used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/modules/node-manager/) modile).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - instanceType
+              properties:
+                instanceType:
+                  description: |
+                    Instance type of AWS instance.
+
+                    **Caution!** Ensure that this type is present in all zones specified in the `zones` parameter.
+                  x-doc-examples: [t3.large]
+                  type: string
+                capacity:
+                  deprecated: true
+                  x-doc-deprecated: true
+                  type: object
+                  description: |
+                    Deprecated: the parameter is no longer used. Deckhouse is using parameters from the cloud for passed instance type.
+
+                    Instance capacity for *non-standard* instance types (the `instanceTypes` parameter).
+
+                    Cluster-autoscaler uses the parameter for scheduling only when there are no nodes in NodeGroup yet (if `minPerZone` equal to 0). If there are already nodes in the NodeGroup, then cluster-autoscaler uses the actual node capacity (CPU, memory) when planning, and does not use the `capacity` parameter.
+
+                    The parameter must be specified only for *non-standard* instance types. Info about the capacity of *standard* instance types (`t2.micro`, `m6a.12xlarge`, etc.) is embedded in Deckhouse.
+                  required:
+                    - cpu
+                    - memory
+                  properties:
+                    cpu:
+                      pattern: '^[0-9]+m?$'
+                      description: Node vCPU resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1000m"]
+                    memory:
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      description: Node memory resources.
+                      x-kubernetes-int-or-string: true
+                      x-doc-examples: ["1500Mi"]
+                ami:
+                  description: |
+                    The Amazon Machine Image (AMI ID) to use in provisioned instances.
+
+                    If omitted, the AMI defined in the [masterNodeGroup.instanceClass.ami](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-ami) parameter of the `AWSClusterConfiguration` resource is used.
+
+                    Here is how you can find the required AMI (each region has its own set of AMIs):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                  x-doc-examples: [ami-040a1551f9c9d11ad]
+                  type: string
+                spot:
+                  description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
+                  type: boolean
+                diskType:
+                  description: Instance EBS disk type.
+                  x-doc-examples: ["gp2"]
+                  type: string
+                  x-doc-default: "gp2"
+                iops:
+                  description: IOPS rate for io1 diskType
+                  x-doc-examples: ["500"]
+                  type: string
+                diskSizeGb:
+                  description: Instance root disk size in gibibytes.
+                  x-doc-examples: [20]
+                  type: integer
+                  x-doc-default: 20
+                additionalTags:
+                  description: Extra AWS tags for instances in addition to `AWSClusterConfiguration.tags`.
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                  additionalProperties:
+                    type: string
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    The additional security groups to add to provisioned instances of the specific InstanceClass.
+                  items:
+                    type: string
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: awsinstanceclasses
+    singular: awsinstanceclass
+    kind: AWSInstanceClass
+    categories:
+      - cloudinstanceclasses

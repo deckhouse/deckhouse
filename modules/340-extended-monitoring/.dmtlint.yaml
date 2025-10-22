@@ -1,0 +1,12 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+    conversions:
+      disable: true
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: Deployment
+          name: image-availability-exporter
+          container: image-availability-exporter

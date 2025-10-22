@@ -1,0 +1,55 @@
+diff --git a/pkg/util/fieldindex/register.go b/pkg/util/fieldindex/register.go
+index c594e3ca..e312c901 100644
+--- a/pkg/util/fieldindex/register.go
++++ b/pkg/util/fieldindex/register.go
+@@ -28,7 +28,6 @@ import (
+ 
+ 	appsv1alpha1 "github.com/openkruise/kruise/apis/apps/v1alpha1"
+ 	appsv1beta1 "github.com/openkruise/kruise/apis/apps/v1beta1"
+-	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
+ )
+ 
+ const (
+@@ -66,11 +65,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
+ 		if err = c.IndexField(context.TODO(), &v1.PersistentVolumeClaim{}, IndexNameForOwnerRefUID, ownerIndexFunc); err != nil {
+ 			return
+ 		}
+-		// ImagePullJob ownerReference
+-		if err = c.IndexField(context.TODO(), &appsv1alpha1.ImagePullJob{}, IndexNameForOwnerRefUID, ownerIndexFunc); err != nil {
+-			return
+-		}
+-
+ 		// pod name
+ 		if err = indexPodNodeName(c); err != nil {
+ 			return
+@@ -79,30 +73,6 @@ func RegisterFieldIndexes(c cache.Cache) error {
+ 		if err = indexJob(c); err != nil {
+ 			return
+ 		}
+-		// broadcastjob owner
+-		if utildiscovery.DiscoverObject(&appsv1alpha1.BroadcastJob{}) {
+-			if err = indexBroadcastCronJob(c); err != nil {
+-				return
+-			}
+-		}
+-		// broadcastjob owner for v1beta1
+-		if utildiscovery.DiscoverObject(&appsv1beta1.BroadcastJob{}) {
+-			if err = indexBroadcastCronJobV1Beta1(c); err != nil {
+-				return
+-			}
+-		}
+-		// imagepulljob active
+-		if utildiscovery.DiscoverObject(&appsv1alpha1.ImagePullJob{}) {
+-			if err = indexImagePullJobActive(c); err != nil {
+-				return
+-			}
+-		}
+-		// sidecar spec namespaces
+-		if utildiscovery.DiscoverObject(&appsv1alpha1.SidecarSet{}) {
+-			if err = indexSidecarSet(c); err != nil {
+-				return
+-			}
+-		}
+ 	})
+ 	return err
+ }

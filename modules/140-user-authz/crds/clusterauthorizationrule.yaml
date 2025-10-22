@@ -1,0 +1,416 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterauthorizationrules.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterauthorizationrules
+    singular: clusterauthorizationrule
+    kind: ClusterAuthorizationRule
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            This cluster-wide object manages RBAC and authorization.
+
+            > The `ClusterAuthorizationRule` resource is used in the [current role-based model](./#current-role-based-model) and isn't used in the experimental role model.
+          required:
+          - spec
+          properties:
+            spec:
+              type: object
+              required:
+              - subjects
+              properties:
+                accessLevel:
+                  type: string
+                  description: |
+                    Access level:
+                    * `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
+                    * `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
+                    * `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks;
+                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — the same as `Editor` + can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators.
+                    * `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` and `ClusterRole`). This role is best suited for cluster administrators.
+
+                      **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
+                    * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` (see below) restrictions remain valid).
+                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+                  x-doc-examples: ['PrivilegedUser']
+                portForwarding:
+                  type: boolean
+                  default: false
+                  description: |
+                    Allow/disallow the user to do `port-forwarding`.
+                allowScale:
+                  type: boolean
+                  default: false
+                  description: |
+                    Defines if scaling of Deployments and StatefulSets is allowed/not allowed.
+                allowAccessToSystemNamespaces:
+                  type: boolean
+                  x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
+                  description: |
+                    Allow access to System namespaces (kube-*, d8-*, loghouse, default).
+
+                    Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
+                  x-doc-default: false
+                limitNamespaces:
+                  type: array
+                  x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
+                  description: |
+                    List of regex-patterns that define namespaces accessible by the user.
+
+                    The decision making process:
+                    * If the list is defined, then only its constituents are accessible.
+                    * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
+
+                    Option available only if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter (API version `v1` of the CR) instead.
+                  x-doc-examples: ['production-.*']
+                  items:
+                    type: string
+                    minLength: 1
+                subjects:
+                  type: array
+                  description: |
+                    Users and/or groups to grant privileges.
+
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+
+                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) module:
+                    - Use the user's `email` as the username to grant privileges to the specific user;
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider).
+                  items:
+                    type: object
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum: [User, Group, ServiceAccount]
+                        description: 'Type of user identification resource.'
+                        x-doc-examples: ['Group']
+                      name:
+                        type: string
+                        description: 'Resource name.'
+                        x-doc-examples: ['some-group-name']
+                      namespace:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                        description: 'ServiceAccount namespace.'
+                additionalRoles:
+                  type: array
+                  description: |
+                    Additional roles to bind for subjects.
+
+                    This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
+
+                  x-doc-examples:
+                  - - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-write-all
+                    - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-read-all
+                  items:
+                    type: object
+                    required:
+                    - apiGroup
+                    - kind
+                    - name
+                    properties:
+                      apiGroup:
+                        type: string
+                        description: 'apiGroup for users.'
+                        x-doc-examples: ['rbac.authorization.k8s.io']
+                        minLength: 1
+                      kind:
+                        type: string
+                        description: 'Kind of the role.'
+                        enum: [ClusterRole]
+                        x-doc-examples: ['ClusterRole']
+                      name:
+                        type: string
+                        description: 'Name of the role.'
+                        minLength: 1
+                        x-doc-examples: ['cluster-admin']
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            This object manages RBAC and namespace-based authorization.
+
+            The settings determine which access level is assigned to the user and/or group.
+          required:
+          - spec
+          properties:
+            spec:
+              type: object
+              required:
+              - subjects
+              properties:
+                accessLevel:
+                  type: string
+                  description: |
+                    Access level:
+                    * `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
+                    * `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
+                    * `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks;
+                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
+                    * `ClusterEditor` — the same as `Editor` + can manage a limited set of `cluster-wide` objects that can be used in application tasks (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet`, etc.). This role is best suited for cluster operators.
+                    * `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  `MachineSets`, `Machines`, `OpenstackInstanceClasses`..., as well as `ClusterAuthorizationRule`, `ClusterRoleBindings` and `ClusterRole`). This role is best suited for cluster administrators.
+
+                      **Caution!** since `ClusterAdmin` can edit `ClusterRoleBindings`, he can broader his privileges within the cluster;
+                    * `SuperAdmin` — can perform any actions with any objects (note that `limitNamespaces` and `namespaceSelector` (see below) restrictions remain valid).
+                  enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
+                  x-doc-examples: ['PrivilegedUser']
+                portForwarding:
+                  type: boolean
+                  default: false
+                  description: |
+                    Allow/disallow the user to do `port-forwarding`.
+                allowScale:
+                  type: boolean
+                  default: false
+                  description: |
+                    Defines if scaling of Deployments and StatefulSets is allowed/not allowed.
+                allowAccessToSystemNamespaces:
+                  type: boolean
+                  x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
+                  description: |
+                    Allow access to System namespaces (kube-*, d8-*, loghouse, default).
+
+                    Option available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
+                  x-doc-default: false
+                namespaceSelector:
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
+                  description: |
+                    Defines a set of namespaces accessible by the user, using the value of the `namespaceSelector.labelSelector` parameter.
+
+                    If the `namespaceSelector` parameter is specified, the values of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**. If the `namespaceSelector.matchAny` field is specified, then all namespaces (including system namespaces) will be accessible. Otherwise, only the namespaces with labels matching the `namespaceSelector.labelSelector` conditions will be accessible (including system namespaces).
+
+                    If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `loghouse`, `default`).
+
+                    Is available **only** if the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter is enabled.
+                  type: object
+                  oneOf:
+                    - required: ["labelSelector"]
+                    - required: ["matchAny"]
+                  properties:
+                    matchAny:
+                      description: |
+                        Unconditionally permits access to any namespace in the cluster, including system namespaces.
+
+                        Cannot be used together with the `labelSelector` parameter.
+
+                        Since `labelSelector` provides access to a limited number of the namespaces that match it, `matchAny` is needed in cases where access to all namespaces is to be granted.
+                      type: boolean
+                      enum: [true]
+                    labelSelector:
+                      description: |
+                        Defines the label selector-based filter of the namespaces.
+
+                        Cannot be used together with the `matchAny` parameter.
+
+                        If both `matchExpressions` and `matchLabels` parameters are set, their requirements are ANDed together — they must all be satisfied in order to match.
+                        If multiple `matchExpression` conditions are provided, they all must be satisfied in order to match.
+                      type: object
+                      minProperties: 1
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: An array of set-based expressions.
+                          x-doc-examples:
+                            - - key: tier
+                                operator: In
+                                values:
+                                  - production
+                                  - staging
+                              - key: tier
+                                operator: NotIn
+                                values: [production]
+                          items:
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [ Exists, DoesNotExist ]
+                                required: [ key, operator ]
+                                not:
+                                  required: [ values ]
+                              - properties:
+                                  operator:
+                                    enum: [ In, NotIn ]
+                                required: [ key, operator, values ]
+                            type: object
+                            properties:
+                              key:
+                                description: A label name.
+                                type: string
+                              operator:
+                                description: A comparison operator.
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                description: A label value.
+                                type: array
+                                items:
+                                  type: string
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
+                        matchLabels:
+                          type: object
+                          description: |
+                            A set of labels a namespace must have to match.
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          additionalProperties:
+                            type: string
+                            pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                            minLength: 1
+                            maxLength: 63
+                limitNamespaces:
+                  type: array
+                  x-doc-deprecated: true
+                  x-doc-d8Editions:
+                    - be
+                    - se
+                    - se+
+                    - ee
+                    - cse-lite
+                    - cse-pro
+                  description: |
+                    List of regex-patterns that define namespaces accessible by the user.
+
+                    The decision making process:
+                    * If the list is defined, then only its constituents are accessible.
+                    * If the list is not defined, then all namespaces are accessible (except for the system ones - see `spec.allowAccessToSystemNamespaces` below).
+
+                    Option available **only** if [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) option is enabled.
+
+                    Deprecated. Use the [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector) field instead.
+                  x-doc-examples: ['production-.*']
+                  items:
+                    type: string
+                    minLength: 1
+                subjects:
+                  type: array
+                  description: |
+                    Users and/or groups to grant privileges.
+
+                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+
+                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) module:
+                    - Use the user's `email` as the username to grant privileges to the specific user;
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider).
+                  items:
+                    type: object
+                    required:
+                    - kind
+                    - name
+                    properties:
+                      kind:
+                        type: string
+                        enum: [User, Group, ServiceAccount]
+                        description: 'Type of user identification resource.'
+                        x-doc-examples: ['Group']
+                      name:
+                        type: string
+                        description: 'Resource name.'
+                        x-doc-examples: ['some-group-name']
+                      namespace:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                        description: 'ServiceAccount namespace.'
+                additionalRoles:
+                  type: array
+                  description: |
+                    Additional roles to bind for subjects.
+
+                    This parameter is reserved for emergencies. Please, use the `accessLevel` parameter instead.
+
+                  x-doc-examples:
+                  - - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-write-all
+                    - apiGroup: rbac.authorization.k8s.io
+                      kind: ClusterRole
+                      name: cluster-read-all
+                  items:
+                    type: object
+                    required:
+                    - apiGroup
+                    - kind
+                    - name
+                    properties:
+                      apiGroup:
+                        type: string
+                        description: 'apiGroup for users.'
+                        x-doc-examples: ['rbac.authorization.k8s.io']
+                        minLength: 1
+                      kind:
+                        type: string
+                        description: 'Kind of the role.'
+                        enum: [ClusterRole]
+                        x-doc-examples: ['ClusterRole']
+                      name:
+                        type: string
+                        description: 'Name of the role.'
+                        minLength: 1
+                        x-doc-examples: ['cluster-admin']

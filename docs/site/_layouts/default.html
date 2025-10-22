@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang }}">
+
+<head>
+  {%- if page.anchors_disabled == true %}
+    <script>
+        window.anchors_disabled = true;
+    </script>
+  {%- endif %}
+  {% include head.html %}
+  {% include head-site.html %}
+</head>
+
+<body>
+  <div class="content">
+    {% include header.html %}
+    {{ content }}
+  </div>
+  {% include footer.html %}
+
+</body>
+
+<script type="text/javascript">
+  // Fix second level topnav menu for GS and guides sections.
+  let subUrls = ['/gs/', '/guides/', '/modules/'];
+  subUrls.forEach(function (element) {
+    if (window.location.pathname.toLowerCase().includes(element)) {
+      $('.header.header__product-menu ul.nav li').each(function () {
+        const href = $(this).find('a').attr('href')?.toLowerCase() || '';
+        const isActive = href.includes(element);
+        $(this).toggleClass('active', isActive);
+      });
+    }
+  });
+</script>
+
+{% if site.google_analytics %}
+{% include google_analytics.html %}
+{% endif %}
+</html>

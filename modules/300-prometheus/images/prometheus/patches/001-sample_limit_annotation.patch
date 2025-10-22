@@ -1,0 +1,85 @@
+diff --git a/discovery/kubernetes/pod.go b/discovery/kubernetes/pod.go
+index 02990e415..69aba7e25 100644
+--- a/discovery/kubernetes/pod.go
++++ b/discovery/kubernetes/pod.go
+@@ -284,6 +284,7 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
+ 			// The user has to add a port manually.
+ 			tg.Targets = append(tg.Targets, model.LabelSet{
+ 				model.AddressLabel:     lv(pod.Status.PodIP),
++				"__sample_limit__":     lv(""),
+ 				podContainerNameLabel:  lv(c.Name),
+ 				podContainerIDLabel:    lv(cID),
+ 				podContainerImageLabel: lv(c.Image),
+@@ -298,6 +299,7 @@ func (p *Pod) buildPod(pod *apiv1.Pod) *targetgroup.Group {
+ 
+ 			tg.Targets = append(tg.Targets, model.LabelSet{
+ 				model.AddressLabel:            lv(addr),
++				"__sample_limit__":            lv(""),
+ 				podContainerNameLabel:         lv(c.Name),
+ 				podContainerIDLabel:           lv(cID),
+ 				podContainerImageLabel:        lv(c.Image),
+diff --git a/discovery/kubernetes/service.go b/discovery/kubernetes/service.go
+index 51204a5a1..31a8df2ce 100644
+--- a/discovery/kubernetes/service.go
++++ b/discovery/kubernetes/service.go
+@@ -180,6 +180,7 @@ func (s *Service) buildService(svc *apiv1.Service) *targetgroup.Group {
+ 
+ 		labelSet := model.LabelSet{
+ 			model.AddressLabel:       lv(addr),
++			"__sample_limit__":       lv(""),
+ 			servicePortNameLabel:     lv(port.Name),
+ 			servicePortNumberLabel:   lv(strconv.FormatInt(int64(port.Port), 10)),
+ 			servicePortProtocolLabel: lv(string(port.Protocol)),
+diff --git a/scrape/scrape.go b/scrape/scrape.go
+index c285f05e3..97f57252d 100644
+--- a/scrape/scrape.go
++++ b/scrape/scrape.go
+@@ -155,6 +155,11 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, offsetSeed
+ 		}
+ 		opts.target.SetMetadataStore(cache)
+ 
++		limit := opts.target.SampleLimit()
++		if limit == 0 {
++			limit = opts.sampleLimit
++		}
++
+ 		return newScrapeLoop(
+ 			ctx,
+ 			opts.scraper,
+@@ -171,7 +176,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, offsetSeed
+ 			opts.honorTimestamps,
+ 			opts.trackTimestampsStaleness,
+ 			opts.enableCompression,
+-			opts.sampleLimit,
++			limit,
+ 			opts.bucketLimit,
+ 			opts.maxSchema,
+ 			opts.labelLimits,
+diff --git a/scrape/target.go b/scrape/target.go
+index ad4b4f685..c58bf6c2f 100644
+--- a/scrape/target.go
++++ b/scrape/target.go
+@@ -19,6 +19,7 @@ import (
+ 	"hash/fnv"
+ 	"net"
+ 	"net/url"
++	"strconv"
+ 	"strings"
+ 	"sync"
+ 	"time"
+@@ -578,3 +579,15 @@ func TargetsFromGroup(tg *targetgroup.Group, cfg *config.ScrapeConfig, noDefault
+ 	}
+ 	return targets, failures
+ }
++
++func (t *Target) SampleLimit() int {
++	limit := t.labels.Get("__sample_limit__")
++	if limit == "" {
++		return 0
++	}
++	convertedLimit, err := strconv.Atoi(limit)
++	if err != nil {
++		return 0
++	}
++	return convertedLimit
++}

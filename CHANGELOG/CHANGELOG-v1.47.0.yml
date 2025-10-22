@@ -1,0 +1,176 @@
+candi:
+  features:
+    - summary: Add debug info to the bashible steps for all run types.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4920
+    - summary: Add visibility of query errors to curl execution.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4916
+    - summary: Not keep compressed image layers in containerd's content store once they have been unpacked.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4843
+      impact: All `containerd` daemons will restart.
+  fixes:
+    - summary: Add waiting for kubelet client certificate generation when a node bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4880
+ci:
+  features:
+    - summary: Add dependabot section to changelogs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5014
+    - summary: Integrate dependabot workflow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4906
+  fixes:
+    - summary: Fix condition for dependabot PRs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5010
+cilium-hubble:
+  fixes:
+    - summary: >-
+        Fix the error with the install if the
+        [modules.https.mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-mode)
+        global parameter is `OnlyInURI`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4846
+cni-cilium:
+  fixes:
+    - summary: Added severity_levels to all alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4779
+cni-flannel:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4635
+control-plane-manager:
+  fixes:
+    - summary: Fix typo in the error text.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4845
+dashboard:
+  fixes:
+    - summary: Fix the logout button (it doesn't appear).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4929
+deckhouse:
+  features:
+    - summary: >-
+        List all Deckhouse modules as CR. Use the `kubectl get modules` command to browse all
+        modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4478
+deckhouse-controller:
+  features:
+    - summary: Move `tools/change-registry.sh` to `deckhouse-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4925
+  fixes:
+    - summary: Add unit tests for change-registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4949
+dhctl:
+  fixes:
+    - summary: Fix parsing node index (CWE-190, CWE-681).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5023
+    - summary: Fix cut off terraform output.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4800
+external-module-manager:
+  fixes:
+    - summary: Prevent path traversal on zip unpacking
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5024
+global-hooks:
+  fixes:
+    - summary: Delete `d8-deckhouse-validating-webhook-handler` validating webhook configurations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5032
+ingress-nginx:
+  features:
+    - summary: Set `ingressClass` to `nginx` if not explicitly set.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4927
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4635
+      impact: Ingress nginx controller will restart.
+  fixes:
+    - summary: >-
+        Pathch Kruse controller manager logic so that it doesn't delete more than `maxUnavailable`
+        Pods during updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5039
+      impact: Kruise controller manager will be restarted.
+    - summary: Update apiVersion of HPA
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4980
+istio:
+  features:
+    - summary: A new non-public label to discard metrics scraping from application namespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4873
+    - summary: Splitting istio to CE (basic functionality) and EE (extra functionality) versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4171
+kube-dns:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4635
+kube-proxy:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4635
+linstor:
+  features:
+    - summary: Added params for enabled SELinux support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4652
+      impact: linstor satellite Pods will be restarted.
+  fixes:
+    - summary: Disable astra hardened kernel for static tests and add workaround for drbd version check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5041
+monitoring-deckhouse:
+  features:
+    - summary: Add Debian 9 and Ubuntu 18.04 to `D8NodeHasDeprecatedOSVersion` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4862
+monitoring-kubernetes:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4635
+  fixes:
+    - summary: >-
+        Fix `kubelet-eviction-thresholds-exporter` Prometheus metric and `node-disk-usage`
+        Prometheus rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4888
+node-manager:
+  features:
+    - summary: Change calculation of `condition.ready` in a `NodeGroup`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4855
+  fixes:
+    - summary: NodeUser fixed the ability to use parameters in sshPublicKeys
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4934
+    - summary: Fix links in node-unmanaged rule for Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4542
+operator-trivy:
+  features:
+    - summary: improvement of Trivy dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4901
+    - summary: Add configuration for `tolerations` and `nodeSelector` for module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4721
+prometheus:
+  features:
+    - summary: Sets Prometheus Main parameter 'lookbackDelta' value to double the scrapeInterval value.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5006
+      impact: Prometheus main restart is required.
+    - summary: Add module external labels setting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4968
+  fixes:
+    - summary: Fix the example in the alertmanager doc.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4942
+    - summary: Fix scheme for web exported URL on Grafana main page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4895
+runtime-audit-engine:
+  features:
+    - summary: (Reverted) Improve documentation and add advanced usage documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4917
+  fixes:
+    - summary: Unset `FALCO_BPF_PROBE` environment variable for the Falco container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4931
+    - summary: Bump Falco version to `v0.35.0`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4894
+      impact: default
+tools:
+  fixes:
+    - summary: Fix auth for docker run in `d8-pull.sh`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4958
+user-authn:
+  features:
+    - summary: Allow users to deploy DexAuthenticator trusted by Kubernetes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5007
+  fixes:
+    - summary: Do not send groups header from `DexAuthenticator`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5027
+user-authz:
+  fixes:
+    - summary: Fix access for `PrivilegedUser` role.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4903
+    - summary: Forbid empty `.spec.subject` field in `ClusterAuthorizationRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4850
+

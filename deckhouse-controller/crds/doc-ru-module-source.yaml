@@ -1,0 +1,85 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию источника модулей Deckhouse.
+          properties:
+            spec:
+              properties:
+                releaseChannel:
+                  description: Желаемый канал обновлений по умолчанию для модулей данного container registry.
+                  x-doc-deprecated: true
+                registry:
+                  properties:
+                    scheme:
+                      description: Протокол для доступа к репозиторию контейнеров.
+                    repo:
+                      type: string
+                      description: Адрес репозитория образов контейнеров.
+                    dockerCfg:
+                      description: Строка с токеном доступа к container registry в Base64. В случае использования анонимного доступа к container registry не заполняйте это поле.
+                    ca:
+                      description: |
+                        Корневой сертификат (В формате PEM), которым можно проверить сертификат registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+                        > Создание ресурса ModuleSource с указанием корневого сертификата, приведет к перезапуску containerd на всех узлах кластера.
+            status:
+              properties:
+                syncTime:
+                  description: Время последней синхронизации с container registry.
+                phase:
+                  description: Текущая фаза.
+                modulesCount:
+                  type: integer
+                  description: Количество доступных модулей.
+                modules:
+                  type: array
+                  description: Список доступных для установки модулей и их политики обновления.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Имя модуля.
+                      version:
+                        type: string
+                        description: Версия модуля
+                      pullError:
+                        type: string
+                        description: Ошибка скачивания модуля.
+                      error:
+                        type: string
+                        description: Ошибка процессинга модуля.
+                      checksum:
+                        type: string
+                        description: Чексумма релиза.
+                      policy:
+                        type: string
+                        description: Имя политики.
+                      overridden:
+                        description: Показывает, есть ли ресурс ModulePullOverride для данного модуля.
+                message:
+                  type: string
+                  description: Сообщение с детальной ошибкой.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: count
+          type: integer
+          jsonPath: .status.modulesCount
+          description: Количество доступных модулей в данном репозитории.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: Текущая фаза.
+        - name: sync
+          jsonPath: .status.syncTime
+          type: date
+          format: date-time
+          description: Время последней синхронизации с container registry.
+        - name: msg
+          jsonPath: .status.message
+          type: string
+          description: Сообщение об ошибке.

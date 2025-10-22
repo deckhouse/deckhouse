@@ -1,0 +1,68 @@
+{{- $version := "1.17.1" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /controller-linux-amd64
+  to: /bin/cert-manager-controller
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/cert-manager-controller"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/jetstack/cert-manager.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - git describe --tags --always --match='v*' --abbrev=14 --dirty > VERSION
+  - git describe --tags --always --match='v*' --abbrev=0 | grep -q '-' && echo true || echo false > IS_PRERELEASE
+  - git rev-parse HEAD > GITCOMMIT
+  - git show -s --format=%ct HEAD > GITEPOCH
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+{{- if eq $.SVACE_ENABLED "false" }}
+  {{- include "debian packages proxy" . | nindent 2 }}
+{{- end }}
+  - apt-get install -y rsync
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  - export RELEASE_VERSION="v{{ $version }}-flant"
+  - export VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64`) | indent 4 }}
+  - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
+  - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+  - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64

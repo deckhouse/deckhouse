@@ -1,0 +1,12 @@
+CHANGELOG/
+go_lib/
+images/
+monitoring/
+node_modules/
+testing/
+tools/
+hooks/
+_includes/
+
+// Files with other rules
+README.md

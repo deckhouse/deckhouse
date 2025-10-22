@@ -1,0 +1,19 @@
+flant-integration:
+  fixes:
+    - summary: Disable HTTP2 for madison-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2242
+linstor:
+  fixes:
+    - summary: fix timestamp on linstor dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2250
+prometheus:
+  fixes:
+    - summary: Use `X-Auth-Token` header for remote write credentials according to the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2205
+upmeter:
+  fixes:
+    - summary: >-
+        Fixed bug when cleaning old upmeter probe garbage resulting in errors stucks Deckhouse main
+        queue
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2221
+

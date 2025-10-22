@@ -1,0 +1,58 @@
+---
+{{ $alertmanagerVersion := "0.27.0" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/alertmanager
+    to: /bin/alertmanager
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bin/alertmanager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $alertmanagerVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/alertmanager.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - |
+    export LDFLAGS="-w -s -extldflags '-static'"
+  - cd /src
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -o alertmanager cmd/alertmanager/main.go`) | indent 6 }}
+  - chown -R 64535:64535 /src/
+  - chmod 0700 /src/alertmanager

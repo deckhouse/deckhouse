@@ -1,0 +1,107 @@
+- name: d8.control-plane-manager.malfunctioning
+  rules:
+  - alert: D8ControlPlaneManagerPodNotRunning
+    for: 10m
+    expr: |
+      max by (node) (
+        kube_node_role{role="master"}
+        unless
+        kube_node_role{role="master"}
+        * on(node) group_left() (
+          (kube_pod_status_ready{condition="true"} == 1)
+          * on (pod, namespace) group_right()
+          kube_controller_pod{
+            controller_type="DaemonSet",
+            namespace="kube-system",
+            controller_name="d8-control-plane-manager"
+          }
+        )
+      )
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_control_plane_manager_unavailable: "D8ControlPlaneManagerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Controller pod isn't running on node `{{ $labels.node }}`.
+      description: |-
+        The `d8-control-plane-manager` pod is either failing or hasn't been scheduled on node `{{ $labels.node }}`.
+
+        To resolve this issue, check the status of the `kube-system/d8-control-plane-manager` DaemonSet and its pods by running the following command:
+
+        ```bash
+        d8 k -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
+        ```
+  - alert: D8KubernetesVersionIsDeprecated
+    for: 10m
+    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.29"}) == 1
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Kubernetes version `{{ $labels.k8s_version }}` is deprecated.
+      description: |-
+        The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
+
+        Please migrate to the next kubernetes version (at least 1.30)
+
+        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
+
+        Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
+
+  - alert: D8KubernetesStaleTokensDetected
+    for: 10m
+    expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (instance) > 0
+    labels:
+      severity_level: "8"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Stale service account tokens detected.
+      description: |-
+        This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
+
+        **Recommended actions:**
+
+        - Ensure your application is configured to periodically reload the token from the file system.
+        - Verify that you are using an up-to-date client library that supports automatic token rotation.
+
+        Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
+
+        **For further investigation:**
+        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
+
+        ```bash
+        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
+        ```
+
+        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
+
+        ```yaml
+        - level: Metadata
+          omitStages:
+          - RequestReceived
+          userGroups:
+          - system:serviceaccounts
+        ```
+
+        Example of applying an additional audit policy:
+
+        ```bash
+        d8 k apply -f - <<EOF
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: audit-policy
+          namespace: kube-system
+        data:
+          audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
+        EOF
+        ```

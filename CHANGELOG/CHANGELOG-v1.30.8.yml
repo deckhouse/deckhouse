@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - description: Fix nodeuser script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/751
+ci:
+  fixes:
+    - description: Pull release-channel-version image before tagging.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/722
+

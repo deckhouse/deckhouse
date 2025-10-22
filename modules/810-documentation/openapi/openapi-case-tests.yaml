@@ -1,0 +1,53 @@
+positive:
+  configValues:
+    - {}
+    # only node selector
+    - nodeSelector: { "disk-type": "ssd" }
+
+    # only tolerations
+    - tolerations:
+        - {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "cert-manager",
+          }
+        - {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "system",
+          }
+
+    # node selector with tolerations
+    - nodeSelector: { "disk-type": "ssd" }
+      tolerations:
+        - {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "cert-manager",
+          }
+        - {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "system",
+          }
+    - auth:
+        externalAuthentication:
+          authURL: "https://api.example.com/auth"
+          authSignInURL: "https://www.example.com/login"
+  values:
+    - auth: {}
+      internal: {}
+    - auth: {}
+      https:
+        mode: CustomCertificate
+        customCertificate:
+          secretName: "plainstring"
+      internal:
+        customCertificateData:
+          tls.crt: plainstring
+          tls.key: plainstring
+negative:
+  configValues:
+    - { somethingInConfig: yes }
+  values:
+    - { somethingInConfig: yes }

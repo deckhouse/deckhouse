@@ -1,0 +1,76 @@
+type: object
+properties:
+  ebpfExporterEnabled:
+    type: boolean
+    default: true
+    x-examples:
+    - false
+    description: |
+      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
+  highAvailability:
+    type: boolean
+    x-examples: [true, false]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      - - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  vpa:
+    type: object
+    description: |
+      VPA settings for `kube-state-metrics` pods.
+    default: {}
+    x-examples:
+      - { kubeStateMetricsMaxCPU: "130m", kubeStateMetricsMaxMemory: "115Mi" }
+    properties:
+      kubeStateMetricsMaxCPU:
+        x-examples: [3, "1000m"]
+        oneOf:
+          - type: string
+            pattern: "^[0-9]+m?$"
+          - type: number
+        description: |
+          The maximum value that the VPA can set for the CPU requests.
+      kubeStateMetricsMaxMemory:
+        x-examples: ["3Mi"]
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          - type: number
+        description: |
+          The maximum memory requests the VPA can set.

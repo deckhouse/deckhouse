@@ -1,0 +1,9 @@
+name: user-authn
+critical: true
+stage: "General Availability"
+subsystems:
+  - security
+namespace: d8-user-authn
+weight: 150
+requirements:
+  deckhouse: ">= 1.68"

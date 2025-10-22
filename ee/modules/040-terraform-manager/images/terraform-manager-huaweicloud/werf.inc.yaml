@@ -1,0 +1,54 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "huaweicloud") }}'
+git:
+  - add: /{{ .ModulePath }}candi/cloud-providers/huaweicloud
+    to: /deckhouse/candi/cloud-providers/huaweicloud
+import:
+  - image: terraform-provider-huaweicloud
+    add: /terraform-provider-huaweicloud
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.huaweicloud.version }} $(cat /run/secrets/SOURCE_REPO)/huaweicloud/terraform-provider-huaweicloud.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf vendor
+  - rm -rf .git
+---
+image: terraform-provider-huaweicloud
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.huaweicloud.version }} -X main.commit=00000000" -o terraform-provider-huaweicloud ./
+  - mv /src/terraform-provider-huaweicloud /terraform-provider-huaweicloud
+  - chmod -R 755 /terraform-provider-huaweicloud
+  - chown 64535:64535 /terraform-provider-huaweicloud

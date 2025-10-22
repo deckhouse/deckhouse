@@ -1,0 +1,9 @@
+istio:
+  fixes:
+    - summary: Replace CA for the Ingress validation of api-proxy, fix kiali `ClusterRole`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3395
+vertical-pod-autoscaler:
+  fixes:
+    - summary: Setting `admissionReviewVersions` to `v1` in mutating webhook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3397
+

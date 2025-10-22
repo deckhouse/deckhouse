@@ -1,0 +1,221 @@
+admission-policy-engine:
+  features:
+    - summary: Add CRD `OperationPolicy` for configuring best-practice cluster policies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3115
+  fixes:
+    - summary: Add ensure_crds hook for native gatekeeper CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3332
+    - summary: Move native CRDs to a separate folder.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3331
+    - summary: Add secret with credentials for a registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3310
+candi:
+  features:
+    - summary: 'Upgraded patch versions of Kubernetes images: v1.22.17, v1.23.15, and v1.24.9.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3297
+      impact: '"Kubernetes control-plane components will restart, kubelet will restart"'
+    - summary: 'Upgraded patch versions of Kubernetes images: v1.22.16, v1.23.14, and v1.24.8.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3250
+      impact: '"Kubernetes control-plane components will restart, kubelet will restart"'
+    - summary: Migrate to NAT gateway in the Yandex.Cloud Standard layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3235
+      impact: >-
+        If you have the Standard layout, follow the [migration
+        guide](https://docs.google.com/document/d/1ssFEfX1jL7YiGD0_ZyJc1awofjQRJeRlABFmXk3E3ws) to
+        start using the new ["NAT
+        gateway"](https://cloud.yandex.com/en-ru/docs/vpc/operations/create-nat-gateway) feature.
+    - summary: >-
+        Added the `proxy` parameter to the `ClusterConfiguration` resource.
+
+        Removed the `packagesProxy` parameter from the `ClusterConfiguration` resource.
+
+        The `modules.proxy` global parameter is deprecated.
+
+        Added migration to convert `ClusterConfiguration.packagesProxy` and the global
+        `modules.proxy` parameters to the 
+
+        `ClusterConfiguration.proxy` parameter (global `modules.proxy` takes precedence).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3185
+    - summary: Show bash debug output for failed sources steps when bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3122
+    - summary: Kernel version management removed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3076
+    - summary: Switch base images from Debian to Ubuntu & update BASE_UBUNTU to Jammy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2885
+      impact: >-
+        The following components will be restarted:
+
+        * `ebs-csi-plugin` in the `cloud-provider-aws` module;
+
+        * `azuredisk-csi` in the `cloud-provider-azure` module;
+
+        * `pd-csi-plugin` in the `cloud-provider-gcp` module;
+
+        * `kube-controller-manager` in the `control-plane-manager` module;
+
+        * `grafana` in the `prometheus` module;
+
+        * `ui-proxy` in the `cilium-hubble` module;
+
+        * `vector` in the `log-shipper` module;
+
+        * `cinder-provider-openstack` and `cloud-controller-manager` in the
+        `cloud-provider-openstack` module;
+
+        * `vsphere-csi-plugin` and `vsphere-csi-plugin-legacy` in the `cloud-provider-vsphere`
+        module;
+
+        * `operator`, `pilot` and `proxyv2` in the `istio` module;
+
+        * `grafana-agent` in the `flant-integration` module.
+  fixes:
+    - summary: Fail node bootstrap if the node has an XFS partition with ftype=0 parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3103
+ceph-csi:
+  fixes:
+    - summary: Allow non-admin ceph account for cephfs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3212
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix ordering static nodes without security groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3182
+    - summary: >-
+        Backported fix for OpenStack with version older than 3.34, for compatibility with some
+        clouds (e.g. VK cloud).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3159
+cni-cilium:
+  fixes:
+    - summary: Removed CiliumAgentUnreachableNodes alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3161
+common:
+  features:
+    - summary: Generate self-signed CA for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3288
+      impact: Multiple Pods, including Prometheus and Ingress Nginx Controller, will be restarted.
+control-plane-manager:
+  features:
+    - summary: Added support for Kubernetes 1.25.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3247
+deckhouse:
+  features:
+    - summary: Added releaseChannel label to DeckhouseIsUpdating alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3264
+deckhouse-config:
+  fixes:
+    - summary: Add watch error handler to see problems with apiserver connections
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3301
+delivery:
+  features:
+    - summary: Added the new 'delivery' module based on ArgoCD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/707
+docs:
+  fixes:
+    - summary: Added a note in the Getting started that EKS is not supported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3219
+    - summary: >-
+        Clarify using the `ClusterConfiguration` and the `<provider>ClusterConfiguration`
+        parameters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3112
+flant-integration:
+  fixes:
+    - summary: Use a service account token to collect metrics from Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3216
+    - summary: Changed expression for D8PrometheusMadisonErrorSendingAlertsToBackend alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3113
+go_lib:
+  features:
+    - summary: Issue a new self-signed certificate if CA is not found.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3349
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Add `minReadySeconds` for `LoadBalancer` inlet controllers. This will give some time for the
+        Load Balancer to rebuild the endpoints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3121
+istio:
+  features:
+    - summary: >-
+        Automatic istio dataplane upgrade for `Deployment`, `Daemonset` and `StatefulSet` with a
+        special label.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3061
+    - summary: Ability to create Ingress istio gateway controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2898
+  fixes:
+    - summary: exclude `upmeter-probe-namespace-.*` from kiali
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3225
+log-shipper:
+  features:
+    - summary: Add Splunk destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3117
+  fixes:
+    - summary: Fix TLS certificates error for Kafka destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3215
+monitoring-deckhouse:
+  fixes:
+    - summary: Add alert for the `deckhouse_kubernetes_client_watch_errors_total` metric.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3333
+node-local-dns:
+  fixes:
+    - summary: Remove the module from the `Managed` bundle.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3309
+node-manager:
+  features:
+    - summary: Check the `bashible` service before bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3140
+  fixes:
+    - summary: Show errors on scale-from-zero capacity planning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3316
+openvpn:
+  features:
+    - summary: Added pushDefaultGatewayToClient parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3178
+      impact: The openvpn pod will be restarted
+pod-reloader:
+  features:
+    - summary: Redeploy workload after ConfigMap/Secret recreation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3096
+prometheus:
+  features:
+    - summary: Use prometheus service account token for authentication.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3217
+      impact: Prometheus, Trickster, Grafana will be restarted.
+  fixes:
+    - summary: >-
+        Set up `maxSamples` of query for the Main and Longterm Prometheus objects from `50000000` to
+        `100000000`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3124
+      impact: the `prometheus` module will be restarted.
+registrypackages:
+  fixes:
+    - summary: Allow downgrading RPMs in registrypackages for CentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3353
+testing:
+  fixes:
+    - summary: Add deckhouse Pod readiness check before running tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3231
+user-authn:
+  features:
+    - summary: Add claim mappings for OIDC providers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3198
+  fixes:
+    - summary: Fix crowd proxy certificate generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3355
+    - summary: Fix dex authenticator probe to tolerate self signed certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3291
+    - summary: kubeconfig generation doc clarifications (public and non-public CA for published API).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3237
+    - summary: Fixed the `generate_crowd_basic_auth_proxy_cert.go` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3223
+    - summary: Use a self-signed certificate for Dex when accessing from inside the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3218
+user-authz:
+  fixes:
+    - summary: Create patch update rights for the `user-authz:admin` clusterrole.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3211
+    - summary: Fix markdown lint errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3166
+vertical-pod-autoscaler:
+  features:
+    - summary: Vertical Pod Autoscaler updated to version 0.12.0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3224
+

@@ -1,0 +1,381 @@
+{{- define "deckhouse_resources" }}
+cpu: 150m
+memory: 500Mi
+{{- end }}
+
+{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  {{- if .Values.deckhouse.nodeSelector }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- else }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+  {{- end }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: deckhouse
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: deckhouse
+      controlledValues: RequestsOnly
+      minAllowed:
+        {{- include "deckhouse_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 1000m
+        memory: 2000Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: deckhouse
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deckhouse
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+    core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
+    core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- include "helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha" (list . (dict "strategy" "Recreate")) | nindent 2 }}
+{{- else }}
+  replicas: 1
+{{- end }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: deckhouse
+  template:
+    metadata:
+      labels:
+        app: deckhouse
+      annotations:
+        checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
+        kubectl.kubernetes.io/default-container: deckhouse
+{{- if and (.Values.deckhouse.internal.chrootMode) (semverCompare "< 1.30" .Values.global.discovery.kubernetesVersion) }}
+        container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
+{{- end }}
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: deckhouse
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                - key: node.deckhouse.io/deckhouse-ready
+                  operator: In
+                  values:
+                  - "true"
+              weight: 100
+{{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+{{- if .Values.deckhouse.nodeSelector }}
+      nodeSelector:
+        {{- .Values.deckhouse.nodeSelector | toYaml | nindent 8 }}
+{{- else }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+{{- end }}
+{{- if .Values.deckhouse.tolerations }}
+      tolerations:
+        {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"
+{{- else }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+{{- end }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      initContainers:
+        - name: init-downloaded-modules
+          image: {{ include "helm_lib_module_image" (list . "init") }}
+          imagePullPolicy: Always
+          command: ['sh', '-c', 'mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
+          volumeMounts:
+            - mountPath: /deckhouse/
+              name: deckhouse
+      containers:
+        - name: deckhouse
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
+{{- if .Values.deckhouse.internal.chrootMode }}
+            capabilities:
+              drop:
+              - all
+              add:
+              - SYS_ADMIN
+  {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+            appArmorProfile:
+              type: Unconfined
+  {{- end }}
+{{- end }}
+          command:
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - /usr/bin/caps-deckhouse-controller
+{{- else }}
+            - /usr/bin/deckhouse-controller
+{{- end }}
+            - start
+          image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
+          imagePullPolicy: Always
+          env:
+{{- if (.Values.global.enabledModules | has "control-plane-manager") }}
+# control-plane is NOT managed by third-party team (EKS/GKP/...)
+  {{- if .Values.global.clusterIsBootstrapped }}
+  # managed by Deckhouse: use API-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              value: 127.0.0.1
+              valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+  {{- else }}
+  # bootstrap phase: use direct connection
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6443"
+  {{- end }}
+{{- end }}
+            - name: LOG_LEVEL
+              value: {{ .Values.deckhouse.logLevel }}
+            - name: LOG_TYPE
+              value: "json"
+            - name: DECKHOUSE_HA
+{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
+              value: "true"
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.global.discovery.clusterDomain | quote }}
+{{- else }}
+              value: "false"
+{{- end }}
+            - name: DECKHOUSE_BUNDLE
+              value: {{ .Values.deckhouse.bundle }}
+            - name: DECKHOUSE_POD
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: DECKHOUSE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HELM_HOST
+              value: "127.0.0.1:44434"
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+            - name: ADDON_OPERATOR_LISTEN_PORT
+              value: "4222"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
+              value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
+              value: "30"
+            - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
+              value: "60"
+            - name: KUBE_CLIENT_QPS
+              value: "20"
+            - name: KUBE_CLIENT_BURST
+              value: "40"
+            - name: GOGC
+              value: "50"
+            - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
+              value: deckhouse_
+            - name: ADDON_OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ADDON_OPERATOR_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_ENABLED
+              value: "true"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
+              value: "/certs"
+            - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
+              value: "heritage=deckhouse"
+            - name: HELM_HISTORY_MAX
+              value: "3"
+            - name: MODULES_DIR
+              value: "/deckhouse/modules:/deckhouse/downloaded/modules"
+            - name: DOWNLOADED_MODULES_DIR
+              value: "/deckhouse/downloaded/"
+            # For backward compatibility with current modules' hooks - remove after 1.69
+            - name: EXTERNAL_MODULES_DIR
+              value: "/deckhouse/downloaded/"
+            - name: DEBUG_UNIX_SOCKET
+              value: /tmp/shell-operator-debug.socket
+            - name: HISTFILE
+              value: /tmp/.bash_history
+            - name: DEBUG_HTTP_SERVER_ADDR
+              value: "127.0.0.1:9652"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
+              value: "/chroot"
+{{- end }}
+            - name: TRACING_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: endpoint
+                  optional: true
+            - name: TRACING_OTLP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: token
+                  optional: true
+          ports:
+            - containerPort: 4222
+              name: self
+            - containerPort: 4223
+              name: webhook
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 4222
+            initialDelaySeconds: 5
+            # fail after 10 minutes
+            periodSeconds: 5
+            failureThreshold: 120
+          resources:
+            limits:
+              memory: 6Gi # heavy load usage ~2Gi (x3)
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
+              {{- include "deckhouse_resources" . | nindent 14 }}
+          workingDir: /deckhouse
+          volumeMounts:
+          - mountPath: /dev
+            name: dev-dir
+          - mountPath: /tmp
+            name: tmp
+          - mountPath: /run
+            name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+          - mountPath: /chroot
+            name: chroot
+{{- end }}
+          - mountPath: /.kube
+            name: kube
+          - mountPath: /certs
+            name: certs
+            readOnly: true
+          - mountPath: /deckhouse/downloaded
+            name: downloaded
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4204"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:9652
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: http
+                    name: debugSrv
+          ports:
+          - containerPort: 4204
+            name: https
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 4204
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 4204
+              scheme: HTTPS
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+      hostNetwork: true
+{{- if .Values.global.clusterIsBootstrapped }}
+      dnsPolicy: ClusterFirstWithHostNet
+{{- else }}
+      dnsPolicy: Default
+{{- end}}
+      serviceAccountName: deckhouse
+      automountServiceAccountToken: true
+      volumes:
+      - name: dev-dir
+        hostPath:
+          path: /dev
+          type: Directory
+      - emptyDir:
+          medium: Memory
+        name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+      - emptyDir: {}
+        name: chroot
+{{- end }}
+      - emptyDir:
+          medium: Memory
+        name: kube
+      - name: certs
+        secret:
+          secretName: admission-webhook-certs
+      - name: deckhouse
+        hostPath:
+          path: /var/lib/deckhouse
+          type: DirectoryOrCreate
+      - name: downloaded
+        hostPath:
+          path: /var/lib/deckhouse/downloaded
+          type: DirectoryOrCreate

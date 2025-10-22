@@ -1,0 +1,40 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-admission-policy-engine
+  name: d8:manage:permission:module:admission-policy-engine:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - operationpolicies
+  - securitypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - admission-policy-engine
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

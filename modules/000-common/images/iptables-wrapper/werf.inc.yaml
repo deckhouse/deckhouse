@@ -1,0 +1,41 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/iptables-wrappers.git /src
+  - cd /src
+  - git reset --hard 680003b3c6e93b471a59ecc9ae87a8f9054b82f3
+  - rm -r .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o iptables-wrapper main.go
+  - chown 64535:64535 iptables-wrapper
+  - chmod 0755 iptables-wrapper

@@ -1,0 +1,61 @@
+{{- $version := "1.7.3.4" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch tag-{{ $version }}  $(cat /run/secrets/SOURCE_REPO)/socat.git /src/socat
+  - rm -rf /src/socat/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - socat
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "socat": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: common/alt-p11-artifact
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install yodl make autoconf automake glibc-devel-static build-essential -y
+  setup:
+    - cd /src/socat
+    - autoconf
+    - CC='/usr/bin/gcc -static' CFLAGS="-fPIC" CPPFLAGS="-I/build -DNETDB_INTERNAL=-1" ./configure
+    - make
+    - strip ./socat
+    - mv ./socat /socat
+    - mv /src/scripts/* /
+    - chmod +x /socat  /install /uninstall

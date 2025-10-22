@@ -1,0 +1,20 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8HostProcesses
+metadata:
+  name: test
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values: 
+          - baseline
+          - restricted
+  parameters:
+    allowHostPID: true
+    allowHostIPC: true

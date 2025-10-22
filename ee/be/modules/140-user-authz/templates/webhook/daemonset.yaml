@@ -1,0 +1,94 @@
+{{- define "webhook_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if .Values.userAuthz.enableMultiTenancy }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-authz-webhook
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: user-authz-webhook
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: webhook
+      minAllowed:
+        {{- include "webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: user-authz-webhook
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-webhook")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: user-authz-webhook
+  template:
+    metadata:
+      labels:
+        app: user-authz-webhook
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      hostNetwork: true
+      serviceAccountName: webhook
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: webhook
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "webhook") }}
+        volumeMounts:
+        - mountPath: /etc/user-authz-webhook/
+          name: user-authz-webhook-config
+          readOnly: true
+        - mountPath: /etc/ssl/user-authz-webhook
+          name: user-authz-webhook-secret
+        - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
+          name: apiserver-authentication-requestheader-client-ca
+        livenessProbe:
+          exec:
+            command:
+            - /healthcheck
+          # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 6
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: user-authz-webhook-secret
+        secret:
+          secretName: user-authz-webhook
+      - name: apiserver-authentication-requestheader-client-ca
+        configMap:
+          name: apiserver-authentication-requestheader-client-ca
+      - name: user-authz-webhook-config
+        configMap:
+          name: user-authz-webhook
+{{- end }}

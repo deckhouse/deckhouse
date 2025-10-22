@@ -1,0 +1,28 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы серверов Базис.DynamiX, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                numCPUs:
+                  description: |
+                    Количество vCPU, выделяемых виртуальным машинам.
+                memory:
+                  description: |
+                    Память в MiB для выделения виртуальным машинам.
+                rootDiskSizeGb:
+                  description: |
+                    Размер корневого диска в GiB для использования в виртуальных машинах.
+                imageName:
+                  description: |
+                    Имя образа ОС, используемое для развертывания ВМ.
+                externalNetwork:
+                  description: |
+                    Имя внешней сети.

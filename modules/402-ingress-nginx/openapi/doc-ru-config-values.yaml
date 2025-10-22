@@ -1,0 +1,9 @@
+properties:
+  defaultControllerVersion:
+    description: |
+      Версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по умолчанию, если не был задан параметр `controllerVersion` в IngressNginxController CR.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.

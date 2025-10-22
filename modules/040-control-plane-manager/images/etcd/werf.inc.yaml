@@ -1,0 +1,66 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b v3.6.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/etcd-io/etcd.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf tools
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /
+  to: /usr/bin
+  includePaths:
+  - etcd
+  - etcdctl
+  - etcdutl
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/etcd"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src/
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - cd server
+    - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /etcd .`) | indent 8 }}
+    - cd ..
+    - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
+    - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..

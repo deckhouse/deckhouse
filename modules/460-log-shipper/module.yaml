@@ -1,0 +1,12 @@
+name: log-shipper
+stage: "General Availability"
+subsystems:
+  - observability
+namespace: d8-log-shipper
+description: |
+  Collecting logs in the Kubernetes cluster
+descriptions:
+  en: |
+    Collecting logs in the Kubernetes cluster
+requirements:
+  deckhouse: ">= 1.68"

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-seccomp-allowed
+  namespace: testns
+spec:
+  securityContext:
+    seccompProfile:
+      type: "RuntimeDefault"
+  containers:
+    - name: nginx
+      image: nginx

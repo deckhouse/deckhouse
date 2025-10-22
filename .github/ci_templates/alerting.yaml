@@ -1,0 +1,55 @@
+{!{- define "send_alert_template" -}!}
+{!{- $ctx := index . 0 }!}
+# <template: send_alert_template>
+- name: Check alerting credentials
+  id: check_alerting
+  if: always()
+  env:
+    KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+  run: |
+    if [[ -n $KEY ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
+- name: Send alert on fail
+{!{- if coll.Has $ctx "if" }!}
+  if: ${{ steps.check_alerting.outputs.has_credentials == 'true' && ( {!{- $ctx.if -}!} ) }}
+{!{- else }!}
+  if: ${{ steps.check_alerting.outputs.has_credentials == 'true' }}
+{!{- end }!}
+  env:
+    CLOUD_LAYOUT_TESTS_MADISON_KEY: ${{secrets.CLOUD_LAYOUT_TESTS_MADISON_KEY}}
+  run: |
+    WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+    echo $WORKFLOW_URL
+
+    alertData=$(cat <<EOF
+    {
+      "labels": {
+{!{ range $k, $v := $ctx.labels }!}
+  {!{- $k | quote | indent 8 -}!}: {!{ $v | quote }!},
+{!{ end }!}
+        "severity_level": 7
+      },
+      "annotations": {
+{!{ range $k, $v := $ctx.annotations }!}
+  {!{- $k | quote | indent 8 -}!}: {!{ $v | quote }!},
+{!{ end }!}
+        "plk_link_url/job": "${WORKFLOW_URL}",
+        "plk_protocol_version": "1",
+        "plk_link_title_en/job": "Github job run"
+      }
+    }
+    EOF
+    )
+
+    for (( iter = 1; iter < 60; iter++ )); do
+      if curl -sS -X "POST" "https://madison.flant.com/api/events/custom/${CLOUD_LAYOUT_TESTS_MADISON_KEY}" -H 'Content-Type: application/json' -d "${alertData}"; then
+        exit 0
+      fi
+
+      echo "Alert was not sent. Wait 5 seconds before next attempt"
+      sleep 5
+    done
+
+    echo "Alert was not sent. Timeout"
+    exit 1
+  # </template: send_alert_template>
+{!{- end -}!}

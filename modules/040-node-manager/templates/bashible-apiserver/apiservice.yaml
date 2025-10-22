@@ -1,0 +1,14 @@
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.bashible.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  caBundle: {{ .Values.nodeManager.internal.bashibleApiServerCA | b64enc | quote }}
+  group: bashible.deckhouse.io
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: bashible-api
+    namespace: d8-cloud-instance-manager
+  version: v1alpha1

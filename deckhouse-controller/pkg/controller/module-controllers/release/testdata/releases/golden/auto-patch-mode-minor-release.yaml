@@ -1,0 +1,102 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  generation: 1
+  name: test
+  resourceVersion: "406077724"
+  uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: parca
+    status: deployed
+  name: parca-1.26.2
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+  resourceVersion: "1001"
+spec:
+  moduleName: parca
+  version: 1.26.2
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: ""
+  name: parca-1.27.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+  resourceVersion: "1004"
+spec:
+  moduleName: parca
+  version: 1.27.0
+  weight: 900
+status:
+  approved: true
+  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: parca
+  resourceVersion: "1003"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'ModuleRelease could not be applied, release postponed: see details in
+      the module release v1.27.0'
+    reason: ReleaseDeployTimeCheck
+    status: "False"
+    type: LastReleaseDeployed
+  phase: Ready

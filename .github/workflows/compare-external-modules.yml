@@ -1,0 +1,76 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Compare external modules
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      versions_to_compare:
+        description: 'Versions to compare'
+        required: true
+        default: 1
+        type: number
+
+concurrency:
+  group: compare-external-modules
+
+jobs:
+  compare-external-modules:
+    name: Compare external modules
+    runs-on: [self-hosted, regular]
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+      - name: Install dependencies
+        run: pip install pyyaml
+      - name: Compare modules
+        env:
+          DECKHOUSE_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          EDITIONS_FILE: "./editions.yaml"
+          VERSIONS_TO_COMPARE : ${{ inputs.versions_to_compare || 1 }}
+        run: python .github/scripts/python/compare_external_modules.py

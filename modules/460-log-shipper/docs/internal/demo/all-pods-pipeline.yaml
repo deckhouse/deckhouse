@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: all-pods
+spec:
+  type: KubernetesPods
+  destinationRefs:
+  - all-pods
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: all-pods
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki-test:3100
+  extraLabels:
+    log_shipper_source: all-pods

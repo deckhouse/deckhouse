@@ -1,0 +1,130 @@
+{
+  "topnav": {
+    "en": [
+      {
+        "items": [
+          {
+            "title": "Solutions",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Technical Support",
+                "url": "/tech-support/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Security",
+                "url": "/security/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Training &amp; Consulting",
+                "url": "/services/training-and-consulting/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Deckhouse vs KaaS",
+                "url": "/deckhouse-vs-kaas/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "title": "Success stories",
+            "url": "/success-stories/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Community",
+            "url": "/community/",
+            "target": "",
+            "rel": ""
+          }
+        ]
+      }
+    ],
+    "ru": [
+      {
+        "items": [
+          {
+            "title": "Партнёры",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Стать партнёром",
+                "url": "/become-partner/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Найти партнёра",
+                "url": "/partners/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "title": "Как купить",
+            "url": "/how-to-buy/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Обучение",
+            "url": "/academy/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Техподдержка",
+            "url": "/tech-support/",
+            "target": "",
+            "rel": ""
+          },
+          {
+            "title": "Ресурсы",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Истории успеха",
+                "url": "/success-stories/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Блог",
+                "url": "https://blog.deckhouse.ru",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Новости",
+                "url": "/news/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Вебинары",
+                "url": "/webinars/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

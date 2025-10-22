@@ -1,0 +1,24 @@
+{
+  "name": "js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "fmt": "prettier --write ./*.js",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1",
+    "@octokit/graphql": "^4.8.0",
+    "@types/node": "^16.11.11",
+    "jest": "28.1.2",
+    "jest-mock-extended": "^4.0.0-beta1",
+    "marked": "^15.0.6",
+    "prettier": "^2.5.0",
+    "yaml": "^2.7.0"
+  }
+}

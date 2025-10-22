@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: service-with-healthchecks
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+  name: d8:manage:permission:module:service-with-healthchecks:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - service-with-healthchecks
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

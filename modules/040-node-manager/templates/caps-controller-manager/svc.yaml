@@ -1,0 +1,15 @@
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+  name: caps-controller-manager-webhook-service
+  namespace: d8-cloud-instance-manager
+spec:
+  ports:
+    - port: 443
+      targetPort: webhook-server
+  selector:
+    app: caps-controller-manager
+{{- end }}

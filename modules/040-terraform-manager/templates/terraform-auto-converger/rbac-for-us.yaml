@@ -1,0 +1,110 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: terraform-auto-converger
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: terraform-auto-converger
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "patch", "update", "create", "delete"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "create", "patch", "update", "delete"]
+- apiGroups: ["apps"]
+  verbs: ["get", "patch"]
+  resources: ["deployments", "daemonsets", "statefulsets"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: terraform-auto-converger
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: terraform-auto-converger
+subjects:
+- kind: ServiceAccount
+  name: terraform-auto-converger
+  namespace: d8-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:terraform-manager:terraform-auto-converger:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-auto-converger")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: terraform-auto-converger
+  namespace: d8-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:terraform-manager:terraform-auto-converger
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:terraform-manager:terraform-auto-converger
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:terraform-manager:terraform-auto-converger
+subjects:
+- kind: ServiceAccount
+  name: terraform-auto-converger
+  namespace: d8-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:terraform-manager:terraform-auto-converger
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-auto-converger")) | nindent 2 }}
+rules:
+- apiGroups: ["deckhouse.io"]
+  resources: ["nodegroups"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch", "patch", "update", "create", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:terraform-manager:terraform-auto-converger
+  {{- include "helm_lib_module_labels" (list . (dict "app" "terraform-auto-converger")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:terraform-manager:terraform-auto-converger
+subjects:
+- kind: ServiceAccount
+  name: terraform-auto-converger
+  namespace: d8-system

@@ -1,0 +1,20 @@
+{{- if .Values.prometheus.longtermRetentionDays }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-longterm
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus" "prometheus" "longterm")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: https
+    port: 9090
+    protocol: TCP
+    targetPort: https
+  selector:
+    app.kubernetes.io/name: prometheus
+    prometheus: longterm
+{{- end }}

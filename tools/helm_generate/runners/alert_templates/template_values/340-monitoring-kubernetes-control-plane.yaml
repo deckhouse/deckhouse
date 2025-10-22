@@ -1,0 +1,3 @@
+global:
+  discovery:
+    kubernetesVersion: 1.24

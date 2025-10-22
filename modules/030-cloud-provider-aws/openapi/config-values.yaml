@@ -1,0 +1,90 @@
+type: object
+properties:
+  storageClass:
+    type: object
+    properties:
+      provision:
+        description: |
+          Defines additional StorageClasses or override the parameters of created by default.
+        type: array
+        items:
+          type: object
+          required: ["name", "type"]
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the class to create.
+            type:
+              type: string
+              enum: ["gp3", "gp2", "sc1", "st1", "io1", "io2"]
+              description: |
+                The volume type.
+            iopsPerGB:
+              type: string
+              description: |
+                The number of I/O operations per second per GB for `io1` and `io2` volume types (this parameter is `3` for `gp2` volumes):
+                  * **Caution!** If the iopsPerGB value multiplied by the target volume's size is less than 100 or more than 64000, the creation of such a volume will fail.
+                  * You can find a detailed description of the volume types and their IOPS in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+            iops:
+              type: string
+              description: |
+                I/O operations per second for `gp3` volume type:
+                  * Allowed values: from `3000` to `16000`.
+                  * If empty, it will set to 3000 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Changing doesn't apply to existing volumes. You can modify them manually through AWS Console.
+            throughput:
+              type: string
+              description: |
+                Throughput in MiB/s for `gp3` volume type:
+                  * Allowed values: from `125` to `1000`.
+                  * If empty, it will set to 125 as documented [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html).
+                  * Changing doesn't apply to existing volumes. You can modify them manually through AWS Console.
+          oneOf:
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["gp2", "sc1", "st1"]
+              additionalProperties: false
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["gp3"]
+                iops:
+                  type: string
+                throughput:
+                  type: string
+              additionalProperties: false
+            - properties:
+                name:
+                  type: string
+                type:
+                  enum: ["io1", "io2"]
+                iopsPerGB:
+                  type: string
+              additionalProperties: false
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        x-examples:
+        - ["sc.*", "st1"]
+      default:
+        type: string
+        deprecated: true
+        x-doc-deprecated: true
+        description: |-
+          The name of StorageClass that will be used in the cluster by default.
+
+          If the parameter is omitted, the default StorageClass is either:
+
+          * an arbitrary StorageClass present in the cluster that has the default annotation;
+          * the first (in lexicographic order) StorageClass created by the module.
+
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+        x-examples:
+        - "gp3"

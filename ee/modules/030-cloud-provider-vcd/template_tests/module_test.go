@@ -1,0 +1,201 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
+package template_tests
+
+import (
+	"encoding/base64"
+	"os"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
+)
+
+func Test(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "")
+}
+
+// fake *-crd modules are required for backward compatibility with lib_helm library
+// TODO: remove fake crd modules
+const globalValues = `
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-vcd"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: VCD
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.29"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      worker: 1
+      master: 3
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: 1.29.1
+    clusterUUID: cluster
+`
+
+const moduleValuesA = `
+    internal:
+      capcdControllerManagerWebhookCert:
+        ca: ca
+        crt: crt
+        key: key
+      providerDiscoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        zones:
+        - default
+      discoveryData:
+        kind: VCDCloudProviderDiscoveryData
+        apiVersion: deckhouse.io/v1
+        vcdInstallationVersion: "10.4.2"
+        vcdAPIVersion: "37.2"
+      providerClusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: VCDClusterConfiguration
+        provider:
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+          server: "http://server/api/"
+        layout: Standard
+        sshPublicKey: rsa-aaaa
+        organization: org
+        virtualDataCenter: dc
+        virtualApplicationName: v1rtual-app
+        mainNetwork: internal
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            affinityRule:
+              polarity: AntiAffinity
+            template: Templates/ubuntu-focal-20.04
+            sizingPolicy: 4cpu8ram
+            rootDiskSizeGb: 20
+            etcdDiskSizeGb: 20
+            storageProfile: nvme
+        nodeGroups:
+        - name: front
+          replicas: 3
+          instanceClass:
+            rootDiskSizeGb: 20
+            sizingPolicy: 16cpu32ram
+            template: Templates/ubuntu-focal-20.04
+            storageProfile: nvme
+            affinityRule:
+              polarity: AntiAffinity
+              required: false
+      affinityRules:
+      - nodeGroupName: master
+        polarity: AntiAffinity
+      - nodeGroupName: front
+        polarity: AntiAffinity
+        required: false
+      - nodeGroupName: ephemeral-node
+        polarity: Affinity
+        required: true
+`
+
+var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
+	f := SetupHelmConfig(``)
+	BeforeSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	Context("VCD", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(regSecret.Exists()).To(BeTrue())
+			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
+
+			masterAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-master")
+			Expect(masterAffinityRule.Exists()).To(BeTrue())
+			Expect(masterAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-master
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: master
+  polarity: "AntiAffinity"
+  required: false
+`))
+
+			frontAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-front")
+			Expect(frontAffinityRule.Exists()).To(BeTrue())
+			Expect(frontAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-front
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: front
+  polarity: "AntiAffinity"
+  required: false
+`))
+
+			ephemeralAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-ephemeral-node")
+			Expect(ephemeralAffinityRule.Exists()).To(BeTrue())
+			Expect(ephemeralAffinityRule.Parse().String()).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: VCDAffinityRule
+metadata:
+  name: sandbox-ephemeral-node
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  nodeLabelSelector:
+    matchLabels:
+      node.deckhouse.io/group: ephemeral-node
+  polarity: "Affinity"
+  required: true
+`))
+
+		})
+	})
+})

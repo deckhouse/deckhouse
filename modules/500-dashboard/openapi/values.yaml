@@ -1,0 +1,26 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: { }
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      deployDexAuthenticator:
+        type: boolean
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]

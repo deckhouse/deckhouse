@@ -1,0 +1,145 @@
+{{- define "operator_resources" }}
+cpu: 25m
+memory: 100Mi
+{{- end }}
+
+{{- define "istio_proxy_resources" }}
+cpu: 50m
+memory: 100Mi
+{{- end }}
+
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{ $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: operator-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: operator-{{ $revision }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: operator
+      minAllowed:
+        {{- include "operator_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: operator-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: "operator"
+      revision: {{ $revision }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: d8-{{ $.Chart.Name }}
+  name: operator-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: operator
+      revision: {{ $revision }}
+  template:
+    metadata:
+      labels:
+        app: operator
+        revision: {{ $revision }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: operator-{{ $revision }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: operator
+        image: {{ include "helm_lib_module_image" (list $ (printf "operator%s" $imageSuffix)) }}
+        command:
+        - operator
+        - server
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsUser: 1337
+          runAsNonRoot: true
+        imagePullPolicy: IfNotPresent
+        {{- if (hasPrefix "1.25" $fullVersion) }}
+        volumeMounts:
+        - mountPath: /etc/sail-operator
+          name: operator-config
+          readOnly: true
+        {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
+
+        ports:
+        {{- if (hasPrefix "1.25" $fullVersion) }}
+        - containerPort: 8443
+          name: https-metrics
+        {{- else}}
+        - containerPort: 8383
+          name: http-metrics
+        {{- end }}
+          protocol: TCP
+        env:
+          - name: WATCH_NAMESPACE
+            value: d8-{{ $.Chart.Name }}
+          - name: LEADER_ELECTION_NAMESPACE
+            value: d8-{{ $.Chart.Name }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: d8-{{ $.Chart.Name }}
+          - name: WAIT_FOR_RESOURCES_TIMEOUT
+            value: 300s
+          - name: REVISION
+            value: {{ $revision }}
+      {{- if (hasPrefix "1.25" $fullVersion) }}
+      volumes:
+        - downwardAPI:
+            defaultMode: 420
+            items:
+            - fieldRef:
+                fieldPath: metadata.annotations
+              path: config.properties
+          name: operator-config
+      {{- end }}
+{{- end }}

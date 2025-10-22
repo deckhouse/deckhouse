@@ -1,0 +1,51 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/extended-monitoring-exporter"]
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /extended-monitoring-exporter
+    after: setup
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - 'go.mod'
+        - 'go.sum'
+shell:
+  install:
+    - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  {{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go build -ldflags="-s -w" -o /extended-monitoring-exporter /src
+    - chown 64535:64535 /extended-monitoring-exporter
+    - chmod 0700 /extended-monitoring-exporter

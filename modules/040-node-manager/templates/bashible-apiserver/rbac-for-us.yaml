@@ -1,0 +1,174 @@
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bashible-apiserver-readconfig
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "get", "watch", "list"]
+# RBAC for bashible - access to registry secret
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-manager:bashible-apiserver-readregsecret
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+---
+# To read configmaps in d8-cloud-instance-manager
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: bashible-apiserver-readconfig
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible-apiserver-readconfig
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager
+---
+# To read secrets in d8-system
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: node-manager:bashible-apiserver-readregsecret
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:bashible-apiserver-readregsecret
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:node-manager:bashible-apiserver:auth
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["flowcontrol.apiserver.k8s.io"]
+    resources: ["prioritylevelconfigurations", "flowschemas"]
+    verbs: ["get", "watch", "list"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroupconfigurations"]
+    verbs: ["get", "list", "watch"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeusers
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["deckhouse.io"]
+  resources: ["nodeusers", "modulesources"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:auth-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible-apiserver:auth
+subjects:
+- kind: ServiceAccount
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible-apiserver:nodeconfigurations
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:nodeusers-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible-apiserver:nodeusers
+subjects:
+- kind: ServiceAccount
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager
+---
+# To read configmaps in kube-system
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:bashible-apiserver:auth-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+  - kind: ServiceAccount
+    name: bashible-apiserver
+    namespace: d8-cloud-instance-manager

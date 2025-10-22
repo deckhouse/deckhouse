@@ -1,0 +1,130 @@
+{{- define "dvp_cloud_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "dvp-cloud-controller-manager"
+      minAllowed:
+        {{- include "dvp_cloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-controller-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: Default
+      serviceAccountName: cloud-controller-manager
+      containers:
+        - name: dvp-cloud-controller-manager
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "cloudControllerManager") }}
+          args:
+          - --leader-elect=true
+          - --cloud-provider=dvp
+          - --allow-untagged-cloud=true
+          - --configure-cloud-routes=false
+          - --controllers=cloud-node,cloud-node-lifecycle,service-lb-controller
+          - --bind-address=127.0.0.1
+          - --secure-port=10471
+          - --v=4
+          env:
+      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
+      {{- if not .Values.global.clusterIsBootstrapped }}
+          - name: KUBERNETES_SERVICE_HOST
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: KUBERNETES_SERVICE_PORT
+            value: "6443"
+      {{- end }}
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: DVP_KUBERNETES_CONFIG_BASE64
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials
+                key: kubernetesConfigBase64
+          - name: DVP_NAMESPACE
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials
+                key: namespace
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10471
+              host: 127.0.0.1
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10471
+              host: 127.0.0.1
+              scheme: HTTPS
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "dvp_cloud_controller_manager_resources" . | nindent 14 }}
+  {{- end }}

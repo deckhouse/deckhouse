@@ -1,0 +1,208 @@
+admission-policy-engine:
+  features:
+    - summary: Operation policy for replica value checking.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6775
+candi:
+  features:
+    - summary: Add support for the `ru-central1-d` zone in Yandex Cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6652
+  fixes:
+    - summary: Resolve names to IPv4 addresses with d8-curl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6898
+    - summary: Fixes for cleanup script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6852
+    - summary: Fix building terraform providers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6772
+    - summary: Restart kubelet after containerd restart to fix containerd.sock loose.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6735
+ceph-csi:
+  fixes:
+    - summary: Create openapi config spec file.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6829
+ci:
+  fixes:
+    - summary: Fix golangci-lint ci action.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6739
+cni-cilium:
+  fixes:
+    - summary: Cilium version bumped to 1.14.5
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6872
+      impact: Cilium agents will restart, during restart some policies won't work.
+cni-flannel:
+  fixes:
+    - summary: Build from source and update to v0.23.0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6594
+      impact: flannel pods will be restarted.
+deckhouse:
+  features:
+    - summary: >-
+        Added annotation `release.deckhouse.io/apply-now` which allows to apply the update without
+        waiting for time restrictions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6651
+deckhouse-controller:
+  features:
+    - summary: Add new resource ModulePullOverride to pull and apply modules in the development mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6781
+  fixes:
+    - summary: Fix global values change and source modules validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6814
+    - summary: Don' purge module on startup if ModulePullOverride exists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6808
+    - summary: Create module directory with desired version only when ModuleRelease is deployed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6807
+    - summary: >-
+        Bump addon-operator. Change internal work with modules. Behavior of commands
+        `deckhouse-controller module values <name>` was changed, no more top levels keys by default.
+        To have old behavior use '-g' flag.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6495
+dhctl:
+  features:
+    - summary: Mirror flag to allow source registry selection.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6889
+    - summary: dhctl will now resume interrupted pulls if pulled data is fresh enough.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6810
+    - summary: Clarify tar bundle flag usage and validate it more strictly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6786
+    - summary: Calculate Streebog GOST checksum for tar bundle only if asked to.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6784
+    - summary: ModuleSource mirroring via `dhctl`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6603
+  fixes:
+    - summary: mirror will validate tar bundle path more strictly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6981
+    - summary: Fix for pulling older Deckhouse versions with tags instead of digests in installers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6932
+    - summary: Allow missing module release channels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6848
+    - summary: Fix mirror not adding module-named tags at modules repo root.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6782
+    - summary: Validate passed credentials against registry prior to mirroring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6629
+docs:
+  features:
+    - summary: Update documentation about how to add an annotation to apply DeckhouseRelease immediately.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6740
+  fixes:
+    - summary: Add support of Astra `1.7.4`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6831
+    - summary: Fix log output and logging level management in the documentation module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6826
+extended-monitoring:
+  fixes:
+    - summary: Fix wrong permissions for `k8s-image-availability-exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6754
+external-module-manager:
+  features:
+    - summary: Add `ModuleUpdatePolicy` custom resource and implemet its logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6668
+      impact: >-
+        New module releases will not be created and deployed without relevant module update
+        policies. ModuleUpdatePolicy for the `deckhouse` ModuleSource is created automatically.
+  fixes:
+    - summary: Remove default `ModuleUpdatePolicy` for the `deckhouse` ModuleSource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6822
+    - summary: Absent module sources are restored on Deckhouse startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6607
+flant-integration:
+  fixes:
+    - summary: Run hook envs_from_nodes OnBeforeHelm to prevent main queue stuck.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6750
+go_lib:
+  fixes:
+    - summary: Fix modules order on startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6952
+    - summary: Restore `.global.enabledModules` values field for source modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6935
+    - summary: Limit registry client operations with 30 seconds timeout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6701
+istio:
+  features:
+    - summary: Bump Istio version to `1.19.4`. Bump Kiali version to `1.67`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6616
+      impact: >-
+        In environments where legacy versions of istio are used, the D8 update will be blocked, and
+        the `D8IstioDeprecatedIstioVersionInstalled` alert will be fired.
+  fixes:
+    - summary: Adding alert about istio and K8s versions incompatibility.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6919
+    - summary: Remove istio/k8s compatibility check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6914
+linstor:
+  fixes:
+    - summary: Fix the `D8DrbdPeerDeviceIsOutOfSync` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6778
+log-shipper:
+  fixes:
+    - summary: Fix empty field trailing dots in filters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6794
+monitoring-kubernetes:
+  features:
+    - summary: Add alert that LoadBalancer has not been created.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6815
+multitenancy-manager:
+  fixes:
+    - summary: Prevents the creation of a new "helm" release when no changes are made to it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6811
+    - summary: Resources are created without a prefix as a project name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6734
+      impact: >-
+        Resources in the project namespaces (the `multitenancy-manager`) will lose prefix of the
+        project. It would affect `secretRef`, `configMapRef` or other resource references if you use
+        it.
+node-local-dns:
+  features:
+    - summary: Remove `hostPorts` from manifest when `hostNetwork=false`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6579
+  fixes:
+    - summary: Fix for CiliumLocalRedirectPolicy for node-local-redirect (wrong protocol for dns-tcp rule).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6844
+node-manager:
+  features:
+    - summary: Use dependency-free cross-version python script for second phase bootstrap loading.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6762
+    - summary: Add DeckhouseControlPlane for Cluster API.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6664
+  fixes:
+    - summary: Fix NodeGroup deletion for CAPS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6590
+    - summary: Generate a `static-kubeconfig` with X.509 certificates for the Cluster API controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6552
+    - summary: Do not parse annotations in the filter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6436
+operator-trivy:
+  fixes:
+    - summary: Fixed trivy working with private container registry with self-signed CA.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6747
+prometheus:
+  features:
+    - summary: Grafana image are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6680
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6644
+  fixes:
+    - summary: Add df utility to an image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6757
+runtime-audit-engine:
+  fixes:
+    - summary: >-
+        Fixed vulnerabilities: GHSA-62mh-w5cv-p88c, CVE-2021-3127, GHSA-j756-f273-xhp4,
+        CVE-2022-21698, CVE-2020-29652, CVE-2021-43565, CVE-2022-27191, CVE-2021-33194,
+        CVE-2022-27664, CVE-2022-41723, CVE-2023-39325, CVE-2021-38561, CVE-2022-32149,
+        GHSA-m425-mq94-257g, CVE-2022-28948.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6501
+testing:
+  features:
+    - summary: Check alerts in e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6620
+  fixes:
+    - summary: Disable early-oom for centos based e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6890
+tools:
+  fixes:
+    - summary: Fix remove module script location
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6875
+user-authn:
+  fixes:
+    - summary: OIDC allows unverified email.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6964
+

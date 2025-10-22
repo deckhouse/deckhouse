@@ -1,0 +1,429 @@
+Index: main.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.go b/main.go
+--- a/main.go	(revision 8bdfa412f6451ac36c9dc4709e6307219890993a)
++++ b/main.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
+@@ -20,6 +20,7 @@
+ 	"context"
+ 	"crypto/tls"
+ 	"flag"
++	"fmt"
+ 	"io/ioutil"
+ 	"net"
+ 	"net/http"
+@@ -75,7 +76,57 @@
+ }
+
+ type configfile struct {
++	ExcludePaths        []string      `json:"excludePaths,omitempty"`
++	Upstreams           []upstream    `json:"upstreams,omitempty"`
++	AuthorizationConfig *authz.Config `json:"authorization,omitempty"`
++}
++
++type upstream struct {
+ 	AuthorizationConfig *authz.Config `json:"authorization,omitempty"`
++	Path                string        `json:"path,omitempty"`
++	Upstream            string        `json:"upstream,omitempty"`
++	UpstreamCaFile      string        `json:"upstreamCaFile,omitempty"`
++	ExcludePaths        []string      `json:"excludePaths,omitempty"`
++}
++
++func parseConfigFile(configFileName string, upstreamFromConfig string, upstreamCaFile string) ([]upstream, []string, error) {
++	var upstreams []upstream
++	var b []byte
++
++	data := os.Getenv("KUBE_RBAC_PROXY_CONFIG")
++	if data != "" {
++		klog.Infof("Parsing configuration from environment variable KUBE_RBAC_PROXY_CONFIG: %s", configFileName)
++		b = []byte(data)
++	} else if configFileName != "" {
++		var err error
++		klog.Infof("Reading config file: %s", configFileName)
++		b, err = ioutil.ReadFile(configFileName)
++		if err != nil {
++			return upstreams, []string{}, fmt.Errorf("failed to read configuration file: %v", err)
++		}
++	} else {
++		upstreams = append(upstreams, upstream{AuthorizationConfig: &authz.Config{}, Upstream: upstreamFromConfig, UpstreamCaFile: upstreamCaFile, Path: "/"})
++		return upstreams, []string{}, nil
++	}
++
++	configfile := configfile{}
++	err := yaml.Unmarshal(b, &configfile)
++	if err != nil {
++		return upstreams, []string{}, fmt.Errorf("failed to parse configuration: %v", err)
++	}
++
++	if len(configfile.Upstreams) == 0 {
++		upstreams = append(upstreams, upstream{
++			AuthorizationConfig: configfile.AuthorizationConfig,
++			Upstream:            upstreamFromConfig,
++			UpstreamCaFile:      upstreamCaFile,
++			Path:                "/",
++		})
++		return upstreams, configfile.ExcludePaths, nil
++	}
++
++	upstreams = append(upstreams, configfile.Upstreams...)
++	return upstreams, configfile.ExcludePaths, nil
+ }
+
+ func main() {
+@@ -143,27 +194,11 @@
+ 	}
+ 	kcfg := initKubeConfig(cfg.kubeconfigLocation)
+
+-	upstreamURL, err := url.Parse(cfg.upstream)
++	upstreams, exludePaths, err := parseConfigFile(configFileName, cfg.upstream, cfg.upstreamCAFile)
+ 	if err != nil {
+-		klog.Fatalf("Failed to parse upstream URL: %v", err)
+-	}
+-
+-	if configFileName != "" {
+-		klog.Infof("Reading config file: %s", configFileName)
+-		b, err := ioutil.ReadFile(configFileName)
+-		if err != nil {
+-			klog.Fatalf("Failed to read resource-attribute file: %v", err)
+-		}
+-
+-		configfile := configfile{}
+-
+-		err = yaml.Unmarshal(b, &configfile)
+-		if err != nil {
+-			klog.Fatalf("Failed to parse config file content: %v", err)
+-		}
+-
+-		cfg.auth.Authorization = configfile.AuthorizationConfig
++		klog.Fatalf("Failed to parse config file: %v", err)
+ 	}
++	cfg.ignorePaths = append(cfg.ignorePaths, exludePaths...)
+
+ 	kubeClient, err := kubernetes.NewForConfig(kcfg)
+ 	if err != nil {
+@@ -208,17 +243,6 @@
+ 		sarAuthorizer,
+ 	)
+
+-	auth, err := proxy.New(kubeClient, cfg.auth, authorizer, authenticator, cfg.staleCacheTTL)
+-
+-	if err != nil {
+-		klog.Fatalf("Failed to create rbac-proxy: %v", err)
+-	}
+-
+-	upstreamTransport, err := initTransport(cfg.upstreamCAFile)
+-	if err != nil {
+-		klog.Fatalf("Failed to set up upstream TLS connection: %v", err)
+-	}
+-
+ 	if len(cfg.allowPaths) > 0 && len(cfg.ignorePaths) > 0 {
+ 		klog.Fatal("Cannot use --allow-paths and --ignore-paths together.")
+ 	}
+@@ -237,45 +261,70 @@
+ 		}
+ 	}
+
+-	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)
+-	proxy.Transport = upstreamTransport
++	klog.Infof("Ignored paths: %v", cfg.ignorePaths)
++
+ 	mux := http.NewServeMux()
+-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+-		found := len(cfg.allowPaths) == 0
+-		for _, pathAllowed := range cfg.allowPaths {
+-			found, err = path.Match(pathAllowed, req.URL.Path)
+-			if err != nil {
+-				return
+-			}
+-			if found {
+-				break
+-			}
+-		}
+-		if !found {
+-			http.NotFound(w, req)
+-			return
+-		}
++	for _, upstreamConfig := range upstreams {
++		upstreamURL, err := url.Parse(upstreamConfig.Upstream)
++		if err != nil {
++			klog.Fatalf("Failed to build parse upstream URL: %v", err)
++		}
++
++		proxyConfig := proxy.Config{Authentication: cfg.auth.Authentication, Authorization: upstreamConfig.AuthorizationConfig}
++		auth, err := proxy.New(kubeClient, *proxyConfig.DeepCopy(), authorizer, authenticator, cfg.staleCacheTTL)
++
++		if err != nil {
++			klog.Fatalf("Failed to create rbac-proxy: %v", err)
++		}
++
++		upstreamTransport, err := initTransport(upstreamConfig.UpstreamCaFile, cfg.upstreamForceH2C)
++		if err != nil {
++			klog.Fatalf("Failed to set up upstream TLS connection: %v", err)
++		}
++
++		reverseProxy := NewSingleHostReverseProxyWithRewrite(upstreamURL, upstreamConfig.Path)
++		reverseProxy.Transport = upstreamTransport
++
++		mux.Handle(upstreamConfig.Path, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
++			klog.V(10).Infof("Proxy URL requested: %s", req.URL.Path)
++
++			found := len(cfg.allowPaths) == 0
++			for _, pathAllowed := range cfg.allowPaths {
++				found, err = path.Match(pathAllowed, req.URL.Path)
++				if err != nil {
++					return
++				}
++				if found {
++					break
++				}
++			}
++			if !found {
++				http.NotFound(w, req)
++				return
++			}
+
+-		ignorePathFound := false
+-		for _, pathIgnored := range cfg.ignorePaths {
+-			ignorePathFound, err = path.Match(pathIgnored, req.URL.Path)
+-			if err != nil {
+-				return
+-			}
+-			if ignorePathFound {
+-				break
+-			}
+-		}
++			ignorePathFound := false
++			for _, pathIgnored := range cfg.ignorePaths {
++				ignorePathFound, err = path.Match(pathIgnored, req.URL.Path)
++				if err != nil {
++					return
++				}
++				if ignorePathFound {
++					break
++				}
++			}
+
+-		if !ignorePathFound {
+-			ok := auth.Handle(w, req)
+-			if !ok {
+-				return
+-			}
+-		}
++			if !ignorePathFound {
++				ok := auth.Handle(w, req)
++				if !ok {
++					return
++				}
++			}
+
+-		proxy.ServeHTTP(w, req)
+-	}))
++			reverseProxy.ServeHTTP(w, req)
++		}))
++		klog.Infof("Added upstream: path=%s, upstream=%s", upstreamConfig.Path, upstreamConfig.Upstream)
++	}
+
+ 	var gr run.Group
+ 	{
+@@ -355,21 +404,6 @@
+ 	}
+ 	{
+ 		if cfg.insecureListenAddress != "" {
+-			if cfg.upstreamForceH2C {
+-				// Force http/2 for connections to the upstream i.e. do not start with HTTP1.1 UPGRADE req to
+-				// initialize http/2 session.
+-				// See https://github.com/golang/go/issues/14141#issuecomment-219212895 for more context
+-				proxy.Transport = &http2.Transport{
+-					// Allow http schema. This doesn't automatically disable TLS
+-					AllowHTTP: true,
+-					// Do disable TLS.
+-					// In combination with the schema check above. We could enforce h2c against the upstream server
+-					DialTLS: func(netw, addr string, cfg *tls.Config) (net.Conn, error) {
+-						return net.Dial(netw, addr)
+-					},
+-				}
+-			}
+-
+ 			srv := &http.Server{Handler: h2c.NewHandler(mux, &http2.Server{})}
+
+ 			l, err := net.Listen("tcp", cfg.insecureListenAddress)
+@@ -425,3 +459,39 @@
+
+ 	return kubeConfig
+ }
++
++func NewSingleHostReverseProxyWithRewrite(target *url.URL, path string) *httputil.ReverseProxy {
++	targetQuery := target.RawQuery
++	director := func(req *http.Request) {
++		req.URL.Scheme = target.Scheme
++		req.URL.Host = target.Host
++
++		req.URL.Path = singleJoiningSlash(target.Path, strings.TrimPrefix(req.URL.Path, path))
++		if !strings.HasSuffix(path, "/") {
++			req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
++		}
++
++		if targetQuery == "" || req.URL.RawQuery == "" {
++			req.URL.RawQuery = targetQuery + req.URL.RawQuery
++		} else {
++			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
++		}
++		if _, ok := req.Header["User-Agent"]; !ok {
++			req.Header.Set("User-Agent", "")
++		}
++		klog.V(4).Infof("Request URL: %s", req.URL.String())
++	}
++	return &httputil.ReverseProxy{Director: director}
++}
++
++func singleJoiningSlash(a, b string) string {
++	aslash := strings.HasSuffix(a, "/")
++	bslash := strings.HasPrefix(b, "/")
++	switch {
++	case aslash && bslash:
++		return a + b[1:]
++	case !aslash && !bslash:
++		return a + "/" + b
++	}
++	return a + b
++}
+Index: pkg/proxy/proxy.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
+--- a/pkg/proxy/proxy.go	(revision 8bdfa412f6451ac36c9dc4709e6307219890993a)
++++ b/pkg/proxy/proxy.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
+@@ -267,7 +267,13 @@
+ // DeepCopy of Proxy Configuration
+ func (c *Config) DeepCopy() *Config {
+ 	res := &Config{
+-		Authentication: &authn.AuthnConfig{},
++		Authentication: &authn.AuthnConfig{
++			X509:   &authn.X509Config{},
++			Header: &authn.AuthnHeaderConfig{},
++			OIDC:   &authn.OIDCConfig{},
++			Token:  &authn.TokenConfig{},
++		},
++		Authorization: &authz.Config{},
+ 	}
+
+ 	if c.Authentication != nil {
+@@ -287,6 +293,25 @@
+ 				GroupSeparator:  c.Authentication.Header.GroupSeparator,
+ 			}
+ 		}
++
++		if c.Authentication.OIDC != nil {
++			res.Authentication.OIDC = &authn.OIDCConfig{
++				IssuerURL:            c.Authentication.OIDC.IssuerURL,
++				ClientID:             c.Authentication.OIDC.ClientID,
++				CAFile:               c.Authentication.OIDC.CAFile,
++				UsernameClaim:        c.Authentication.OIDC.UsernameClaim,
++				UsernamePrefix:       c.Authentication.OIDC.UsernamePrefix,
++				GroupsClaim:          c.Authentication.OIDC.GroupsClaim,
++				GroupsPrefix:         c.Authentication.OIDC.GroupsPrefix,
++				SupportedSigningAlgs: c.Authentication.OIDC.SupportedSigningAlgs,
++			}
++		}
++
++		if c.Authentication.Token != nil {
++			res.Authentication.Token = &authn.TokenConfig{
++				Audiences: c.Authentication.Token.Audiences,
++			}
++		}
+ 	}
+
+ 	if c.Authorization != nil {
+Index: pkg/proxy/proxy_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
+--- a/pkg/proxy/proxy_test.go	(revision 8bdfa412f6451ac36c9dc4709e6307219890993a)
++++ b/pkg/proxy/proxy_test.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
+@@ -306,7 +306,9 @@
+ 	for _, c := range cases {
+ 		t.Run(c.description, func(t *testing.T) {
+ 			w := httptest.NewRecorder()
+-			proxy, err := New(kc, cfg, c.authorizer, fakeAuth, time.Hour*3600)
++			//proxy, err := New(kc, cfg, c.authorizer, fakeAuth, time.Hour*3600)
++			proxyConfig := Config{Authentication: cfg.Authentication, Authorization: cfg.Authorization}
++			proxy, err := New(kc, *proxyConfig.DeepCopy(), c.authorizer, fakeAuth, time.Hour*3600)
+ 			if err != nil {
+ 				t.Fatalf("Failed to instantiate test proxy. Details : %s", err.Error())
+ 			}
+Index: transport.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/transport.go b/transport.go
+--- a/transport.go	(revision 8bdfa412f6451ac36c9dc4709e6307219890993a)
++++ b/transport.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
+@@ -21,17 +21,34 @@
+ 	"crypto/x509"
+ 	"errors"
+ 	"fmt"
++	"golang.org/x/net/http2"
+ 	"io/ioutil"
+ 	"net"
+ 	"net/http"
+ 	"time"
+ )
+
+-func initTransport(upstreamCAFile string) (http.RoundTripper, error) {
++func initTransport(upstreamCAFile string, forceHTTP2 bool) (http.RoundTripper, error) {
+ 	if upstreamCAFile == "" {
+ 		return http.DefaultTransport, nil
+ 	}
+
++	if forceHTTP2 {
++		// Force http/2 for connections to the upstream i.e. do not start with HTTP1.1 UPGRADE req to
++		// initialize http/2 session.
++		// See https://github.com/golang/go/issues/14141#issuecomment-219212895 for more context
++		http2Transport := http2.Transport{
++			// Allow http schema. This doesn't automatically disable TLS
++			AllowHTTP: true,
++			// Do disable TLS.
++			// In combination with the schema check above. We could enforce h2c against the upstream server
++			DialTLS: func(netw, addr string, cfg *tls.Config) (net.Conn, error) {
++				return net.Dial(netw, addr)
++			},
++		}
++		return &http2Transport, nil
++	}
++
+ 	rootPEM, err := ioutil.ReadFile(upstreamCAFile)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("error reading upstream CA file: %v", err)
+Index: transport_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/transport_test.go b/transport_test.go
+--- a/transport_test.go	(revision 8bdfa412f6451ac36c9dc4709e6307219890993a)
++++ b/transport_test.go	(revision 0aeb8b6ab9dfa2176031935c24c33c6b7ba9b8bc)
+@@ -21,7 +21,7 @@
+ )
+
+ func TestInitTransportWithDefault(t *testing.T) {
+-	roundTripper, err := initTransport("")
++	roundTripper, err := initTransport("", false)
+ 	if err != nil {
+ 		t.Errorf("want err to be nil, but got %v", err)
+ 		return
+@@ -32,7 +32,7 @@
+ }
+
+ func TestInitTransportWithCustomCA(t *testing.T) {
+-	roundTripper, err := initTransport("test/ca.pem")
++	roundTripper, err := initTransport("test/ca.pem", false)
+ 	if err != nil {
+ 		t.Errorf("want err to be nil, but got %v", err)
+ 		return

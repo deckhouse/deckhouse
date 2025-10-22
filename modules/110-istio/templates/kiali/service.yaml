@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali" "migration.deckhouse.io/fix-services-broken-by-helm" "done")) | nindent 2 }}
+spec:
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: https
+  - name: http-metrics
+    protocol: TCP
+    port: 9090
+    targetPort: http-metrics
+  selector:
+    app: kiali

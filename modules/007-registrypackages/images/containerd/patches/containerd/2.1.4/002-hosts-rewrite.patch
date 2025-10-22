@@ -1,0 +1,264 @@
+Subject: [PATCH] rewrite
+---
+Index: core/remotes/docker/config/hosts.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
+--- a/core/remotes/docker/config/hosts.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
++++ b/core/remotes/docker/config/hosts.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
+@@ -27,6 +27,7 @@
+ 	"os"
+ 	"path"
+ 	"path/filepath"
++	"regexp"
+ 	"strings"
+ 	"time"
+
+@@ -56,9 +57,17 @@
+
+ 	header http.Header
+
++	rewrites []hostPathRewrite
++
+ 	// TODO: Add credential configuration (domain alias, username)
+ }
+
++// HostPathRewrite is used to confirure rewrite paths in the mirror hosts
++type hostPathRewrite struct {
++	regexp      *regexp.Regexp
++	replacement string
++}
++
+ // HostOptions is used to configure registry hosts
+ type HostOptions struct {
+ 	HostDir       func(string) (string, error)
+@@ -231,6 +240,17 @@
+ 			rhosts[i].Path = host.path
+ 			rhosts[i].Capabilities = host.capabilities
+ 			rhosts[i].Header = host.header
++
++			if len(host.rewrites) > 0 {
++				rhosts[i].RepoRewrites = make([]docker.RegistryHostRepoRewrite, len(host.rewrites))
++				for ri, rewrite := range host.rewrites {
++					rhosts[i].RepoRewrites[ri] = docker.RegistryHostRepoRewrite{
++						Regex:       rewrite.regexp,
++						Replacement: rewrite.replacement,
++					}
++				}
++			}
++
+ 		}
+
+ 		return rhosts, nil
+@@ -373,6 +393,11 @@
+ 	// a connect to complete.
+ 	DialTimeout string `toml:"dial_timeout"`
+
++	Rewrites []struct {
++		Regex       string `toml:"regex"`
++		Replacement string `toml:"replace"`
++	} `toml:"rewrite"`
++
+ 	// TODO: Credentials: helper? name? username? alternate domain? token?
+ }
+
+@@ -541,6 +566,23 @@
+ 		result.dialTimeout = &dialTimeout
+ 	}
+
++	if len(config.Rewrites) > 0 {
++		result.rewrites = make([]hostPathRewrite, len(config.Rewrites))
++
++		for i, item := range config.Rewrites {
++			re, err := regexp.Compile(item.Regex)
++			if err != nil {
++				return hostConfig{}, fmt.Errorf(
++					"failed to compile rewrite regex %q for %q, error: %w",
++					item.Regex, server, err,
++				)
++			}
++
++			result.rewrites[i].regexp = re
++			result.rewrites[i].replacement = item.Replacement
++		}
++	}
++
+ 	return result, nil
+ }
+
+Index: core/remotes/docker/config/hosts_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
+--- a/core/remotes/docker/config/hosts_test.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
++++ b/core/remotes/docker/config/hosts_test.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
+@@ -24,6 +24,7 @@
+ 	"net/http"
+ 	"os"
+ 	"path/filepath"
++	"regexp"
+ 	"testing"
+ 	"time"
+
+@@ -232,6 +233,73 @@
+ 	}
+ }
+
++func TestParseHostFileWithRewrites(t *testing.T) {
++	const testtoml = `
++server = "https://test-default.registry"
++[[rewrite]]
++regex = "^/system/path1"
++replace = "/other/path2"
++
++[host."https://mirror.registry"]
++  capabilities = ["pull"]
++  [[host."https://mirror.registry".rewrite]]
++    regex = "^/system/"
++    replace = "/another/"
++
++[host."https://mirror-bak.registry/us"]
++  capabilities = ["pull"]
++  [[host."https://mirror-bak.registry/us".rewrite]]
++    regex = "/system/"
++    replace = "/sys/"
++  [[host."https://mirror-bak.registry/us".rewrite]]
++    regex = "/other/"
++    replace = "/oth/"
++`
++	expected := []hostConfig{
++		{
++			scheme:       "https",
++			host:         "mirror.registry",
++			path:         "/v2",
++			capabilities: docker.HostCapabilityPull,
++			rewrites:     []hostPathRewrite{{regexp: regexp.MustCompile("^/system/"), replacement: "/another/"}},
++		},
++		{
++			scheme:       "https",
++			host:         "mirror-bak.registry",
++			path:         "/us/v2",
++			capabilities: docker.HostCapabilityPull,
++			rewrites:     []hostPathRewrite{{regexp: regexp.MustCompile("/system/"), replacement: "/sys/"}, {regexp: regexp.MustCompile("/other/"), replacement: "/oth/"}},
++		},
++		{
++			scheme:       "https",
++			host:         "test-default.registry",
++			path:         "/v2",
++			capabilities: allCaps,
++			rewrites:     []hostPathRewrite{{regexp: regexp.MustCompile("^/system/path1"), replacement: "/other/path2"}},
++		},
++	}
++	hosts, err := parseHostsFile("", []byte(testtoml))
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	defer func() {
++		if t.Failed() {
++			t.Log("HostConfigs...\nActual:\n" + printHostConfig(hosts) + "Expected:\n" + printHostConfig(expected))
++		}
++	}()
++
++	if len(hosts) != len(expected) {
++		t.Fatalf("Unexpected number of hosts %d, expected %d", len(hosts), len(expected))
++	}
++
++	for i := range hosts {
++		if !compareHostConfig(hosts[i], expected[i]) {
++			t.Fatalf("Mismatch at host %d", i)
++		}
++	}
++}
++
+ func TestLoadCertFiles(t *testing.T) {
+ 	dir := t.TempDir()
+
+@@ -576,6 +644,18 @@
+ 		return false
+ 	}
+
++	if len(j.rewrites) != len(k.rewrites) {
++		return false
++	}
++
++	for i := range j.rewrites {
++		if j.rewrites[i].regexp.String() != k.rewrites[i].regexp.String() {
++			return false
++		}
++		if j.rewrites[i].replacement != k.rewrites[i].replacement {
++			return false
++		}
++	}
+ 	return true
+ }
+
+@@ -597,6 +677,10 @@
+ 		if hc[i].dialTimeout != nil {
+ 			fmt.Fprintf(b, "\t\tdial-timeout: %v\n", hc[i].dialTimeout)
+ 		}
++		if hc[i].rewrites != nil {
++			fmt.Fprintf(b, "\t\trewrites: %#v\n", hc[i].rewrites)
++		}
++		fmt.Fprintf(b, "\n")
+ 	}
+ 	return b.String()
+ }
+Index: core/remotes/docker/registry.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
+--- a/core/remotes/docker/registry.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
++++ b/core/remotes/docker/registry.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
+@@ -21,6 +21,7 @@
+ 	"errors"
+ 	"net"
+ 	"net/http"
++	"regexp"
+ 	"time"
+ )
+
+@@ -76,6 +77,12 @@
+ 	Path         string
+ 	Capabilities HostCapabilities
+ 	Header       http.Header
++	RepoRewrites []RegistryHostRepoRewrite
++}
++
++type RegistryHostRepoRewrite struct {
++	Regex       *regexp.Regexp
++	Replacement string
+ }
+
+ func (h RegistryHost) isProxy(refhost string) bool {
+Index: core/remotes/docker/resolver.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/core/remotes/docker/resolver.go b/core/remotes/docker/resolver.go
+--- a/core/remotes/docker/resolver.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
++++ b/core/remotes/docker/resolver.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
+@@ -528,7 +528,15 @@
+ 		header.Set("User-Agent", "containerd/"+version.Version)
+ 	}
+
+-	parts := append([]string{"/", host.Path, r.repository}, ps...)
++	repo := r.repository
++	for _, rewrite := range host.RepoRewrites {
++		if rewrite.Regex.MatchString(repo) {
++			repo = rewrite.Regex.ReplaceAllString(repo, rewrite.Replacement)
++			break
++		}
++	}
++
++	parts := append([]string{"/", host.Path, repo}, ps...)
+ 	p := path.Join(parts...)
+ 	// Join strips trailing slash, re-add ending "/" if included
+ 	if len(parts) > 0 && strings.HasSuffix(parts[len(parts)-1], "/") {

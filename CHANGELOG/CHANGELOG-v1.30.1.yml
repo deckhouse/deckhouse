@@ -1,0 +1,26 @@
+bashible:
+  features:
+    - description: Log rotation changed from 10 Mi / 10 files to 50 Mi / 4 files.
+      note: >-
+        kubelet will restart, neither docker nor containerd won't restart. The change affects
+        **only** containerd CRI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/608
+documentation:
+  fixes:
+    - description: Add the 'experimental' warning to namespace-configurator module documentation pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/688
+    - description: Fix examples in  and  CR. Fix CR generator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/680
+flant-integration:
+  fixes:
+    - description: Remove "kubeall.team" field from the  ConfigMap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/673
+helm:
+  fixes:
+    - description: Add deprecation guide link to deprecated resources alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/678
+registry-packages:
+  fixes:
+    - description: Fixed build of containerd-fe registry package.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/683
+

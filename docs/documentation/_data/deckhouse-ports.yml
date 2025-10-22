@@ -1,0 +1,493 @@
+groups:
+- group: MastersToMasters
+  description:
+    en: Traffic between master nodes
+    ru: Трафик между master-узлами
+  destinations:
+  - ports: "2379, 2380"
+    protocol: TCP
+    description:
+      en: etcd replication
+      ru: Репликация etcd
+  - ports: "4200"
+    protocol: TCP
+    description:
+      en: Cluster API webhook handler
+      ru: Вебхук-обработчик Cluster API
+  - ports: "4201"
+    protocol: TCP
+    description:
+      en: Webhook handler for VMware Cloud Director cloud provider
+      ru: Вебхук-обработчик для cloud-провайдера VMware Cloud Director
+  - ports: "4223"
+    protocol: TCP
+    description:
+      en: Deckhouse controller webhook handler
+      ru: Вебхук-обработчик контроллера Deckhouse
+
+- group: MastersToNodes
+  description:
+    en: Traffic from master nodes to regular nodes
+    ru: Трафик от master-узлов к узлам
+  destinations:
+  - ports: "22"
+    protocol: TCP
+    description:
+      en: SSH for static node bootstrapping by the static provider
+      ru: SSH для первичной настройки статичных узлов статичным провайдером
+  - ports: "10250"
+    protocol: TCP
+    description:
+      en: kubelet
+      ru: kubelet
+  - ports: "4221"
+    protocol: TCP
+    description:
+      en: "`bashible apiserver` for delivering node configurations"
+      ru: "`apiserver bashible` для доставки конфигурации на узлы"
+  - ports: "4227"
+    protocol: TCP
+    description:
+      en: "`runtime-audit-engine` webhook handler"
+      ru: "Вебхук-обработчик компонента `runtime-audit-engine`"
+
+- group: NodesToMasters
+  description:
+    en: Traffic from nodes to master nodes
+    ru: Трафик от узлов к master-узлам
+  destinations:
+  - ports: "4234"
+    protocol: UDP
+    description:
+      en: NTP for time synchronization between nodes
+      ru: NTP для синхронизации времени между узлами
+  - ports: "6443"
+    protocol: TCP
+    description:
+      en: "`kube-apiserver` for controllers working in the node's host network namespace"
+      ru: "`kube-apiserver` для контроллеров, работающих в сетевом пространстве имен узла"
+  - ports: "4203"
+    protocol: TCP
+    description:
+      en: "`machine-controller-manager` metrics"
+      ru: "Метрики компонента `machine-controller-manager`"
+  - ports: "4219"
+    protocol: TCP
+    description:
+      en: "Proxy for registry packages `registry-packages-proxy`"
+      ru: "Прокси для пакетов registry `registry-packages-proxy`"
+  - ports: "4222"
+    protocol: TCP
+    description:
+      en: "Deckhouse controller metrics"
+      ru: "Метрики контроллера Deckhouse"
+
+- group: NodesToNodes
+  description:
+    en: Traffic between nodes
+    ru: Трафик между узлами
+  destinations:
+  - ports: ""
+    protocol: ICMP
+    description:
+      en: ICMP for node-to-node connectivity monitoring
+      ru: ICMP для мониторинга связности между узлами
+  - ports: "4202"
+    protocol: TCP
+    description:
+      en: "`sds-node-configurator` node agent metrics"
+      ru: "Метрики агента `sds-node-configurator`"
+  - ports: "4204"
+    protocol: TCP
+    description:
+      en: "Deckhouse controller debug"
+      ru: "Debug для контроллера Deckhouse"
+  - ports: "4205"
+    protocol: TCP
+    description:
+      en: "`ebpf-exporter` module metrics"
+      ru: "Метрики модуля `ebpf-exporter`"
+  - ports: "4206"
+    protocol: TCP
+    description:
+      en: "`node-exporter` module metrics"
+      ru: "Метрики модуля `node-exporter`"
+  - ports: "4207"
+    protocol: TCP
+    description:
+      en: "`ingress-nginx` controller metrics for the `HostWithFailover` inlet"
+      ru: "Метрики контроллера `ingress-nginx` для инлета `HostWithFailover`"
+  - ports: "4208"
+    protocol: TCP
+    description:
+      en: "`ingress-nginx` controller metrics for the `HostWithFailover` inlet"
+      ru: "Метрики контроллера `ingress-nginx` для инлета `HostWithFailover`"
+  - ports: "4209"
+    protocol: TCP
+    description:
+      en: Kubernetes control plane metrics
+      ru: Метрики управляющего слоя Kubernetes
+  - ports: "4210"
+    protocol: TCP
+    description:
+      en: "`kube-proxy` metrics"
+      ru: "Метрики `kube-proxy`"
+  - ports: "4211"
+    protocol: TCP
+    description:
+      en: Cluster API metrics
+      ru: Метрики Cluster API
+  - ports: "4212"
+    protocol: TCP
+    description:
+      en: "`runtime-audit-engine` module metrics"
+      ru: "Метрики модуля `runtime-audit-engine`"
+  - ports: "4213"
+    protocol: TCP
+    description:
+      en: "`kube-router` metrics"
+      ru: "Метрики `kube-router`"
+  - ports: "4214"
+    protocol: TCP
+    description:
+      en: API of the `sds-replicated-volume` module agent
+      ru: API агента модуля `sds-replicated-volume`
+  - ports: "4215"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` agent metrics"
+      ru: "Метрики агента `sds-replicated-volume`"
+  - ports: "4218"
+    protocol: TCP/UDP
+    description:
+      en: "Synchronization of the `speaker` components in `metallb` modules via memberlist protocol"
+      ru: "Синхронизация компонентов `speaker` модулей `metallb` через протокол memberlist"
+  - ports: "4220"
+    protocol: TCP
+    description:
+      en: "Metrics of the `speaker` components in `metallb` modules"
+      ru: "Метрики компонентов `speaker` модулей `metallb`"
+  - ports: "4224"
+    protocol: TCP
+    description:
+      en: "`node-local-dns` metrics"
+      ru: "Метрики `node-local-dns`"
+  - ports: "4225"
+    protocol: TCP/UDP
+    description:
+      en: "Synchronization of the `speaker` components in `metallb` modules via memberlist protocol"
+      ru: "Синхронизация компонентов `speaker` модулей `metallb` через протокол memberlist"
+  - ports: "4226"
+    protocol: TCP
+    description:
+      en: "Metrics of the `speaker` components in `metallb` modules"
+      ru: "Метрики компонентов `speaker` модулей `metallb`"
+  - ports: "4229"
+    protocol: TCP
+    description:
+      en: "`csi-nfs` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-nfs`"
+  - ports: "4230"
+    protocol: TCP
+    description:
+      en: "`csi-nfs` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-nfs`"
+  - ports: "4231"
+    protocol: TCP
+    description:
+      en: "`csi-hpe` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-hpe`"
+  - ports: "4232"
+    protocol: TCP
+    description:
+      en: "`csi-hpe` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-hpe`"
+  - ports: "4235"
+    protocol: TCP
+    description:
+      en: "`csi-s3` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-s3`"
+  - ports: "4236"
+    protocol: TCP
+    description:
+      en: "`csi-s3` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-s3`"
+  - ports: "4237"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-scsi-generic`"
+  - ports: "4238"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-scsi-generic`"
+  - ports: "4240"
+    protocol: TCP
+    description:
+      en: CNI Cilium node-to-node healthcheck
+      ru: Порт для процедуры healthcheck соседних узлов в CNI Cilium
+  - ports: "4241"
+    protocol: TCP
+    description:
+      en: CNI Cilium agent metrics
+      ru: Метрики агентов CNI Cilium
+  - ports: "4242"
+    protocol: TCP
+    description:
+      en: CNI Cilium operator metrics
+      ru: Метрики оператора CNI Cilium
+  - ports: "4244"
+    protocol: TCP
+    description:
+      en: "`cilium-hubble` module API"
+      ru: "API для модуля `cilium-hubble`"
+  - ports: "4245"
+    protocol: TCP
+    description:
+      en: "`chrony-exporter` metrics"
+      ru: "Метрики `chrony-exporter`"
+  - ports: "4246"
+    protocol: TCP
+    description:
+      en: "`csi-ceph` CephFS CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера CephFS модуля `csi-ceph`"
+  - ports: "4247"
+    protocol: TCP
+    description:
+      en: "`csi-ceph` RBD CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера RBD модуля `csi-ceph`"
+  - ports: "4248"
+    protocol: TCP
+    description:
+      en: "`csi-yadro-tatlin-unified` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-yadro-tatlin-unified`"
+  - ports: "4249"
+    protocol: TCP
+    description:
+      en: "`csi-yadro-tatlin-unified` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-yadro-tatlin-unified`"
+  - ports: "4250"
+    protocol: TCP
+    description:
+      en: "`sds-local-volume` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `sds-local-volume`"
+  - ports: "4251"
+    protocol: TCP
+    description:
+      en: "`sds-local-volume` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `sds-local-volume`"
+  - ports: "4252"
+    protocol: TCP
+    description:
+      en: "`csi-ceph` RBD CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов RBD модуля `csi-ceph`"
+  - ports: "4253"
+    protocol: TCP
+    description:
+      en: "`csi-ceph` CephFS CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов CephFS модуля `csi-ceph`"
+  - ports: "4254"
+    protocol: TCP
+    description:
+      en: "`csi-netapp` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `csi-netapp`"
+  - ports: "4255"
+    protocol: TCP
+    description:
+      en: "`csi-netapp` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-netapp`"
+  - ports: "4256"
+    protocol: TCP
+    description:
+      en: "`csi-netapp` CSI controller metrics"
+      ru: "Метрики CSI-контроллера модуля `csi-netapp`"
+  - ports: "4257"
+    protocol: TCP
+    description:
+      en: "`csi-netapp` CSI controller API port"
+      ru: "Порт API CSI-контроллера модуля `csi-netapp`"
+  - ports: "4258"
+    protocol: TCP
+    description:
+      en: "`csi-huawei` CSI controller webhook port"
+      ru: "Порт вебхука CSI-контроллера модуля `csi-huawei`"
+  - ports: "4259"
+    protocol: TCP
+    description:
+      en: "`csi-huawei` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `csi-huawei`"
+  - ports: "4260"
+    protocol: TCP
+    description:
+      en: "`csi-huawei` CSI controller metrics"
+      ru: "Метрики CSI-контроллера модуля `csi-huawei`"
+  - ports: "4261"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI controller healthcheck"
+      ru: "Healthcheck CSI-контроллера модуля `sds-replicated-volume`"
+  - ports: "4262"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `sds-replicated-volume`"
+  - ports: "4263"
+    protocol: TCP
+    description:
+      en: "`service-with-healthchecks` module metrics"
+      ru: "Метрики модуля `service-with-healthchecks`"
+  - ports: "4269"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI node healthcheck"
+      ru: "Healthcheck CSI-агентов модуля `sds-replicated-volume`"
+  - ports: "4270"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` CSI node metrics"
+      ru: "Метрики CSI-агентов модуля `sds-replicated-volume`"
+  - ports: "4286"
+    protocol: TCP
+    description:
+      en: Istio CNI metrics
+      ru: Метрики Istio CNI
+  - ports: "4287"
+    protocol: UDP
+    description:
+      en: WireGuard port for traffic encryption in CNI Cilium
+      ru: Порт WireGuard для шифрования трафика в CNI Cilium
+  - ports: "4288"
+    protocol: TCP
+    description:
+      en: "`monitoring-ping` metrics"
+      ru: "Метрики `monitoring-ping`"
+  - ports: "4289"
+    protocol: TCP
+    description:
+      en: "`monitoring-ping` metrics"
+      ru: "Метрики `monitoring-ping`"
+  - ports: "4295&#8209;4297"
+    protocol: UDP
+    description:
+      en: |
+        Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DKP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DKP with the `virtualization` module enabled
+      ru: |
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации — когда DKP с включенным модулем `virtualization` развернут внутри виртуальных машин, также созданных в DKP с включенным модулем `virtualization`
+  - ports: "4298"
+    protocol: UDP
+    description:
+      en: |
+        Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`)
+      ru: |
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
+  - ports: "4299"
+    protocol: UDP
+    description:
+      en: |
+        **For clusters deployed on DKP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the port used unless the `virtualization` module is enabled.
+
+        **Note** that in such clusters, enabling the `virtualization` module on DKP up to version 1.70 changes the port to `4298/UDP`
+      ru: |
+        **Для кластеров, развернутых на DKP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт на `4298/UDP`
+  - ports: "7000&#8209;7999"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` DRBD replication"
+      ru: "Репликация DRBD для `sds-replicated-volume`"
+  - ports: "8469"
+    protocol: UDP
+    description:
+      en: |
+        **For clusters deployed on DKP version 1.63 and below with the `virtualization` module enabled prior to DKP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port
+      ru: |
+        **Для кластеров, развернутых на DKP версии 1.63 и ниже с модулем `virtualization`, включенным до DKP версии 1.63.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт
+  - ports: "8472"
+    protocol: UDP
+    description:
+      en: |
+        **For clusters deployed on DKP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port if the `virtualization` module is not enabled.
+
+        **Note** that in such clusters, enabling the `virtualization` module on DKP before version 1.70 changes the port:
+        - Enabling the `virtualization` module on DKP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DKP updates
+        - Enabling the `virtualization` module on DKP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DKP updates
+      ru: |
+        **Для кластеров, развернутых на DKP версии 1.63 и ниже.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт:
+        - включение модуля `virtualization` на DKP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DKP
+        - включение модуля `virtualization` на DKP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DKP
+- group: ExternalToMaster
+  description:
+    en: External traffic to master nodes
+    ru: Внешний трафик к master-узлам
+  destinations:
+  - ports: "22"
+    protocol: TCP
+    description:
+      en: SSH for initializing Deckhouse Kubernetes Platform
+      ru: SSH для инициализации Deckhouse Kubernetes Platform
+  - ports: "6443"
+    protocol: TCP
+    description:
+      en: Direct access to the apiserver
+      ru: Прямой доступ к API-серверу
+
+- group: ExternalToFrontends
+  description:
+    en: External traffic to frontend nodes
+    ru: Внешний трафик к фронтенд-узлам
+  destinations:
+  - ports: "80, 443"
+    protocol: TCP
+    description:
+      en: Application ports for requests to Ingress controllers over HTTP and HTTPS. Note that these ports are configurable in the IngressNginxController resource and may vary across installations
+      ru: Прикладные порты для запросов к Ingress-контроллеру по протоколам HTTP и HTTPS. Обратите внимание, что эти порты настраиваются в ресурсе IngressNginxController и могут отличаться в разных инсталляциях
+  - ports: "5416"
+    protocol: UDP
+    description:
+      en: OpenVPN
+      ru: OpenVPN
+  - ports: "5416"
+    protocol: TCP
+    description:
+      en: OpenVPN
+      ru: OpenVPN
+  - ports: "10256"
+    protocol: TCP
+    description:
+      en: Healthcheck port for external balancers
+      ru: Healthcheck-порт для внешних балансировщиков
+  - ports: "30000-32767"
+    protocol: TCP
+    description:
+      en: NodePort range
+      ru: Диапазон портов NodePort
+
+- group: NodesToExternal
+  description:
+    en: External traffic for all nodes
+    ru: Внешний трафик для всех узлов
+  destinations:
+  - ports: "53"
+    protocol: UDP
+    description:
+      en: DNS
+      ru: DNS
+  - ports: "53"
+    protocol: TCP
+    description:
+      en: DNS
+      ru: DNS
+  - ports: "123"
+    protocol: UDP
+    description:
+      en: NTP for synchronization with external time servers
+      ru: NTP для синхронизации с внешними серверами точного времени
+  - ports: "443"
+    protocol: TCP
+    description:
+      en: Container registry
+      ru: Container registry

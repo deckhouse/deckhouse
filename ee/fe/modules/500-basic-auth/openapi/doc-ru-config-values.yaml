@@ -1,0 +1,44 @@
+type: object
+properties:
+  locations:
+    description: |
+      Список location'ов, для которых будет включён доступ по паролям (basic auth). Если параметр не указан, то добавляется `/` с автоматически сгенерированным паролем.
+
+      Посмотреть список location'ов и увидеть сгенерированный пароль можно командой:
+
+      ```shell
+      d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values basic-auth -o json | jq '.basicAuth.internal.locations'
+      ```
+
+      Для генерации нового пароля нужно удалить секрет:
+
+      ```shell
+      d8 k -n kube-basic-auth delete secret/htpasswd
+      ```
+
+    items:
+      properties:
+        location:
+          description: Это location, для которого будут определяться `whitelist` и `users`, в конфиге nginx `root` заменяется на `/`.
+        whitelist:
+          description: Список IP адресов и подсетей для которых разрешена авторизация без логина/пароля.
+        users:
+          description: |
+            Список пользователей в формате `username: "password"`.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

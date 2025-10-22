@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang }}">
+
+<head>
+  {% if page.sidebar == 'embedded-modules' %}
+  <meta name="page:module:type" content="embedded">
+  {% else %}
+  <meta name="page:versioned" content="true">
+  {% endif %}
+  <meta name="page:url:relative" content="./{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}">
+  {%- if page.anchors_disabled == true %}
+    <script>
+        window.anchors_disabled = true;
+    </script>
+  {%- endif %}
+  {% include head.html mode='documentation' %}
+  {%- if site.mode == 'module' %}
+  {% include head-local.html %}
+  {%- endif %}
+  <!--#include virtual="/includes/head-site.html" -->
+</head>
+
+<body>
+  <div class="content">
+    {%- if site.mode == 'module' %}
+    {% include header.html %}
+    {%- else %}
+     <!--#include virtual="/includes/header.html" -->
+    {%- endif %}
+    {{ content }}
+  </div>
+     <!--#include virtual="/includes/footer.html" -->
+</body>
+
+{%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
+<script type="text/javascript">
+  // Fix second level topnav menu for GS and guides sections.
+  let subUrls = ['/modules/'];
+  subUrls.forEach(function (element) {
+    if (window.location.pathname.toLowerCase().includes(element)) {
+      $('{% if site.mode == "module" %}.header__content.container{% else %}.header.header__product-menu{% endif %} ul.nav li').each(function () {
+        const href = $(this).find('a').attr('href')?.toLowerCase() || '';
+        const isActive = href.includes(element);
+        $(this).toggleClass('active', isActive);
+      });
+    }
+  });
+</script>
+{%- endif %}
+
+{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL.md' or page.name == 'DECKHOUSE_CONFIGURE_GLOBAL_RU.md' %}
+{% include openapi-tippy.html %}
+{%- endif %}
+{% if site.google_analytics %}
+{% include google_analytics.html %}
+{% endif %}
+</html>

@@ -1,0 +1,27 @@
+positive:
+  configValues:
+    - {}
+    - vpa:
+        kubeStateMetricsMaxCPU: "100m"
+        kubeStateMetricsMaxMemory: "150Mi"
+    - vpa:
+        kubeStateMetricsMaxCPU: "100m"
+        kubeStateMetricsMaxMemory: "1.5Gi"
+    - vpa:
+        kubeStateMetricsMaxCPU: 1
+        kubeStateMetricsMaxMemory: 26214400
+  values:
+    - { internal: {} }
+negative:
+  configValues:
+    - { somethingInConfig: yes }
+    - vpa:
+        kubeStateMetricsMaxCPU: "512Hz"
+        kubeStateMetricsMaxMemory: "16m"
+    - vpa:
+        kubeStateMetricsMaxCPU: "512Hz"
+        kubeStateMetricsMaxMemory: "16.m"
+    - vpa:
+        kubeStateMetricsMaxCPU: "512cpu"
+  values:
+    - { somethingInConfig: yes }

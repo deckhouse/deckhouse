@@ -1,0 +1,125 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Custom resource для настройки keepalived-кластеров.
+
+            Один custom resource `KeepalivedInstance` описывает один keepalived-кластер.
+
+            `metadata.name` — имя кластера, используется в названиях подов.
+          properties:
+            spec:
+              properties:
+                nodeSelector:
+                  description: |
+                    Определяет `nodeSelector` для подов с keepalived.
+
+                    **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
+                tolerations:
+                  description: |
+                    Определяет `tolerations` для подов с keepalived.
+
+                    **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
+                  items:
+                    properties:
+                      effect:
+                        description: |
+                          Определяет, какому effect'у taint'а соответствует описываемый toleration. Пустой подразумевает соответствие любому effect.
+                      key:
+                        description: |
+                          Определяет, какому ключу (key) taint'a соответствует описываемый toleration. Пустой подразумевает соответствие любому ключу.
+
+                          Если ключ (key) не указан (пуст), `operator` должен быть `Exists`, что подразумевает соответствие любым `value` и `key`.
+                      operator:
+                        description: |
+                          Определяет отношение ключа (key) к значению (value) — должен ли ключ быть равен (`Equal`) значению или допустимо существование ключа с любым значением.
+
+                          Указание `Exists` означает, что значение value может быть любым, чтобы под с указанным toleration был размещён на узле с соответствующим taint.
+                      tolerationSeconds:
+                        description: |
+                          Определяет период времени в секундах, в течение которого планировщик должен ждать, прежде чем выселить (evict) под с узла, если
+                          toleration больше не соответствует taint'у (справедливо **только** для effect `NoExecute`, иначе игнорируется).
+
+                          Если **не установлено**, тогда под не будет выселен с узла, если toleration больше не соответствует taint. Если **установлен в ноль** (или отрицателен), под будет выселен с узла немедленно, если  toleration больше не соответствует taint.
+
+                          **По умолчанию** используется значение «не установлено».
+                      value:
+                        description: |
+                          Значение, которому должен соответствовать toleration.
+
+                          Должно быть пустым, если operator имеет параметр `Exists`.
+                vrrpInstances:
+                  description: |
+                    Список инстансов VRRP внутри keepalived-кластера. По сути, список групп адресов, которые мигрируют между серверами одновременно и не могут работать друг без друга.
+
+                    Не нужно путать `vrrpInstance` и `KeepalivedInstance`. `vrrpInstance` — это составная часть `KeepalivedInstance`.
+
+                    Модуль `keepalived` настраивает VRRP-инстансы таким образом, чтобы все адреса (все группы) не собирались одновременно на одном узле, а распределялись равномерно по всем серверам.
+                  items:
+                    properties:
+                      id:
+                        description: |
+                          Уникальный **в масштабах всего кластера** идентификатор VRRP-группы.
+
+                          Не нужно использовать одинаковый ID в разных инстансах `KeepalivedInstance`, если у вас на это нет особой причины.
+                      interface:
+                        description: |
+                          Определяет, как вычислить интерфейс для служебного VRRP-трафика на узле.
+                        properties:
+                          detectionStrategy:
+                            description: |
+                              Одна из трех возможных стратегий определения интерфейса для трафика VRRP:
+                              * `Name` — задать имя интерфейса явно, с помощью параметра `spec.vrrpInstances[].interface.name`. В этом случае все узлы должны иметь одинаковый интерфейс, который смотрит в нужную сеть (например, eth0);
+                              * `NetworkAddress` — найти на узле интерфейс с IP из этой подсети и использовать его;
+                              * `DefaultRoute` — использовать интерфейс, через который определен маршрут по умолчанию на узле (в таблице 254 «main»).
+                          name:
+                            description: |
+                              Имя интерфейса для служебного VRRP-трафика в случае использования `detectionStrategy` = `Name`.
+
+                              **Обязательный параметр** в случае использования `detectionStrategy` = `Name`.
+                          networkAddress:
+                            description: |
+                              Интерфейс узла с IP-адресом из этой подсети будет использован как служебный в случае использования `detectionStrategy` = `NetworkAddress`.
+
+                              **Обязательный параметр** в случае использования `detectionStrategy` = `NetworkAddress`.
+                      preempt:
+                        description: |
+                          Возвращать ли IP на узел, который восстановился после аварии.
+
+                          Если у вас один `vrrpInstance`, разумнее не перекидывать IP лишний раз, чтобы не трогать соединения. Если групп много и трафик большой, лучше вернуть, чтобы не допустить скопления всех групп на одном узле.
+
+                          **По умолчанию** используется значение `true`, то есть IP вернется на узел в случае, если он вернется в строй.
+                      virtualIPAddresses:
+                        type: array
+                        description: |
+                          Список IP-адресов, которые **одновременно** будут «прыгать» между серверами.
+                        items:
+                          properties:
+                            address:
+                              description: |
+                                Один из адресов в группе.
+                            interface:
+                              description: |
+                                Интерфейс для привязки виртуального IP-адреса на узле. Аналогичен `spec.vrrpInstances[].interface`.
+
+                                Если не указать — будет использован основной, служебный интерфейс, который определен в `spec.vrrpInstances[].interface`.
+                              properties:
+                                detectionStrategy:
+                                  description: |
+                                    Одна из трех возможных стратегий определения интерфейса для привязки IP-адреса:
+                                    * `Name` — задать имя интерфейса явно, с помощью параметра `spec.vrrpInstances[].virtualIPAddresses[].interface.name`. В этом случае все узлы должны иметь одинаковый интерфейс, который смотрит в нужную сеть (например, eth0);
+                                    * `NetworkAddress` — найти на узле интерфейс с IP из этой подсети и использовать его;
+                                    * `DefaultRoute` — использовать интерфейс, через который определен маршрут по умолчанию на узле (в таблице 254 «main»).
+                                name:
+                                  description: |
+                                    Имя интерфейса для привязки виртуального IP-адреса в случае использования `virtualIPaddresses[].detectionStrategy` = `Name`.
+
+                                    **Обязательный параметр** в случае использования `virtualIPaddresses[].detectionStrategy` = `Name`.
+                                networkAddress:
+                                  type: string
+                                  description: |
+                                    Интерфейс узла с IP-адресом из этой подсети будет использован как служебный в случае использования `virtualIPaddresses[].detectionStrategy` = `NetworkAddress`.
+
+                                    **Обязательный параметр** в случае использования `virtualIPaddresses[].detectionStrategy` = `NetworkAddress`.

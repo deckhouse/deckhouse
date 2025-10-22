@@ -1,0 +1,58 @@
+diff --git a/pkg/compliance/clustercompliancereport.go b/pkg/compliance/clustercompliancereport.go
+index 5878a5d6..d6c293ed 100644
+--- a/pkg/compliance/clustercompliancereport.go
++++ b/pkg/compliance/clustercompliancereport.go
+@@ -3,6 +3,7 @@ package compliance
+ import (
+ 	"context"
+ 	"fmt"
++	"sync"
+ 	"time"
+ 
+ 	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
+@@ -24,6 +25,9 @@ type ClusterComplianceReportReconciler struct {
+ 	etc.Config
+ 	Mgr
+ 	ext.Clock
++
++	onStartupOnce map[types.NamespacedName]*sync.Once
++	mu            sync.Mutex
+ }
+ 
+ // +kubebuilder:rbac:groups=aquasecurity.github.io,resources=clustercompliancereports,verbs=get;list;watch;create;update;patch;delete
+@@ -58,6 +62,16 @@ func (r *ClusterComplianceReportReconciler) generateComplianceReport(ctx context
+ 			}
+ 			return fmt.Errorf("getting report from cache: %w", err)
+ 		}
++		r.onStartup(namespaceName).Do(func() {
++			if report.Status.SummaryReport != nil || report.Status.DetailReport != nil {
++				return
++			}
++
++			err = r.Mgr.GenerateComplianceReport(ctx, report.Spec)
++			if err != nil {
++				log.Error(err, "failed to generate compliance report")
++			}
++		})
+ 		durationToNextGeneration, err := utils.NextCronDuration(report.Spec.Cron, r.reportLastUpdatedTime(&report), r.Clock)
+ 		if err != nil {
+ 			return fmt.Errorf("failed to check report cron expression %w", err)
+@@ -87,3 +101,18 @@ func (r *ClusterComplianceReportReconciler) reportLastUpdatedTime(report *v1alph
+ 	}
+ 	return lastUpdated
+ }
++
++func (r *ClusterComplianceReportReconciler) onStartup(nn types.NamespacedName) *sync.Once {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++
++	if r.onStartupOnce == nil {
++		r.onStartupOnce = make(map[types.NamespacedName]*sync.Once)
++	}
++
++	if _, ok := r.onStartupOnce[nn]; !ok {
++		r.onStartupOnce[nn] = new(sync.Once)
++	}
++
++	return r.onStartupOnce[nn]
++}

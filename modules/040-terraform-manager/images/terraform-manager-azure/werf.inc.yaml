@@ -1,0 +1,57 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{ include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "azure") }}'
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/azure
+  to: /deckhouse/candi/cloud-providers/azure
+import:
+- image: terraform-provider-azure
+  add: /terraform-provider-azurerm
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "azure") }}/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
+  before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.azure.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-azurerm.git /src
+  - cd /src
+  - rm -rf vendor/
+  - rm -rf examples/
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: terraform-provider-azure
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git openssh-client
+  install:
+    - cd /src
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform-provider-azurerm .
+    - chmod -R 755 /terraform-provider-azurerm
+    - chown 64535:64535 /terraform-provider-azurerm

@@ -1,0 +1,25 @@
+cni-cilium:
+  fixes:
+    - summary: Run `safe_agent_updater` pods in the `hostNetwork` mode and use `kubernetes-api-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7760
+      impact: '`cilium-agent` pods will probably restart and L7 policies will flap.'
+control-plane-manager:
+  fixes:
+    - summary: Fixed `D8KubernetesVersionIsDeprecated` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7768
+dhctl:
+  fixes:
+    - summary: Prevent deadlock when re-bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7753
+flow-schema:
+  fixes:
+    - summary: >-
+        Change apiVersion for `FlowSchema` and `PriorityLevelConfiguration` to the minimum
+        available.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7750
+ingress-nginx:
+  fixes:
+    - summary: Add missed libraries to the Ingress controller v1.6 image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7764
+      impact: Ingress controller v1.6 will restart.
+

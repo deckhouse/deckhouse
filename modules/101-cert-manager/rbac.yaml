@@ -1,0 +1,4 @@
+allowedResources:
+  - group: cert-manager.io
+    resources:
+      - all

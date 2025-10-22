@@ -1,0 +1,274 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в AWS.
+
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      peeredVPCs:
+        description: |
+          Список AWS VPC ID для организации пиринга с сетью кластера.
+
+          Учетная запись должна иметь доступ ко всем VPC в списке. Также вы можете настроить соединение [вручную](https://docs.aws.amazon.com/vpc/latest/peering/create-vpc-peering-connection.html), если доступа нет.
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+          instanceClass:
+            description: |
+              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+            properties:
+              instanceType:
+                type: string
+                description: |
+                  Тип заказываемых инстансов.
+
+                  > **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+              ami:
+                type: string
+                description: |
+                  Образ (AMI ID), который будет использоваться в заказанных инстансах.
+
+                  Как найти нужный AMI (в каждом регионе AMI разные):
+                  ```shell
+                  aws ec2 --region <REGION> describe-images \
+                  --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                  jq '.Images[].ImageId'
+                  ```
+              additionalSecurityGroups:
+                type: array
+                description: |
+                  Дополнительные secutiry groups, которые будут присвоены созданным инстансам.
+                items:
+                  type: string
+              diskType:
+                description: Тип созданного диска.
+              diskSizeGb:
+                description: Размер root-диска. Значение указывается в `ГиБ`.
+              etcdDisk:
+                type: object
+                properties:
+                  sizeGb:
+                    description: Размер диска для etcd. Значение указывается в `ГиБ`.
+                  type:
+                    description: Тип диска для etcd.
+          zones:
+            description: |
+              Список зон, в которых допустимо создавать master-узлы.
+
+              Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+          additionalTags:
+            description: |
+              Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации cloud-провайдера.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup. Используется для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > Доступны только поля `effect`, `key`, `values`.
+            instanceClass:
+              description: |
+                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              properties:
+                instanceType:
+                  type: string
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    > **Внимание!** Следует убедиться, что указанный тип есть во всех зонах, перечисленных в параметре `zones`.
+                ami:
+                  type: string
+                  description: |
+                    Образ (AMI ID), который будет использоваться в заказанных инстансах.
+
+                    Как найти нужный AMI (в каждом регионе AMI разные):
+                    ```shell
+                    aws ec2 --region <REGION> describe-images \
+                    --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                    jq '.Images[].ImageId'
+                    ```
+                additionalSecurityGroups:
+                  type: array
+                  description: |
+                    Дополнительные secutiry groups, которые будут присвоены созданным инстансам.
+                  items:
+                    type: string
+                diskType:
+                  description: Тип созданного диска.
+                diskSizeGb:
+                  description: Размер root-диска. Значение указывается в `ГиБ`.
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+            additionalTags:
+              description: |
+                Дополнительные к основным (`AWSClusterConfiguration.tags`) теги, которые будут присвоены созданным инстансам.
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
+
+          > Схема размещения `Standard` считается **устаревшей**, не используйте ее.
+      standard:
+        description: Схема размещения `Standard` считается **устаревшей**, не используйте ее.
+      withNAT:
+        properties:
+          bastionInstance:
+            properties:
+              zone:
+                description: |
+                  Зона, в которой будет создан инстанс bastion.
+
+                  По умолчанию будет использоваться первая доступная зона в регионе или первая из списка глобального параметра `zones`.
+              instanceClass:
+                description: |
+                  Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                properties:
+                  instanceType:
+                    type: string
+                    description: |
+                      Тип заказываемого инстанса.
+                  ami:
+                    type: string
+                    description: |
+                      Образ (AMI ID), который будет использоваться для создания заказываемого инстанса.
+
+                      Как найти нужный AMI (в каждом регионе AMI разные):
+                      ```shell
+                      aws ec2 --region <REGION> describe-images \
+                      --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-2020*' | \
+                      jq '.Images[].ImageId'
+                      ```
+                  additionalSecurityGroups:
+                    type: array
+                    description: |
+                      Дополнительные security groups, которые будут присвоены созданному инстансу.
+                    items:
+                      type: string
+                  diskType:
+                    description: Тип созданного root-диска.
+                  diskSizeGb:
+                    description: Размер root-диска. Значение указывается в `ГиБ`.
+      vpcNetworkCIDR:
+        description: |
+          Подсеть, которая будет указана в созданном VPC.
+
+          **Обязательный параметр**, если не указан параметр для развертывания в уже созданном VPC `existingVPCID`.
+      nodeNetworkCIDR:
+        description: |
+          Подсеть, в которой будут работать узлы кластера:
+
+          * Диапазон должен быть частью или должен соответствовать диапазону адресов VPC.
+          * Диапазон будет равномерно разбит на подсети по одной на Availability Zone в вашем регионе.
+          * Необязательный, но рекомендованный параметр. По умолчанию он соответствует целому диапазону адресов VPC.
+
+          Если при создании кластера создается новая VPC и не указан `vpcNetworkCIDR`, VPC будет создана с диапазоном, указанным в `nodeNetworkCIDR`. Таким образом, вся VPC будет выделена под сети кластера и, соответственно, не будет возможности добавить другие ресурсы в эту VPC.
+
+          Диапазон `nodeNetworkCIDR` распределяется по подсетям в зависимости от количества зон доступности в выбранном регионе. Например, если указана `nodeNetworkCIDR: "10.241.1.0/20"` и в регионе 3 зоны доступности, подсети будут созданы с маской `/22`.
+      existingVPCID:
+        description: |
+          ID существующего VPC, в котором будет развернута схема.
+
+          * **Обязательный параметр**, если не указан `vpcNetworkCIDR`.
+          * **Важно!** Если в данной VPC уже есть Internet Gateway, деплой базовой инфраструктуры упадет с ошибкой. На данный момент использовать уже существующий Internet Gateway нельзя.
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы.
+      disableDefaultSecurityGroup:
+        description: |
+          Если установлено значение `true`, то security group по умолчанию создаваться не будут.
+
+          **Важно.** При использовании `disableDefaultSecurityGroup: true` вы обязаны самостоятельно создать все необходимые security group для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
+
+          - `additionalSecurityGroups` в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
+          - `additionalSecurityGroups` в ресурсе AWSInstanceClass;
+          - `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
+
+          Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по SSH.
+
+          По умолчанию, `0.0.0.0/0`.
+      tags:
+        description: |
+          Словарь тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-aws/environment.html) к API AWS.
+        properties:
+          providerAccessKeyId:
+            description: |
+              Access key [ID](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
+          providerSecretAccessKey:
+            description: |
+              Access key [secret](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys).
+          region:
+            description: |
+              Имя AWS региона, в котором будут заказываться инстансы.
+      zones:
+        description: |
+          Глобальное ограничение набора зон, с которыми работает cloud provider.
+
+          Ограничивает только **создание** узлов в кластере.
+      additionalRolePolicies:
+        description: |
+          Список дополнительных policy actions для IAM-ролей.
+          * Дополнительные policy actions будут добавлены к базовым политикам IAM-ролей.
+          * Необязательный параметр. Если отсутствует, IAM-роли будут использовать только policy actions по умолчанию.
+          * Пример policy actions: `ecr:ListImages`, `s3:GetObject` etc
+
+          По умолчанию IAM-роли содержат следующие policy actions:
+          - `ec2:DescribeTags`
+          - `ec2:DescribeInstances`
+      iamNodeRole:
+        description: |
+          Имя IAM-роли, которая будет привязана ко всем AWS-инстансам узлов кластера.
+
+          DKP всегда создает и привязывает к каждому AWS-инстансу узла кластера специальную IAM-роль с именем `<PREFIX>-node`, где `<PREFIX>` — значение параметра [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) общих параметров кластера. Вы можете указать в параметре `iamNodeRole` свою IAM-роль с бОльшими правами, но, важно чтобы она включала в себя политики IAM-роли, создаваемой DKP (роль `<PREFIX>-node`).
+
+          Подробнее о IAM-ролях для AWS EC2 можно прочитать в [документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).

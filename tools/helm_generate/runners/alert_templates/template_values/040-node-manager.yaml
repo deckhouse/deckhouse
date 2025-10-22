@@ -1,0 +1,24 @@
+global:
+  modules:
+    publicDomainTemplate: ""
+    https:
+      mode: Disabled
+
+nodeManager:
+  earlyOomEnabled: true
+  internal:
+    nodeGroups:
+      - nodeType: CloudEphemeral
+        cloudInstances:
+          zones:
+            - eu-west-1a
+            - eu-west-1b
+          minPerZone: 1
+          maxPerZone: 2
+          classReference:
+            kind: AWSInstanceClass
+            name: test
+        nodeTemplate:
+          labels:
+            tier: test
+    machineControllerManagerEnabled: true

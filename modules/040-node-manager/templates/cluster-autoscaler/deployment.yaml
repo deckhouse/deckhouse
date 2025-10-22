@@ -1,0 +1,192 @@
+{{- define "cluster_autoscaler_resources" }}
+cpu: 25m
+memory: 150Mi
+{{- end }}
+
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $autoscalerImageName := join "" (list "clusterAutoscaler" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $autoscalerImage := include "helm_lib_module_image_no_fail" (list . $autoscalerImageName) }}
+
+{{- define "cluster_autoscaler_provider" }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") (hasKey $.Values.nodeManager.internal.cloudProvider "dvp") }}
+- --cloud-provider=clusterapi
+    {{- else }}
+- --cloud-provider=mcm
+{{- include "cluster_autoscaler_nodes" . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_nodes" }}
+  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+    {{- if eq $ng.nodeType "CloudEphemeral" }}
+      {{- range $zone_name := $ng.cloudInstances.zones }}
+        {{- if $.Values.nodeManager.internal.instancePrefix }}
+- --nodes={{ $ng.cloudInstances.minPerZone }}:{{ $ng.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $.Values.nodeManager.internal.instancePrefix }}-{{ $ng.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        {{- else }}
+- --nodes={{ $ng.cloudInstances.minPerZone }}:{{ $ng.cloudInstances.maxPerZone }}:d8-cloud-instance-manager.{{ $ng.name }}-{{ printf "%v%v" $.Values.global.discovery.clusterUUID $zone_name | sha256sum | trunc 8 }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- if include "cluster_autoscaler_enabled" . }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cluster-autoscaler
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cluster-autoscaler
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cluster-autoscaler"
+      minAllowed:
+        {{- include "cluster_autoscaler_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 250Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cluster-autoscaler
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  revisionHistoryLimit: 2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: cluster-autoscaler
+      terminationGracePeriodSeconds: 5
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: cluster-autoscaler
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ $autoscalerImage }}
+        args:
+        - --namespace=d8-cloud-instance-manager
+        {{- include "cluster_autoscaler_provider" . | nindent 8 }}
+        - --write-status-configmap=false
+        - --stderrthreshold=info
+        - --skip-nodes-with-system-pods=false
+        - --skip-nodes-with-local-storage=false
+        - --min-replica-count=1
+        - --expendable-pods-priority-cutoff=-10
+        - --scale-down-unneeded-time=5m
+        - --scale-down-unready-time=4m
+        - --scale-down-delay-after-failure=1m
+        - --scale-down-utilization-threshold=0.6
+        - --unremovable-node-recheck-timeout=30s
+        - --scale-down-delay-after-add=15m
+        - --address=127.0.0.1:8085
+        - --balance-similar-node-groups=true
+        - --expander=priority,least-waste
+        - --max-failing-time=120m
+        - --v=5
+        env:
+        - name: CONTROL_NAMESPACE
+          value: d8-cloud-instance-manager
+        livenessProbe:
+          httpGet:
+            path: /health-check
+            port: 8443
+            scheme: HTTPS
+          failureThreshold: 6
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "cluster_autoscaler_resources" . | nindent 12 }}
+    {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /health-check
+            upstreams:
+            - upstream: http://127.0.0.1:8085/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-cloud-instance-manager
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: cluster-autoscaler
+        ports:
+        - containerPort: 8443
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+    {{- end }}
+  {{- end }}
+{{- end }}

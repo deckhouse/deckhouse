@@ -1,0 +1,90 @@
+{
+  "sources": {
+    "cluster_logging_config/test-source": {
+      "type": "file",
+      "include": [
+        "/var/log/kube-audit/audit.log"
+      ]
+    }
+  },
+  "transforms": {
+    "transform/destination/test-kafka-dest/00_cef_values": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/01_clean_up"
+      ],
+      "source": "if !exists(.cef) {\n  .cef = {};\n};\n\nif !exists(.cef.name) {\n  .cef.name = \"Deckhouse Event\";\n};\n\nif !exists(.cef.severity) {\n  .cef.severity = \"5\";\n} else if is_string(.cef.severity) {\n  if .cef.severity == \"Debug\" {\n    .cef.severity = \"0\";\n  };\n  if .cef.severity == \"Informational\" {\n    .cef.severity = \"3\";\n  };\n  if .cef.severity == \"Notice\" {\n    .cef.severity = \"4\";\n  };\n  if .cef.severity == \"Warning\" {\n    .cef.severity = \"6\";\n  };\n  if .cef.severity == \"Error\" {\n    .cef.severity = \"7\";\n  };\n  if .cef.severity == \"Critical\" {\n    .cef.severity = \"8\";\n  };\n  if .cef.severity == \"Emergency\" {\n    .cef.severity = \"10\";\n  };\n};",
+      "type": "remap"
+    },
+    "transform/destination/test-kafka-dest/01_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-kafka-dest/00_cef_values"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/00_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/test-source"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/test-source/01_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/test-source/00_local_timezone"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/test-kafka-dest": {
+      "type": "kafka",
+      "inputs": [
+        "transform/destination/test-kafka-dest/01_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "bootstrap_servers": "192.168.1.1:9200",
+      "encoding": {
+        "codec": "cef",
+        "timestamp_format": "rfc3339",
+        "cef": {
+          "device_vendor": "Deckhouse",
+          "device_product": "log-shipper-agent",
+          "device_version": "1",
+          "device_event_class_id": "Log event",
+          "name": "cef.name",
+          "severity": "cef.severity",
+          "version": "V1",
+          "extensions": {
+            "container": "container",
+            "host": "host",
+            "image": "image",
+            "message": "message",
+            "namespace": "namespace",
+            "node": "node",
+            "pod": "pod",
+            "podip": "pod_ip",
+            "podowner": "pod_owner",
+            "timestamp": "timestamp"
+          }
+        }
+      },
+      "topic": "logs",
+      "compression": "gzip",
+      "tls": {
+        "crt_file": "-----BEGIN CERTIFICATE-----\nMIIC/TCCAeWgAwIBAgIIM699xN0eSrIwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UE\nAxMKa3ViZXJuZXRlczAeFw0yMDA4MTIxNjIyNTNaFw0yMTA4MTIxNjIyNTRaMD8x\nFTATBgNVBAoTDHN5c3RlbTpub2RlczEmMCQGA1UEAxMdc3lzdGVtOm5vZGU6c3Rh\nbmRhcmQtbWFzdGVyLTAwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQD8\nZmCrwGH8z11dUSysJwQCrQwLm4ro84dbgKYpleHF3Sysi1LBVCTJeSZDRFyWWg9P\ny9FSCD4amR6/NYZslKpAoXBxkYjXg2/6X5t7vff0vZ0pbdiZLAlf7c9hEy487Fz2\nBRpAqeFxZZY11lwXe8yA/EhnlJEViBGPY7CGYvZ0YfWvPS0bDbbfLNCvOTBxzUg4\nOjoCstHgNBglLr1JwyN6qulxKeCf/LbzV9YxxTMWYtwkQrF9Tm9nroqcxw5lRgeV\nms+GcXOopiNyktXROFdbFNWe9F+CpDPk++ojOZ4e0egYlR/ZgY6kO+RXY968EuZR\n87n7GEA8FxVMi92hLRDxAgMBAAGjJzAlMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUE\nDDAKBggrBgEFBQcDAjANBgkqhkiG9w0BAQsFAAOCAQEAKUmzzTWhlTBRJMEVSO1p\nIhWhgopjyIzqe6lPFnQ3f/1k5pdeARlnyx+r8lT/u5zlpk+cv8VOvpN2teAK/XaW\npyCof8elxL60z0AR8Rom90qI6Hme9i5nYz20FGAdyf18rcV5DoQ8FkFTPXqHK+rq\ngrp/7HqKXJcwaREcXofnXyOXIZZIQFJSa24CyijLPBTFt+aIUtx1OhupLWOLfJn7\nuVoRpXe0Z9J7TFgwctzggJFGSgSXeVVcmZDU+cFDeSDd0ktS4Z3wXJRXfdvSFoCK\nyqaDNZ9MTZfev7U2DXEOSGNTx7GJN3wiNjnp1k9ZF9RiN5ZgTexZjv2BNKgjKx3m\nmQ==\n-----END CERTIFICATE-----\n",
+        "key_file": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpgIBAAKCAQEA/GZgq8Bh/M9dXVEsrCcEAq0MC5uK6POHW4CmKZXhxd0srItS\nwVQkyXkmQ0RclloPT8vRUgg+GpkevzWGbJSqQKFwcZGI14Nv+l+be7339L2dKW3Y\nmSwJX+3PYRMuPOxc9gUaQKnhcWWWNdZcF3vMgPxIZ5SRFYgRj2OwhmL2dGH1rz0t\nGw223yzQrzkwcc1IODo6ArLR4DQYJS69ScMjeqrpcSngn/y281fWMcUzFmLcJEKx\nfU5vZ66KnMcOZUYHlZrPhnFzqKYjcpLV0ThXWxTVnvRfgqQz5PvqIzmeHtHoGJUf\n2YGOpDvkV2PevBLmUfO5+xhAPBcVTIvdoS0Q8QIDAQABAoIBAQCp0T/tjuzeqa5J\noNoLodyC6GcYUDiv71n86JvjkuJqvBrYpIyzYqe1nntt+srIpiNzLtDQ/pa6Updr\nUtn0qDm8bmI3JxII3ngy3qzAHtp7oi/htfRrakOMdXZ3++26M9V/+YLmSuZR42Wj\nJ2yiqDq59gPJHR5YfEpETXBxmpfzSLd0hPGVO2ZatWSEdzOAnnub5DelzeptmbkQ\nEE0z+ZZK4qgfTukR3w9CHvgrPIXjwfhkx5/YehJMYVBib5y57aavg22Q4qCU3Np5\nS10qzc4pteGIPX/YJGC9TiavWVC2G8Yz9f9yxtlzkTnN74IOgcIxdd70tnlsvw3y\nP4YloYk5AoGBAP7YWlDXpYNtJMAVODD9yGz5rD+ePaXp763IEQph/GEEzyIwRNx3\nePq3Wa8DhENTe2+/lvDrqFy5Ad6OzEzQ/owjUvvto6JAeYxL6xF3FasuL7yiQAVz\nQKywSCwDjebOssA+Ry0q4KlWPXJhUoAXy0GoCUtZFSosIUgeAnv37+VfAoGBAP2L\nMChvIWVl0U8qXEPPvR5wMeyh8YS/K2Z8mUAE3tE0TkYoCjSznsuW7uTOzXnv7zbB\nTsxOwUk1I3ojUlLjj400kII1rMw+JMSh8qK5Wy4uYYUUEpQ/abNL+mYoT0yhHAfF\nhMUCZ3awx/emYbjCSQJimOG8Hj6sJ/KiEyCJaduvAoGBAOuE2VrzINSoTplyQt8L\n+2mzCFw3CvRFkasCRbVZvxuOjTskbs9tXpIeVrTmxBpQkbhB0OZQc+VVWYPsZqTr\nVQQANVX8VgjCG1Lsao9WheEQqy9ip1YiIHg35ks+8aqIBiyiobb9dGkq+Vi21r7o\nvoCsIgLPjj7OT+fNTDBzf/JzAoGBAJVn3uIE0p4oyJWo9aO0F9KG9LRnnaXG7TFA\nfSIffJm1A+cNky4JJqr77xx/zM9tFv6iHOgCBJ46JQTFKa7Uj/P6pKlGLeRRPmNs\nt0kyhsuI40iDUotvbr8MJ6rpWAlk6tqdhyZ8yzFC7SM/NViljFZOeZ6TtxLhaczt\nuu2ya+HbAoGBAPMp9CvGQ7cCD3WsiOtR/wlIh9gis3SuOcSiqrTq2GJKt5zxsIhS\n1VUhvicD0BBLQPlhagzozF8ETXylLaIE+xHjZ743GmIOPK2gTmknrEjzge3OtF0a\ncUFmAb4OkfCOSvPH/EY3j9458Ypy8zUCCKZcsUEJARsna1Qh7FFjm8fm\n-----END RSA PRIVATE KEY-----\n",
+        "verify_hostname": true,
+        "verify_certificate": true,
+        "enabled": true
+      }
+    }
+  }
+}

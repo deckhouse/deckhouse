@@ -1,0 +1,5 @@
+- name: Local-path-provisioner
+  link: https://github.com/rancher/local-path-provisioner
+  description: Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage in each node by creating hostPath based persistent volume on the node automatically.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0

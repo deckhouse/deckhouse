@@ -1,0 +1,351 @@
+kind: OpenStackClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в OpenStack.
+
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы.
+      sshAllowList:
+        description: |
+          Список CIDR, разрешенных для подключения к узлам по SSH.
+
+          По умолчанию `0.0.0.0/0`.
+      tags:
+        description: |
+          Список тегов, которые будут созданы на всех ресурсах, имеющих такую возможность.
+
+          Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+      zones:
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный облачный провайдер.
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы количество было нечетным.
+          instanceClass:
+            description: |
+              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+            properties: &instanceClassProperties_ru
+              flavorName:
+                description: |
+                  Тип заказываемых виртуальных машин.
+
+                  Чтобы узнать список всех доступных flavor'ов, выполните команду: `openstack flavor list`.
+
+                  Для всех узлов, кроме master, рекомендуется выбирать flavor'ы с локальным диском. Такие диски, как правило, обеспечивают более высокую производительность и меньшую стоимость. Однако их использование имеет ограничение — невозможность миграции узлов между гипервизорами.
+
+                  Пример создания flavor'а: `openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
+              imageName:
+                description: |
+                  Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                  Получить список всех доступных образов можно командой: `openstack image list`.
+
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти [в документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+              rootDiskSize:
+                description: |
+                  Размер root-диска. Значение указывается в гигабайтах.
+
+                  Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в гигабайтах.
+              additionalSecurityGroups:
+                description: |
+                  Дополнительный список security groups, которые будут добавлены на заказанные инстансы соответствующего `OpenStackInstanceClass`. Default-группа также должна быть добавлена в этот список.
+
+                  Используется для задания правил файрвола по отношению к заказываемым инстансам.
+
+                  `SecurityGroups` могут не поддерживаться провайдером.
+              additionalTags:
+                description: |
+                  Дополнительные теги, которые будут присвоены созданным инстансам в дополнение к указанным в конфигурации облачного провайдера.
+          volumeTypeMap:
+            description: |
+              Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
+
+              Формат элементов словаря: `<ЗОНА ДОСТУПНОСТИ>: <ТИП ДИСКА>` (см. пример).
+
+              Если указан параметр `rootDiskSize`, этот же тип диска будет использован в качестве загрузочного диска виртуальной машины.
+
+              Всегда рекомендуется использовать самые быстрые диски, предоставляемые провайдером.
+
+              Если значение, указанное в `replicas`, превышает количество элементов в словаре, master-узлы, чьи номера превышают
+              длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, с типом
+              диска `fast-eu-1a` будут master-0, master-2 и master-4, а с типом диска `fast-eu-1b` будут master-1 и master-3.
+
+              Полезные команды:
+              - `openstack availability zone list` — получить список зон доступности.
+              - `openstack volume type list` — получить список типов дисков.
+          serverGroup:
+            description: |
+              Объединяет инстансы в группу. Инстансы в такой группе будут размещены на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволяет повысить отказоустойчивость кластера.
+            properties:
+              policy:
+                description: |
+                  Политика распределения инстансов:
+
+                  - `AntiAffinity` — размещает инстансы на разных гипервизорах.
+                  - `ManuallyManaged` — позволяет указать существующую ServerGroup по идентификатору.
+              manuallyManaged:
+                properties:
+                  id:
+                    description: |
+                      Идентификатор объекта ServerGroup.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично [стандартному полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                annotations:
+                  description: |
+                    Аналогично [стандартному полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+            instanceClass:
+              description: |
+                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
+                configDrive:
+                  description: |
+                    Флаг, указывающий, будет ли монтироваться на узел дополнительный диск, содержащий конфигурацию для узла.
+
+                    Параметр необходимо устанавливать, если в сети, указанной в качестве `mainNetwork`, отключен DHCP.
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
+
+                    Получить список доступных сетей можно командой: `openstack network list`.
+                additionalNetworks:
+                  description: |
+                    Список сетей, которые будут подключены к инстансу.
+                    Получить список доступных сетей можно командой: `openstack network list`.
+                networksWithSecurityDisabled:
+                  description: |
+                    Список сетей из параметров `mainNetwork` и `additionalNetworks`, в которых **запрещена** настройка `SecurityGroups` и `AllowedAddressPairs` на портах.
+                floatingIPPools:
+                  description: |
+                    Список сетей для заказа Floating IP для узлов.
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+            volumeTypeMap:
+              description: |
+                Словарь типов дисков для загрузочного диска.
+
+                Формат элементов словаря: `<ЗОНА ДОСТУПНОСТИ>: <ТИП ДИСКА>` (см. пример).
+
+                Если значение, указанное в `replicas`, превышает количество элементов в словаре, узлы, чьи номера превышают длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, с типом диска `fast-eu-1a` будут worker-0, worker-2 и worker-4, а с типом диска `fast-eu-1b` будут worker-1 и worker-3.
+
+                > **Внимание.** Ограничение по зонам доступности работает только при использовании параметра `zones` (`nodeGroups.zones`). Если параметр `zones` не задан, будут использованы все зоны доступности.
+
+                Master-узлы будут создаваться в зонах в алфавитном порядке, указанных в этом параметре. Исходя из примера ниже, `master-0` будет создан в зоне `eu-1a`, `master-1` будет создан в зоне `eu-1b`, а `master-2` будет создан в зоне `eu-1a`.
+
+                Полезные команды:
+                - `openstack availability zone list` — получить список зон доступности.
+                - `openstack volume type list` — получить список типов дисков.
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html) о возможных схемах размещения провайдера.
+      standard:
+        description: |
+          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#standard).
+        properties:
+          bastion:
+            description: |
+              Спецификация для описания bastion-узла.
+            properties:
+              zone:
+                description: |
+                  Зона для создания инстанса для bastion-узла.
+              volumeType:
+                description: |
+                  Тип корневого диска.
+              instanceClass:
+                description: |
+                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+                properties:
+                  flavorName:
+                    description: |
+                      Тип виртуальной машины.
+
+                      Чтобы узнать список всех доступных flavor'ов, выполните команду: `openstack flavor list`.
+                  imageName:
+                    description: |
+                      Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                      Чтобы узнать список всех доступных образов, выполните команду: `openstack image list`.
+
+                  rootDiskSize:
+                    description: |
+                      Размер root-диска. Значение указывается в гигабайтах.
+
+                      Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                  additionalTags:
+                    description: |
+                      Дополнительные теги, которые будут присвоены созданному инстансу в дополнение к указанным в конфигурации облачного провайдера.
+          internalNetworkCIDR: &internalNetworkCIDR_ru
+            description: |
+              Адресация для внутренней сети узлов кластера.
+          internalNetworkDNSServers:
+            description: |
+              Список адресов рекурсивных DNS внутренней сети.
+          internalNetworkSecurity: &internalNetworkSecurity_ru
+            description: |
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/modules/cloud-provider-openstack/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) и [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) на портах внутренней сети.
+          externalNetworkName: &externalNetworkName_ru
+            description: |
+              Имя сети для внешнего взаимодействия.
+              Получить список доступных сетей можно командой: `openstack network list`.
+      standardWithNoRouter:
+        description: |
+          Настройки для схемы размещения [`StandardWithNoRouter`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#standardwithnorouter).
+        properties:
+          internalNetworkCIDR:
+            <<: *internalNetworkCIDR_ru
+          internalNetworkSecurity:
+            <<: *internalNetworkSecurity_ru
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          externalNetworkDHCP: &externalNetworkDHCP_ru
+            description: |
+              Флаг, который указывает, включен ли DHCP в сети, указанной в качестве внешней.
+      simple:
+        description: |
+          Настройки для схемы размещения [`Simple`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#simple).
+        properties:
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP_ru
+          podNetworkMode:
+            description: |
+              Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это внутренняя сеть, но бывают исключения):
+              * `DirectRouting` – между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
+              * `VXLAN` – между узлами **не работает** прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+
+              > **Внимание.** После изменения этого параметра необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+
+              > **Внимание.** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
+      simpleWithInternalNetwork:
+        description: |
+          Настройки для схемы размещения [`SimpleWithInternalNetwork`](https://deckhouse.ru/modules/cloud-provider-openstack/layouts.html#simplewithinternalnetwork).
+        properties:
+          internalSubnetName:
+            description: |
+              Имя подсети, в которой будут работать узлы кластера.
+          podNetworkMode:
+            description: |
+              Определяет способ организации трафика в той сети, которая используется для коммуникации между подами (обычно это внутренняя сеть, но бывают исключения):
+              * `DirectRouting` — между узлами работает прямая маршрутизация, в этом режиме отключены SecurityGroups.
+              * `DirectRoutingWithPortSecurityEnabled` — между узлами работает прямая маршрутизация, но только если в OpenStack явно разрешить на портах диапазон адресов, используемых во внутренней сети.
+                * **Внимание.** Убедитесь, что у `username` есть доступ на редактирование `AllowedAddressPairs` на портах, подключенных в сеть `internalNetworkName`. Обычно в OpenStack такого доступа нет, если сеть имеет флаг `shared`.
+              * `VXLAN` — между узлами **не работает** прямая маршрутизация, необходимо использовать VXLAN, в этом режиме отключены SecurityGroups.
+
+              > **Внимание.** После изменения этого параметра необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+
+              > **Внимание.** После переключения с/на VXLAN требуется перезагрузка всех узлов кластера.
+          externalNetworkName:
+            <<: *externalNetworkName_ru
+          externalNetworkDHCP:
+            <<: *externalNetworkDHCP_ru
+          masterWithExternalFloatingIP:
+            description: |
+              Флаг, который указывает, создавать ли Floating IP на master-узлах.
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-openstack/environment.html) к API OpenStack.
+
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-openstack](https://deckhouse.ru/modules/cloud-provider-openstack/configuration.html#параметры).
+        properties:
+          authURL:
+            description: |
+              OpenStack Identity API URL.
+          caCert:
+            description: |
+              CA x509 сертификат, использовавшийся для подписи (можно указать, если OpenStack API имеет самоподписанный сертификат).
+          domainName:
+            description: |
+              Имя домена.
+
+              Переменная `OS_USER_DOMAIN_NAME` из файла openrc.
+          tenantName:
+            description: |
+              Имя проекта.
+
+              Не может использоваться вместе с `tenantID`.
+          tenantID:
+            description: |
+              ID проекта.
+
+              Не может использоваться вместе с `tenantName`.
+          username:
+            description: |
+              Имя пользователя с полными правами на проект.
+          password:
+            description: |
+              Пароль пользователя.
+          region:
+            description: |
+              Регион OpenStack, где будет развернут кластер.

@@ -1,0 +1,49 @@
+type: object
+properties:
+  configurations:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      required:
+        - includeNames
+      properties:
+        annotations:
+          type: object
+          description: |
+            A list of annotations in the `key: "value"` format.
+          x-examples:
+            example: "true"
+          additionalProperties:
+            type: string
+            nullable: true
+          default: {}
+        labels:
+          type: object
+          description: |
+            A list of labels in the `key: "value"` format.
+          x-examples:
+            istio-injection: "true"
+          additionalProperties:
+            type: string
+            nullable: true
+          default: {}
+        includeNames:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          x-examples:
+          - ["prod-.*", "infra-.*"]
+          description: |
+            A list of namespace patterns to include.
+          default: []
+        excludeNames:
+          type: array
+          items:
+            type: string
+          x-examples:
+          - ["infra-test"]
+          description: |
+            A list of namespace patterns to exclude.
+          default: []

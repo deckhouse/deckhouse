@@ -1,0 +1,266 @@
+candi:
+  features:
+    - summary: Add support for ALT Linux p11.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9040
+    - summary: Add ModuleSource custom CA on nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9000
+      impact: >-
+        If cluster has ModuleSource resources with custom CA, containerd will be restarted on all
+        nodes in cluster.
+    - summary: Added E2E tests for vCloud Director in Deckhouse.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8852
+      impact: >-
+        Improves the reliability and stability of Deckhouse deployments in vCloud Director
+        environments by catching integration issues early.
+    - summary: Single bootstrap for all bundles.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8640
+      impact: Possible impact on ordering new nodes.
+  fixes:
+    - summary: Add new dirs to cleanup on `cleanup_static_node.sh`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9159
+    - summary: Fix work `registry-packages-proxy` with module sources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9112
+      impact: '`registry-packages-proxy` should be restarted.'
+    - summary: Enable guest customization in Terraform configuration for master and cloud static nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9098
+    - summary: AWS NAT Gateways are forced to be created in first non-local zone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9063
+    - summary: Fix node-manager render network-script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9040
+    - summary: Set bootstrap-network as first  bootstrap script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9040
+    - summary: Fix index overflow when retrieving values from the list of external IP addresses.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8877
+    - summary: Fixed kubelet server certificate rotation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8603
+ci:
+  features:
+    - summary: Added E2E tests for vCloud Director in Deckhouse.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8852
+      impact: >-
+        Improves the reliability and stability of Deckhouse deployments in vCloud Director
+        environments by catching integration issues early.
+  fixes:
+    - summary: >-
+        Renaming VCD E2E tests. Fixes the issue of running tests via comments, e.g., `/e2e/run/vcd
+        release-123`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9276
+      impact: low
+cloud-provider-openstack:
+  fixes:
+    - summary: The layout of the elements on the page has been changed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9183
+cloud-provider-vcd:
+  features:
+    - summary: >-
+        Add the ability to specify an organization as the first part of the template path for master
+        and cloud permanence node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9220
+    - summary: Add support for token-based authentication.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8862
+cloud-provider-vsphere:
+  fixes:
+    - summary: The layout of the elements on the page has been changed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9183
+cloud-provider-yandex:
+  fixes:
+    - summary: The layout of the elements on the page has been changed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9183
+cni-cilium:
+  fixes:
+    - summary: >-
+        Improved the `CiliumAgentUnreachableHealthEndpoints` metric expression to avoid false
+        positives.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9198
+deckhouse:
+  features:
+    - summary: Add DELETE verbs for restrict operations on `heritage=deckhouse` label.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9180
+deckhouse-controller:
+  features:
+    - summary: Consider `values.yaml` file as values default, not config-values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8837
+    - summary: Deckhouse update logic has been moved to a separate controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8667
+  fixes:
+    - summary: Fix panic on invalid module image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9231
+    - summary: Deckhouse update metrics restored.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9147
+dhctl:
+  features:
+    - summary: >-
+        Add `--config` flag and add deprecation warning abour `--resources` flag for
+        `bootstrap-phase create-resources` command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9105
+    - summary: Add a preflight checks for system requirements on the master nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8961
+    - summary: Added a preflight check for sudo permissions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8908
+    - summary: Preflight check exist embedded containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8734
+    - summary: Add retries for bashible routines.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8627
+    - summary: >-
+        Preflight check hostname uniqueness on servers when setting up a bare metal cluster and
+        check only one `--ssh-host` parameter used.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8515
+  fixes:
+    - summary: Wait for resources required by manifest being created.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9157
+    - summary: Fix bashible bundles step did not break when retry attempts was exited
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9144
+    - summary: Fix creation cloudPermanent nodes with valid length name (no longer 42 symbols).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9075
+    - summary: Automatically use `--ssh-user` as `--ssh-bastion-user` if not set by the user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9061
+    - summary: Fix watching CustomResource while custom `apiVersion` has not yet been applied.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9040
+    - summary: >-
+        Validate the length of the list of external IP addresses in the
+        `YandexClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8877
+docs:
+  features:
+    - summary: Add a list of DKP alerts to the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8861
+  fixes:
+    - summary: An unused domain `cdi-uploadproxy` has been removed from Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9143
+    - summary: Fix broken links in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9128
+    - summary: >-
+        Removed cillium module configuration, fixed typos in the getting started section for the AWS
+        cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9010
+    - summary: Fix zone and disk in `volumeTypeMap` VK Cloud `config.yml` from Getting Started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9005
+      impact: Fix bootstrap error in the Getting Started `config.yml` for VK Cloud.
+    - summary: >-
+        Update Getting Started to use the `enabled` option instead of `enable` in the user-authn
+        module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8466
+go_lib:
+  fixes:
+    - summary: Fix work `registry-packages-proxy` with module sources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9112
+      impact: '`registry-packages-proxy` should be restarted.'
+    - summary: successful confirmation of module installation via annotations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9031
+ingress-nginx:
+  features:
+    - summary: Bump ingress-nginx to 1.10.3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9115
+      impact: ingress-nginx controllers' pods with controller version 1.10 will be recreated.
+    - summary: Add SSLPassthrough inlets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9021
+  fixes:
+    - summary: Set proxy connect timeout in auth locations to 15s.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8941
+      impact: >-
+        ingress-nginx controllers' pods will be recreated and in some cases, 15s would be not
+        enough.
+istio:
+  fixes:
+    - summary: Istio 1.19 version compatibility extended with K8s versions 1.29 and 1.30.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9217
+l2-load-balancer:
+  features:
+    - summary: The new module for redundant L2 load-balancing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8465
+  fixes:
+    - summary: >-
+        An internal refactoring and the fix for handling external and internal traffic policies in
+        the LoadBalancer Service.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9114
+log-shipper:
+  fixes:
+    - summary: Make `extraLabels` and `CEF` encoding work for `Socket` destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9149
+multitenancy-manager:
+  fixes:
+    - summary: Fix templates bugs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9205
+node-manager:
+  features:
+    - summary: Cluster API Provider Static can adopt manually bootstrapped static nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8753
+  fixes:
+    - summary: Reducing unnecessary kube-apiserver logsl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9134
+      impact: Reducing unnecessary kube-apiserver logs.
+    - summary: Added handling for graceful shutdown of node-critical pods during cluster scale-down.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8609
+      impact: >-
+        Ensures `csi-node-*` pods are not terminated before PV-mounted pods are gracefully
+        terminated, preventing hanging pods.
+operator-trivy:
+  features:
+    - summary: Add `reportResourceLabels` option.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9022
+prometheus:
+  features:
+    - summary: Made Grafana version 10 the default on primary domain, moved Grafana 8 to secondary domain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9076
+  fixes:
+    - summary: The PR fixes a redirect bug in the monitoring system.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9261
+    - summary: >-
+        Fixed mismatched Dex authentication endpoints introduced in previous PR, resolving cyclic
+        redirect issues for Grafana v8 and v10 login.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9249
+    - summary: >-
+        Fixes to Grafana dashboards for improved data accuracy in summary tables, network
+        consumption, PVC usage and handling Pod restarts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9066
+registry-packages-proxy:
+  fixes:
+    - summary: Fix work `registry-packages-proxy` with module sources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9112
+      impact: '`registry-packages-proxy` should be restarted.'
+    - summary: package-proxy in hostNetwork.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9099
+registrypackages:
+  features:
+    - summary: Use growpart from registrypackages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8850
+    - summary: Add ec2-describe-tags to registry packages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8640
+testing:
+  features:
+    - summary: Add E2E tests for requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9097
+    - summary: Use ALT Linux p11 in E2E static tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9040
+    - summary: Add nodeUser to e2e-test.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9020
+    - summary: Added E2E tests for vCloud Director in Deckhouse.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8852
+      impact: >-
+        Improves the reliability and stability of Deckhouse deployments in vCloud Director
+        environments by catching integration issues early.
+  fixes:
+    - summary: Rename VCD E2E workflow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9299
+    - summary: allow kubernetes-admin to make changes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9278
+    - summary: >-
+        Renaming VCD E2E tests. Fixes the issue of running tests via comments, e.g., `/e2e/run/vcd
+        release-123`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9276
+      impact: low
+    - summary: The istio module and istio availability test are disabled EKS e2e layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9245
+    - summary: Fix vCD template for Debian 12 in E2E tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9213
+    - summary: OpenStack set root disk to 50
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9174
+    - summary: Fix E2E test for GCP.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9169
+    - summary: OpenStack migration with configOverrides
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9168
+user-authn:
+  fixes:
+    - summary: Allow to create users with invalid email.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9171
+

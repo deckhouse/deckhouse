@@ -1,0 +1,66 @@
+properties:
+  imageAvailability:
+    description: |
+      Настройки для мониторинга доступности образов в кластере.
+    properties:
+      exporterEnabled:
+        description: |
+          Включен ли imageAvailabilityExporter.
+      ignoredImages:
+        description: |
+          Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
+      registry:
+        description: |
+          Настройки подключения к container registry.
+        properties:
+          scheme:
+            description: |
+              Протокол доступа к container registry.
+          tlsConfig:
+            description: |
+              Настройки подключения к container registry
+            properties:
+              insecureSkipVerify:
+                description: |
+                  Пропускать ли валидацию TLS-сертификата для container registry.
+              ca:
+                description: |
+                  Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      mirrors:
+        type: array
+        description: |
+          Список зеркал для container registry.
+      forceCheckDisabledControllers:
+        description: |
+          Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
+
+          Укажите `All`, для проверки всех типов контроллеров.
+  events:
+    description: |
+      Настройки для мониторинга event'ов в кластере Kubernetes.
+    properties:
+      exporterEnabled:
+        description: |
+          Включен ли eventsExporter.
+      severityLevel:
+        description: |
+          Enables eventsExporter.
+  certificates:
+    description: |
+      Настройки для мониторинга сертификатов в кластере Kubernetes.
+    properties:
+      exporterEnabled:
+        type: boolean
+        default: false
+        description: |
+          Включен ли x509-certificate-exporter.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

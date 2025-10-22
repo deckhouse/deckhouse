@@ -1,0 +1,9 @@
+name: cni-simple-bridge
+stage: "General Availability"
+critical: true
+weight: 35
+subsystems:
+  - networking
+namespace: d8-cni-simple-bridge
+requirements:
+  deckhouse: ">= 1.68"

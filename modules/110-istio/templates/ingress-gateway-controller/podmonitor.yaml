@@ -1,0 +1,53 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+{{- if .Values.istio.internal.ingressControllers }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-ingress-gateway-controller
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "ingress-gateway-controller" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  namespaceSelector:
+    matchNames:
+      - d8-ingress-{{ .Chart.Name }}
+  podMetricsEndpoints:
+    - path: /stats/prometheus
+      relabelings:
+        - action: keep
+          regex: istio-proxy
+          sourceLabels:
+            - __meta_kubernetes_pod_container_name
+        - action: replace
+          regex: ([^:]+)(:\d+)?
+          replacement: ${1}:15090
+          sourceLabels:
+            - __address__
+          targetLabel: __address__
+        - action: replace
+          replacement: istio-ingress-gateway-controller
+          targetLabel: job
+        - action: replace
+          replacement: cluster
+          targetLabel: tier
+        - action: keep
+          regex: "true"
+          sourceLabels:
+            - __meta_kubernetes_pod_ready
+        - action: replace
+          sourceLabels:
+            - __meta_kubernetes_pod_name
+          targetLabel: pod
+        - action: replace
+          sourceLabels:
+            - __meta_kubernetes_namespace
+          targetLabel: namespace
+      scheme: http
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["ingress-gateway-controller"]
+{{- end }}
+{{- end }}

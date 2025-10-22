@@ -1,0 +1,116 @@
+- name: d8.node-group-node-with-deprecated-availability-zone
+  rules:
+    - alert: NodeGroupNodeWithDeprecatedAvailabilityZone
+      expr: |
+        max by (node_group) (d8_node_group_node_with_deprecated_availability_zone) > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: NodeGroup `{{ $labels.node_group }}` contains nodes in a deprecated availability zone.
+        description: |
+          Certain nodes in the node group `{{ $labels.node_group }}` are located in the availability zone `ru-central1-c`, which has been deprecated by Yandex Cloud.
+
+          Steps to troubleshoot:
+
+          1. Identify the nodes that need to be migrated by running the following command:
+
+             ```bash
+             d8 k get node -l "topology.kubernetes.io/zone=ru-central1-c"
+             ```
+
+          2. Migrate your nodes, disks, and load balancers to one of the supported zones: `ru-central1-a`, `ru-central1-b`, or `ru-central1-d`. Refer to the [Yandex migration guide](https://cloud.yandex.com/en/docs/overview/concepts/zone-migration) for detailed instructions.
+
+             > You can't migrate public IP addresses between zones. For details, refer to the migration guide.
+    - alert: NATInstanceWithDeprecatedAvailabilityZone
+      expr: |
+        d8_cloud_provider_yandex_nat_instance_zone_deprecated > 0
+      for: 1m
+      labels:
+        tier: cluster
+        severity_level: "9"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_groups_deprecation_alerts: "AvailabilityZonesDeprecationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: NAT instance `{{ $labels.name }}` is in a deprecated availability zone.
+        description: |
+          The NAT instance `{{ $labels.name }}` is located in the availability zone `ru-central1-c`, which has been deprecated by Yandex Cloud. To resolve this issue, migrate the NAT instance to either `ru-central1-a` or `ru-central1-b` by following the instructions below.
+
+          > The migration process involves irreversible changes and may result in a significant downtime. The duration typically depends on Yandex Cloud’s response time and can last several tens of minutes.
+
+          1. Migrate the NAT instance. To get `providerClusterConfiguration.withNATInstance`, run the following command:
+
+             ```bash
+             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+             ```
+
+             - If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in `providerClusterConfiguration`, remove them using the following command:
+
+               ```bash
+               d8 p edit provider-cluster-configuration
+               ```
+
+             - If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in `providerClusterConfiguration`, change them to the appropriate values.
+
+               To get the address and subnet ID, use the Yandex Cloud Console or CLI.
+
+               To change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress`, run the following command:
+
+               ```bash
+               d8 p edit provider-cluster-configuration
+               ```
+
+          1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine. You may have to change the container registry address to do that. After that, perform the converge.
+
+             - Get the appropriate edition and version of Deckhouse:
+
+               ```bash
+               DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
+               DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
+               echo "DH_VERSION=$DH_VERSION DH_EDITION=$DH_EDITION"
+               ```
+
+             - Run the installer:
+
+               ```bash
+               docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+               ```
+
+             - Perform the converge:
+
+               ```bash
+               dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+               ```
+
+          1. Update the route table.
+
+             - Get the route table name:
+
+               ```bash
+               d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+               ```
+
+             - Get the NAT instance name:
+
+               ```bash
+               d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+               ```
+
+             - Get the NAT instance internal IP address:
+
+               ```bash
+               yc compute instance list | grep -e "INTERNAL IP" -e <NAT_INSTANCE_NAME_FROM_PREVIOUS_STEP>
+               ```
+
+             - Update the route:
+
+               ```bash
+               yc vpc route-table update --name <ROUTE_TABLE_NAME_FROM_PREVIOUS_STEP> --route "destination=0.0.0.0/0,next-hop=<NAT_INSTANCE_INTERNAL_IP_FROM_PREVIOUS_STEP>"
+               ```

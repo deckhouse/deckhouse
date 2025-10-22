@@ -1,0 +1,17 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedClusterRoles
+metadata:
+  name: test
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["RoleBinding"]
+    namespaceSelector:
+      matchLabels:
+        enforce: mypolicy
+    scope: Namespaced
+  parameters:
+    allowedClusterRoles:
+    - admin

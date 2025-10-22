@@ -1,0 +1,63 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.12.0
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    cluster.x-k8s.io/provider: infrastructure-deckhouse
+    cluster.x-k8s.io/v1beta1: v1alpha1
+  name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: DeckhouseControlPlane
+    listKind: DeckhouseControlPlaneList
+    plural: deckhousecontrolplanes
+    singular: deckhousecontrolplane
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: DeckhouseControlPlane is the Schema for the Cluster API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: DeckhouseControlPlaneSpec defines the desired state of DeckhouseControlPlane
+              type: object
+            status:
+              description: DeckhouseControlPlaneStatus defines the observed state of DeckhouseControlPlane
+              properties:
+                externalManagedControlPlane:
+                  description: |
+                    ExternalManagedControlPlane tells cluster-api
+                    that the control plane is managed by an external service.
+                  type: boolean
+                initialized:
+                  description: Initialized is true when the control plane is available
+                    for initial contact. This may occur before the control plane is
+                    fully ready.
+                  type: boolean
+                ready:
+                  description: Ready is true when the control plane is ready.
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

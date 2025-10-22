@@ -1,0 +1,62 @@
+# dhctl source artifact
+# . is dict with keys:
+#   gitPrefix - prefix for git add
+{{- define "dhctl_src_artifact" }}
+{{- $context := . -}}
+{{- $prefix := $context.gitPrefix -}}
+
+image: dhctl-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: {{ printf "%s/dhctl" $prefix }}
+  to: /src/dhctl
+  stageDependencies:
+    install:
+    - "**/*.go"
+    - Makefile
+    - go.sum
+    - go.mod
+- add: {{ printf "%s/go_lib" $prefix }}
+  to: /src/go_lib
+  stageDependencies:
+    install:
+      - "**/*.go"
+- add: {{ printf "%s/pkg/log" $prefix }}
+  to: /src/pkg/log
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+
+{{- end }}
+
+
+# dhctl artifact
+# . is dict with keys:
+#   GOPROXY - GOPROXY env
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "dhctl_artifact" }}
+{{- $context := . -}}
+{{- $rppSignCheck := ternary "true" "false" (eq $context.Env "CSE") -}}
+image: dhctl
+final: false
+fromImage: base-for-go
+import:
+- image: dhctl-src-artifact
+  add: /src
+  to: /
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /dhctl
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - RPP_SIGN_CHECK={{- $rppSignCheck }} D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
+{{- end }}

@@ -1,0 +1,246 @@
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Описывает конфигурацию облачного кластера в Yandex Cloud.
+
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      sshPublicKey:
+        description: |
+          Публичный ключ для доступа на узлы.
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+          zones:
+            description: |
+              Список зон, в которых допустимо создавать узлы.
+
+              Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+          instanceClass:
+            description: |
+              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+            properties: &instanceClassProperties_ru
+              platform:
+                description: |
+                  Платформа виртуальной машины.
+              cores:
+                description: |
+                  Количество ядер у создаваемых инстансов.
+              memory:
+                description: |
+                  Количество оперативной памяти (в мегабайтах) у создаваемых инстансов.
+              imageID:
+                description: |
+                  Идентификатор образа, который будет установлен в заказанные инстансы.
+              diskSizeGB:
+                description: |
+                  Размер диска у инстансов. Значение указывается в `ГиБ`.
+              diskType:
+                description: |
+                  Тип диска у создаваемых инстансов. Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в `ГиБ`.
+
+                  При изменении этого параметра необходимо вручную расширить каждый диск для etcd в интерфейсе Yandex Cloud (причина такого поведения — в [issue](https://github.com/yandex-cloud/terraform-provider-yandex/issues/226)).
+              externalIPAddresses:
+                description: |
+                  Список внешних IP-адресов, перечисленных в порядке зон, в которых будут создаваться узлы.
+
+                  В списке можно указывать следующие значения:
+                  - IP-адрес из дополнительной внешней сети для соответствующей зоны (параметр `externalSubnetIDs`);
+                  - [зарезервированный публичный IP-адрес](faq.html#как-зарезервировать-публичный-ip-адрес), если список дополнительных внешних сетей не определен (параметр `externalSubnetIDs`);
+                  - `Auto`, для заказа публичного IP-адреса в соответствующей зоне.
+
+                  Обратите внимание:
+                  - Элементы массива должны быть перечислены согласно порядку зон (параметр `zones`), в которых будут создаваться узлы.
+
+                    Например:
+
+                    ```yaml
+                    - <RU-CENTRAL1-A-IP-ADDRESS>
+                    - <RU-CENTRAL1-B-IP-ADDRESS>
+                    - <RU-CENTRAL1-D-IP-ADDRESS>
+                    ```
+
+                  - Количество элементов массива в параметре `externalIPAddresses` должно быть равно количеству узлов в группе (параметра `replicas`). Для автоматического заказа публичных IP-адресов в зоне, используйте значение `Auto` в списке в параметре `externalIPAddresses` на соответствующем месте (соответствующему порядку зон).
+                  - Если не указать externalIPAddresses, то узлы в группе будут заказаны без внешних IP-адресов.
+              externalSubnetID:
+                description: |
+                  Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+              externalSubnetIDs:
+                description: |
+                  Список дополнительных внешних сетей, подключаемых к узлам.
+
+                  Интерфейс узла, находящийся в сети из списка, будет назначен шлюзом по умолчанию.
+
+                  Также будет добавлен маршрут для интерфейса внутренней сети узла на всю подсеть, указанную в [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
+
+                  Элементы массива **должны** быть перечислены согласно порядку зон (параметр `zones`), в которых будут создаваться узлы. Например:
+
+                  ```yaml
+                  - <RU-CENTRAL1-A-SUBNET-ID>
+                  - <RU-CENTRAL1-B-SUBNET-ID>
+                  - <RU-CENTRAL1-D-SUBNET-ID>
+                  ```
+              additionalLabels:
+                description: |
+                  Дополнительные лейблы, которые будут присвоены созданным инстансам.
+              networkType:
+                description: |
+                  Тип сети.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узла.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+
+                    Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > Доступны только поля `effect`, `key`, `values`.
+            instanceClass:
+              description: |
+                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              properties:
+                <<: *instanceClassProperties_ru
+                coreFraction:
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых инстансов. [Подробнее...](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)
+      existingNetworkID:
+        description: |
+          ID существующей VPC Network.
+      nodeNetworkCIDR:
+        description: |
+          Данная подсеть будет разделена на **три** равные части и использована для создания подсетей в трех зонах Yandex Cloud.
+      existingZoneToSubnetIDMap:
+        description: |
+          Одна или несколько ранее существовавших подсетей, сопоставленных с соответствующей зоной.
+
+          > **Внимание!** Deckhouse создаст таблицу маршрутизации, которую необходимо вручную привязать к указанным подсетям. К одной подсети можно привязать только одну таблицу маршрутизации. Поэтому невозможно развернуть два кластера с `cni-simple-bridge` в одних и тех же подсетях. Если вам нужно использовать одинаковые подсети для нескольких кластеров — используйте `cni-cilium`.
+      labels:
+        description: |
+          Лейблы, проставляемые на ресурсы, создаваемые в Yandex Cloud.
+
+          Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+      dhcpOptions:
+        description: |
+          Список DHCP-опций, которые будут установлены на все подсети.
+
+          [Возможные проблемы](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+        properties:
+          domainName:
+            description: |
+              Search-домен.
+          domainNameServers:
+            description: |
+              Список адресов рекурсивных DNS.
+      layout:
+        description: |
+          Название схемы размещения.
+
+          [Подробнее](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+      withNATInstance:
+        description: |
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html#withnatinstance).
+        properties:
+          exporterAPIKey:
+            description: |
+              API-ключ для экспортера метрик Yandex Cloud.
+
+              - Если значение ключа — пустая строка, экспортер не будет развернут в кластере.
+              - Если значение ключа — `Auto`, Deckhouse создаст service account c ролью `monitoring.viewer` и API-ключ для него. Для основного service account'а требуется роль `admin`.
+              - Любое другое значение ключа считается допустимым API-ключем. Используйте [инструкцию](https://cloud.yandex.ru/docs/iam/operations/api-key/create) для создания API-ключа.
+                Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
+          natInstanceExternalAddress:
+            description: |
+              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+          natInstanceInternalAddress:
+            description: |
+              Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
+          internalSubnetID:
+            description: |
+              ID подсети для внутреннего интерфейса.
+          internalSubnetCIDR:
+            description: |
+              CIDR автоматически создаваемой подсети для внутреннего интерфейса. Если указан вместе с `internalSubnetID`, internalSubnetCIDR имеет приоритет.
+          externalSubnetID:
+            description: |
+              Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
+          natInstanceResources:
+            description: |
+              Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию.
+
+              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
+            type: object
+            properties:
+              cores:
+                description: |
+                  Количество ядер у создаваемого NAT-инстанса.
+              memory:
+                description: |
+                  Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
+              platform:
+                description: |
+                  Тип платформы процессора у создаваемого NAT-инстанса.
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.ru/modules/cloud-provider-yandex/environment.html) к API Yandex Cloud.
+        properties:
+          cloudID:
+            description: |
+              Идентификатор облака.
+          folderID:
+            description: |
+              Идентификатор директории.
+          serviceAccountJSON:
+            description: |
+              Ключ к service account'у в JSON-формате.
+
+              Получить его можно с помощью команды `[yc iam key create](environment.html)`.
+      zones:
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
+

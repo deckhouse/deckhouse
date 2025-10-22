@@ -1,0 +1,51 @@
+- name: kube-state-metrics
+  rules:
+  - alert: DeploymentGenerationMismatch
+    expr: max(kube_deployment_status_observed_generation != kube_deployment_metadata_generation) by (namespace, deployment)
+    for: 15m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Deployment is outdated.
+      description: |
+        The observed deployment generation doesn't match the expected one for Deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
+
+  - alert: KubeStateMetricsDown
+    expr: absent(up{job="kube-state-metrics"} == 1)
+    for: 5m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: >
+        `Kube-state-metrics` isn't working in the cluster.
+      description: |-
+        Deckhouse has detected that no metrics about cluster resources have been available for the past 5 minutes.
+        As a result, most alerts and monitoring panels aren't working.
+
+        Steps to troubleshoot:
+
+        1. Check the `kube-state-metrics` pods:
+        
+           ```bash
+           d8 k -n d8-monitoring describe pod -l app=kube-state-metrics
+           ```
+
+        2. Check the deployment logs:
+        
+           ```bash
+           d8 k -n d8-monitoring describe deploy kube-state-metrics
+           ```
+
+  # kube_persistentvolume_is_local migration.
+  # The patch was not generic enough, but it is used in many alerts/panels.
+  # This recording rule is aimed to avoid rewriting them.
+  - expr: |
+      max by (instance, job, persistentvolume, scrape_endpoint, storageclass) (
+          kube_persistentvolume_info{local_path=~".+"} or kube_persistentvolume_info{host_path=~".+"}
+        or
+          (kube_persistentvolume_info - 1)
+      )
+    record: kube_persistentvolume_is_local

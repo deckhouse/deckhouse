@@ -1,0 +1,16 @@
+# https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: audit-policy
+  namespace: kube-system
+type: Opaque
+data:
+  # apiVersion: audit.k8s.io/v1
+  # kind: Policy
+  # rules:
+  # - level: Metadata
+  #   omitStages:
+  #   - RequestReceived
+  audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCgo=

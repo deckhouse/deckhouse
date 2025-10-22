@@ -1,0 +1,122 @@
+{{- define "dhcp_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if not .Values.networkGateway.disableDHCP }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: dhcp
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: dhcp
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: dhcp
+      minAllowed:
+        {{- include "dhcp_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dhcp
+  namespace: d8-network-gateway
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dhcp")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: dhcp
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dhcp
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: dhcp
+  serviceName: dhcp
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ .Values.networkGateway | toYaml | sha256sum }}
+      labels:
+        app: dhcp
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        command: ['/usr/bin/python3', '/prepare-config.py']
+        image: {{ include "helm_lib_module_image" (list . "dnsmasq") }}
+        volumeMounts:
+        - name: dhcp-config
+          mountPath: /etc/dnsmasq.conf.d
+        - name: network-gateway-config
+          mountPath: /etc/network-gateway-config
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      containers:
+      - name: dhcp
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_BIND_SERVICE" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "dnsmasq") }}
+        command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
+        volumeMounts:
+        - name: dhcp-config
+          mountPath: /etc/dnsmasq.conf.d
+        - name: dhcp-data
+          mountPath: /var/lib/dnsmasq/
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "dhcp_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: dhcp-config
+        emptyDir: {}
+      - name: network-gateway-config
+        configMap:
+          name: network-gateway
+{{- $storageClass := .Values.networkGateway.internal.effectiveStorageClass }}
+{{- if not $storageClass }}
+      - name: dhcp-data
+        emptyDir: {}
+{{- else }}
+  volumeClaimTemplates:
+  - metadata:
+      name: dhcp-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 32Mi
+      storageClassName: {{ $storageClass }}
+{{- end }}
+{{- end }}

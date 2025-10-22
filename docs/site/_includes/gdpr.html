@@ -1,0 +1,16 @@
+<div class="gdpr">
+  <div class="text gdpr__message">
+    {%- if page.lang == "en" %}
+      We use cookies to make your browsing experience more convenient. Please refer to our <a href="https://deckhouse.io/privacy-policy/" class="gdpr__link">Privacy Policy</a> for details.
+    {% else %}
+      Мы используем файлы cookie, чтобы сделать работу с&nbsp;сайтом удобнее. Подробнее — в&nbsp;<a href="https://deckhouse.ru/security-policy/" class="gdpr__link">Политике конфиденциальности</a>.
+    {% endif %}
+  </div>
+  <button class="button gdpr__button">
+    {%- if page.lang == "en" %}
+      Accept
+    {% else %}
+      Принять
+    {% endif %}
+  </button>
+</div>

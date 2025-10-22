@@ -1,0 +1,83 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-apparrmor-profiles
+tests:
+  - name: pod-security-standards-baseline
+    template: ../../templates/security/allowed-apparmor-profiles.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: example-allowed-annotation
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_annotation.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-localhost-annotation
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_localhost_annotation.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-annotation
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_annotation.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemera-annotation
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral_annotation.yaml
+        assertions:
+          - violations: yes
+
+      - name: example-allowed-spec-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_spec_container.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-localhost-spec-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_localhost_spec_container.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-spec-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_spec_container.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemeral-spec-container
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral_spec_container.yaml
+        assertions:
+          - violations: yes
+
+      - name: example-allowed-spec-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_spec_pod.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-localhost-spec-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed_localhost_spec_pod.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed-spec-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_spec_pod.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemeral-spec-pod
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral_spec_pod.yaml
+        assertions:
+          - violations: yes

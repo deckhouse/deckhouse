@@ -1,0 +1,46 @@
+{{- range $ng := .Values.nodeManager.internal.standbyNodeGroups }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: standby-holder-{{ $ng.name }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "standby-holder" "extended-monitoring.deckhouse.io/enabled" "false")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: standby-holder
+      ng: {{ $ng.name }}
+  revisionHistoryLimit: 0
+  replicas: {{ $ng.standby }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: standby-holder
+        ng: {{ $ng.name }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: standby-holder
+                ng: {{ $ng.name }}
+            topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        node.deckhouse.io/group: {{ $ng.name }}
+      priorityClassName: standby
+      tolerations:
+        {{- $ng.taints | toYaml | nindent 8 }}
+      containers:
+      - name: reserve-resources
+        image: {{ include "helm_lib_module_common_image" (list $ "pause") }}
+        resources:
+          requests:
+            cpu: {{ $ng.reserveCPU | quote }}
+            memory: {{ $ng.reserveMemory | quote }}
+{{- end }}

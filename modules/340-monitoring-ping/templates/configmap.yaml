@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-ping-config
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
+data:
+  targets.json: |
+    {{ .Values.monitoringPing.internal.clusterTargets | toJson | nindent 4 }}
+  external_targets.json: |
+    {{ .Values.monitoringPing.externalTargets | toJson | nindent 4 }}

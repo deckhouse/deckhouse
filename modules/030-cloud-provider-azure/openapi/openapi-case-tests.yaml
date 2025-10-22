@@ -1,0 +1,4 @@
+positive:
+  configValues:
+    # empty configuration is valid
+    - {}

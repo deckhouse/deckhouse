@@ -1,0 +1,21 @@
+dhctl:
+  features:
+    - summary: Add a templating feature for Kubernetes resources сreated by dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/776
+general:
+  fixes:
+    - summary: Move astra bundle to ee edition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/809
+ingress-nginx:
+  fixes:
+    - summary: temporary remove support of 1.0 controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/782
+node-group:
+  fixes:
+    - summary: Fix event creation for NG when new Machine provisioning process is failed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/757
+node-manager:
+  fixes:
+    - summary: Do not deploy VPA for bashible-apiserver if autoscaler is not enabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/708
+

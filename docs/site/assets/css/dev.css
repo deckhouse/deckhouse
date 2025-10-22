@@ -1,0 +1,37 @@
+/* language comparing */
+
+table.lang__compare {
+    width: 95%;
+    margin: 10px auto;
+    padding: 0px auto;
+}
+
+.lang__compare td {
+    width: 50%;
+    max-width: 500px;
+}
+
+.lang__compare code {
+    white-space: normal !important;
+}
+
+.lang__compare tr:nth-child(2n+1) td {
+    background: #4075ff14;
+}
+
+.lang__compare .equal * {
+    color: #797979;
+}
+
+.lang__compare h1  {
+    font-size: 1.5em
+}
+
+.lang__compare h2  {
+    font-size: 1.4em
+}
+
+.lang__compare h3  {
+    font-size: 1.3em
+}
+

@@ -1,0 +1,84 @@
+description: Обязательных настроек нет.
+properties:
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  cloudflareAPIToken:
+    description: |
+      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) позволяют использовать ключи, привязанные к определенным DNS-зонам.
+
+      Рекомендуется использовать API Tokens для более высокой безопасности, поскольку они имеют более строгие разрешения и могут быть легко отозваны.
+
+      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
+      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+  cloudflareGlobalAPIKey:
+    description: |
+      Cloudflare Global API key для управления DNS-записями.
+
+      Способ проверки того, что домены, указанные в ресурсе Certificate, для которых заказывается сертификат,
+      находятся под управлением `cert-manager` у DNS-провайдера Cloudflare. Проверка происходит путем добавления специальных
+      TXT-записей для домена [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/).
+  cloudflareEmail:
+    description: |
+      Почтовый ящик проекта, на который выдавались доступы для управления Cloudflare.
+  route53AccessKeyID:
+    description: |
+      Access Key ID пользователя с необходимыми правами.
+
+      [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
+      для управления доменными записями домена.
+  route53SecretAccessKey:
+    description: |
+      Secret Access Key пользователя с необходимыми правами для управления доменными записями домена.
+  digitalOceanCredentials:
+    description: |
+      Access Token от Digital Ocean API, который можно создать в разделе `API`.
+  cloudDNSServiceAccount:
+    description: |
+      Service Account для [Google Cloud](usage.html#заказ-wildcard-сертификата-с-dns-в-google)
+      из того же проекта с ролью Администратора DNS.
+  email:
+    description: |
+      Email проекта, на который LetsEncrypt будет слать уведомления.
+  cleanupOrphanSecrets:
+    description: |
+      Удалять Secret с сертификатом автоматически, если соответствующий ресурс Certificate удален из кластера.
+  disableLetsencrypt:
+    description: |
+      Не создавать ClusterIssuer `letsencrypt` и `letsencrypt-staging` в кластере (если `true`).
+  maxConcurrentChallenges:
+    description: |
+      Максимальное количество одновременных Challenges в статусе `Processing`
+  enableCAInjector:
+    description: |
+      Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
+      Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
+
+  ingressClassHttp01:
+    type: string
+    x-examples: ["nginx"]
+    description: |
+      Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).
+      Если параметр не указан, то используется `ingressClass` по умолчанию.
+
+  recursiveSettings:
+    description: |
+      Параметры использования рекурсивных DNS-серверов, которые применяются для проверки существования записи в DNS, перед запуском процесса подтверждения владения доменом методом [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/).
+    x-examples:
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
+        useOnlyRecursive: true
+    properties:
+      nameservers:
+        description: |
+          Список рекурсивных DNS-серверов (IP:порт или HTTPS-URL).
+      useOnlyRecursive:
+        description: |
+          Если значение true, для проверки существования записи в DNS перед запуском процесса подтверждения владения доменом будут использоваться только указанные рекурсивные DNS-серверы.

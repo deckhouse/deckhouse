@@ -1,0 +1,467 @@
+From 6a121bcfaaeeed04c51f1df5a9de2dab15936fde Mon Sep 17 00:00:00 2001
+From: "m.nabokikh" <maksim.nabokikh@flant.com>
+Date: Tue, 30 Mar 2021 13:41:08 +0400
+Subject: [PATCH] patch
+
+Signed-off-by: m.nabokikh <maksim.nabokikh@flant.com>
+---
+ dex-auth.go                     | 65 ++++++++++++++++++++++++--
+ entrypoint.sh                   |  2 +-
+ main.go                         |  7 +++
+ templates.go                    | 19 ++++++++
+ templates/kubeconfig.html       | 16 +++++--
+ templates/kubelogin-tab.html    | 82 +++++++++++++++++++++++++++++++++
+ templates/linux-mac-common.html |  2 +-
+ templates/linux-tab.html        |  2 +-
+ templates/mac-tab.html          |  4 +-
+ templates/raw-config-tab.html   | 39 ++++++++++++++++
+ templates/warning.html          | 42 +++++++++++++++++
+ 11 files changed, 268 insertions(+), 11 deletions(-)
+ create mode 100644 templates/kubelogin-tab.html
+ create mode 100644 templates/raw-config-tab.html
+ create mode 100644 templates/warning.html
+
+diff --git a/dex-auth.go b/dex-auth.go
+index 2a52d1d..245d512 100644
+--- a/dex-auth.go
++++ b/dex-auth.go
+@@ -2,6 +2,7 @@ package main
+
+ import (
+ 	"bytes"
++	"encoding/base64"
+ 	"encoding/json"
+ 	"fmt"
+ 	"io/ioutil"
+@@ -17,6 +18,36 @@ import (
+
+ const exampleAppState = "Vgn2lp5QnymFtLntKX5dM8k773PwcM87T4hQtiESC1q8wkUBgw5D3kH0r5qJ"
+
++func loadCookie(r *http.Request) ([]string, error) {
++	var clusters []string
++
++	cookie, err := r.Cookie("clusters")
++	if err != nil {
++		return clusters, err
++	}
++
++	if cookie != nil {
++		cookieString, err := base64.StdEncoding.DecodeString(cookie.Value)
++		if err != nil {
++			return clusters, err
++		}
++		err = json.Unmarshal(cookieString, &clusters)
++		if err != nil {
++			return clusters, err
++		}
++	}
++	return clusters, nil
++}
++
++func newCookie(clusters []string) *http.Cookie {
++	cookie := http.Cookie{Name: "clusters", Path: "/"}
++
++	newCookieValue, _ := json.Marshal(clusters)
++
++	cookie.Value = base64.StdEncoding.EncodeToString(newCookieValue)
++	return &cookie
++}
++
+ func (cluster *Cluster) oauth2Config(scopes []string) *oauth2.Config {
+
+ 	return &oauth2.Config{
+@@ -29,8 +60,7 @@ func (cluster *Cluster) oauth2Config(scopes []string) *oauth2.Config {
+ }
+
+ func (config *Config) handleIndex(w http.ResponseWriter, r *http.Request) {
+-
+-	if len(config.Clusters) == 1 && r.URL.String() == config.Web_Path_Prefix {
++	if len(config.Clusters) == 1 && r.URL.Path == config.Web_Path_Prefix {
+ 		http.Redirect(w, r, path.Join(config.Web_Path_Prefix, "login", config.Clusters[0].Name), http.StatusSeeOther)
+ 	} else {
+ 		renderIndex(w, config)
+@@ -38,9 +68,32 @@ func (config *Config) handleIndex(w http.ResponseWriter, r *http.Request) {
+ }
+
+ func (cluster *Cluster) handleLogin(w http.ResponseWriter, r *http.Request) {
++	clusters, err := loadCookie(r)
++	if err != nil {
++		log.Printf("Error while decoding cookie: %v", err)
++	}
++	skipAlreadyLogged := r.URL.Query().Get("skip_already_logged")
++	if skipAlreadyLogged == "" {
++		for _, clusterName := range clusters {
++			if clusterName == cluster.Name {
++				cluster.renderWarning(w, clusterName)
++				return
++			}
++		}
++	} else {
++		for index, clusterName := range clusters {
++			if clusterName == cluster.Name {
++				clusters = append(clusters[:index], clusters[index+1:]...)
++				break
++			}
++		}
++		http.SetCookie(w, newCookie(clusters))
++	}
++
+ 	var scopes []string
+
+ 	scopes = append(scopes, "openid", "profile", "email", "offline_access", "groups")
++	scopes = append(scopes, cluster.Scopes...)
+
+ 	log.Printf("Handling login-uri for: %s", cluster.Name)
+ 	authCodeURL := cluster.oauth2Config(scopes).AuthCodeURL(exampleAppState, oauth2.AccessTypeOffline)
+@@ -59,7 +112,6 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
+ 	userErrorMsg := "Invalid token request"
+
+ 	log.Printf("Handling callback for: %s", cluster.Name)
+-
+ 	ctx := oidc.ClientContext(r.Context(), cluster.Client)
+ 	oauth2Config := cluster.oauth2Config(nil)
+ 	switch r.Method {
+@@ -136,6 +188,13 @@ func (cluster *Cluster) handleCallback(w http.ResponseWriter, r *http.Request) {
+ 		IdpCaPem = cast.ToString(content)
+ 	}
+
++	clusters, err := loadCookie(r)
++	if err != nil {
++		log.Printf("Error while decoding cookie: %v", err)
++	}
++	clusters = append(clusters, cluster.Name)
++	http.SetCookie(w, newCookie(clusters))
++
+ 	cluster.renderToken(w, rawIDToken, token.RefreshToken,
+ 		cluster.Config.IDP_Ca_URI,
+ 		IdpCaPem,
+diff --git a/entrypoint.sh b/entrypoint.sh
+index 14bec45..9478319 100755
+--- a/entrypoint.sh
++++ b/entrypoint.sh
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+
+-if [ ! -z "$(ls -A /certs)" ]; then
++if [[ ! -z "$(ls -A /certs)" ]]; then
+   cp -L /certs/*.crt /usr/local/share/ca-certificates/ 2>/dev/null
+   update-ca-certificates
+ fi
+diff --git a/main.go b/main.go
+index d195f18..6aa85b1 100644
+--- a/main.go
++++ b/main.go
+@@ -65,6 +65,7 @@ type Cluster struct {
+ 	K8s_Ca_URI          string
+ 	K8s_Ca_Pem          string
+ 	Static_Context_Name bool
++	Scopes              []string
+
+ 	Verifier       *oidc.IDTokenVerifier
+ 	Provider       *oidc.Provider
+@@ -235,6 +236,12 @@ func start_app(config Config) {
+ 	// Index page
+ 	http.HandleFunc(config.Web_Path_Prefix, config.handleIndex)
+
++	// Health check page
++	http.HandleFunc(config.Web_Path_Prefix+"healthz", func(w http.ResponseWriter, _ *http.Request) {
++		w.WriteHeader(http.StatusOK)
++		w.Write([]byte("ok"))
++	})
++
+ 	// Serve static html assets
+ 	fs := http.FileServer(http.Dir("html/static/"))
+ 	static_uri := path.Join(config.Web_Path_Prefix, "static") + "/"
+diff --git a/templates.go b/templates.go
+index c6ab1b1..893a163 100644
+--- a/templates.go
++++ b/templates.go
+@@ -3,6 +3,7 @@
+ package main
+
+ import (
++	"encoding/base64"
+ 	"encoding/json"
+ 	"fmt"
+ 	"html/template"
+@@ -37,8 +38,10 @@ type templateData struct {
+ 	K8sMasterURI      string
+ 	K8sCaURI          string
+ 	K8sCaPem          string
++	K8sCaEncoded      string
+ 	IDPCaURI          string
+ 	IDPCaPem          string
++	IDPCaEncoded      string
+ 	LogoURI           string
+ 	Web_Path_Prefix   string
+ 	StaticContextName bool
+@@ -67,6 +70,9 @@ func (cluster *Cluster) renderToken(w http.ResponseWriter,
+ 		unix_username = strings.Split(email, "@")[0]
+ 	}
+
++	encodedCa := base64.StdEncoding.EncodeToString([]byte(cluster.K8s_Ca_Pem))
++	encodedIDP := base64.StdEncoding.EncodeToString([]byte(idpCaPem))
++
+ 	token_data := templateData{
+ 		IDToken:           idToken,
+ 		RefreshToken:      refreshToken,
+@@ -81,8 +87,10 @@ func (cluster *Cluster) renderToken(w http.ResponseWriter,
+ 		K8sMasterURI:      cluster.K8s_Master_URI,
+ 		K8sCaURI:          cluster.K8s_Ca_URI,
+ 		K8sCaPem:          cluster.K8s_Ca_Pem,
++		K8sCaEncoded:      encodedCa,
+ 		IDPCaURI:          idpCaURI,
+ 		IDPCaPem:          idpCaPem,
++		IDPCaEncoded:      encodedIDP,
+ 		LogoURI:           logoURI,
+ 		Web_Path_Prefix:   webPathPrefix,
+ 		StaticContextName: cluster.Static_Context_Name,
+@@ -107,3 +115,14 @@ func (cluster *Cluster) renderHTMLError(w http.ResponseWriter, errorMsg string,
+ 		"Error_Description": errorMsg,
+ 	})
+ }
++
++func (cluster *Cluster) renderWarning(w http.ResponseWriter, name string) {
++	w.Header().Set("Content-Type", "text/html; charset=utf-8")
++	w.Header().Set("X-Content-Type-Options", "nosniff")
++	w.WriteHeader(200)
++	templates.ExecuteTemplate(w, "warning.html", map[string]string{
++		"Logo_Uri":        cluster.Config.Logo_Uri,
++		"Web_Path_Prefix": cluster.Config.Web_Path_Prefix,
++		"Name":            name,
++	})
++}
+diff --git a/templates/kubeconfig.html b/templates/kubeconfig.html
+index 35763de..fe5bbb4 100644
+--- a/templates/kubeconfig.html
++++ b/templates/kubeconfig.html
+@@ -26,7 +26,7 @@
+   <div class="dex-kubeconfig-container">
+     <div class="theme-panel">
+       <div style="float:right">
+-        <a href="{{ .Web_Path_Prefix }}">Login Again</a>
++        <a href="{{ .Web_Path_Prefix }}login/{{ .ClusterName }}?skip_already_logged=true">Login Again</a>
+       </div>
+       <h2 class="theme-heading">Generated Kubernetes Token - {{ .ShortDescription }}</h2>
+
+@@ -41,24 +41,34 @@
+         </div>
+
+         <div class="tab">
+-          <button class="tablinks active" onclick="openTab(event, 'Linux')">Linux</button>
++          <button class="tablinks active" onclick="openTab(event, 'Kubelogin')">Kubelogin</button>
++          <button class="tablinks" onclick="openTab(event, 'Linux')">Linux</button>
+           <button class="tablinks" onclick="openTab(event, 'MacOS')">MacOS</button>
+           <button class="tablinks" onclick="openTab(event, 'Windows')">Windows</button>
++          <button class="tablinks" onclick="openTab(event, 'RawConfig')">Raw Config</button>
+           <button class="tablinks" onclick="openTab(event, 'IDToken')">ID Token</button>
+         </div>
+
+-        <div id="Linux" class="tabcontent" style="display: block">
++        <div id="Kubelogin" class="tabcontent" style="display: block">
++          {{ template "kubelogin-tab-content" . }}
++        </div>
++
++        <div id="Linux" class="tabcontent">
+           {{ template "linux-tab-content" . }}
+         </div>
+-
++
+         <div id="MacOS" class="tabcontent">
+           {{ template "mac-tab-content" . }}
+         </div>
+-
++
+         <div id="Windows" class="tabcontent">
+           {{ template "windows-tab-content" . }}
+         </div>
+
++        <div id="RawConfig" class="tabcontent">
++          {{ template "raw-config-tab-content" . }}
++        </div>
++
+         <div id="IDToken" class="tabcontent">
+           {{ template "id-token-content" . }}
+         </div>
+diff --git a/templates/kubelogin-tab.html b/templates/kubelogin-tab.html
+new file mode 100644
+index 0000000..2905d2a
+--- /dev/null
++++ b/templates/kubelogin-tab.html
+@@ -0,0 +1,82 @@
++{{ define "kubelogin-tab-content" }}
++  <p>
++  {{ if .K8sCaURI }}
++    <h3>Copy Kubernetes CA Certificate From URL</h3>
++
++    <p>Copy this CA Certificate and download it to your .kube directory</p>
++    <div class="command">
++
++      <button class="btn" style="float: right" data-clipboard-snippet="">
++        <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt=""/>
++      </button>
++      <pre><code>curl --create-dirs -s {{ .K8sCaURI }} -o ${HOME}/.kube/certs/{{ .ClusterName }}/k8s-ca.crt</code></pre>
++    </div>
++  {{ end }}
++
++  <h3>Kubectl + Kubelogin</h3>
++  <p>
++    Kubelogin plugin is designed to run as a client-go credential plugin.
++    When you run kubectl, kubelogin opens the browser and you can log in to the provider.
++    It also prevents loosing refresh tokens and receive errors on concurrent requests.
++  </p>
++  <p><b>Install the latest release from Homebrew, Krew, Chocolatey or GitHub Releases.</b></p>
++
++  <div class="command">
++<pre><code># Github releases (macOS, Linux, Windows and ARM)
++github.com/int128/kubelogin/releases
++
++# Homebrew (macOS and Linux)
++brew install int128/kubelogin/kubelogin
++
++# Krew (macOS, Linux, Windows and ARM)
++kubectl krew install oidc-login
++
++# Chocolatey (Windows)
++choco install kubelogin
++</code></pre>
++  </div>
++
++  <p>Kubectl configuration file that you can copy to ${HOME}/.kube/config</p>
++  <div class="command">
++    <button class="btn" style="float:right" data-clipboard-snippet="">
++      <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt="">
++    </button>
++<pre><code>apiVersion: v1
++kind: Config
++preferences: {}
++users:
++- name: {{ .Username }}-{{ .ClusterName }}
++  user:
++    exec:
++      apiVersion: client.authentication.k8s.io/v1beta1
++      args:
++      - oidc-login
++      - get-token
++      - "--oidc-issuer-url={{ .Issuer }}"
++      - "--oidc-client-id={{ .ClientID }}"
++      - "--oidc-client-secret={{ .ClientSecret }}"
++      - "--oidc-extra-scope=email"
++      - "--oidc-extra-scope=profile"
++      - "--oidc-extra-scope=groups"
++      - "--oidc-extra-scope=offline_access"
++      - "--oidc-extra-scope=audience:server:client_id:kubernetes"
++      - "--oidc-extra-scope=federated:id"
++      {{- if .IDPCaPem }}
++      - "--certificate-authority-data={{ .IDPCaEncoded }}"
++      {{- end }}
++      command: kubectl
++clusters:
++- name: {{ .ClusterName }}
++  cluster:
++    server: {{ .K8sMasterURI }}
++    {{ if .K8sCaPem }}certificate-authority-data: {{ .K8sCaEncoded }}
++    {{- else if .K8sCaURI }}certificate-authority: ~/.kube/certs/{{ .ClusterName }}/k8s-ca.crt
++    {{- end }}
++contexts:
++- context:
++    cluster: {{ .ClusterName }}
++    user: {{ .Username }}-{{ .ClusterName }}
++  name: {{ .Username }}-{{ .ClusterName }}
++current-context: {{ .Username }}-{{ .ClusterName }}</code></pre>
++  </div>
++{{ end }}
+
+diff --git a/templates/raw-config-tab.html b/templates/raw-config-tab.html
+new file mode 100644
+index 0000000..c3a73e5
+--- /dev/null
++++ b/templates/raw-config-tab.html
+@@ -0,0 +1,39 @@
++{{ define "raw-config-tab-content" }}
++<p>
++<p>Kubectl configuration file that you can copy to ${HOME}/.kube/config</p>
++<div class="command">
++  <button class="btn" style="float:right" data-clipboard-snippet="">
++    <img class="clippy" width="13" src="{{ .Web_Path_Prefix }}static/clippy.svg" alt="">
++  </button>
++  <pre><code>apiVersion: v1
++kind: Config
++preferences: {}
++users:
++- name: {{ .Username }}-{{ .ClusterName }}
++  user:
++    auth-provider:
++      config:
++        client-id: {{ .ClientID }}
++        client-secret: {{ .ClientSecret }}
++        id-token: {{ .IDToken }}
++        idp-issuer-url: {{ .Issuer }}
++        {{- if .IDPCaPem }}
++        idp-certificate-authority-data: {{ .IDPCaEncoded }}
++        {{- end }}
++        refresh-token: {{ .RefreshToken }}
++      name: oidc
++clusters:
++- name: {{ .ClusterName }}
++  cluster:
++    server: {{ .K8sMasterURI }}
++    {{ if .K8sCaPem }}certificate-authority-data: {{ .K8sCaEncoded }}
++    {{- else if .K8sCaURI }}certificate-authority: ~/.kube/certs/{{ .ClusterName }}/k8s-ca.crt
++    {{- end }}
++contexts:
++- context:
++    cluster: {{ .ClusterName }}
++    user: {{ .Username }}-{{ .ClusterName }}
++  name: {{ .Username }}-{{ .ClusterName }}
++current-context: {{ .Username }}-{{ .ClusterName }}</code></pre>
++</div>
++{{ end }}
+diff --git a/templates/warning.html b/templates/warning.html
+new file mode 100644
+index 0000000..59433de
+--- /dev/null
++++ b/templates/warning.html
+@@ -0,0 +1,42 @@
++<!DOCTYPE html>
++<html>
++  <head>
++    <meta charset="utf-8">
++    <meta name="google" content="notranslate">
++    <meta http-equiv="Content-Language" content="en">
++    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
++
++    <title>Warning - You are already logged</title>
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <link href="{{ .Web_Path_Prefix }}static/main.css" rel="stylesheet" type="text/css">
++    <link href="{{ .Web_Path_Prefix }}static/styles.css" rel="stylesheet" type="text/css">
++    <link rel="icon" href="{{ .Web_Path_Prefix }}static/favicon.png">
++  </head>
++
++  <body class="theme-body">
++    <div class="theme-navbar">
++      {{ if .Logo_Uri }}
++      <div class="theme-navbar__logo-wrap">
++          <img class="theme-navbar__logo" src="{{ .Logo_Uri }}"/>
++      </div>
++      {{ end }}
++    </div>
++
++    <div class="dex-container">
++      <div class="theme-panel">
++        <h2 class="theme-heading">You already generated kubeconfig for <b>{{ .Name }}</b> cluster</h2>
++        <div class="theme-form-row">
++          <p class="theme-form-description">If you generate new kubeconfig, the old one will stop working</p>
++          <p>
++            <a href="{{ .Web_Path_Prefix }}login/{{ .Name }}?skip_already_logged=true" target="_self">
++              <button class="dex-btn theme-btn-provider">
++                <span class="dex-btn-icon dex-btn-icon--local"></span>
++                <span class="dex-btn-text">Generate new kubeconfig</span>
++              </button>
++            </a>
++          </p>
++        </div>
++      </div>
++    </div>
++  </body>
++</html>

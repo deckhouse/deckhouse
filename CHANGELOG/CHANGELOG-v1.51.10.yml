@@ -1,0 +1,5 @@
+prometheus:
+  fixes:
+    - summary: fix fix-permissions init-container to run under kesl security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6091
+

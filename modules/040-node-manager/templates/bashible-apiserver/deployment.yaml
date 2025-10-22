@@ -1,0 +1,180 @@
+{{- define "bashible_apiserver_resources" }}
+cpu: 25m
+memory: 150Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: bashible-apiserver
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "bashible-apiserver"
+      minAllowed:
+        {{- include "bashible_apiserver_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 200Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: "bashible-apiserver"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "bashible-apiserver"
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: "bashible-apiserver"
+  template:
+    metadata:
+      labels:
+        app: "bashible-apiserver"
+    spec:
+      {{- include "helm_lib_node_selector"  (tuple . "master")  | nindent 6 }}
+      {{- include "helm_lib_tolerations"    (tuple . "any-node" "uninitialized")  | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" .   | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: bashible-apiserver
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: bashible-apiserver
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--cert-dir=/var/certs"
+          - "--secure-port=4221"
+        volumeMounts:
+          - name: certs
+            mountPath: /var/certs
+            readOnly: false
+          - name: dependency-files
+            mountPath: /var/files
+          - name: tmp
+            mountPath: /tmp
+        ports:
+          - name: https
+            hostPort: 4221
+            containerPort: 4221
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: https
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: https
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "bashible_apiserver_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+        - name: certs
+          secret:
+            secretName: bashible-api-server-tls
+        - name: dependency-files
+          configMap:
+            name: bashible-apiserver-files
+        - name: tmp
+          emptyDir: {}
+
+
+{{- define "bashible_input_data" }}
+    clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
+    clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
+
+    {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    cloudProvider:
+      {{- $.Values.nodeManager.internal.cloudProvider | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
+    proxy:
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
+      httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
+      {{- end }}
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpsProxy" }}
+      httpsProxy: {{ $.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
+      {{- end }}
+      {{- $noProxy := list "127.0.0.1" "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
+      {{- if hasKey $.Values.global.clusterConfiguration.proxy "noProxy" }}
+        {{- $noProxy = concat $noProxy $.Values.global.clusterConfiguration.proxy.noProxy }}
+      {{- end }}
+      noProxy:
+        {{- $noProxy | toYaml | nindent 8 }}
+    {{- end }}
+    bootstrapTokens:
+      {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
+    apiserverEndpoints:
+      {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
+    packagesProxy:
+      addresses:
+        {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
+      token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
+    {{- end }}
+    {{- if $.Values.nodeManager.internal.kubernetesCA }}
+    kubernetesCA: |
+      {{- $.Values.nodeManager.internal.kubernetesCA | nindent 6 }}
+    {{- end }}
+    allowedBundles:
+      {{- $.Values.nodeManager.internal.allowedBundles | toYaml | nindent 6 }}
+    nodeGroups:
+      {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
+    nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-apiserver-context
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+data:
+  input.yaml: |-
+    {{- include "bashible_input_data" . | b64enc | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bashible-apiserver-files
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
+data:
+  version_map.yml: |-
+    {{- .Files.Get "candi/version_map.yml" | nindent 4 }}
+  images_digests.json: |-
+    {{- .Files.Get "images_digests.json" | nindent 4 }}

@@ -1,0 +1,18 @@
+candi:
+  fixes:
+    - summary: Fix RedOS installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6121
+linstor:
+  fixes:
+    - summary: Removed alert about HA-controller absence.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6166
+    - summary: >-
+        Added an init container for LINSTOR satellite, that waits for DRBD v9.x to be loaded on the
+        node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6151
+registrypackages:
+  fixes:
+    - summary: Fix disabling the old `containerd` service in Ubuntu `18.04`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6172
+      impact: '`containerd` on Ubuntu 18.04 will restart.'
+

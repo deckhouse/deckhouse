@@ -1,0 +1,157 @@
+---
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  name: up-services
+spec:
+  folder: Services
+  definition: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "-- Grafana --"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "target": {
+              "limit": 100,
+              "matchAny": false,
+              "tags": [],
+              "type": "dashboard"
+            },
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": false,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": 31,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 15,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 10,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 26,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "legend": {
+              "calcs": [
+                  "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "8.5.2",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$ds_prometheus"
+              },
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "sum by (job, scrape_endpoint, scrape_source) (up)",
+              "format": "time_series",
+              "instant": false,
+              "legendFormat": "{{ job }} {{ scrape_source }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Up",
+          "transformations": [],
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-3h",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+            "30s"
+        ]
+      },
+      "timezone": "",
+      "title": "Services Up",
+      "uid": "f_8jGXenz",
+      "version": 1,
+      "weekStart": ""
+    }

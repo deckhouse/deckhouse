@@ -1,0 +1,16 @@
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Reverted "mergo" library update. Fixed an issue where Deckhouse might panic on concurrent
+        map access.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4872
+docs:
+  fixes:
+    - summary: Fix the module comparison table in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4870
+linstor:
+  features:
+    - summary: Added params for enabled SELinux support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4849
+      impact: linstor satellite Pods will be restarted.
+

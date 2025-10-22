@@ -1,0 +1,161 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{/*
+Multifile generator of e2e workflows.
+
+One workflow file for each provider.
+
+Workflow consists of jobs for each possible pair of CRI and Kubernetes version.
+Jobs are enabled according to outputs from check labels job.
+
+A note on werf.yaml and deckhouse image tag:
+
+$CI_COMMIT_REF_NAME environment variable is used in werf.yaml, so it is needed
+    for successful run of werf commands.
+
+$CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
+    of "pr<PR_NUMBER>" for pull requests and deckouse Deployment uses this tag
+    to auto update testing cluster on new commits.
+    The Git tag is slugified in case it constains a plus sign.
+
+*/}!}
+
+{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
+{!{- $criNames := slice "Containerd" "ContainerdV2" -}!}
+{!{- $kubernetesVersions := slice "1.29" "1.30" "1.31" "1.32" "1.33" "1.34" "Automatic" -}!}
+
+{!{- range $providerName := $providerNames -}!}
+{!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
+{!{-   $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
+{!{-   $ctx := dict "provider" $provider "providerName" $providerName "criNames" $criNames "kubernetesVersions" $kubernetesVersions "kubernetesDefaultVersion" $kubernetesDefaultVersion }!}
+{!{-   $outFile := printf "e2e-%s.yml" $provider }!}
+{!{-   $outPath := filepath.Join (getenv "OUTDIR") $outFile }!}
+{!{-   tmpl.Exec "e2e_workflow_template" $ctx | file.Write $outPath }!}
+{!{- end -}!}
+
+
+{!{/* Template with e2e jobs for one provider. */}!}
+{!{- define "e2e_workflow_template" -}!}
+{!{- $ctx := . -}!}
+{!{- $workflowName := printf "e2e: %s" $ctx.providerName -}!}
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# <template: e2e_workflow_template>
+name: '{!{ $workflowName }!}'
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'ID of issue where label was set'
+        required: false
+      issue_number:
+        description: 'Number of issue where label was set'
+        required: false
+      comment_id:
+        description: 'ID of comment in issue where to put workflow run status'
+        required: false
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref for checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'Git SHA for restoring artifacts from cache'
+        required: false
+      pull_request_head_label:
+        description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
+        required: false
+      test_config:
+        description: 'JSON string of parameters of current test'
+        required: false
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
+      initial_ref_slug:
+        description: 'An image tag to install first and then switch to workflow context ref'
+        required: false
+      autodelete:
+        description: 'Should the cluster be deleted regardless of the test result'
+        required: true
+        default: false
+        type: boolean
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Note: no concurrency section for e2e workflows.
+# Usually you run e2e and wait until it ends.
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  started_at:
+    name: Save start timestamp
+    outputs:
+      started_at: ${{ steps.started_at.outputs.started_at }}
+    runs-on: "ubuntu-latest"
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "block-until-image-is-not-ready" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
+
+{!{/* Jobs for each CRI and Kubernetes version */}!}
+{!{- $lastCommentNeeds := slice "started_at" "git_info" -}!}
+{!{- $jobNames := dict -}!}
+{!{- range $criName := $ctx.criNames -}!}
+{!{-   range $kubernetesVersion := $ctx.kubernetesVersions -}!}
+{!{-     $kubernetesVersionSlug := $kubernetesVersion | replaceAll "." "_" -}!}
+{!{-     $cri := $criName | toLower -}!}
+{!{-     $criEnv := $cri | toUpper -}!}
+{!{-     $layout := (tmpl.Exec "e2e_get_layout" $ctx | strings.TrimSpace ) -}!}
+{!{-     $jobID := printf "run_%s_%s" $cri $kubernetesVersionSlug -}!}
+{!{-     $jobName := printf "%s, %s, Kubernetes %s" $workflowName $criName $kubernetesVersion -}!}
+{!{-     $lastCommentNeeds = $lastCommentNeeds | append $jobID -}!}
+{!{-     $jobNames = coll.Merge $jobNames (dict $jobID $jobName) }!}
+{!{-     $jobCtx := coll.Merge $ctx (dict "e2eStepTimeoutMinutes" "80" "sleepBeforeClusterTestingAlerts" "0" "manualRun" "yes" "cri" $cri "criName" $criName "criEnv" $criEnv "layout" $layout "kubernetesVersion" $kubernetesVersion "kubernetesVersionSlug" $kubernetesVersionSlug "workflowName" $workflowName "jobName" $jobName "jobID" $jobID) }!}
+{!{     tmpl.Exec "e2e_run_job_template" $jobCtx | strings.Indent 2 }!}
+{!{-   end -}!}
+{!{- end }!}
+
+  last_comment:
+    name: Update comment on finish
+    needs: {!{ $lastCommentNeeds | toJSON }!}
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      JOB_NAMES: |
+        {!{ $jobNames | toJSON }!}
+    steps:
+{!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "workflow,final,no-skipped,restore-separate" $workflowName) | strings.Indent 6 }!}
+{!{ tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 6 }!}
+# </template: e2e_workflow_template>
+{!{ end -}!}

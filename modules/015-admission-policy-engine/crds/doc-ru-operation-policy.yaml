@@ -1,0 +1,124 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает операционную политику для кластера.
+
+            Каждый ресурс `OperationPolicy` описывает правила для объектов в кластере.
+          properties:
+            spec:
+              properties:
+                enforcementAction:
+                  description: |
+                    Действие, которое будет выполнено по результатам проверки ограничений:
+                    - `Deny` — запрет;
+                    - `Dryrun` — отсутствие действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana в Dashboard `Security/Admission policy engine`;
+                    - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
+                policies:
+                  properties:
+                    allowedRepos:
+                      description: |
+                        Список префиксов, которые может иметь образ контейнера.
+                    requiredResources:
+                      description: |
+                        Набор ресурсов, который требуют контейнеры.
+                      properties:
+                        limits:
+                          description: "Список ограничений по выделяемым ресурсам, которые должны соблюдаться (по процессору, памяти или оба ограничения)."
+                        requests:
+                          description: "Список запросов на выделение ресурсов, которые должны быть выполнены (процессор, память или оба запроса)."
+                    disallowedImageTags:
+                      description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
+                    disallowedTolerations:
+                      description: |
+                        Запрещает создание подов с tolerations из указанного списка.
+
+                        Больше информации [в документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+
+                        Список шаблонов toleration (partial match по указанным полям: key/operator/value/effect).
+                    requiredLabels:
+                      description: |
+                        Список лейблов, которые должен указать объект.
+                      properties:
+                        labels:
+                          items:
+                            properties:
+                              key:
+                                description: >-
+                                  Требуемый лейбл.
+                              allowedRegex:
+                                description: >-
+                                  Если указано, то содержит регулярное выражение, которому должно соответствовать значение лейбла. Значение должно содержать хотя бы одно совпадение с регулярным выражением.
+                        watchKinds:
+                          description: |
+                            Список объектов Kubernetes в формате `$apiGroup/$kind` для просмотра меток.
+                    requiredAnnotations:
+                      description: |
+                        Список аннотаций, которые должен указать объект.
+                      properties:
+                        annotations:
+                          items:
+                            properties:
+                              key:
+                                description: >-
+                                  Требуемая аннотация.
+                              allowedRegex:
+                                description: >-
+                                  Если указано, то содержит регулярное выражение, которому должно соответствовать значение аннотации. Значение должно содержать хотя бы одно совпадение с регулярным выражением.
+                        watchKinds:
+                          description: |
+                            Список объектов Kubernetes в формате `$apiGroup/$kind` для просмотра аннотаций.
+                    requiredProbes:
+                      description: "Список проб, которые необходимы (например, `readinessProbe` и `livenessProbe`)."
+                    maxRevisionHistoryLimit:
+                      description: "Максимальное значение для истории ревизий."
+                    priorityClassNames:
+                      description: "Список возможных классов приоритета."
+                    ingressClassNames:
+                      description: "Список возможных классов ингресса."
+                    storageClassNames:
+                      description: "Список возможных классов хранилища."
+                    imagePullPolicy:
+                      description: "Требуемая политика скачивания образов для контейнеров."
+                    checkHostNetworkDNSPolicy:
+                      description: "Проверка, что dnsPolicy `ClusterFirstWithHostNet` установлена для подов с `hostNetwork: true`."
+                    checkContainerDuplicates:
+                      description: "Проверка имен контейнеров и переменных env на наличие дубликатов."
+                    replicaLimits:
+                      description: "Проверка диапазона разрешенных реплик. Значения включаются в диапазон."
+                      properties:
+                        minReplicas:
+                          description: "Минимально разрешенное количество реплик, включительно."
+                        maxReplicas:
+                          description: "Максимально разрешенное количество реплик, включительно."
+                match:
+                  properties:
+                    namespaceSelector:
+                      description: Указывает селектор пространства имен для фильтрации объектов.
+                      properties:
+                        matchNames:
+                          description: "Включать только определенный набор пространств имен."
+                        excludeNames:
+                          description: "Включить все пространства имен, кроме определенного набора."
+                        labelSelector:
+                          description: |
+                            Указывает селектор меток для фильтрации пространств имен.
+
+                            Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          properties:
+                            matchLabels:
+                              description: Список лейблов, которые должно иметь пространство имен.
+                            matchExpressions:
+                              description: Список выражений лейблов для пространств имен.
+                    labelSelector:
+                      description: |
+                        Указывает селектор лейблов для фильтрации подов.
+
+                        Больше информации [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      properties:
+                        matchLabels:
+                          description: Список лейблов, которые должен иметь под.
+                        matchExpressions:
+                          description: Список выражений лейблов для подов.

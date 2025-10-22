@@ -1,0 +1,4 @@
+source $VIMRUNTIME/defaults.vim
+let g:skip_defaults_vim = 1
+set noautoindent
+set mouse=c

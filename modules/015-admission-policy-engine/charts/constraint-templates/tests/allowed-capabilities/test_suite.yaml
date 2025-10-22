@@ -1,0 +1,61 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-capabilities
+tests:
+  - name: pod-security-standard-baseline
+    template: ../../templates/security/allowed-capabilities.yaml
+    constraint: constraint_pss_baseline.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-ephemeral
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_baseline/disallowed_ephemeral.yaml
+        assertions:
+          - violations: yes
+  - name: pod-security-standard-restricted
+    template: ../../templates/security/allowed-capabilities.yaml
+    constraint: constraint_pss_restricted.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-allowed-drop
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/allowed_drop.yaml
+        assertions:
+          - violations: no
+      - name: example-skip-pss-label
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/allowed_with_skip_pss.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-wo-drop
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/pss_restricted/disallowed_wo_drop.yaml
+        assertions:
+          - violations: yes

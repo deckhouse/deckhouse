@@ -1,0 +1,130 @@
+# render git imports include paths
+{{- define "dev_prebuild_git_imports_include_paths" }}
+- candi
+- modules
+- global-hooks
+- shell_lib.sh
+- shell_lib
+- deckhouse-controller/entrypoint.sh
+- deckhouse-controller/crds/*.yaml
+- jq_lib
+- helm_lib
+- python_lib
+{{- end }}
+
+
+#  render shell operator import
+{{- define "dev_prebuild_git_shell_operator" }}
+- url: {{ .SOURCE_REPO }}/flant/shell-operator
+  tag: v1.4.10
+  add: /frameworks/shell
+  to: /deckhouse/shell-operator/frameworks/shell
+{{- end }}
+
+# render imports from images
+# . is dict with keys:
+#   Env - werf env
+{{- define "dev_prebuild_images_imports" }}
+{{- $context := . -}}
+
+- image: deckhouse-controller-artifact
+  add: /out
+  to: /usr/bin
+  after: install
+  includePaths:
+  - deckhouse-controller
+  - caps-deckhouse-controller
+- image: libs/ncurses
+  add: /usr/share/terminfo/
+  to: /usr/share/terminfo/
+  before: install
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
+- image: tools/erofs-utils
+  add: /usr/bin/mkfs.erofs
+  to: /usr/bin/mkfs.erofs
+  after: setup
+- image: tools/cryptsetup
+  add: /usr/sbin/veritysetup
+  to: /usr/sbin/veritysetup
+  after: setup
+- image: version-map-artifact
+  add: /version_map_{{ $context.Env }}.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
+{{- end }}
+
+
+#  render general part of setup script
+# . is dict with keys:
+#   Env - edition set up from ci
+#   CI_COMMIT_TAG - CI_COMMIT_TAG env
+{{- define "dev_prebuild_setup_script_general_part" }}
+{{- $context := . -}}
+
+# Add version info
+cat <<"EOD" > /deckhouse/version
+{{ $context.CI_COMMIT_TAG}}
+EOD
+# Add edition info
+cat <<"EOD" > /deckhouse/edition
+{{ $context.Env | default "unknown"}}
+EOD
+# Override deckhouse entrypoint to use tini as supervisor
+cat <<"EOD" > /deckhouse/deckhouse
+#!/bin/bash
+exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
+EOD
+chmod +x /deckhouse/deckhouse
+# Create symlink to grant entrypoint.sh write permission
+ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+# Run deckhouse from dedicated user
+chown deckhouse:deckhouse -R /deckhouse
+{{- end }}
+
+# render docker parameters for installer image
+{{- define "dev_prebuild_docker_properties" }}
+imageSpec:
+  config:
+    env: { "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PYTHONPATH": "/deckhouse/python_lib", "LC_ALL": "C" }
+{{- end }}
+
+
+# render deckhouse controller image
+{{- define "dev_image" }}
+image: dev
+fromImage: dev-prebuild
+import:
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
+  after: setup
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
+  after: setup
+git:
+- add: /tools/mounts/mountdir
+  to: /.kube
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+- add: /tools/mounts/mountdir
+  to: /certs
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+- add: /tools/mounts/mountdir
+  to: /deckhouse/downloaded
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+{{- end }}

@@ -1,0 +1,3 @@
+x-extend:
+  schema: config-values.yaml
+type: object

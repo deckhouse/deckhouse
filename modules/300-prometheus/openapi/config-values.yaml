@@ -1,0 +1,378 @@
+x-config-version: 2
+type: object
+properties:
+  retentionDays:
+    type: integer
+    default: 15
+    description: How long to keep the data.
+  storageClass:
+    type: string
+    x-examples: ["ceph-ssd", "false"]
+    description: |-
+      The name of the StorageClass to use for Longterm Prometheus.
+
+      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
+
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      If `false` is specified, `emptyDir` will be forced to be used.
+  longtermStorageClass:
+    type: string
+    x-examples: ["ceph-ssd"]
+    description: |-
+      The name of the StorageClass to use for Longterm Prometheus.
+
+      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
+
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      **Warning.** When migrating Prometheus with local storage to other nodes, the pod will hang in the Pending state. In this case, it will be necessary to save the Prometheus database, delete the old PVC and restart the pod manually.  Local storage refers to a StorageClass that is associated not with network storage, but with a local volume on a node (for example, StorageClass created by the local-path-provider module).
+
+      If `false` is specified, emptyDir will be forced to be used.
+  longtermRetentionDays:
+    type: integer
+    default: 1095
+    description: |
+      How long to keep the data in longterm Prometheus.
+
+      Setting this parameter to `0` will result in Longterm Prometheus not running in the cluster.
+  auth:
+    type: object
+    default: {}
+    description: Options related to authentication or authorization in the application.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            x-examples: ["https://example.com/dex/auth"]
+            description: The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            x-examples: ["https://example.com/dex/sign_in"]
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access Grafana & Prometheus.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
+        description: An array if CIDRs that are allowed to authenticate in Grafana & Prometheus.
+      satisfyAny:
+        type: boolean
+        default: false
+        x-examples: [true]
+        description: |
+          Enables single authentication.
+
+          If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
+  grafana:
+    type: object
+    default: {}
+    description: Grafana installation-related settings.
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        x-examples: [false]
+        description: |
+          Enables Grafana deploy in the cluster.
+      useDarkTheme:
+        type: boolean
+        default: false
+        x-examples: [true]
+        description: The dark theme is enabled by default.
+      customPlugins:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - ["agenty-flowcharting-panel", "vertamedia-clickhouse-datasource"]
+        description: |
+          A list of custom Grafana [plugins](https://grafana.com/grafana/plugins). Contains plugin names from the official repository.
+
+          Here is how you can add custom plugins (in this case, clickhouse-datasource and flowcharting-panel plugins are used):
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - agenty-flowcharting-panel
+            - vertamedia-clickhouse-datasource
+          ```
+
+          You can also install plugins from other sources by passing a link to the plugin zip archive in the format `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel
+          ```
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    x-examples: ["public"]
+    description: |
+      The class of the Ingress controller used for Grafana/Prometheus.
+
+      An optional parameter. By default, the `modules.ingressClass` global value is used.
+  externalLabels:
+    type: object
+    x-examples:
+      - prometheus_replica: $(POD_NAME)
+        shard: $(SHARD)
+        hostname: $(HOSTNAME)
+    description: |
+      The set of external labels to add to the metrics.
+
+      It's possible to expand the environment variables of the `config-reloader` container in external labels
+      such as:
+      * `HOSTNAME`/`POD_NAME` - contains the name of the pod (for example `prometheus-main-0`, `prometheus-main-1`, etc.).
+      * `SHARD` - contains the [shard](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md) number.
+    additionalProperties:
+      type: string
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with Grafana/Prometheus.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        description: |
+          The HTTPS usage mode:
+          - `Disabled` — Grafana/Prometheus will work over HTTP only;
+          - `CertManager` — Grafana/Prometheus will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Grafana/Prometheus will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — Grafana/Prometheus will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for Grafana/Prometheus.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Grafana/Prometheus.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  vpa:
+    type: object
+    x-examples:
+      - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
+      - {updateMode: "Off"}
+    default: {updateMode: "Initial"}
+    description: |
+      VPA settings for pods.
+    properties:
+      maxCPU:
+        oneOf:
+          - type: string
+            pattern: "^[0-9]+m?$"
+          - type: number
+        x-examples: ["3"]
+        description: |
+          The maximum value that the VPA can set for the CPU requests for the main Prometheus Pods.
+
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+      maxMemory:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          - type: number
+        x-examples: ["3Mi"]
+        description: |
+          The maximum memory requests the VPA can set for the main Prometheus Pods.
+
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+      longtermMaxCPU:
+        oneOf:
+          - type: string
+            pattern: "^[0-9]+m?$"
+          - type: number
+        x-examples: [0.1]
+        description: |
+          The maximum value that the VPA can set for the Longterm Prometheus Pods.
+
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+      longtermMaxMemory:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+          - type: number
+        x-examples: ["4Mi"]
+        description: |
+          The maximum memory requests the VPA can set for the longterm Prometheus Pods.
+
+          The default value is chosen automatically based on the maximum number of Pods that can be created in the cluster considering the current number of nodes and their settings. For more information, see the `detect_vpa_max` hook of the module.
+      updateMode:
+        type: string
+        description: |
+          The VPA usage mode.
+        default: "Initial"
+        enum:
+          - "Initial"
+          - "Auto"
+          - "Off"
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  scrapeInterval:
+    type: string
+    default: "30s"
+    description: |
+      Sets the interval for scraping metrics from targets.
+
+      Evaluation Interval is always equal to scrapeInterval.
+    pattern: '^([\d]*y)?([\d]*w)?([\d]*d)?([\d]*h)?([\d]*m)?([\d]*s)?$'
+  longtermScrapeInterval:
+    type: string
+    default: "5m"
+    description: |
+      Sets the interval for making "data snapshots" of the main Prometheus by the longterm Prometheus.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  longtermNodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - disktype: ssd
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  longtermPodAntiAffinity:
+    type: string
+    default: "Preferred"
+    description: |
+      Defines the podAntiAffinity configuration for the Prometheus longterm instance relative to the Prometheus main instance.
+      - `Preferred` — allows scheduling Prometheus longterm instance alongside the Prometheus main instance if it is not possible to place them on different nodes.
+      - `Required` — does not allow scheduling Prometheus longterm instance on the same node as the Prometheus main instance.
+    enum: [Preferred, Required]
+  tolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      -
+        - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  longtermTolerations:
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+    x-examples:
+      -
+        - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  mainMaxDiskSizeGigabytes:
+    type: integer
+    description: |
+      Deprecated and will be removed. Doesn't affect anything.
+    x-doc-deprecated: true
+  longtermMaxDiskSizeGigabytes:
+    type: integer
+    x-doc-deprecated: true
+    description: |
+      Deprecated and will be removed. Doesn't affect anything.

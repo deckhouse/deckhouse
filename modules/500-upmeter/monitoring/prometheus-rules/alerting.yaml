@@ -1,0 +1,595 @@
+- name: d8.upmeter.availability
+  rules:
+    - alert: D8UpmeterServerPodIsNotReady
+      expr: |
+        min by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+        ) != 1
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter server is not Ready.
+
+    - alert: D8UpmeterAgentPodIsNotReady
+      expr: |
+        min by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="DaemonSet", controller_name="upmeter-agent"}
+          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+        ) != 1
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter agent is not Ready.
+
+    - alert: D8UpmeterServerReplicasUnavailable
+      expr: |
+        absent(
+          max by (namespace) (
+            kube_controller_replicas{controller_name="upmeter",controller_type="StatefulSet"}
+          )
+          <=
+          count by (namespace) (
+            kube_controller_pod{controller_name="upmeter",controller_type="StatefulSet"}
+            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+          )
+        ) == 1
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "phase"
+        summary: One or more Upmeter server Pods are NOT Running.
+        description: |-
+          Some `upmeter` Pods are not in the Running state.
+
+          To investigate the details, do the following:
+
+          - Check the StatefulSet status:
+
+            ```shell
+            d8 k -n d8-upmeter get statefulset upmeter -o json | jq .status
+            ```
+
+          - Check the Pod status:
+
+            ```shell
+            d8 k -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
+            ```
+
+    - alert: D8UpmeterAgentReplicasUnavailable
+      expr: |
+        absent(
+          max by (namespace) (
+            kube_controller_replicas{controller_name="upmeter-agent",controller_type="DaemonSet"}
+          )
+          <=
+          count by (namespace) (
+            kube_controller_pod{controller_name="upmeter-agent",controller_type="DaemonSet"}
+            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+          )
+        ) == 1
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "phase"
+        summary: One or more upmeter-agent Pods are NOT Running.
+        description: |-
+          Some `upmeter-agent` Pods are not in the Running state.
+
+          To investigate the details, do the following:
+
+          - Check the DaemonSet status:
+
+            ```shell
+            d8 k -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
+            ```
+
+          - Check the Pod status:
+
+            ```shell
+            d8 k -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
+            ```
+
+- name: d8.upmeter.malfunctioning
+  rules:
+    - alert: D8UpmeterServerPodIsRestartingTooOften
+      expr: |
+        max by (pod) (
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-upmeter"}[1h])
+          and
+          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-upmeter"}
+        ) > 5
+      for: 5m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_malfunctioning: "D8UpmeterMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Upmeter server is restarting too frequently.
+        description: |
+          The `upmeter` server has restarted {{ $value }} times in the last hour.
+
+          Frequent restarts may indicate an issue.
+          It is expected to run continuously and collect availability episodes without interruption.
+
+          To investigate the cause, check the logs:
+
+          ```shell
+          d8 k -n d8-upmeter logs -f upmeter-0 upmeter
+          ```
+
+- name: d8.upmeter.smoke-mini
+  rules:
+    - alert: D8SmokeMiniNotBoundPersistentVolumeClaims
+      for: 1h
+      expr: |
+        max by (persistentvolumeclaim, phase) (
+          kube_persistentvolumeclaim_status_phase{
+            namespace="d8-upmeter",
+            persistentvolumeclaim=~"disk-smoke-mini-[a-z]-0",
+            phase!="Bound"
+          } == 1
+        )
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: smoke-mini
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_smoke_mini_unavailable: "D8SmokeMiniUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Smoke-mini has unbound or lost PersistentVolumeClaims.
+        description: |
+          The PersistentVolumeClaim `{{ $labels.persistentvolumeclaim }}` is in the `{{ $labels.phase }}` phase.
+
+          This indicates a problem with PersistentVolume provisioning.
+        
+          To investigate the cause, check the PersistentVolumeClaim phase:
+
+          ```shell
+          d8 k -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
+          ```
+
+          If your cluster doesn't have a disk provisioning system,
+          you can disable volume ordering for `smoke-mini` using the module settings.
+
+# TODO (shvgn) remove garbage objects tracking alerts in Deckhouse v1.35 since upmeter no longer pollutes cluster with uncontrolled amount of objects
+- name: d8.upmeter.resources
+  rules:
+    - alert: D8UpmeterProbeGarbageConfigmap
+      expr: |
+        (
+          count (kube_configmap_info{namespace="d8-upmeter", configmap=~"upmeter-basic-.*"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "configmap"
+        summary: Garbage ConfigMaps from the basic probe are not being cleaned up.
+        description: |
+          Probe-generated ConfigMaps were found but not cleaned up as expected.
+
+          `upmeter-agent` should automatically delete ConfigMaps produced by the `control-plane/basic` probe.
+          There should be no more ConfigMaps than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with the `kube-apiserver`.
+          - Stale ConfigMaps left by outdated `upmeter-agent` Pods after an Upmeter update.
+
+          Troubleshooting steps:
+
+          1. Check the `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Ensure the control plane is operating normally.
+
+          3. Delete stale ConfigMaps manually:
+
+             ```shell
+             d8 k -n d8-upmeter delete cm -l heritage=upmeter
+             ```
+
+    - alert: D8UpmeterProbeGarbageDeployment
+      expr: |
+        (
+          count (kube_deployment_labels{namespace="d8-upmeter", label_heritage="upmeter",
+                                                                label_upmeter_probe="controller-manager"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"} )
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "deployment"
+        summary: Garbage Deployments from the controller-manager probe are not being cleaned up.
+        description: |
+          The average number of probe-generated Deployments per `upmeter-agent` Pod is {{ $value }}.
+
+          `upmeter-agent` should automatically delete Deployments created by the `control-plane/controller-manager` probe.
+          There should not be more Deployments than master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with the `kube-apiserver`.
+          - Stale Deployments left by outdated `upmeter-agent` Pods after an Upmeter update.
+          
+          Troubleshooting steps:
+
+          1. Check the `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
+
+          3. Delete stale Deployments manually:
+
+             ```shell
+             d8 k -n d8-upmeter delete deployment -l heritage=upmeter
+             ```
+
+    - alert: D8UpmeterProbeGarbagePodsFromDeployments
+      expr: |
+        (
+          count (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter",
+                                                         label_upmeter_probe="controller-manager"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 1
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Garbage Pods from the controller-manager probe are not being cleaned up.
+        description: |
+          The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+
+          `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
+          and `kube-controller-manager` should remove the associated Pods.
+          There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with the `kube-apiserver` or `kube-controller-manager`.
+          - Stale Pods left from outdated `upmeter-agent` Pods after an Upmeter update.
+
+          Troubleshooting steps:
+
+          1. Check the `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
+
+          3. Delete stale Pods manually:
+
+             ```shell
+             d8 k -n d8-upmeter delete pods -l upmeter-probe=controller-manager
+             ```
+
+    - alert: D8UpmeterProbeGarbagePods
+      expr: |
+        (
+          count (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter",
+                                                         label_upmeter_probe="scheduler"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "pod"
+        summary: Garbage Pods from the scheduler probe are not being cleaned up.
+        description: |
+          The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+
+          `upmeter-agent` should automatically clean up Pods created by the `control-plane/scheduler` probe.  
+          There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with the `kube-apiserver`.
+          - Stale Pods left from old `upmeter-agent` Pods after an Upmeter update.
+
+          Troubleshooting steps:
+
+          1. Check `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Ensure the control plane is operating normally.
+
+          3. Delete stale Pods manually:
+
+             ```shell
+             d8 k -n d8-upmeter delete pods -l upmeter-probe=scheduler
+             ```
+
+    - alert: D8UpmeterProbeGarbageNamespaces
+      expr: |
+        (
+          sum (kube_namespace_status_phase{namespace=~"upmeter-.*"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "namespace"
+        summary: Garbage namespaces from the `namespace` probe are not being cleaned up.
+        description: |
+          The average number of probe-created namespaces per `upmeter-agent` Pod is {{ $value }}.
+
+          `upmeter-agent` should automatically clean up namespaces created by the `control-plane/namespace` probe.  
+          There should not be more of these namespaces than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with the `kube-apiserver`.
+          - Stale namespaces left from older `upmeter-agent` Pods after an Upmeter update.
+          
+          Troubleshooting steps:
+
+          1. Check `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Ensure the control plane is operating normally.
+
+          3. Delete stale namespaces manually:
+          
+             ```shell
+             d8 k -n d8-upmeter delete ns -l heritage=upmeter
+             ```
+
+    - alert: D8UpmeterTooManyHookProbeObjects
+      expr: |
+        (
+          sum (d8_upmeter_upmeterhookprobe_count)
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) > 1
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "upmeterhookprobe"
+        summary: Too many UpmeterHookProbe objects in the cluster.
+        description: |
+          The average number of `UpmeterHookProbe` objects per `upmeter-agent` Pod is {{ $value }}, but it should always be exactly 1 per agent.
+
+          This likely happened because older `upmeter-agent` Pods left behind their `UpmeterHookProbe` objects during an Upmeter update or downscale.
+
+          Once the cause has been investigated, remove outdated objects and leave only the ones corresponding to currently running `upmeter-agent` Pods.
+
+          To view all `UpmeterHookProbe` objects, run the following command:
+
+          ```shell
+          d8 k get upmeterhookprobes.deckhouse.io
+          ```
+
+    - alert: D8UpmeterSmokeMiniMoreThanOnePVxPVC
+      expr: |
+        count(
+          (
+            kube_persistentvolume_status_phase{phase!="Bound"}
+            + on(persistentvolume) group_left(name)
+            0 * label_replace(kube_persistentvolume_claim_ref{name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
+          ) > 0
+        )
+      for: 1h
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "volume"
+        summary: Unnecessary `smoke-mini` PersistentVolumes detected in the cluster.
+        description: |
+          The number of unnecessary `smoke-mini` PersistentVolumes (PVs) is {{ $value }}.
+
+          These PVs should be deleted automatically when released.
+
+          Possible causes:
+
+          - The `smoke-mini` StorageClass may be set to `Retain` by default.
+          - There may be issues with the CSI driver or cloud storage integration.
+
+          These PVs do not contain valuable data and should be deleted.
+
+          To list all the PVs, run the following command:
+
+          ```shell
+          d8 k get pv | grep disk-smoke-mini
+          ```
+
+    - alert: D8UpmeterProbeGarbageSecretsByCertManager
+      expr: |
+        (
+          count (kube_secret_info{namespace="d8-upmeter", secret=~"upmeter-cm-probe.*"})
+          /
+          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+        ) >= 2
+      for: 10m
+      labels:
+        severity_level: "9"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: upmeter-agent
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "secret"
+        summary: Garbage Secrets from the cert-manager probe are not being cleaned up.
+        description: |
+          Probe-generated Secrets were found.
+
+          `upmeter-agent` should clean up certificates created by the `cert-manager` probe, and `cert-manager` in turn should clean up the associated Secrets.
+          There should not be more of these Secrets than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and they should be deleted within seconds.
+
+          This may indicate:
+
+          - A problem with `kube-apiserver`, `cert-manager`, or `upmeter`.
+          - Stale Secrets left from older `upmeter-agent` Pods after an Upmeter update.
+
+          Troubleshooting steps:
+
+          1. Check `upmeter-agent` logs:
+
+             ```shell
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
+             ```
+
+          2. Check that the control plane and `cert-manager` are operating normally.
+
+          3. Delete stale certificates and Secrets manually:
+
+             ```shell
+             d8 k -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
+             d8 k -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- d8 k -n d8-upmeter delete secret
+             ```
+
+    - alert: D8UpmeterDiskUsage
+      expr: |
+        100 * (
+        kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
+        ) > 80
+      for: 10m
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: upmeter
+        d8_component: server
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Upmeter disk usage exceeds 80%.
+        description: |
+          Disk usage for Upmeter has exceeded 80%.
+
+          The only way to resolve this is to recreate the PersistentVolumeClaim (PVC) in the following steps:
+
+          1. Save the PVC data if you need it.
+
+          1. Delete the PVC and restart the `upmeter` Pod:
+
+             ```shell
+             d8 k -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+             ```
+
+          1. Check the status of the created PVC:
+
+             ```shell
+             d8 k -n d8-upmeter get pvc
+             ```

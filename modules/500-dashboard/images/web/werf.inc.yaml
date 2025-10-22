@@ -1,0 +1,85 @@
+# #####################################################################
+# Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/web/Dockerfile
+# #####################################################################
+{{- $version := "1.6.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /dashboard-web
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+  add: /src/modules/web/.dist/public
+  to: /public
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+  add: /src/modules/web/.dist/public/locale_conf.json
+  to: /locale_conf.json
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dashboard-web"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src/modules/web
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/web/pkg/environment.Version=v{{ $version }}" -o /dashboard-web .
+  - chown 64535:64535 /dashboard-web
+  - chmod 0755 /dashboard-web
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
+final: false
+from: {{ .Images.BASE_NODE_20_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make perl
+  install:
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /src/modules/web
+  - yarn set version 3.3.0
+  - yarn plugin import workspace-tools
+  - SKIP_POSTINSTALL=true yarn workspaces focus
+  - make build-frontend
+  - ./install_logout.sh
+  - rm -r node_modules .angular .yarn /root/.cache /root/.yarn #1Gi
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b web/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
+  - cp /patches/* /src/modules/web/
+  - rm -r .git .github charts docs

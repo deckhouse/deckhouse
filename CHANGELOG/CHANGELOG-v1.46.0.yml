@@ -1,0 +1,386 @@
+admission-policy-engine:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+candi:
+  fixes:
+    - summary: >-
+        Update bashible network bootstrap in AWS cloud to use IMDSv2 for obtaining instance
+        metadata.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4632
+    - summary: Events created by bashible get connected to the relevant node objects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4623
+    - summary: refactor bootstrap scripts to fit 16kb limit of cloud-data
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4580
+    - summary: fix system-proxy configuration for containerd installations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4532
+    - summary: Prevent accidental modification of files in /root/.bashrc and /etc/inputrc
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4531
+    - summary: override proxy settings for containerd unit.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4525
+    - summary: Remove swap entries from /etc/fstab after checking for such an entry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4483
+ceph-csi:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+cert-manager:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+chrony:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+ci:
+  features:
+    - summary: Add Kubernetes 1.27 e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4643
+    - summary: Send weekly Trivy digest to security officers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4162
+  fixes:
+    - summary: Replace `save-state` and `set-output` workflow commands.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4642
+    - summary: Fix output only grey IP in e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4372
+cloud-data-crd:
+  features:
+    - summary: Add the new `010-cloud-discovery-crd` module with `CloudDiscoveryData` CRD.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4187
+  fixes:
+    - summary: Remove enable script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4704
+    - summary: The `cluster-autoscaler-crd module has been renamed to the `cloud-data-crd` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4497
+cloud-provider-aws:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: >-
+        Add cloud data discoverer service which get information about available instance types for
+        node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4218
+cloud-provider-azure:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: >-
+        Add cloud data discoverer service which get information about available instance types for
+        node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4213
+cloud-provider-gcp:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: >-
+        Add cloud data discoverer service which get information about available instance types for
+        node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4221
+cloud-provider-openstack:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: >-
+        Add cloud data discoverer service which gets information about available instance types for
+        node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4187
+cloud-provider-vsphere:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+cloud-provider-yandex:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+cni-cilium:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: Enable external access to ClusterIP services.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4302
+      impact: Cilium Pods will be restarted.
+  fixes:
+    - summary: Update Grafana dashboard for Cilium agent
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4420
+cni-flannel:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Fix cleanup flannel used IPs on migration from docker to containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4306
+cni-simple-bridge:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+containerized-data-importer:
+  features:
+    - summary: enable HonorWaitForFirstConsumer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4481
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+control-plane-manager:
+  fixes:
+    - summary: The documentation for the master node update has been updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4514
+dashboard:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+deckhouse:
+  features:
+    - summary: Automatically set GOMAXPROCS according to container limits.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4595
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Remove Deckhouse release naming transformation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4568
+    - summary: Change liveness probe for `webhook-handler` to prevent EOF log spamming.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4562
+      impact: The `webhook-handler` Pod will restart.
+deckhouse-controller:
+  fixes:
+    - summary: Fix `deckhouse-controller` help message.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4009
+delivery:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+descheduler:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+dhctl:
+  features:
+    - summary: Introduces dependency verification on bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4647
+docs:
+  fixes:
+    - summary: Update the description of the global `storageClass` parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4424
+extended-monitoring:
+  fixes:
+    - summary: Fix enabled condition for controllers after refactoring.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4707
+    - summary: Remove D8 objects from the `DeprecatatedAnnotation` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4654
+    - summary: Use the `batch/v1` API version instead of the `batch/v1beta1`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4423
+flant-integration:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: Add deckhouse controller resource consumption metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4352
+global-hooks:
+  fixes:
+    - summary: Fix cluster DNS address discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4521
+    - summary: Fix the Kubernetes version hook for `DigitalOcean`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4473
+ingress-nginx:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: The default backend request metric contain ingress, service, and location labels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4377
+istio:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+keepalived:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+linstor:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Enable `WaitForFirstConsumer`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4681
+      impact: >-
+        - all auto-generated linstor storageclasses will be recreated with WaitForFirstConsumer
+        option.
+
+        - all existing Persistent Volumes do not require any update or modifications.
+    - summary: Fix passphrase reconcilation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4621
+    - summary: Reconcile LVM pool updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4611
+    - summary: Disable the `auto-resync-after` option.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4501
+local-path-provisioner:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+log-shipper:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Fixed vector-reloader
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4608
+    - summary: Add host label and the doc about labels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4383
+metallb:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Fix MetalLB speaker tolerations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4435
+monitoring-kubernetes:
+  fixes:
+    - summary: Remove duplicates of memory graphs on namespace dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4701
+network-gateway:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+node-local-dns:
+  fixes:
+    - summary: Added logs if changed state iptables.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4613
+node-manager:
+  features:
+    - summary: Automatic capacity nodegroup discovery
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4607
+    - summary: Create an event bound to a Node object if node drain was failed during the bashible update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4558
+    - summary: Remove the `adopt.sh` script and modify the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4496
+    - summary: Add instance resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4417
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: Add annotation `update.node.deckhouse.io/draining=user` for starting node drain process
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4310
+  fixes:
+    - summary: >-
+        Fix bashible-apiserver altlinux docker containerd version (otherwise, bashible-apiserver
+        will not work).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4553
+    - summary: Fix the error node group condition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4367
+okmeter:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+openvpn:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Fix updating user list in HA mode.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4506
+      impact: OpenVPN will be restarted and connections will be terminated.
+operator-prometheus:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Added secret-field-selector in args.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4619
+operator-trivy:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: Added CIS Benchmark reports and dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3995
+    - summary: >-
+        Added the `NodeRestriction` admission plugin and turned on the
+        `RotateKubeletServerCertificate` feature flag via the feature gate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3995
+      impact: Control plane components and kubelet will restart.
+  fixes:
+    - summary: >-
+        Add support for kubernetes.io/dockercfg secrets in imagePullSecrets pods field for scan
+        jobs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4469
+    - summary: Fixed k8s file permissions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3995
+pod-reloader:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+prometheus:
+  features:
+    - summary: |-
+        Display Prometheus alerts as a custom resource in a cluster.
+        - To get alerts: `kubectl get clusteralerts`
+        - To view an alert: `kubectl get clusteralerts <ALERT_NAME> -o yaml`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4614
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+    - summary: Added local alerts receiver, which publishes alerts as events.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4382
+  fixes:
+    - summary: Fixed creation of multiple CustomAlertmanager resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4402
+    - summary: Update Prometheus to `2.43.0` (bug and security fixes, performance improvements).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4269
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Added return 0 value if custom metrics stop being returned.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4395
+runtime-audit-engine:
+  features:
+    - summary: Migrate to using the modern eBPF probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4552
+      impact: Linux Kernel >= 5.8 is required to run the `runtime-audit-engine` module.
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+snapshot-controller:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+testing:
+  features:
+    - summary: Added E2E tests for EKS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3962
+  fixes:
+    - summary: Removed some debug settings in e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4482
+tools:
+  fixes:
+    - summary: Fix d8-push.sh and d8-pull.sh scripts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4470
+upmeter:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+user-authn:
+  features:
+    - summary: Added validating webhook to check the uniqueness of `userID` and `email` in User object.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4561
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Use a static background image for Dex login screen.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4696
+user-authz:
+  features:
+    - summary: Add the new `AuthorizationRule` CR for namespaced control access.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4494
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Removed some rules for the `Editor`, `Admin`, and `ClusterEditor` access levels.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4494
+      impact: >-
+        Removed write permissions on `namespace`, `limitrange`, `resourcequota`, `role` and
+        `clusterrole` resources for the `Editor`, `Admin`, and `ClusterEditor` access levels. Read
+        the [issue](https://github.com/deckhouse/deckhouse/pull/4494) description If you want to
+        return the permissions.
+virtualization:
+  features:
+    - summary: Add support for `PrometheusRule`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4407
+  fixes:
+    - summary: Fixed docs path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4575
+    - summary: Minor fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4368
+

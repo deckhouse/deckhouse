@@ -1,0 +1,53 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "secret-copier-label.deckhouse.io" }}
+apiVersion:  {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  auditAnnotations:
+    - key: source-user
+      valueExpression: '''User: '' + string(request.userInfo.username) + '' tries to
+      create or update secret with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace'''
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector: {}
+    resourceRules:
+      - apiGroups:
+          - ''
+        apiVersions:
+          - 'v1'
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - 'secrets'
+        scope: 'Namespaced'
+  validations:
+  - expression: request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
+    reason: Forbidden
+    messageExpression: '''Creating or updating secrets with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace is forbidden'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  matchResources:
+    matchPolicy: Equivalent
+    objectSelector:
+      matchLabels:
+        secret-copier.deckhouse.io/enabled: ""
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - default
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{- end }}

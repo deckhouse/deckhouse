@@ -1,0 +1,97 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:node-manager:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - openstackmachineclasses
+  - awsmachineclasses
+  - azuremachineclasses
+  - vspheremachineclasses
+  - gcpmachineclasses
+  - alicloudmachineclasses
+  - yandexmachineclasses
+  - packetmachineclasses
+  - machines
+  - machinesets
+  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  - machinesets
+  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterEditor
+  name: d8:user-authz:node-manager:cluster-editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:node-manager:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - openstackmachineclasses
+  - awsmachineclasses
+  - azuremachineclasses
+  - vspheremachineclasses
+  - gcpmachineclasses
+  - alicloudmachineclasses
+  - yandexmachineclasses
+  - packetmachineclasses
+  - machines
+  - machinesets
+  - machinedeployments
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  - machinesets
+  - machinedeployments
+  verbs:
+  - patch
+  - update

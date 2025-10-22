@@ -1,0 +1,155 @@
+admission-policy-engine:
+  features:
+    - summary: Make default PSS policy customizable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6528
+      impact: >-
+        Clusters, created after 1.55 Deckhouse release will have Baseline Pod Security Standard by
+        default.
+    - summary: Provide a way for specifying alternative pod security standards enforcement actions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6355
+      impact: >-
+        Pod security standards constraints will be renamed to fit new name schema. It does not
+        affect anything while you don't use raw PSS constraints.
+    - summary: Additional status fields for custom resource `SecurityPolicy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5274
+  fixes:
+    - summary: Fixed labels in anti-affinity for `gatekeeper-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6555
+basic-auth:
+  features:
+    - summary: Nginx image is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6395
+candi:
+  features:
+    - summary: Parallel download registry packages in separate step before installation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6415
+  fixes:
+    - summary: Fix disabling managing foreign IP rules by systemd-networkd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6623
+    - summary: Disable managing "foreign" ip rules by systemd-networkd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6561
+      impact: systemd-networkd.service will be restarted to apply the settings.
+    - summary: Do not wait Instance status patch indefinitely during bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6551
+    - summary: Fixed wait apt update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6040
+cloud-provider-azure:
+  fixes:
+    - summary: >-
+        Azure cloud-controller-manager has been updated to the latest versions for all supported
+        Kubernetes versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6574
+      impact: cloud-controller-manager will restart.
+cni-flannel:
+  fixes:
+    - summary: '**REVERTED** Build from source and update to v0.23.0.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6520
+      impact: flannel pods will be restarted.
+common:
+  fixes:
+    - summary: >-
+        Fix vulnerabilities in csi-external-* images: `CVE-2023-44487`, `CVE-2022-41723`,
+        `GHSA-m425-mq94-257g`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6313
+deckhouse-controller:
+  fixes:
+    - summary: Fix getting Deckhouse version in debugging.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6517
+    - summary: Fix CVE issues in deckhouse-controller image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6393
+dhctl:
+  features:
+    - summary: Add config map with install version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6522
+documentation:
+  features:
+    - summary: documentation module is based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6396
+extended-monitoring:
+  fixes:
+    - summary: Add a job to sift metrics from custom exporters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5996
+go_lib:
+  features:
+    - summary: Ignore `/path` when checking registry credentials.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6433
+kube-dns:
+  fixes:
+    - summary: >-
+        Fixed vulnerabilities: CVE-2022-1996, CVE-2022-27664, CVE-2022-41723, CVE-2023-39325,
+        CVE-2022-32149, CVE-2021-33194, CVE-2021-38561.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6397
+linstor:
+  features:
+    - summary: Add a custom script for eviction of LINSTOR resources from a node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6400
+loki:
+  fixes:
+    - summary: Fix CVE issue in Loki image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6494
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix CVE issues in `node-exporter`, `kubelet-eviction-tresholds-exporter` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6523
+    - summary: Capacity Planning dashboard shows correct number of Pods usage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5934
+node-manager:
+  features:
+    - summary: Alert about Yandex Cloud `ru-central-c` zone deprecation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6614
+    - summary: Additional status fields for custom resource `NodeGroup`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5274
+  fixes:
+    - summary: >-
+        Fix node-manager does not remove `node.deckhouse.io/unitialized` taint when using one taint
+        with different effects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6671
+    - summary: Fix nodeGroup validation webhook if global mc does not exists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6583
+    - summary: Fix CVE issue in fix cve in `bashible-apiserver` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6526
+operator-prometheus:
+  fixes:
+    - summary: Fix CVE issues in `operator-prometheus` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6456
+operator-trivy:
+  fixes:
+    - summary: Fix CVE issues in `operator-trivy` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6463
+prometheus:
+  features:
+    - summary: Additional status fields for custom resource `CustomAlertManager`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5274
+  fixes:
+    - summary: Fix CVE issues in alertsreceiver image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6503
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fix CVE issues in k8sPrometheusAdapter image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6506
+runtime-audit-engine:
+  fixes:
+    - summary: >-
+        Add request to search for nodes with non-working pods in
+        `D8RuntimeAuditEngineNotScheduledInCluster` prometheus-rule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5946
+upmeter:
+  features:
+    - summary: Images are based on a distroless image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6176
+user-authn:
+  fixes:
+    - summary: >-
+        Fix vulnerabilities: CVE-2022-41721, CVE-2022-41723, CVE-2023-39325, CVE-2022-32149,
+        GHSA-m425-mq94-257g, CVE-2021-33194, CVE-2022-27664, CVE-2022-21698, CVE-2021-43565,
+        CVE-2022-27191, CVE-2021-38561, CVE-2020-29652, CVE-2020-7919, CVE-2020-9283, CVE-2019-9512,
+        CVE-2019-9514, CVE-2022-3064.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6502
+      impact: dex and kubeconfig-generator pods will restart.
+user-authz:
+  fixes:
+    - summary: Fixed liveness probe for `user-authz-webhook.`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6525
+    - summary: Fix CVE issues in `user-authz` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6473
+

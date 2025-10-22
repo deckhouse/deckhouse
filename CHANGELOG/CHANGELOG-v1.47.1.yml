@@ -1,0 +1,30 @@
+dhctl:
+  fixes:
+    - summary: Add cache identity for a `kubeconfig` parameter in the `converge` command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4961
+ingress-nginx:
+  fixes:
+    - summary: >-
+        Update the Kruise controller manager before updating Ingress Nginx so that an updated Kruise
+        controller manager takes care of Ingress nginx demonsets.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5050
+linstor:
+  fixes:
+    - summary: Update Linstor. Fix `D8LinstorControllerTargetDown` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4823
+node-manager:
+  fixes:
+    - summary: >-
+        Rework CRI requirements. Add ignoring `NodeGroup` with the `NotManaged` CRI type and
+        Kubernetes version below `1.24`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5033
+      impact: >-
+        In the next release (v1.48) it will be impossible to update Deckhouse until docker is
+        replaced with containerd.
+user-authn-crd:
+  fixes:
+    - summary: >-
+        Loosens the `applicationIngressCertificateSecretName` field's pattern to accept an empty
+        string.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5067
+

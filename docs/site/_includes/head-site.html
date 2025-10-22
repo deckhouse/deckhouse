@@ -1,0 +1,186 @@
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<!-- favicon -->
+<link rel="apple-touch-icon" sizes="180x180" href="{{ site.baseurl }}/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ site.baseurl }}/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ site.baseurl }}/favicon-16x16.png">
+<link rel="shortcut icon" href="{{ site.baseurl }}/favicon.ico">
+<link rel="manifest" href="{{ site.baseurl }}/site.webmanifest">
+<link rel="mask-icon" href="{{ site.baseurl }}/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#603cba">
+<meta name="theme-color" content="#ffffff">
+
+<!-- fonts -->
+<link href='/assets/css/font-awesome.min.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/fonts.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<!-- styles -->
+<link href='/assets/css/slick.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/normalize.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/syntax.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/tab.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/submenu.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/cards.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/site.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/docs.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/search-v3.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/navigation.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+
+<!-- scripts -->
+<script type="text/javascript" src="/assets/js/jquery.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/jquery.cookie.min.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/bootstrap.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/slick.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/popper.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/tippy-bundle.umd.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/stickythead.min.js?v={{ assetHash }}"></script>
+
+<!-- Lunr JS for search -->
+<script type="text/javascript" src="/assets/js/lunr/lunr.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.stemmer.support.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.multi.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.ru.js?v={{ assetHash }}"></script>
+
+<script>
+  $(document).ready(function() {
+    tippy('[title]', {
+      content(reference) {
+        const title = reference.getAttribute('title');
+        reference.removeAttribute('title');
+        return title;
+      },
+      maxWidth: 400,
+      allowHTML: true,
+      theme: 'light',
+      arrow: '<svg width="14" height="10" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 9L13 1L1 1L7 9Z" fill="#EFF3F9"/><path d="M13 1L7 9L1 1" stroke="#C4CAD4" stroke-linecap="round"/></svg>',
+    });
+
+  });
+</script>
+<script type="text/javascript">
+  $(document).ready(function () {
+    tippy('[data-tippy-content]', {
+      interactive: true,
+      interactiveDebounce: 75,
+      placement: 'right-start',
+      maxWidth: 700,
+      theme: 'light-large',
+      allowHTML: true,
+      arrow: '<svg width="10" height="14" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 7L1 1L1 13L9 7Z" fill="#EFF3F9"/><path d="M1 1L9 7L1 13" stroke="#C4CAD4" stroke-linecap="round"/></svg>',
+    });
+  });
+</script>
+
+<script type="text/javascript" src="/assets/js/jquery.navgoco.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/anchor.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/toc.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/details.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/tab.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/clipboard.min.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/pdf.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/pdf-slider.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/popup-form.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/customscripts.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/table-sticky.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/sidebar-scroll.js?v={{ assetHash }}"></script>
+
+{%- unless site.mode == "module" %}
+<script type="text/javascript" src="/assets/js/feedback.js?v={{ assetHash }}"></script>
+{%- endunless %}
+
+<script>
+    $(document).ready(function() {
+        // Initialize navgoco with default options
+        $("#mysidebar").navgoco({
+            caretHtml: '',
+            accordion: false,
+            openClass: 'active', // open
+            save: false, // leave false or nav highlighting doesn't work right
+            cookie: {
+                name: 'navgoco',
+                expires: false,
+                path: '/'
+            },
+            slide: {
+                duration: 400,
+                easing: 'swing'
+            }
+        });
+
+        $("#collapseAll").click(function(e) {
+            e.preventDefault();
+            $("#mysidebar").navgoco('toggle', false);
+        });
+
+        $("#expandAll").click(function(e) {
+            e.preventDefault();
+            $("#mysidebar").navgoco('toggle', true);
+        });
+
+    });
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+    $(document).ready(function() {
+        $("#tg-sb-link").click(function() {
+            $("#tg-sb-sidebar").toggle();
+            $("#tg-sb-content").toggleClass('col-md-9');
+            $("#tg-sb-content").toggleClass('col-md-12');
+            $("#tg-sb-icon").toggleClass('fa-toggle-on');
+            $("#tg-sb-icon").toggleClass('fa-toggle-off');
+        });
+    });
+</script>
+{% if page.datatable == true %}
+<!-- Include the standard DataTables bits -->
+<!-- asset jquery.dataTables.css -->
+<!-- asset jquery.dataTables.min.js -->
+<!-- First, this walks through the tables that occur between ...-begin
+     and ...-end and add the "datatable" class to them.
+     Then it invokes DataTable's standard initializer
+     Credit here: http://www.beardedhacker.com/blog/2015/08/28/add-class-attribute-to-markdown-table/
+  -->
+<script>
+  $(document).ready(function(){
+      $('div.datatable-begin').nextUntil('div.datatable-end', 'table').addClass('display');
+      $('table.display').DataTable( {
+          paging: true,
+          stateSave: true,
+          searching: true
+      });
+   });
+</script>
+{% endif %}
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('[data-slick]').slick({
+        infinite: true,
+        slidesToShow: 3,
+        autoplaySpeed: 5000,
+        variableWidth: true,
+        centerMode: true,
+        initialSlide: 1,
+        responsive: [{
+            breakpoint: 1500,
+            settings: {
+                initialSlide: 0,
+                slidesToShow: 1
+            }
+        }]
+        });
+    });
+</script>
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+<script type="text/javascript" src="/assets/js/html5shiv.js"></script>
+<script type="text/javascript" src="/assets/js/respond.min.js"></script>
+<![endif]-->
+
+{%- unless site.mode == "module" %}
+{%- include counters-and-chat.liquid %}
+{%- endunless %}

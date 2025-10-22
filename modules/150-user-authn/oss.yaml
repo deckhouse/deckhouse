@@ -1,0 +1,12 @@
+- name: Dex
+  link: https://github.com/dexidp/dex
+  description: A Federated OpenID Connect Provider with pluggable connectors.
+  logo: /images/logos/dex-icon-color.svg
+  license: Apache License 2.0
+
+- name: OAuth2 Proxy
+  link: https://github.com/oauth2-proxy/oauth2-proxy
+  description: A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.
+  logo: https://raw.githubusercontent.com/oauth2-proxy/oauth2-proxy/master/docs/static/img/logos/OAuth2_Proxy_icon.svg
+  license: MIT License
+

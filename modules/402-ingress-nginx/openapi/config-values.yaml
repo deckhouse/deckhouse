@@ -1,0 +1,16 @@
+type: object
+properties:
+  defaultControllerVersion:
+    default: "1.10"
+    oneOf:
+      - type: string
+        enum: ["1.9", "1.10", "1.12"]
+    description: |
+      The version of the ingress-nginx controller that is used for all controllers by default if the `controllerVersion` parameter is omitted in the IngressNginxController CR.
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.

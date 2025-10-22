@@ -1,0 +1,36 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webhook
+  namespace: d8-user-authz
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+rules:
+- nonResourceURLs: ["/version", "/api/v1", "/apis/*"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authz:webhook
+subjects:
+  - kind: ServiceAccount
+    name: webhook
+    namespace: d8-user-authz
+{{- end }}

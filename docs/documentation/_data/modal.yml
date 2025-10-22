@@ -1,0 +1,133 @@
+request-access:
+  header:
+    ru:
+      title: "Запросить пробный доступ"
+      text: "Заполните форму, и&nbsp;в&nbsp;течение ближайшего рабочего дня мы&nbsp;свяжемся с&nbsp;вами для&nbsp;уточнения деталей — будьте на&nbsp;связи!"
+    en:
+      title: " Request trial access"
+      text: "Fill out the form, and we&nbsp;will contact you within the next business day&nbsp;&mdash; please stay in&nbsp;touch!"
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
+    en:
+      title: "Thank you"
+      text: "Thank you for your interest in the Deckhouse Kubernetes Platform!<br/>We will contact you within the next business day regarding the details of your request — please be in touch!"
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так..."
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+request-callback:
+  header:
+    ru:
+      title: "Связаться со специалистом Deckhouse"
+      text: "Ответим на вопросы о продуктах, разберем ваш кейс, назначим встречу с техническим экспертом"
+    en:
+      title: "Request callback"
+      text: "Fill out this form, and we will contact you soon."
+  communication-method:
+    ru:
+      title: "Удобный способ связи"
+    en:
+      title: "Select your preferred communication means"
+  success-message:
+    ru:
+      title: "Заявка отправлена"
+      text: "Мы свяжемся с вами в течение рабочего дня"
+    en:
+      title: "Thank you"
+      text: "We will contact you on this or the next business day"
+  error-message:
+    ru:
+      title: "Возникла ошибка отправки формы"
+      text: "Попробуйте еще раз"
+    en:
+      title: "Something went wrong"
+      text: "Please try again later"
+request-education:
+  header:
+    ru:
+      title: "Запросить обучение"
+      text: "Заполните форму, и мы свяжемся с вами, чтобы обсудить детали."
+    en:
+      title: "Book your sessions"
+      text: "Fill out this form, and we will contact you to discuss the details"
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Мы отправили инструкцию с дальнейшими шагами вам на почту."
+    en:
+      title: "Thank you"
+      text: "Check your email for details."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+request-demo:
+  header:
+    ru:
+      title: "Запросить демо"
+      text: "Оставьте ваши данные, и мы свяжемся с вами."
+    en:
+      title: "Request demo"
+      text: "Fill out this form, and we will contact you soon."
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Спасибо, мы скоро свяжемся с вами."
+    en:
+      title: "Thank you"
+      text: "We will contact you soon."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+get-a-report:
+  header:
+    ru:
+      title: "Получите отчет о&nbsp;соответствии рекомендациям PCI&nbsp;SSC"
+      text: "Документ ориентирован на&nbsp;компании, которые используют платежные системы на&nbsp;базе контейнеров, и&nbsp;помогает защитить эти системы от&nbsp;актуальных угроз. Мы&nbsp;выяснили, насколько Deckhouse соответствует критериям PCI&nbsp;SSC."
+    en:
+      title: "Get the PCI SSC Compliance Report"
+      text: "The document is aimed at companies that use container-based payment systems. It contains a list of common threats along with the best practices and measures we put in place to address them. Find out the extent to which Deckhouse meets the PCI SSC criteria!"
+  success-message:
+    ru:
+      title: "Спасибо"
+      text: "Файл загрузится автоматически. Если этого не&nbsp;произошло, нажмите кнопку «Скачать»."
+    en:
+      title: "Thank you"
+      text: "The file is loaded automatically. If it doesn't, click the «Download» button."
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."
+  download-file:
+    ru:
+      file-name: "Deckhouse_PCI_SSC_requirements_ru.pdf"
+    en:
+      file-name: "Deckhouse_PCI_SSC_requirements.pdf"
+become-a-partner:
+  header:
+    ru:
+      title: "Запросить подробности партнёрской программы"
+      text: "Оставьте ваши данные, и мы свяжемся с вами."
+  success-message:
+    ru:
+      title: "Запрос получен"
+      text: "Мы свяжемся с вами в течение рабочего дня"
+  error-message:
+    ru:
+      title: "Ошибка"
+      text: "Что-то пошло не так"

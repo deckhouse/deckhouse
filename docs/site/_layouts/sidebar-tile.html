@@ -1,0 +1,19 @@
+---
+layout: default
+---
+<!--#include virtual="/includes/banner.html" -->
+<div class="container">
+  {%- include nav-breadcrumbs_tile.html %}
+  <div class="layout-sidebar layout-sidebar__tile">
+    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--tile">
+      {%- include filter.html %}
+    </div>
+    <div class="layout-sidebar__content layout-sidebar__content--tile">
+        <h1 class="tile__title">{{ page.title }}</h1>
+        {{ content }}
+        {%- if page.feedback != false %}
+         {%- include feedback.html %}
+        {%- endif %}
+    </div>
+  </div>
+</div>

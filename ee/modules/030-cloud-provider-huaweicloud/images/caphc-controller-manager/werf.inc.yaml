@@ -1,0 +1,52 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /caphc-controller-manager
+  to: /caphc-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/caphc-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - export VERSION="v0.3.0"
+  - export VERSION_COMMON="v0.5.0"
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/caphc-controller-manager.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+  - cd /src/huaweicloud-common
+  - rm -rf .git
+  - cd /src
+  - rm -rf .git
+  - sed -i -e 's# ../huaweicloud-common# /src/huaweicloud-common#g' go.mod
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caphc-controller-manager cmd/main.go
+  - chown 64535:64535 /caphc-controller-manager
+  - chmod 0700 /caphc-controller-manager

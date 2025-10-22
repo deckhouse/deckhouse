@@ -1,0 +1,100 @@
+{{- $ciliumVersion := "1.17.4" }}
+---
+# #####################################################################
+# Build cilium-agent binaries
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
+  - cd /src/cilium
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf Documentation
+  - rm -rf /src/cilium/.git
+---
+image: {{ .ModuleName }}/cilium-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+  - llvm-objcopy
+- image: {{ .ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
+- image: {{ .ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- image: {{ .ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOROOT=/usr/local/go GOPATH=/go
+  # When launching this container via CI, an unexpected path is inserted into the PATH variable.
+  # Because of this, the code is built with errors. We haven't figured out why this is happening yet.
+  # As a workaround, we explicitly specified PATH.
+  - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
+  #
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/cilium
+  - go mod vendor && go mod verify
+  #
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container`) | indent 4 }}
+  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-container-binary install-bash-completion licenses-all
+  - mv LICENSE.all /tmp/install/LICENSE.all
+  #
+  - cd hubble
+  - make
+  - strip hubble
+  - mkdir -p /tmp/install/usr/bin && mv hubble /tmp/install/usr/bin/hubble
+  - /tmp/install/usr/bin/hubble completion bash > /tmp/install/etc/bash_completion.d/hubble
+  #
+  - cd /src/cilium
+  - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  #
+  - rm -rf /src/cilium/vendor
+  # fix compatibility with the new version of bash_completion
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/cilium-dbg
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/hubble
+  # trying reduce size of binaries
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-agent
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-bugtool
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-dbg
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health-responder
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-mount
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-sysctlfix
+  - objcopy --strip-all /tmp/install/usr/bin/hubble
+---

@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Fix DeckhouseRelease CRD
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1122
+

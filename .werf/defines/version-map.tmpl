@@ -1,0 +1,51 @@
+# parses version_map.yml file and adds info about supported k8s versions
+# . is dict with keys:
+# Editions - set of deckhouse editions.
+{{- define "parse_version_map" }}
+  {{ $context := . }}
+  # Version Map
+  {{- $versionMap := dict }}
+  {{- range $_, $edition := $.Editions }}
+   {{- if $edition.versionMapFile }}
+     {{- $versionMap = (mergeOverwrite $versionMap ($.Files.Get $edition.versionMapFile | fromYaml) )}}
+   {{- end }}
+   {{- if eq $.Env $edition.name }}
+     {{- break -}}
+   {{- end }}
+  {{- end }}
+
+  # Filtering only non-empty values in k8s
+  {{- $filteredK8s := dict }}
+  {{- range $ver, $val := $versionMap.k8s }}
+    {{- if $val }}
+      {{- $_ := set $filteredK8s $ver $val }}
+    {{- end }}
+  {{- end }}
+
+  {{- $_ := set $versionMap "k8s" $filteredK8s }}
+  {{- $_ := set $context "CandiVersionMap" $versionMap }}
+  # kubernetes versions list
+  {{- $kubernetesVersions := list }}
+  {{- $eolKubernetesVersions := list }}
+  {{- $previewKubernetesVersions := list }}
+  {{- $defaultKubernetesVersion := "" }}
+  {{- range $k, $v := $versionMap.k8s }}
+    {{- $kubernetesVersions = append $kubernetesVersions ($k | toString ) }}
+    {{- if eq $v.status "preview" }}
+      {{- $previewKubernetesVersions = append $previewKubernetesVersions ($k | toString ) }}
+    {{- end }}
+    {{- if eq $v.status "end-of-life" }}
+      {{- $eolKubernetesVersions = append $eolKubernetesVersions ($k | toString ) }}
+    {{- end }}
+    {{- if $v.default }}
+      {{- if ne $defaultKubernetesVersion "" }}
+        {{- fail "Multiple default kubernetes versions is set in candi/version_map.yml" }}
+      {{- end }}
+      {{- $defaultKubernetesVersion = $k | toString }}
+    {{- end }}
+  {{- end }}
+  {{ $_ := set $context "kubernetesVersions" $kubernetesVersions }}
+  {{ $_ := set $context "previewKubernetesVersions" $previewKubernetesVersions }}
+  {{ $_ := set $context "eolKubernetesVersions" $eolKubernetesVersions }}
+  {{ $_ := set $context "defaultKubernetesVersion" $defaultKubernetesVersion }}
+{{- end }}

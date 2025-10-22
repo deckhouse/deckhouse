@@ -1,0 +1,55 @@
+{{- $MimirVersion := "2.14.3" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - "**/*"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git ./operations
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go mod vendor
+    - go build -o mimir ./cmd/mimir
+    - chown -R 64535:64535 /src/mimir
+    - chmod 0700 /src/mimir
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/mimir
+    to: /bin/mimir
+    after: setup
+git:    
+{{- include "image mount points" . }}    
+imageSpec:
+  config:
+    entrypoint: ["/bin/mimir"]

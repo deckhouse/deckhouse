@@ -1,0 +1,18 @@
+defaults:
+
+positive:
+  values:
+    - internal:
+        storageClasses: []
+        instances:
+          ami: test
+          additionalSecurityGroups: ["test"]
+          associatePublicIPAddress: true
+          iamProfileName: test
+        keyName: test
+        loadBalancerSecurityGroup: test
+        zones: ["test"]
+        zoneToSubnetIdMap: {"test": "test"}
+        providerAccessKeyId: test
+        providerSecretAccessKey: test
+        region: test

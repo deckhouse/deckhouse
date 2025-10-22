@@ -1,0 +1,88 @@
+diff --git a/go.mod b/go.mod
+index 548aeed3..e923d6f0 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/grafana/grafana
+ 
+-go 1.24.3
++go 1.24.6
+ 
+ // Override docker/docker to avoid:
+ // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires
+@@ -291,7 +291,7 @@ require (
+ 	github.com/armon/go-metrics v0.4.1 // indirect
+ 	github.com/bwmarrin/snowflake v0.3.0 // @grafan/grafana-app-platform-squad
+ 	github.com/centrifugal/protocol v0.10.0 // indirect
+-	github.com/cloudflare/circl v1.3.7 // indirect
++	github.com/cloudflare/circl v1.6.1 // indirect
+ 	github.com/cockroachdb/errors v1.9.1 // indirect
+ 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
+ 	github.com/cockroachdb/redact v1.1.3 // indirect
+@@ -446,6 +446,8 @@ require github.com/spyzhov/ajson v0.9.0 // @grafana/grafana-app-platform-squad
+ 
+ require github.com/fullstorydev/grpchan v1.1.1 // @grafana/backend-platform
+ 
++require github.com/grafana/authlib/types v0.0.0-20250721184729-1593a38e4933
++
+ require (
+ 	cloud.google.com/go/auth v0.7.2 // indirect
+ 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
+diff --git a/go.sum b/go.sum
+index 77527512..7d481ed3 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1503,10 +1503,10 @@ github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl
+ github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
+ github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b h1:L/QXpzIa3pOvUGt1D1lA5KjYhPBAN/3iWdP7xeFS9F0=
+ github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
+-github.com/bsm/ginkgo/v2 v2.5.0 h1:aOAnND1T40wEdAtkGSkvSICWeQ8L3UASX7YVCqQx+eQ=
+-github.com/bsm/ginkgo/v2 v2.5.0/go.mod h1:AiKlXPm7ItEHNc/2+OkrNG4E0ITzojb9/xWzvQ9XZ9w=
+-github.com/bsm/gomega v1.20.0 h1:JhAwLmtRzXFTx2AkALSLa8ijZafntmhSoU63Ok18Uq8=
+-github.com/bsm/gomega v1.20.0/go.mod h1:JifAceMQ4crZIWYUKrlGcmbN3bqHogVTADMD2ATsbwk=
++github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
++github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
++github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=
++github.com/bsm/gomega v1.27.10/go.mod h1:JyEr/xRbxbtgWNi8tIEVPUYZ5Dzef52k01W3YH0H+O0=
+ github.com/bufbuild/connect-go v1.10.0 h1:QAJ3G9A1OYQW2Jbk3DeoJbkCxuKArrvZgDt47mjdTbg=
+ github.com/bufbuild/connect-go v1.10.0/go.mod h1:CAIePUgkDR5pAFaylSMtNK45ANQjp9JvpluG20rhpV8=
+ github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
+@@ -1554,8 +1554,8 @@ github.com/clbanning/mxj v1.8.4/go.mod h1:BVjHeAH+rl9rs6f+QIpeRl0tfu10SXn1pUSa5P
+ github.com/clbanning/x2j v0.0.0-20191024224557-825249438eec/go.mod h1:jMjuTZXRI4dUb/I5gc9Hdhagfvm9+RyrPryS/auMzxE=
+ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
+ github.com/cloudflare/circl v1.3.3/go.mod h1:5XYMA4rFBvNIrhs50XuiBJ15vF2pZn4nnUKZrLbUZFA=
+-github.com/cloudflare/circl v1.3.7 h1:qlCDlTPz2n9fu58M0Nh1J/JzcFpfgkFHHX3O35r5vcU=
+-github.com/cloudflare/circl v1.3.7/go.mod h1:sRTcRWXGLrKw6yIGJ+l7amYJFfAXbZG0kBSc8r4zxgA=
++github.com/cloudflare/circl v1.6.1 h1:zqIqSPIndyBh1bjLVVDHMPpVKqp8Su/V+6MeDzzQBQ0=
++github.com/cloudflare/circl v1.6.1/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
+ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
+ github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
+ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
+@@ -2201,6 +2201,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
+ github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+ github.com/grafana/alerting v0.0.0-20250228212120-8dc9701ba5f4 h1:G7zjdfJeZ93adt+fjU+us7m67pIp2+xpSDupD11goug=
+ github.com/grafana/alerting v0.0.0-20250228212120-8dc9701ba5f4/go.mod h1:brTFeACal/cSZAR8XO/4LPKs7rzNfS86okl6QjSP1eY=
++github.com/grafana/authlib/types v0.0.0-20250721184729-1593a38e4933 h1:GjiMR5NIO1/bYSCnt8x7VUeOMaupv2qXJkeLDVAddxQ=
++github.com/grafana/authlib/types v0.0.0-20250721184729-1593a38e4933/go.mod h1:qeWYbnWzaYGl88JlL9+DsP1GT2Cudm58rLtx13fKZdw=
+ github.com/grafana/codejen v0.0.3 h1:tAWxoTUuhgmEqxJPOLtJoxlPBbMULFwKFOcRsPRPXDw=
+ github.com/grafana/codejen v0.0.3/go.mod h1:zmwwM/DRyQB7pfuBjTWII3CWtxcXh8LTwAYGfDfpR6s=
+ github.com/grafana/cue v0.0.0-20230926092038-971951014e3f h1:TmYAMnqg3d5KYEAaT6PtTguL2GjLfvr6wnAX8Azw6tQ=
+@@ -2975,8 +2977,6 @@ github.com/prometheus/prometheus v0.49.0/go.mod h1:aDogiyqmv3aBIWDb5z5Sdcxuuf2BO
+ github.com/protocolbuffers/txtpbfmt v0.0.0-20220428173112-74888fd59c2b h1:zd/2RNzIRkoGGMjE+YIsZ85CnDIz672JK2F3Zl4vux4=
+ github.com/protocolbuffers/txtpbfmt v0.0.0-20220428173112-74888fd59c2b/go.mod h1:KjY0wibdYKc4DYkerHSbguaf3JeIPGhNJBp2BNiFH78=
+ github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
+-github.com/redis/go-redis/v9 v9.0.2 h1:BA426Zqe/7r56kCcvxYLWe1mkaz71LKF77GwgFzSxfE=
+-github.com/redis/go-redis/v9 v9.0.2/go.mod h1:/xDTe9EF1LM61hek62Poq2nzQSGj0xSrEtEHbBQevps=
+ github.com/redis/go-redis/v9 v9.6.3 h1:8Dr5ygF1QFXRxIH/m3Xg9MMG1rS8YCtAgosrsewT6i0=
+ github.com/redis/go-redis/v9 v9.6.3/go.mod h1:0C0c6ycQsdpVNQpxb1njEQIqkx5UcsM8FJCQLgE9+RA=
+ github.com/redis/rueidis v1.0.16 h1:ieB3AqZe9GcuTWZL8PFu1Mfn+pfqjBZAJEZh7zOcwSI=
+diff --git a/go.work b/go.work
+index 29bfcb15..b5f952ba 100644
+--- a/go.work
++++ b/go.work
+@@ -1,4 +1,4 @@
+-go 1.24.3
++go 1.24.6
+ 
+ use (
+ 	.

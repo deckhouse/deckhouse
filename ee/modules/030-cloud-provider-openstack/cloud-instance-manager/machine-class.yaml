@@ -1,0 +1,85 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: OpenStackMachineClass
+metadata:
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  region: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.region | quote }}
+  availabilityZone: {{ .zoneName }}
+  {{- if not .Values.nodeManager.internal.cloudProvider.openstack.externalNetworkDHCP }}
+  useConfigDrive: true
+  {{- end }}
+  flavorName: {{ .nodeGroup.instanceClass.flavorName }}
+  {{- if hasKey .nodeGroup.instanceClass "imageName" }}
+  imageName: {{ .nodeGroup.instanceClass.imageName }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "imageName" }}
+  imageName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.imageName }}
+  {{- else }}
+    {{ cat "No imageName provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+  {{- end }}
+  networks:
+  {{- $networks := list }}
+  {{- if hasKey .nodeGroup.instanceClass "additionalNetworks" }}
+    {{- range $additionalNetwork := .nodeGroup.instanceClass.additionalNetworks }}
+      {{- $networks = append $networks $additionalNetwork }}
+    {{- end }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "additionalNetworks" }}
+    {{- range $additionalNetwork := .Values.nodeManager.internal.cloudProvider.openstack.instances.additionalNetworks }}
+      {{- $networks = append $networks $additionalNetwork }}
+    {{- end }}
+  {{- end }}
+  {{- if hasKey .nodeGroup.instanceClass "mainNetwork" }}
+    {{- $networks = prepend $networks .nodeGroup.instanceClass.mainNetwork }}
+  {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "mainNetwork" }}
+    {{- $networks = prepend $networks .Values.nodeManager.internal.cloudProvider.openstack.instances.mainNetwork }}
+  {{- else}}
+    {{ cat "No mainNetwork provided neither in cloud provider configuration nor in OpenStackInstanceClass" .nodeGroup.cloudInstances.classReference.name | fail }}
+  {{- end }}
+  {{- range $networks | uniq }}
+  - name: {{ . | quote }}
+    {{- if has . $.Values.nodeManager.internal.cloudProvider.openstack.internalNetworkNames }}
+      {{- if eq $.Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled" }}
+    podNetwork: true
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  podNetworkCidr: {{ .Values.global.discovery.podSubnet }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack "instances" }}
+  {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "sshKeyPairName" }}
+  keyName: {{ .Values.nodeManager.internal.cloudProvider.openstack.instances.sshKeyPairName }}
+  {{- end }}
+  {{- $securityGroups := list }}
+  {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.instances "securityGroups" }}
+    {{- $securityGroups = concat $securityGroups .Values.nodeManager.internal.cloudProvider.openstack.instances.securityGroups }}
+  {{- end }}
+  {{- if hasKey .nodeGroup.instanceClass "additionalSecurityGroups" }}
+    {{- $securityGroups = concat $securityGroups .nodeGroup.instanceClass.additionalSecurityGroups }}
+  {{- end }}
+  {{- if gt (len $securityGroups) 0 }}
+  securityGroups:
+    {{- range $securityGroups | uniq }}
+  - {{ . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "rootDiskSize" }}
+  rootDiskSize: {{ .nodeGroup.instanceClass.rootDiskSize }}
+{{- end }}
+  tags:
+{{- $tags := dict }}
+{{- if .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+  {{- $tags = merge $tags .Values.nodeManager.internal.cloudProvider.openstack.tags }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
+  {{- $tags = mergeOverwrite $tags .nodeGroup.instanceClass.additionalTags }}
+{{- end }}
+{{- range $k, $v := $tags }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+    # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
+    kubernetes.io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID }}: "1"
+    kubernetes.io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+  secretRef:
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

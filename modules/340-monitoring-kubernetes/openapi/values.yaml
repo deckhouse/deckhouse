@@ -1,0 +1,27 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      clusterDNSImplementation:
+        type: string
+        default: ""
+        description: Internal property for cluster dns subsystem.
+        x-examples: ["kube-dns", "coredns"]
+      vpa:
+        type: object
+        default: {}
+        properties:
+          kubeStateMetricsMaxCPU:
+            type: string
+            default: "115"
+            description: Internal CPU value for VPA. Calculated from number of nodes
+            x-examples: ["115", "160"]
+          kubeStateMetricsMaxMemory:
+            type: string
+            default: "180Mi"
+            description: Internal Memory value for VPA. Calculated from number of nodes
+            x-examples: ["210Mi", "300Mi"]

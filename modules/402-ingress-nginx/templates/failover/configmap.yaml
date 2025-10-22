@@ -1,0 +1,20 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxy-{{ $crd.name }}-failover-config
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "proxy-failover" "name" $crd.name)) | nindent 2 }}
+data:
+  accept-requests-from.conf: |
+  {{- if $crd.spec.acceptRequestsFrom }}
+    {{- range $cidr := $crd.spec.acceptRequestsFrom }}
+    allow {{ $cidr }};
+    {{- end }}
+    deny all;
+  {{- end }}
+  {{- end }}
+{{- end }}

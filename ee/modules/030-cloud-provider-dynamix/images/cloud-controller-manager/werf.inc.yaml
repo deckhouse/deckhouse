@@ -1,0 +1,50 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dynamix-cloud-controller-manager
+  to: /dynamix-cloud-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dynamix-cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - export VERSION="v0.4.0"
+  - export VERSION_COMMON="v0.5.0"
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/cloud-controller-manager.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
+  - cd /src/dynamix-common
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dynamix-cloud-controller-manager cmd/dynamix-cloud-controller-manager/main.go
+    - chown 64535:64535 /dynamix-cloud-controller-manager
+    - chmod 0755 /dynamix-cloud-controller-manager

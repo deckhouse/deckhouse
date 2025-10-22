@@ -1,0 +1,14 @@
+{{- if .Values.certManager.enableCAInjector }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cainjector
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: cainjector
+{{- end }}

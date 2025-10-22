@@ -1,0 +1,11 @@
+linters-settings:
+  module:
+    conversions:
+      disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - properties.addressPools.items.properties.protocol
+  templates:
+    grafana-dashboards:
+      disable: true

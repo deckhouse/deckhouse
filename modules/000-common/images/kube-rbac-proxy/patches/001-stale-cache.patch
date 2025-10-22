@@ -1,0 +1,481 @@
+diff --git a/README.md b/README.md
+index ce09dca7..cfe900b7 100644
+--- a/README.md
++++ b/README.md
+@@ -56,6 +56,7 @@ Usage of _output/kube-rbac-proxy:
+       --secure-listen-address string                The address the kube-rbac-proxy HTTPs server should listen on.
+       --skip_headers                                If true, avoid header prefixes in the log messages
+       --skip_log_headers                            If true, avoid headers when opening log files
++      --stale-cache-interval duration               The interval to keep auth request review results for in case of unavailability of kube-apiserver.
+       --stderrthreshold severity                    logs at or above this threshold go to stderr (default 2)
+       --tls-cert-file string                        File containing the default x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert)
+       --tls-cipher-suites strings                   Comma-separated list of cipher suites for the server. Values are from tls package constants (https://golang.org/pkg/crypto/tls/#pkg-constants). If omitted, the default Go cipher suites will be used
+diff --git a/main.go b/main.go
+index 6812e746..15e5f25e 100644
+--- a/main.go
++++ b/main.go
+@@ -52,6 +52,8 @@ import (
+ 	rbac_proxy_tls "github.com/brancz/kube-rbac-proxy/pkg/tls"
+ )
+ 
++var kubeClientDefaultTimeout = 5 * time.Second
++
+ type config struct {
+ 	insecureListenAddress string
+ 	secureListenAddress   string
+@@ -63,6 +65,7 @@ type config struct {
+ 	kubeconfigLocation    string
+ 	allowPaths            []string
+ 	ignorePaths           []string
++	staleCacheTTL         time.Duration
+ }
+ 
+ type tlsConfig struct {
+@@ -107,6 +110,7 @@ func main() {
+ 	flagset.StringVar(&configFileName, "config-file", "", "Configuration file to configure kube-rbac-proxy.")
+ 	flagset.StringSliceVar(&cfg.allowPaths, "allow-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy matches the incoming request. If the request doesn't match, kube-rbac-proxy responds with a 404 status code. If omitted, the incoming request path isn't checked. Cannot be used with --ignore-paths.")
+ 	flagset.StringSliceVar(&cfg.ignorePaths, "ignore-paths", nil, "Comma-separated list of paths against which kube-rbac-proxy will proxy without performing an authentication or authorization check. Cannot be used with --allow-paths.")
++	flagset.DurationVar(&cfg.staleCacheTTL, "stale-cache-interval", 0*time.Minute, "The interval to keep auth request review results for in case of unavailability of kube-apiserver.")
+ 
+ 	// TLS flags
+ 	flagset.StringVar(&cfg.tls.certFile, "tls-cert-file", "", "File containing the default x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert)")
+@@ -206,7 +210,7 @@ func main() {
+ 		sarAuthorizer,
+ 	)
+ 
+-	auth, err := proxy.New(kubeClient, cfg.auth, authorizer, authenticator)
++	auth, err := proxy.New(kubeClient, cfg.auth, authorizer, authenticator, cfg.staleCacheTTL)
+ 
+ 	if err != nil {
+ 		klog.Fatalf("Failed to create rbac-proxy: %v", err)
+@@ -413,6 +417,9 @@ func initKubeConfig(kcLocation string) *rest.Config {
+ 		if err != nil {
+ 			klog.Fatalf("unable to build rest config based on provided path to kubeconfig file: %v", err)
+ 		}
++
++		kubeConfig.Timeout = kubeClientDefaultTimeout
++
+ 		return kubeConfig
+ 	}
+ 
+@@ -421,5 +428,7 @@ func initKubeConfig(kcLocation string) *rest.Config {
+ 		klog.Fatalf("cannot find Service Account in pod to build in-cluster rest config: %v", err)
+ 	}
+ 
++	kubeConfig.Timeout = kubeClientDefaultTimeout
++
+ 	return kubeConfig
+ }
+diff --git a/pkg/proxy/cache.go b/pkg/proxy/cache.go
+new file mode 100644
+index 00000000..08a77ca9
+--- /dev/null
++++ b/pkg/proxy/cache.go
+@@ -0,0 +1,65 @@
++/*
++Copyright 2017 Frederic Branczyk All rights reserved.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package proxy
++
++import (
++	"time"
++
++	utilcache "k8s.io/apimachinery/pkg/util/cache"
++	"k8s.io/apiserver/pkg/authentication/authenticator"
++)
++
++type authResponseCache interface {
++	Add(key string, value *authenticator.Response)
++	Get(key string) (*authenticator.Response, bool)
++	Remove(key string)
++}
++
++var (
++	_ authResponseCache = &lruCache{}
++	_ authResponseCache = &fakeCache{}
++)
++
++// lruCache is wrapper around kubernetes lru cache to make the ttl setting a property of the cache.
++type lruCache struct {
++	wrap *utilcache.LRUExpireCache
++	ttl  time.Duration
++}
++
++func newLRUTokenCache(ttl time.Duration) *lruCache {
++	return &lruCache{
++		wrap: utilcache.NewLRUExpireCache(4096),
++		ttl:  ttl,
++	}
++}
++
++func (c *lruCache) Add(key string, value *authenticator.Response) { c.wrap.Add(key, value, c.ttl) }
++func (c *lruCache) Remove(key string)                             { c.wrap.Remove(key) }
++func (c *lruCache) Get(key string) (*authenticator.Response, bool) {
++	obj, ok := c.wrap.Get(key)
++	if obj == nil {
++		return nil, ok
++	}
++	return obj.(*authenticator.Response), ok
++}
++
++// fakeCache is a dummy substitute to keep working with cache simple.
++type fakeCache struct{}
++
++func (*fakeCache) Add(_ string, _ *authenticator.Response)      {}
++func (*fakeCache) Remove(_ string)                              {}
++func (*fakeCache) Get(_ string) (*authenticator.Response, bool) { return nil, false }
+diff --git a/pkg/proxy/proxy.go b/pkg/proxy/proxy.go
+index aaac103c..988fd632 100644
+--- a/pkg/proxy/proxy.go
++++ b/pkg/proxy/proxy.go
+@@ -22,6 +22,7 @@ import (
+ 	"net/http"
+ 	"strings"
+ 	"text/template"
++	"time"
+ 
+ 	"github.com/brancz/kube-rbac-proxy/pkg/authn"
+ 	"github.com/brancz/kube-rbac-proxy/pkg/authz"
+@@ -32,6 +33,12 @@ import (
+ 	"k8s.io/klog/v2"
+ )
+ 
++// Prefixes to differentiate authentication methods to save them to the same cache
++var (
++	tokenPrefix       = "token:"
++	certificatePrefix = "certificate:"
++)
++
+ // Config holds proxy authorization and authentication settings
+ type Config struct {
+ 	Authentication *authn.AuthnConfig
+@@ -45,17 +52,29 @@ type kubeRBACProxy struct {
+ 	authorizer.Authorizer
+ 	// authorizerAttributesGetter implements retrieving authorization attributes for a respective request.
+ 	authorizerAttributesGetter *krpAuthorizerAttributesGetter
+-	// config for kube-rbac-proxy
++	// Config for kube-rbac-proxy
+ 	Config Config
++	// StaleCache for caching auth response
++	StaleCache authResponseCache
+ }
+ 
+-func new(authenticator authenticator.Request, authorizer authorizer.Authorizer, config Config) *kubeRBACProxy {
+-	return &kubeRBACProxy{authenticator, authorizer, newKubeRBACProxyAuthorizerAttributesGetter(config.Authorization), config}
++func new(authenticator authenticator.Request, authorizer authorizer.Authorizer, config Config, staleCacheTTL time.Duration) *kubeRBACProxy {
++	proxy := kubeRBACProxy{
++		Request:                    authenticator,
++		Authorizer:                 authorizer,
++		authorizerAttributesGetter: newKubeRBACProxyAuthorizerAttributesGetter(config.Authorization),
++		Config:                     config,
++		StaleCache:                 &fakeCache{},
++	}
++	if staleCacheTTL > 0*time.Second {
++		proxy.StaleCache = newLRUTokenCache(staleCacheTTL)
++	}
++	return &proxy
+ }
+ 
+ // New creates an authenticator, an authorizer, and a matching authorizer attributes getter compatible with the kube-rbac-proxy
+-func New(client clientset.Interface, config Config, authorizer authorizer.Authorizer, authenticator authenticator.Request) (*kubeRBACProxy, error) {
+-	return new(authenticator, authorizer, config), nil
++func New(_ clientset.Interface, config Config, authorizer authorizer.Authorizer, authenticator authenticator.Request, staleCacheTTL time.Duration) (*kubeRBACProxy, error) {
++	return new(authenticator, authorizer, config, staleCacheTTL), nil
+ }
+ 
+ // Handle authenticates the client and authorizes the request.
+@@ -67,24 +86,37 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
+ 		req = req.WithContext(ctx)
+ 	}
+ 
++	userIdentity := tokenPrefix + getTokenFromRequest(req)
++
+ 	// Authenticate
+ 	u, ok, err := h.AuthenticateRequest(req)
+ 	if err != nil {
+-		klog.Errorf("Unable to authenticate the request due to an error: %v", err)
+-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+-		return false
++		u, ok = h.StaleCache.Get(userIdentity)
++		if !ok {
++			klog.Errorf("Unable to authenticate the request due to an error: %v", err)
++			http.Error(w, "Unauthorized", http.StatusUnauthorized)
++			return false
++		}
+ 	}
+ 	if !ok {
+ 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
++		h.StaleCache.Remove(userIdentity)
+ 		return false
+ 	}
+ 
++	// If no token was specified in request, use the user name (cn) from x509 authentication instead with the prefix
++	if userIdentity == tokenPrefix {
++		userIdentity = certificatePrefix + u.User.GetName()
++	}
++
+ 	// Get authorization attributes
+ 	allAttrs := h.authorizerAttributesGetter.GetRequestAttributes(u.User, req)
+ 	if len(allAttrs) == 0 {
+ 		msg := "Bad Request. The request or configuration is malformed."
+ 		klog.V(2).Info(msg)
+ 		http.Error(w, msg, http.StatusBadRequest)
++
++		h.StaleCache.Remove(userIdentity)
+ 		return false
+ 	}
+ 
+@@ -92,19 +124,33 @@ func (h *kubeRBACProxy) Handle(w http.ResponseWriter, req *http.Request) bool {
+ 		// Authorize
+ 		authorized, reason, err := h.Authorize(ctx, attrs)
+ 		if err != nil {
+-			msg := fmt.Sprintf("Authorization error (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
+-			klog.Errorf("%s: %s", msg, err)
+-			http.Error(w, msg, http.StatusInternalServerError)
+-			return false
++			_, ok := h.StaleCache.Get(userIdentity)
++			if !ok {
++				msg := fmt.Sprintf("Authorization error (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
++				klog.Errorf("%s: %s", msg, err)
++				http.Error(w, msg, http.StatusInternalServerError)
++
++				h.StaleCache.Remove(userIdentity)
++				return false
++			}
++
++			// We save only authorized requests to the stale cache, if there is an entry - authorization is allowed
++			authorized = authorizer.DecisionAllow
+ 		}
+ 		if authorized != authorizer.DecisionAllow {
+ 			msg := fmt.Sprintf("Forbidden (user=%s, verb=%s, resource=%s, subresource=%s)", u.User.GetName(), attrs.GetVerb(), attrs.GetResource(), attrs.GetSubresource())
++
+ 			klog.V(2).Infof("%s. Reason: %q.", msg, reason)
+ 			http.Error(w, msg, http.StatusForbidden)
++
++			h.StaleCache.Remove(userIdentity)
+ 			return false
+ 		}
+ 	}
+ 
++	// cache successfully authorized responses only
++	h.StaleCache.Add(userIdentity, u)
++
+ 	if h.Config.Authentication.Header.Enabled {
+ 		// Seemingly well-known headers to tell the upstream about user's identity
+ 		// so that the upstream can achieve the original goal of delegating RBAC authn/authz to kube-rbac-proxy
+@@ -210,6 +256,11 @@ func (n krpAuthorizerAttributesGetter) GetRequestAttributes(u user.Info, r *http
+ 		}
+ 		allAttrs = append(allAttrs, attrs)
+ 	}
++
++	for attrs := range allAttrs {
++		klog.V(5).Infof("kube-rbac-proxy request attributes: attrs=%#v", attrs)
++	}
++
+ 	return allAttrs
+ }
+ 
+@@ -265,3 +316,15 @@ func templateWithValue(templateString, value string) string {
+ 	}
+ 	return out.String()
+ }
++
++func getTokenFromRequest(req *http.Request) string {
++	auth := strings.TrimSpace(req.Header.Get("Authorization"))
++	if auth == "" {
++		return ""
++	}
++	parts := strings.Split(auth, " ")
++	if len(parts) < 2 || strings.ToLower(parts[0]) != "bearer" {
++		return ""
++	}
++	return parts[1]
++}
+diff --git a/pkg/proxy/proxy_test.go b/pkg/proxy/proxy_test.go
+index d5afc362..0e596e25 100644
+--- a/pkg/proxy/proxy_test.go
++++ b/pkg/proxy/proxy_test.go
+@@ -18,10 +18,12 @@ package proxy
+ 
+ import (
+ 	"context"
++	"fmt"
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"strings"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/brancz/kube-rbac-proxy/pkg/authn"
+ 	"github.com/brancz/kube-rbac-proxy/pkg/authz"
+@@ -49,7 +51,7 @@ func TestProxyWithOIDCSupport(t *testing.T) {
+ 	}
+ 
+ 	fakeUser := user.DefaultInfo{Name: "Foo Bar", Groups: []string{"foo-bars"}}
+-	authenticator := fakeOIDCAuthenticator(t, &fakeUser)
++	fakeAuth := fakeAuthenticator(&fakeUser)
+ 
+ 	scenario := setupTestScenario()
+ 	for _, v := range scenario {
+@@ -57,7 +59,7 @@ func TestProxyWithOIDCSupport(t *testing.T) {
+ 		t.Run(v.description, func(t *testing.T) {
+ 
+ 			w := httptest.NewRecorder()
+-			proxy, err := New(kc, cfg, v.authorizer, authenticator)
++			proxy, err := New(kc, cfg, v.authorizer, fakeAuth, 0)
+ 
+ 			if err != nil {
+ 				t.Fatalf("Failed to instantiate test proxy. Details : %s", err.Error())
+@@ -237,6 +239,103 @@ func TestGeneratingAuthorizerAttributes(t *testing.T) {
+ 	}
+ }
+ 
++func TestProxyCacheSupport(t *testing.T) {
++	kc := testclient.NewSimpleClientset()
++	cfg := Config{
++		Authentication: &authn.AuthnConfig{
++			Header: &authn.AuthnHeaderConfig{},
++			Token:  &authn.TokenConfig{},
++		},
++		Authorization: &authz.Config{},
++	}
++
++	fakeUser := user.DefaultInfo{Name: "Foo Bar", Groups: []string{"foo-bars"}}
++	fakeAuth := fakeAuthenticator(&fakeUser)
++
++	cases := []struct {
++		description  string
++		authorizer   authorizer.Authorizer
++		token        string
++		tokenInCache bool
++		status       int
++	}{
++		{
++			description:  "With a request with valid token and no access rights should not cache auth response",
++			authorizer:   denier{},
++			token:        "VALID-1",
++			tokenInCache: false,
++			status:       403,
++		},
++		{
++			description:  "With a request with valid token and access rights should cache auth response",
++			authorizer:   approver{},
++			token:        "VALID-2",
++			tokenInCache: true,
++			status:       200,
++		},
++		{
++			description:  "With a request with invalid token should not cache auth response",
++			authorizer:   approver{},
++			token:        "INVALID",
++			tokenInCache: false,
++			status:       401,
++		},
++		{
++			description:  "With a request with a valid token in case of authn error should get auth data from the cache",
++			authorizer:   approver{},
++			token:        "ERROR",
++			tokenInCache: true,
++			status:       200,
++		},
++		{
++			description:  "With a request with a valid non cached token in case of authz error should fail",
++			authorizer:   failer{},
++			token:        "NON-CACHED",
++			tokenInCache: false,
++			status:       500,
++		},
++		{
++			description:  "With a request with a valid cached token in case of authz error should get auth data from the cache",
++			authorizer:   failer{},
++			token:        "CACHED",
++			tokenInCache: true,
++			status:       200,
++		},
++	}
++
++	for _, c := range cases {
++		t.Run(c.description, func(t *testing.T) {
++			w := httptest.NewRecorder()
++			proxy, err := New(kc, cfg, c.authorizer, fakeAuth, time.Hour*3600)
++			if err != nil {
++				t.Fatalf("Failed to instantiate test proxy. Details : %s", err.Error())
++			}
++
++			// Put the cache entry for the ERROR token to be sure that the proxy will use cache if an error is occurred
++			proxy.StaleCache.Add(tokenPrefix+"ERROR", &authenticator.Response{})
++
++			// Put cached tokens to the cache to get back their results on authorization error
++			proxy.StaleCache.Add(tokenPrefix+"CACHED", &authenticator.Response{})
++
++			proxy.Handle(w, fakeJWTRequest("GET", "/", fmt.Sprintf("Bearer %s", c.token)))
++
++			_, ok := proxy.StaleCache.Get(tokenPrefix + c.token)
++			if c.tokenInCache && !ok {
++				t.Fatalf("Cache doesn't contain the token.")
++			}
++
++			if !c.tokenInCache && ok {
++				t.Fatalf("Cache contains the token but it must not.")
++			}
++
++			resp := w.Result()
++			if resp.StatusCode != c.status {
++				t.Errorf("Expected response: %d received : %d", c.status, resp.StatusCode)
++			}
++		})
++	}
++}
++
+ func createRequest(queryParams, headers map[string]string) *http.Request {
+ 	r := httptest.NewRequest("GET", "/accounts", nil)
+ 	if queryParams != nil {
+@@ -296,13 +395,16 @@ func fakeJWTRequest(method, path, token string) *http.Request {
+ 	return req
+ }
+ 
+-func fakeOIDCAuthenticator(t *testing.T, fakeUser *user.DefaultInfo) authenticator.Request {
+-
++func fakeAuthenticator(fakeUser *user.DefaultInfo) authenticator.Request {
+ 	auth := bearertoken.New(authenticator.TokenFunc(func(ctx context.Context, token string) (*authenticator.Response, bool, error) {
+-		if token != "VALID" {
++		switch token {
++		case "INVALID":
+ 			return nil, false, nil
++		case "ERROR":
++			return nil, false, fmt.Errorf("error occured while authenticating")
++		default:
++			return &authenticator.Response{User: fakeUser}, true, nil
+ 		}
+-		return &authenticator.Response{User: fakeUser}, true, nil
+ 	}))
+ 	return auth
+ }
+@@ -319,6 +421,14 @@ func (a approver) Authorize(ctx context.Context, auth authorizer.Attributes) (au
+ 	return authorizer.DecisionAllow, "user allowed", nil
+ }
+ 
++type failer struct{}
++
++func (e failer) Authorize(ctx context.Context, auth authorizer.Attributes) (authorized authorizer.Decision, reason string, err error) {
++	// authorizer.DecisionNoOpinion is a decision on error, see:
++	// https://github.com/kubernetes/apiserver/blob/6490793cbf59ce4b2b4f76c93ffdb0d498c7c3a6/plugin/pkg/authorizer/webhook/webhook.go#L115
++	return authorizer.DecisionNoOpinion, "", fmt.Errorf("error occured while authorizig")
++}
++
+ type given struct {
+ 	req        *http.Request
+ 	authorizer authorizer.Authorizer

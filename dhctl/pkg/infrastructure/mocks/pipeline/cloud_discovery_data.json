@@ -1,0 +1,21 @@
+{
+  "apiVersion": "deckhouse.io/v1",
+  "defaultLbTargetGroupNetworkId": "test",
+  "internalNetworkIDs": [
+    "test"
+  ],
+  "kind": "YandexCloudDiscoveryData",
+  "region": "ru-central1",
+  "routeTableID": "test",
+  "shouldAssignPublicIPAddress": false,
+  "zoneToSubnetIdMap": {
+    "ru-central1-a": "test",
+    "ru-central1-b": "test",
+    "ru-central1-c": "test"
+  },
+  "zones": [
+    "ru-central1-a",
+    "ru-central1-b",
+    "ru-central1-c"
+  ]
+}

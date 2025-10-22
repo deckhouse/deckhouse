@@ -1,0 +1,28 @@
+{{- if .Values.openvpn.internal.deployDexAuthenticator }}
+---
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" .Chart.Name )) | nindent 2 }}
+spec:
+  applicationDomain: {{ include "helm_lib_module_public_domain" (list . "openvpn-admin") }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.openvpn.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- with .Values.openvpn.auth.allowedUserGroups }}
+  allowedGroups:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  highAvailability: true
+  {{- else }}
+  highAvailability: false
+  {{- end }}
+{{- end }}

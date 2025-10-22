@@ -1,0 +1,195 @@
+{{- $containerd_versions := list "1.7.28" "2.1.4" }}
+{{- $runc_versions := list "1.3.0" }}
+{{- $containerd2runc := dict "1.7.28" "1.3.0" "2.1.4" "1.3.0" }}
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "7" }} # may be redefine in CSE
+
+# calculate additional build options for containerd
+# skip for v1 and not CSE. Now we calculate namespaces for integrity check
+# from /tools/build_includes/integrity-check-namespaces.yaml file
+# . is dict with keys:
+#   rootContext - context of template. Should contain Files and Env (werf env) keys
+#   isV2 - bool value that indicates that we render container v2 template
+{{- define "render_containerd_build_options" }}
+{{- $context := .rootContext -}}
+{{- $is_v2 := .isV2 -}}
+
+  {{- if and (eq $context.Env "CSE") $is_v2 -}}
+    {{- $namespacesSettings := ($context.Files.Get "/tools/build_includes/integrity-check-namespaces.yaml" | fromYaml) }}
+    {{- if not (hasKey $namespacesSettings "namespaces_for_integrity") -}}
+      {{- fail "file /tools/build_includes/integrity-check-namespaces.yaml has not key namespaces_for_integrity" -}}
+    {{- end }}
+
+    {{- $namespaces := get $namespacesSettings "namespaces_for_integrity" | join "," -}}
+    {{- if $namespaces -}}
+INTEGRITY_NAMESPACES="{{ $namespaces }}"
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+
+{{- range $runc_version := $runc_versions }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/runc
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src
+  - cd /src
+  - git apply /patches/{{ $runc_version }}/*.patch --verbose
+  - git describe --dirty --long --always > COMMIT
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+  {{ include "mount points for golang builds" $ }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" $ | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
+  - mkdir -p /out
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - git config --global user.email "builder@deckhouse.io"
+  - |
+  {{- $buildContext := deepCopy $ -}}
+  {{- $parted_version := split "." $runc_version -}}
+  {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" static` -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "%s/runc-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
+  - mv runc /out/runc
+  - chown -R 64535:64535 /out
+  - chmod 755 /out/runc
+{{- end }}
+
+{{- range $containerd_version := $containerd_versions }}
+  {{- $image_version := $containerd_version | replace "." "-" }}
+  {{- $is_v2 := hasPrefix "2." $containerd_version }}
+  {{- $major_version := index (splitList "-" $image_version) 0 }}
+  {{- $runc_version := index $containerd2runc $containerd_version }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /out
+  to: /
+  includePaths:
+  - containerd
+  - .containerd_fallback
+  - containerd-shim-runc-v1
+  - containerd-shim-runc-v2
+  - ctr
+  - install
+  - uninstall
+  - containerd.service
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+  add: /out/runc
+  to: /runc
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "containerd": "{{ $containerd_version }}", "runc": "{{ $runc_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/containerd/{{ $containerd_version }}
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ $.DECKHOUSE_PRIVATE_REPO }}
+shell:
+  install:
+{{- if and (eq $.Env "CSE") $is_v2 }}
+  - echo "Attention! Use integrity patches!"
+  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
+  - alias cp='cp'
+  - cp /src/integrity-patches/patches/*.patch /patches
+  - rm -rf /src/integrity-patches
+{{- end }}
+  - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
+  - cd /src/containerd
+  - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
+  - git rev-parse HEAD > REVISION
+  - git apply /patches/*.patch --verbose
+  - cd /src/scripts
+  - cp install_v{{ $major_version }} install
+  - rm -rf install_v1 install_v2
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" $ }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" $ | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
+  - mkdir -p /out
+  install:
+  - cd /src/containerd
+  - git config --global user.email "builder@deckhouse.io"
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  {{- if and (eq $.Env "CSE") $is_v2 }}
+  - GOOS=linux GOARCH=amd64 make STATIC=1 INTEGRITY_IMAGE_SIGN_CHECK="false" INTEGRITY_DEV_MAPPER_CHECK="false" INTEGRITY_PERIODICAL_CHECK="false" INTEGRITY_STOP_CONTAINER_IF_FAIL="false" bin/containerd
+  - mv bin/containerd /out/.containerd_fallback
+  {{- end }}
+  {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
+  - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
+  - |
+  {{- $buildContext := deepCopy $ -}}
+  {{- $parted_version := split "." $containerd_version -}}
+  {{- $_ := set $buildContext "BuildCommand" (printf "make STATIC=1 VERSION=\"$(cat VERSION)\" REVISION=\"$(cat REVISION)\" %s all" $additionalBuildOptions) -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "%s/containerd-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
+  - mv bin/* /out
+  - mv /src/scripts/* /out
+  - chown -R 64535:64535 /out
+  - chmod 755 /out/*
+{{- end }}

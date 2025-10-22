@@ -1,0 +1,115 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $enableWorkflowOnTestRepos := false }!}
+
+name: K8S autoupdate
+on:
+  schedule:
+  - cron: '0 3 * * *'
+  workflow_dispatch:
+jobs:
+  skip_tests_repos:
+    name: Skip tests repos
+    runs-on: ubuntu-latest
+    if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
+    steps:
+    - name: Do nothing
+      run: echo "Empty action to fulfil Github requirements."
+
+  update_k8s:
+    runs-on: [self-hosted, regular]
+    needs:
+    - skip_tests_repos
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - uses: {!{ index (ds "actions") "actions/setup-go" }!}
+      with:
+        go-version: '1.23.7'
+        cache: false
+    - name: Setup
+      id: get_milestone
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        script: |
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+
+          const milestones = await github.rest.issues.listMilestones({
+            owner: owner,
+            repo: repo,
+            state: 'open',
+          });
+
+          const filteredMilestones = milestones.data
+          .filter(milestone => /^v\d+\.\d+\.0$/.test(milestone.title));
+
+          if (filteredMilestones.length > 0) {
+            const targetMilestone = filteredMilestones.sort((a, b) => {
+              const partsA = a.title.substring(1).split('.').map(Number);
+              const partsB = b.title.substring(1).split('.').map(Number);
+
+              for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const numA = partsA[i] || 0; // Default to 0 if a part is missing
+                const numB = partsB[i] || 0; // Default to 0 if a part is missing
+
+                if (numA !== numB) {
+                  return numA - numB;
+                }
+              }
+              return 0; // Equal
+            })[0];
+            core.setOutput('milestone', targetMilestone.number);
+            console.log(`Milestone found: ${targetMilestone.number}`);
+          } else {
+            core.setOutput('milestone', '');
+            console.log('No milestones found with patch version 0.');
+          }
+    - name: Update k8s patch version
+      id: update
+      run: |
+        make update-k8s-patch-versions
+        make generate
+        echo "Updated versions: $(cat /tmp/updated-versions)"
+        echo "::set-output name=k8sVersions::$(cat /tmp/updated-versions)" && rm -f /tmp/updated-versions
+    - name: Create Pull Request
+      id: create-pull-request
+      uses: {!{ index (ds "actions") "peter-evans/create-pull-request" }!}
+      with:
+        commit-message: "Automated Change: Update k8s patch version"
+        signoff: true
+        title: "[run ci] Automated Change: Update k8s patch version"
+        body-path: ".github/k8s_autoupdate_pull_request_template.md"
+        branch: chore/k8s-autoupdate
+        token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        base: main
+        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}security/cve
+        milestone: ${{ steps.get_milestone.outputs.milestone }}
+        delete-branch: true
+    - name: Send success report
+      if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' && github.repository == 'deckhouse/deckhouse' }}
+      env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+      run: |
+        PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
+        bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
+    - name: Send failure report
+      if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+      env:
+        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+        bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
+
+

@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fixed CSI mount cleaner.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5667
+

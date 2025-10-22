@@ -1,0 +1,3 @@
+crds:
+  - deckhouse-controller/crds/*.yaml
+

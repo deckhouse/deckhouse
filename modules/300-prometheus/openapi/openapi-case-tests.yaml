@@ -1,0 +1,93 @@
+positive:
+  values:
+    - internal:
+        vpa:
+          maxCPU: 4096
+          maxMemory: 0.1
+    - internal:
+        vpa:
+          maxCPU: "1400m"
+          maxMemory: "100"
+    - internal:
+        vpa:
+          maxCPU: "1400m"
+          maxMemory: "1.5Gi"
+    - internal:
+        vpa:
+          longtermMaxCPU: "1m"
+          longtermMaxMemory: "100Mi"
+    - internal:
+        vpa:
+          longtermMaxCPU: "1m"
+          longtermMaxMemory: "1.5Gi"
+    - internal:
+        vpa:
+          longtermMaxCPU: 4096
+          longtermMaxMemory: 1000
+    - internal:
+        prometheusLongterm:
+          retentionGigabytes: 25
+    - internal:
+        prometheusAPIClientTLS:
+          certificate: somecertstring
+          key: somekeystring
+          certificate_updated: false
+    - internal:
+        prometheusAPIClientTLS:
+          certificate: somecertstring
+          key: somekeystring
+          certificate_updated: true
+        grafana:
+          additionalDatasources:
+          - access: proxy
+            basicAuth: false
+            editable: false
+            isDefault: false
+            jsonData:
+              timeInterval: 30s
+              integer: 1
+            name: loki
+            orgId: 1
+            type: loki
+            url: http://loki.loki:3100
+            uid: loki
+            version: 1
+          - access: proxy
+            basicAuth: false
+            editable: false
+            isDefault: false
+            jsonData:
+              httpMethod: POST
+              timeInterval: 30s
+            name: promscale-production
+            orgId: 1
+            type: prometheus
+            url: http://my.domain.com:9091
+            uid: promscale-production
+            version: 1
+          - access: proxy
+            basicAuth: true
+            basicAuthUser: metric
+            editable: false
+            isDefault: false
+            jsonData:
+              timeInterval: 30s
+            name: external-prometheus
+            orgId: 1
+            secureJsonData:
+              basicAuthPassword: secret
+            type: prometheus
+            url: http://my.domain.com/prometheus/
+            uid: external-prometheus
+            version: 1
+
+negative:
+  values:
+  - internal:
+      vpa:
+        maxCPU: "123Hz"
+        maxMemory: "3445J"
+  - internal:
+      vpa:
+        maxCPU: "123Pz"
+        maxMemory: "3.Gi"

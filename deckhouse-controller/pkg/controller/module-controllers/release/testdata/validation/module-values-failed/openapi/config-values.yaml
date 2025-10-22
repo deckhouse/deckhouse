@@ -1,0 +1,8 @@
+type: object
+properties:
+  name-1:
+    type: integer
+    default: 1
+  name-2:
+    type: integer
+    default: 1

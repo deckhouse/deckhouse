@@ -1,0 +1,171 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:kiali
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - pods/log
+  - namespaces
+  - pods
+  - replicationcontrollers
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/portforward
+  verbs:
+  - create
+  - post
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - destinationrules/status
+  - envoyfilters
+  - envoyfilters/status
+  - gateways
+  - gateways/status
+  - proxyconfigs
+  - proxyconfigs/status
+  - serviceentries
+  - serviceentries/status
+  - sidecars
+  - sidecars/status
+  - virtualservices
+  - virtualservices/status
+  - workloadentries
+  - workloadentries/status
+  - workloadgroups
+  - workloadgroups/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - security.istio.io
+  resources:
+  - authorizationpolicies
+  - authorizationpolicies/status
+  - peerauthentications
+  - peerauthentications/status
+  - requestauthentications
+  - requestauthentications/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
+  - wasmplugins/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  - telemetries/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - referencegrants
+  - grpcroutes
+  - grpcroutes/status
+  - gateways
+  - gateways/status
+  - gatewayclasses
+  - gatewayclasses/status
+  - httproutes
+  - httproutes/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - prometheuses
+  - prometheuses/http
+  verbs:
+  - get
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - trickster
+  resources:
+  - deployments/http
+  verbs:
+  - create
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:kiali
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:kiali
+subjects:
+- kind: ServiceAccount
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}

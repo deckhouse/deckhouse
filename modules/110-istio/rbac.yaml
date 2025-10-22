@@ -1,0 +1,2 @@
+crds:
+  - ee/modules/110-istio/crds/*.yaml

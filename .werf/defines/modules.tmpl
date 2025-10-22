@@ -1,0 +1,109 @@
+{{- define "module_image_template" }}
+  {{- if eq .ImageInstructionType "Dockerfile" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+dockerfile: Dockerfile
+ssh: default
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+args:
+  BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
+  BASE_NODE_20_ALPINE: {{ .Images.BASE_NODE_20_ALPINE }}
+
+  # Only needed for ingress-nginx controller 1.9. Should be removed soon
+  BASE_ALT_DEV: {{ .Images.BASE_ALT_DEV }}
+
+  SOURCE_REPO: {{ .SOURCE_REPO }}
+  CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
+  DECKHOUSE_PRIVATE_REPO: {{ .DECKHOUSE_PRIVATE_REPO }}
+  SVACE_ANALYZE_HOST: {{ .SVACE_ANALYZE_HOST }}
+  SVACE_ANALYZE_SSH_USER: {{ .SVACE_ANALYZE_SSH_USER }}
+    {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
+dependencies:
+- image: common/distroless
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_DISTROLESS
+- image: common/iptables-wrapper
+  imports:
+  - type: ImageName
+    targetBuildArg: BASE_IPTABLES_WRAPPER
+    {{- end }}
+  {{- else }}
+    {{- tpl .ImageBuildData . }}
+  {{- end }}
+{{- end }}
+
+# render images digests image with /images_digests.json file
+# . is dict with next params
+#   ModulesImagesDigestList - digest getting after rendering images
+#   Images - map from images_versions.yml
+{{- define "images_digest_image" }}
+{{- $context := . -}}
+
+image: images-digests
+fromImage: builder/alpine-3.20
+dependencies:
+
+{{- range $imageDigest := $context.ModulesImagesDigestList }}
+  {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
+  {{- $ImageDigestCamel  := $imageDigest | splitList "/" | last  | camelcase | untitle }}
+- image: {{ $imageDigest }}
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: MODULE_IMAGE_DIGEST_{{ $ModuleNameCamel }}_{{ $ImageDigestCamel }}
+{{- end }}
+
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+shell:
+  setup:
+  - |
+    touch digests_full.lst
+    # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
+    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | cut -d "=" -f 1`
+    do
+      digestKey=`echo $line | cut -f 4- -d '_'`
+      imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`
+      echo $digestKey'='$imageDigest >> digests_full.lst
+    done
+    cat digests_full.lst | jq -Rn '
+      reduce inputs as $i (
+        {};
+        . * (
+          $i | sub("=";"_") |
+          split("_") as [$moduleName, $imageName, $digest] |
+          {($moduleName): {($imageName): $digest}}
+        )
+      )
+    ' > /images_digests.json
+{{- end }}
+
+
+{{- define "exclude_modules_dir_from_images" }}
+- docs
+- modules/*/docs
+- modules/*/README.md
+- modules/*/images
+- modules/*/hooks/**/*.go
+- modules/*/template_tests
+- modules/*/.namespace
+- modules/*/values_matrix_test.yaml
+- modules/*/apis/**/*.go
+- modules/*/requirements/**/*.go
+- modules/*/settings-conversion/**/*.go
+- modules/*/hack/**/*.go
+- global-hooks/**/*.go
+- candi/cloud-providers/*/layouts
+- candi/cloud-providers/*/terraform-modules
+- '**/testdata'
+{{- end}}

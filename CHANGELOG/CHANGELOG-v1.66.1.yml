@@ -1,0 +1,13 @@
+admission-policy-engine:
+  features:
+    - summary: Add SecurityPolicy with ability to check images, signed with cosign. EE only.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10846
+candi:
+  fixes:
+    - summary: nodeUser creation fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10795
+user-authn:
+  features:
+    - summary: helm/werf.io labels exclude for transfer to secrets
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10567
+

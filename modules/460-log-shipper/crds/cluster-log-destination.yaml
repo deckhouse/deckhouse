@@ -1,0 +1,1152 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterlogdestinations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterlogdestinations
+    singular: clusterlogdestination
+    kind: ClusterLogDestination
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          description: |
+            Describes setting for a log storage, which you can use in many log sources.
+
+            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](https://deckhouse.io/modules/log-shipper/cr.html#clusterloggingconfig).
+          properties:
+            spec:
+              type: object
+              oneOf:
+                - properties:
+                    loki: {}
+                    type:
+                      enum:
+                        - Loki
+                  required:
+                    - loki
+                    - type
+                - properties:
+                    elasticsearch: {}
+                    type:
+                      enum:
+                        - Elasticsearch
+                  required:
+                    - elasticsearch
+                    - type
+                - properties:
+                    logstash: {}
+                    type:
+                      enum:
+                        - Logstash
+                  required:
+                    - type
+                    - logstash
+                - properties:
+                    vector: {}
+                    type:
+                      enum:
+                        - Vector
+                  required:
+                    - type
+                    - vector
+                - properties:
+                    kafka: {}
+                    type:
+                      enum:
+                        - Kafka
+                  required:
+                    - type
+                    - kafka
+                - properties:
+                    splunk: {}
+                    type:
+                      enum:
+                      - Splunk
+                  required:
+                    - type
+                    - splunk
+                - properties:
+                    socket: {}
+                    type:
+                      enum:
+                        - Socket
+                  required:
+                  - type
+                  - socket
+              properties:
+                type:
+                  type: string
+                  enum: ["Loki", "Elasticsearch", "Logstash", "Vector", "Kafka", "Splunk", "Socket"]
+                  description: Type of a log storage backend.
+                loki:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        password:
+                          type: string
+                          format: password
+                          description: Base64-encoded Basic authentication password.
+                        strategy:
+                          type: string
+                          enum: ["Basic", "Bearer"]
+                          default: "Basic"
+                          description: The authentication strategy to use.
+                        token:
+                          type: string
+                          description: The token to use for Bearer authentication.
+                        user:
+                          type: string
+                          description: The Basic authentication user name.
+                      oneOf:
+                        - properties:
+                            strategy:
+                              enum: ["Basic"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - token
+                            - required:
+                                - user
+                                - password
+                        - properties:
+                            strategy:
+                              enum: ["Bearer"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - user
+                                  - required:
+                                      - password
+                            - required:
+                                - token
+                    tenantID:
+                      type: string
+                      description: |
+                        ID of a tenant.
+
+                        This option is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
+                    endpoint:
+                      type: string
+                      description: |
+                        Base URL of the Loki instance.
+
+                        > Agent automatically adds `/loki/api/v1/push` into URL during data transmission.
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
+                elasticsearch:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    auth:
+                      type: object
+                      properties:
+                        strategy:
+                          enum: ["Basic", "AWS"]
+                          type: string
+                          default: "Basic"
+                          description: The authentication strategy to use.
+                        password:
+                          type: string
+                          format: password
+                          description: Base64-encoded Basic authentication password.
+                        awsAccessKey:
+                          type: string
+                          description: Base64-encoded AWS `ACCESS_KEY`.
+                        awsSecretKey:
+                          type: string
+                          description: Base64-encoded AWS `SECRET_KEY`.
+                        awsAssumeRole:
+                          type: string
+                          description: The ARN of an IAM role to assume at startup.
+                        user:
+                          type: string
+                          description: The Basic authentication user name.
+                        awsRegion:
+                          type: string
+                          description: AWS region for authentication.
+                      oneOf:
+                        - properties:
+                            strategy:
+                              enum: ["Basic"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - awsAccessKey
+                                  - required:
+                                      - awsSecretKey
+                                  - required:
+                                      - awsAssumeRole
+                                  - required:
+                                      - awsRegion
+                            - required:
+                                - user
+                                - password
+                        - properties:
+                            strategy:
+                              enum: ["AWS"]
+                          allOf:
+                            - not:
+                                anyOf:
+                                  - required:
+                                      - user
+                                  - required:
+                                      - password
+                            - required:
+                                - awsAccessKey
+                                - awsSecretKey
+                    index:
+                      type: string
+                      description: Index name to write events to.
+                    pipeline:
+                      type: string
+                      description: Name of the pipeline to apply.
+                    endpoint:
+                      type: string
+                      description: Base URL of the Elasticsearch instance.
+                    dataStreamEnabled:
+                      type: boolean
+                      default: false
+                      description: |
+                        Use for storage indexes or datastreams (https://www.elastic.co/guide/en/elasticsearch/reference/master/data-streams.html).
+
+                        Datastream usage is better for logs and metrics storage but they works only for Elasticsearch >= 7.16.X.
+                    docType:
+                      type: string
+                      description: |
+                        The `doc_type` for your index data. This is only relevant for Elasticsearch <= 6.X.
+
+                        - For Elasticsearch >= 7.X you do not need this option since this version has removed `doc_type` mapping;
+                        - For Elasticsearch >= 6.X the recommended value is `_doc`, because using it will make it easy to upgrade to 7.X;
+                        - For Elasticsearch < 6.X you can't use a value starting with `_` or empty string. Use, for example, values like `logs`.
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host. Specifically the issuer is checked but not CRLs (Certificate Revocation Lists).
+                logstash:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: Base URL of the Logstash instance.
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host.
+                kafka:
+                  type: object
+                  required:
+                    - topic
+                    - bootstrapServers
+                  properties:
+                    topic:
+                      type: string
+                      description: |
+                        The Kafka topic name to write events to.
+                        This parameter supports template syntax, which enables you to use dynamic per-event values.
+                      x-doc-examples: ["logs", "logs-{{unit}}-%Y-%m-%d"]
+                    bootstrapServers:
+                      type: array
+                      description: |
+                        A list of host and port pairs that are the addresses of the Kafka brokers in a “bootstrap” Kafka cluster that a Kafka client connects to initially to bootstrap itself.
+                      default: []
+                      x-doc-examples:
+                      - ["10.14.22.123:9092", "10.14.23.332:9092"]
+                      items:
+                        type: string
+                        pattern: '^(.+)\:\d{1,5}$'
+                    encoding:
+                      type: object
+                      description: |
+                        How to encode the message.
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["JSON", "CEF"]
+                          default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["JSON"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
+                    keyField:
+                      type: string
+                      description: |
+                        Allows to set the [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
+                      x-doc-examples: ["host", "node", "namespace","parsed_data.app_info"]
+                    sasl:
+                      type: object
+                      description: Configuration for SASL authentication when interacting with Kafka.
+                      required:
+                        - mechanism
+                        - username
+                        - password
+                      properties:
+                        mechanism:
+                          type: string
+                          description: The SASL mechanism to use. Only PLAIN and SCRAM-based mechanisms are supported.
+                          enum: ["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"]
+                        username:
+                          type: string
+                          description: The SASL username.
+                          x-doc-examples:
+                            - "username"
+                        password:
+                          type: string
+                          description: The SASL password.
+                          x-doc-examples:
+                            - "qwerty"
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host.
+                splunk:
+                  type: object
+                  required:
+                  - token
+                  - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: Base URL of the Splunk instance.
+                      x-doc-examples:
+                      - "https://http-inputs-hec.splunkcloud.com"
+                    token:
+                      type: string
+                      description: Default Splunk HEC token. If an event has a token set in its metadata, it will have priority over the one set here.
+                    index:
+                      type: string
+                      description: Index name to write events to.
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host.
+                socket:
+                  type: object
+                  required:
+                    - address
+                    - mode
+                  properties:
+                    address:
+                      type: string
+                      pattern: '^.*:[1-9][0-9]+$'
+                      description: "Address of the socket."
+                    encoding:
+                      type: object
+                      description: "How to encode the message."
+                      properties:
+                        codec:
+                          type: string
+                          enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
+                          default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["Text", "JSON", "Syslog", "GELF"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
+                    mode:
+                      type: string
+                      enum: ["TCP", "UDP"]
+                      descriptions: "The type of socket to use."
+                    tcp:
+                      type: object
+                      descriptions: "Configuration for TCP sockets."
+                      properties:
+                        tls:
+                          type: object
+                          description: Configures the TLS options for outgoing connections.
+                          properties:
+                            secretRef:
+                              type: object
+                              description: |
+                                Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                                (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                                specified, TLS settings are overridden with values from the secret.
+                                Secret should be located in d8-log-shipper namespace and have
+                                `log-shipper.deckhouse.io/watch-secret: true` label.
+                              properties:
+                                name:
+                                  type: string
+                                  description: Name of the Secret with TLS certificates.
+                            caFile:
+                              type: string
+                              description: Base64-encoded CA certificate in PEM format.
+                            clientCrt:
+                              type: object
+                              description: Configures the client certificate for outgoing connections.
+                              required:
+                                - crtFile
+                                - keyFile
+                              properties:
+                                crtFile:
+                                  type: string
+                                  description: |
+                                    Base64-encoded certificate in PEM format.
+
+                                    You must also set the `keyFile` parameter.
+                                keyFile:
+                                  type: string
+                                  format: password
+                                  description: |
+                                    Base64-encoded private key in PEM format (PKCS#8).
+
+                                    You must also set the `crtFile` parameter.
+                                keyPass:
+                                  type: string
+                                  format: string
+                                  description: Base64-encoded pass phrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: |
+                            Validate the TLS certificate of the remote host.
+
+                            If set to `false`, the certificate is not checked in the Certificate Revocation Lists.
+                vector:
+                  type: object
+                  required:
+                    - endpoint
+                  properties:
+                    endpoint:
+                      type: string
+                      description: An address of the Vector instance. API v2 must be used for communication between instances.
+                      pattern: ^(.+):([0-9]{1,5})$
+                    tls:
+                      type: object
+                      description: Configures the TLS options for outgoing connections.
+                      properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
+                        caFile:
+                          type: string
+                          description: Base64-encoded CA certificate in PEM format.
+                        clientCrt:
+                          type: object
+                          description: Configures the client certificate for outgoing connections.
+                          required:
+                            - crtFile
+                            - keyFile
+                          properties:
+                            crtFile:
+                              type: string
+                              description: |
+                                Base64-encoded certificate in PEM format.
+
+                                You must also set the `keyFile` parameter.
+                            keyFile:
+                              type: string
+                              format: password
+                              description: |
+                                Base64-encoded private key in PEM format (PKCS#8).
+
+                                You must also set the `crtFile` parameter.
+                            keyPass:
+                              type: string
+                              format: string
+                              description: Base64-encoded passphrase used to unlock the encrypted key file.
+                        verifyHostname:
+                          type: boolean
+                          default: true
+                          description: Verifies that the name of the remote host matches the name specified in the remote host's TLS certificate.
+                        verifyCertificate:
+                          type: boolean
+                          default: true
+                          description: Validate the TLS certificate of the remote host.
+                rateLimit:
+                  type: object
+                  description: |
+                    Parameter for limiting the flow of events.
+                  required:
+                    - linesPerMinute
+                  properties:
+                    linesPerMinute:
+                      type: number
+                      description: |
+                        The number of records per minute.
+                    keyField:
+                      type: string
+                      description: The name of the log field whose value will be hashed to determine if the event should be rate limited.
+                    excludes:
+                      type: array
+                      description: |
+                        List of excludes for keyField.
+
+                        Only NOT matched log entries would be rate limited.
+                      x-doc-examples:
+                        - field: tier
+                          operator: Exists
+                        - field: foo
+                          operator: NotIn
+                          values:
+                          - dev
+                          - 42
+                          - "true"
+                          - "3.14"
+                        - field: bar
+                          operator: Regex
+                          values:
+                          - '^abc'
+                          - '^\d.+$'
+                      items:
+                        type: object
+                        required:
+                          - field
+                          - operator
+                        properties:
+                          field:
+                            description: Field name for filtering.
+                            type: string
+                          operator:
+                            type: string
+                            description: |
+                              Operator for log field comparations:
+                              * `In` — finds a substring in a string.
+                              * `NotIn` — is a negative version of the `In` operator.
+                              * `Regex` — is trying to match regexp over the field; only log events with matching fields will pass.
+                              * `NotRegex` — is a negative version of the `Regex` operator; log events without fields or with not matched fields will pass.
+                              * `Exists` — drops log event if it contains some fields.
+                              * `DoesNotExist` — drops log event if it does not contain some fields.
+                            enum:
+                              - In
+                              - NotIn
+                              - Regex
+                              - NotRegex
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            description: |
+                              Array of values or regexes for corresponding operations. Does not work for `Exists` and `DoesNotExist` operations.
+
+                              Fields a with float or boolean values will be converted to strings during comparison.
+                            items:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                        oneOf:
+                          - properties:
+                              operator:
+                                enum: ["Exists", "DoesNotExist"]
+                              values:
+                                maxItems: 0
+                          - properties:
+                              operator:
+                                enum: ["Regex", "NotRegex", "In", "NotIn"]
+                              values:
+                                minItems: 1
+                extraLabels:
+                  type: object
+                  description: |
+                    A set of labels that will be attached to each batch of events.
+
+                    You can use simple templating here: `{{ app }}`.
+
+                    There are some reserved keys:
+                    - parsed_data
+                    - pod
+                    - pod_labels_*
+                    - pod_ip
+                    - namespace
+                    - image
+                    - container
+                    - node
+                    - pod_owner
+
+                    [More about field path notation...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                  x-doc-examples:
+                    - forwarder: vector
+                      key: value
+                      app_info: '{{ app }}'
+                      array_member: '{{ array[0] }}'
+                      symbol_escating_value: '{{ pay\.day }}'
+                  x-kubernetes-validations:
+                    - message: using reserved keys in extraLabels
+                      rule: '!([''pod'', ''pod_ip'', ''pod_owner'', ''parsed_data'', ''namespace'', ''image'', ''container'', ''node''].exists(k, k in self))'
+                  additionalProperties:
+                    type: string
+                    anyOf:
+                      - pattern: '^[a-zA-Z0-9_\-]+$'
+                      - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                transformations:
+                  type: array
+                  description: |
+                    List of transformations that can be applied to logs before sending them to the destination.
+
+                    Available options:
+
+                      - `ReplaceKeys`: Replaces `source` with `target` in the specified label keys.
+
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage`: Converts the `message` field from the format specified in `sourceFormat` into an object. If conversion fails, the `message` field remains unchanged.
+
+                        Examples:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels`: Removes the specified labels.
+
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    type: object
+                    oneOf:
+                      - properties:
+                          replaceKeys: {}
+                          action:
+                            enum:
+                              - ReplaceKeys
+                        required:
+                          - replaceKeys
+                          - action
+                      - properties:
+                          parseMessage: {}
+                          action:
+                            enum:
+                              - ParseMessage
+                        required:
+                          - parseMessage
+                          - action
+                      - properties:
+                          dropLabels: {}
+                          action:
+                            enum:
+                              - DropLabels
+                        required:
+                          - dropLabels
+                          - action
+                    properties:
+                      action:
+                        type: string
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        description: Type of a transformation.
+                      replaceKeys:
+                        type: object
+                        description: "Recursive replacement of all matches of the `source` pattern with the `target` value in the specified labels."
+                        required:
+                          - labels
+                          - source
+                        properties:
+                          source:
+                            type: string
+                            description: |
+                              Pattern used to find matches.
+                              Can be a static string or a regular expression.
+                          target:
+                            type: string
+                            default: ""
+                            description: "Value that replaces all matches of the pattern."
+                          labels:
+                            type: array
+                            description: "List of labels in which the recursive replacement will be performed."
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                      parseMessage:
+                        type: object
+                        description: "Converts the `message` field into an object."
+                        required:
+                          - sourceFormat
+                        oneOf:
+                          - properties:
+                              string: {}
+                              sourceFormat:
+                                enum:
+                                  - String
+                            required:
+                              - string
+                              - sourceFormat
+                          - properties:
+                              json: {}
+                              sourceFormat:
+                                enum:
+                                  - JSON
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - Klog
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "SysLog"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "CLF"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "Logfmt"
+                            required:
+                              - sourceFormat
+                        properties:
+                          sourceFormat:
+                            type: string
+                            enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
+                            description: "Message format for converting into an object."
+                          string:
+                            type: object
+                            required:
+                              - targetField
+                            properties:
+                              targetField:
+                                type: string
+                                pattern: '^[a-zA-Z0-9_\\\.\-]+$'
+                                description: "Target field where the structured message is placed."
+                          json:
+                            type: object
+                            properties:
+                              depth:
+                                type: integer
+                                minimum: 1
+                                maximum: 128
+                                description: "Depth for JSON parsing."
+                      dropLabels:
+                        type: object
+                        description: "Removes the specified labels."
+                        required:
+                          - labels
+                        properties:
+                          labels:
+                            type: array
+                            description: "List of labels to remove."
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                buffer:
+                  type: object
+                  oneOf:
+                    - properties:
+                        disk: {}
+                        type:
+                          enum:
+                            - Disk
+                      required:
+                        - disk
+                        - type
+                        - whenFull
+                      not:
+                        required: [memory]
+                    - properties:
+                        memory: {}
+                        type:
+                          enum:
+                            - Memory
+                      required:
+                        - memory
+                        - type
+                        - whenFull
+                      not:
+                        required: [disk]
+                  description: Buffer parameters.
+                  required: ["type"]
+                  properties:
+                    type:
+                      type: string
+                      description: The type of buffer to use.
+                      enum: ["Disk", "Memory"]
+                    disk:
+                      type: object
+                      description: Disk buffer parameters.
+                      properties:
+                        maxSize:
+                          description: |
+                            The maximum size of the buffer on disk.
+                            Must be at least ~256MB (268435488 bytes).
+
+                            You can express size as a plain integer or as a fixed-point number using one of these quantity suffixes: `E`, `P`, `T`, `G`, `M`, `k`, `Ei`, `Pi`, `Ti`, `Gi`, `Mi`, `Ki`.
+
+                            More about resource quantity:
+                            - [kubernetes quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/)
+                            - [memory resource units](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#meaning-of-memory)
+                          x-doc-examples: ["512Mi", 268435488]
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                    memory:
+                      type: object
+                      properties:
+                        maxEvents:
+                          description: The maximum number of events allowed in the buffer.
+                          type: number
+                    whenFull:
+                      type: string
+                      description: Event handling behavior when a buffer is full.
+                      enum: ["DropNewest", "Block"]
+                      default: "Block"

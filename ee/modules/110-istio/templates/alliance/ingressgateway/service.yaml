@@ -1,0 +1,30 @@
+{{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingressgateway
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
+{{- if .Values.istio.alliance.ingressGateway.serviceAnnotations }}
+  annotations:
+    {{- .Values.istio.alliance.ingressGateway.serviceAnnotations | toYaml | nindent 4 }}
+{{- end }}
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: tls
+    port: 15443
+    protocol: TCP
+  {{- if and (eq .Values.istio.alliance.ingressGateway.inlet "NodePort") .Values.istio.alliance.ingressGateway.nodePort.port }}
+    nodePort: {{ .Values.istio.alliance.ingressGateway.nodePort.port }}
+  {{- end }}
+  selector:
+    app: ingressgateway
+  sessionAffinity: None
+  {{- if eq .Values.istio.alliance.ingressGateway.inlet "NodePort" }}
+  type: NodePort
+  {{- else }}
+  type: LoadBalancer
+  {{- end }}
+{{- end }}

@@ -1,0 +1,11 @@
+type: object
+properties:
+  allowNamespacesWithoutProjects:
+    description: |
+      Если эта опция выключена — запретите создавать пространства имен, которые не являются частью проекта.
+
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.

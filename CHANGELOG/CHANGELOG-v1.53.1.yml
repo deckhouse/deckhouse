@@ -1,0 +1,19 @@
+candi:
+  fixes:
+    - summary: Send bootstrap logs from cluster-api static instances.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6252
+    - summary: Fix CAPI kubeconfig hook, which cannot work on fresh installations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6252
+    - summary: Removed `shortNames` from CAPI CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6252
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fix slugification datastore names containing hyphens.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6286
+linstor:
+  fixes:
+    - summary: >-
+        Changed the method of loading DRBD kernel module on the nodes with active LINSTOR
+        satellites.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6278
+

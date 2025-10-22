@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Exclude the `d8-upmeter` namespace from the istio discovery process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2858
+

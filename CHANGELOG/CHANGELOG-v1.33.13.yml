@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Update kiali to 1.49.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1942
+

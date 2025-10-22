@@ -1,0 +1,45 @@
+type: object
+properties:
+  autoConvergerEnabled:
+    type: boolean
+    default: true
+    description: |
+      Enables periodic checking of Terraform state and applying non-destructive changes.
+
+      The frequency of the check is set by the [autoConvergerPeriod](#parameters-autoconvergerperiod) parameter.
+  autoConvergerPeriod:
+    type: string
+    default: "1h"
+    pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+    description: |
+      The time interval after which the state of Terraform is checked and applied.
+
+      It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the Pod's `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

@@ -1,0 +1,101 @@
+{{ $trivyServerURL := printf "http://trivy-server.d8-%s.svc.%s:4954" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
+{{ $dbRepository := printf "%s/security/trivy-db:2" .Values.global.modulesImages.registry.base | quote }}
+{{ $javaDbRepository := printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
+{{ $policiesBundleRepository := printf "%s/security/trivy-checks:0" .Values.global.modulesImages.registry.base | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-operator
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  scanJob.podTemplateContainerSecurityContext: '{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true}'
+  # disable log compression since it invokes binaries that are not present in a distroless image
+  # https://github.com/aquasecurity/trivy-operator/blob/f612674ba0b7c66e3796e60cc29dc0dcd978caa5/pkg/plugins/trivy/plugin.go#L1209
+  scanJob.compressLogs: "false"
+  vulnerabilityReports.scanner: "Trivy"
+  configAuditReports.scanner: "Trivy"
+  report.recordFailedChecksOnly: "true"
+  node.collector.imageRef: {{ include "helm_lib_module_image" (list . "nodeCollector") }}
+  node.collector.imagePullSecret: deckhouse-registry
+  policies.bundle.oci.ref: {{ $policiesBundleRepository }}
+  {{- with (include "helm_lib_tolerations" (tuple . "any-node") | fromYaml) }}
+  scanJob.tolerations: {{ .tolerations | toJson | quote }}
+  nodeCollector.tolerations: {{ .tolerations | toJson | quote }}
+  {{- end }}
+  {{- with (include "helm_lib_node_selector" (tuple . "system") | fromYaml) }}
+  scanJob.nodeSelector: {{ .nodeSelector | toJson | quote }}
+  {{- end }}
+  # Mount docker-config to download JavaDB from the registry
+  scanJob.customVolumes: '[{"name": "docker-config","secret": {"defaultMode": 420,"items": [{"key": ".dockerconfigjson","path": "config.json"}],"secretName": "deckhouse-registry"}}]'
+  scanJob.customVolumesMount: '[{"name": "docker-config", "mountPath": "/.docker","readOnly": true}]'
+  # Skip upmeter probes in vulnerability scanning
+  # https://github.com/deckhouse/deckhouse/blob/v1.49.0/modules/500-upmeter/images/upmeter/pkg/probe/checker/k8s_statefulset.go#L138
+  skipResourceByLabels: upmeter-group,upmeter-probe
+  trivy.serverURL: {{ $trivyServerURL }}
+  {{- if .Values.operatorTrivy.reportResourceLabels }}
+  report.resourceLabels: {{ .Values.operatorTrivy.reportResourceLabels | join "," }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-operator-trivy-config
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+data:
+  # Break down the trivy image string into trivy.repository and trviy.tag parts by ":" delimiter. Internally, these parts are just concatenated back into a single image string
+  {{- $image := (include "helm_lib_module_image" (list . "trivy")) | splitn ":" 2 }}
+  trivy.repository: {{ $image._0 }}
+  trivy.tag: {{ $image._1 }}
+  {{- if .Values.operatorTrivy.additionalVulnerabilityReportFields }}
+  trivy.additionalVulnerabilityReportFields: {{ .Values.operatorTrivy.additionalVulnerabilityReportFields | join "," | quote }}
+  {{- else }}
+  trivy.additionalVulnerabilityReportFields: ""
+  {{- end }}
+  {{- if .Values.operatorTrivy.severities }}
+  trivy.severity: {{ .Values.operatorTrivy.severities | join "," | quote }}
+  {{- else }}
+  trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  {{- end }}
+  {{- range $idx, $registry := .Values.operatorTrivy.insecureRegistries }}
+  trivy.insecureRegistry.{{ $idx }}: {{ $registry | quote }}
+  trivy.nonSslRegistry.{{ $idx }}: {{ $registry | quote }}
+  {{- end }}
+  trivy.slow: "true"
+  trivy.dbRepository: {{ $dbRepository }}
+  trivy.javaDbRepository: {{ $javaDbRepository }}
+  trivy.command: "image"
+  {{- if .Values.operatorTrivy.insecureDbRegistry }}
+  TRIVY_INSECURE: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  trivy.dbRepositoryInsecure: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  {{- else }}
+  TRIVY_INSECURE: "false"
+  trivy.dbRepositoryInsecure: "false"
+  {{- end }}
+  trivy.useBuiltinRegoPolicies: "true"
+  trivy.supportedConfigAuditKinds: "Workload,Service,Role,ClusterRole,NetworkPolicy,Ingress,LimitRange,ResourceQuota"
+  trivy.timeout: "5m0s"
+  trivy.resources.requests.cpu: 100m
+  trivy.resources.requests.memory: 100M
+  trivy.resources.limits.cpu: 500m
+  trivy.resources.limits.memory: 500M
+  trivy.serverURL: {{ $trivyServerURL }}
+  trivy.mode: "ClientServer"
+  TRIVY_LISTEN: "0.0.0.0:4954"
+  TRIVY_CACHE_DIR: "/home/scanner/.cache/trivy"
+  TRIVY_DEBUG: "false"
+  TRIVY_SKIP_DB_UPDATE: "false"
+  TRIVY_DB_REPOSITORY: {{ $dbRepository }}
+  {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.additionalRegistryCA }}
+  TRIVY_REGISTRY_CA: |-
+    {{- if $.Values.global.modulesImages.registry.CA -}}
+    {{- trim $.Values.global.modulesImages.registry.CA | nindent 4 -}}
+    {{- end -}}
+    {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+    {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+    {{- trim .ca | nindent 4 }}
+    {{- end -}}
+    {{- end -}}
+  {{- end }}

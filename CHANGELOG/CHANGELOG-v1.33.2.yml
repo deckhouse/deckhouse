@@ -1,0 +1,9 @@
+ingress-nginx:
+  fixes:
+    - summary: Fix build of the ingress-nginx 0.33 controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1757
+node-local-dns:
+  fixes:
+    - summary: Changed priority-class to `cluster-medium`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1747
+

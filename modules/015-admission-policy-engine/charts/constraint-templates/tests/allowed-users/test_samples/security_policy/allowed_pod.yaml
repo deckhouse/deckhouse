@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  namespace: testns
+spec:
+  securityContext:
+    runAsUser: 10
+    runAsGroup: 21
+    fsGroup: 12
+    supplementalGroups:
+      - 23
+  containers:
+    - name: nginx
+      image: nginx
+    - name: apache2
+      image: apache2

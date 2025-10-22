@@ -1,0 +1,54 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/kube-state-metrics
+  to: /bin/kube-state-metrics
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/kube-state-metrics"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 --branch v2.17.0 $(cat /run/secrets/SOURCE_REPO)/kubernetes/kube-state-metrics.git .
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git tools
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      setup:
+        - "**/*"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - make build-local
+  - chown 64535:64535 /src/kube-state-metrics
+  - chmod 0700 /src/kube-state-metrics

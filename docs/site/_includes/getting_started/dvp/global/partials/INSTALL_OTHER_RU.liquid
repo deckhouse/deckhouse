@@ -1,0 +1,117 @@
+{% assign revision=include.revision %}
+
+Для установки **Deckhouse Virtualization Platform** используется Docker-образ, в который необходимо передать конфигурационный файл{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/id_rsa`){% endif %}.
+{% if page.platform_code == 'bm-private' %}
+Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
+{%- endif %}
+
+Запустите установщик на **персональном компьютере**.
+
+{%- if revision == 'ee' %}
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, EE -->
+```shell
+ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.ru/deckhouse/ee/install:stable bash
+```
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, EE -->
+Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
+```text
+docker login -u license-token registry.deckhouse.ru
+```
+
+Запустите контейнер с установщиком:
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.ru/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+</div>
+{% else %}
+
+<a id='tab_installer_linux_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }} active"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_linux_{{ revision }}');" >
+  Linux / macOS
+</a>
+<a id='tab_installer_windows_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_installer_{{ revision }}"
+   onclick="openTabAndSaveStatus(event, 'tabs__btn_installer_{{ revision }}', 'tabs__content_installer_{{ revision }}', 'block_installer_windows_{{ revision }}');" >
+  Windows
+</a>
+
+<div id='block_installer_linux_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }} active" markdown="1">
+<!-- Linux or macOS install, CE -->
+```shell
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
+  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
+{%- if page.platform_type == "cloud" %} \
+  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.ru/deckhouse/ce/install:stable{% endif %} bash
+```
+</div>
+<div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
+<!-- Windows install, CE -->
+```text
+docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
+{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
+{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.ru/deckhouse/ce/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/id_rsa; bash"
+```
+</div>
+{% endif %}
+
+{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
+Примечание:
+- В файл `/kubeconfig` контейнера необходимо смонтировать файл конфигурации kubectl с доступом к Kubernetes API. В руководстве предполагается, что он находится в файле `.kube/config` домашнего каталога пользователя.
+{% endif %}
+
+Внутри контейнера выполните команду:
+
+```shell
+dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --config=/config.yml \
+  --ask-become-pass
+```
+
+здесь:
+- `<master_ip>` — адрес **master-узла** для подключения по SSH.
+- `<username>` — имя пользователя (для доступа на **master-узел**), от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`
+- `--ask-become-pass` — укажите параметр, если для запуска sudo на сервере необходим пароль.
+
+Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения между master-узлом и хранилищем образов.
+
+Пример вывода при успешном окончании установки:
+```
+...
+│ │ No more converge tasks found in Deckhouse queue.
+│ │ Deckhouse pod is Ready!
+│ └ Waiting for Deckhouse to become Ready (157.34 seconds)
+└ ⛵ ~ Bootstrap: Install Deckhouse (158.47 seconds)
+
+❗ ~ Some resources require at least one non-master node to be added to the cluster.
+┌ ⛵ ~ Bootstrap: Clear cache
+│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+```
+
+Почти все готово для полноценной работы Deckhouse Virtualization Platform!

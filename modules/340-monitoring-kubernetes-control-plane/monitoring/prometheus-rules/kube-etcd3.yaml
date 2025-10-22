@@ -1,0 +1,142 @@
+- name: d8.control-plane.etcd.availability
+  rules:
+
+  - alert: KubeEtcdTargetDown
+    expr: max by (job) (up{job="kube-etcd3"} == 0)
+    for: 1m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_ignore_labels: "job"
+      summary: Prometheus is unable to scrape etcd metrics.
+      description: >
+        Steps to troubleshoot:
+        
+        1. Check the status of the etcd Pods:
+        
+           ```bash
+           d8 k -n kube-system get pod -l component=etcd
+           ```
+
+        1. Review Prometheus logs:
+        
+           ```bash
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           ```
+
+  - alert: KubeEtcdTargetAbsent
+    expr: absent(up{job="kube-etcd3"}) == 1
+    for: 1m
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: There is no etcd target in Prometheus.
+      description: >
+        Steps to troubleshoot:
+        
+        1. Check the status of the etcd Pods:
+        
+           ```bash
+           d8 k -n kube-system get pod -l component=etcd
+           ```
+
+        1. Review Prometheus logs:
+        
+           ```bash
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           ```
+
+  - alert: KubeEtcdNoLeader
+    expr: max by (node) (etcd_server_has_leader{job="kube-etcd3"}) == 0
+    for: 1m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_unavailable: "KubeEtcdUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The etcd cluster member running on node `{{ $labels.node }}` has lost the leader.
+      description: >
+        To resolve this issue, check the status of the etcd Pods:
+        
+        ```bash
+        d8 k -n kube-system get pod -l component=etcd | grep {{ $labels.node }}
+        ```
+
+- name: d8.control-plane.etcd.malfunctioning
+  rules:
+
+  - alert: KubeEtcdHighNumberOfLeaderChanges
+    expr: max by (node) (increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[10m]) > 3)
+    labels:
+      severity_level: "5"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_caused_by__ping: "NodePingPacketLoss,tier=cluster,prometheus=deckhouse,destination_node={{ $labels.node }},kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The etcd cluster is re-electing the leader too frequently.
+      description: |
+        There have been {{ $value }} leader re-elections for the etcd cluster member running on node `{{ $labels.node }}` in the last 10 minutes.
+
+        Possible causes:
+
+        - High disk latency where etcd data is stored.
+        - High CPU usage on the node.
+        - Degradation of network connectivity between cluster members in the multi-master mode.
+
+  - alert: KubeEtcdInsufficientMembers
+    expr: count(up{job="kube-etcd3"} == 0) > (count(up{job="kube-etcd3"}) / 2 - 1)
+    for: 3m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Insufficient members in the etcd cluster.
+      description: >
+        The etcd cluster has too few members, increasing the risk of failure if another member becomes unavailable.
+        
+        To resolve this issue, check the status of etcd Pods:
+        
+        ```bash
+        d8 k -n kube-system get pod -l component=etcd
+        ```
+
+  - alert: KubeEtcdHighFsyncDurations
+    expr: max by (node) (histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job="kube-etcd3"}[5m])) > 0.5)
+    for: 10m
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Syncing (fsync) WAL files to disk is slow.
+      description: |
+        In the last 15 minutes, the 99th percentile of the fsync duration for WAL files exceeded 0.5 seconds: {{ $value }}.
+
+        Possible causes:
+
+        - High disk latency where etcd data is stored.
+        - High CPU usage on the node.

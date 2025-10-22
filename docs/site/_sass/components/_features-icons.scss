@@ -1,0 +1,102 @@
+@use "sass:math";
+
+@use "components/common/_variables.scss";
+
+$item-gap: 50px;
+$item-width-m: math.div(variables.$container-width-m - $item-gap*2, 3);
+$item-width-lg: (variables.$container-width-lg - $item-gap*3)*0.25;
+
+.features-icons {
+    margin-bottom: 100px;
+    &__title {
+        margin-top: 0;
+        margin-bottom: variables.$spacing-l;
+        box-sizing: border-box;
+    }
+    &__item {
+        &_even {
+            background: variables.$color-smooth;
+        }
+        &-content {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 100px 0;
+            box-sizing: border-box;
+        }
+        &-icon {
+            width: $item-width-m;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                width: $item-width-lg;
+            }
+            img {
+                width: 60%;
+            }
+        }
+        &-info {
+            flex: 1;
+            margin-left: $item-gap;
+        }
+        &-title {
+            margin: 0 0 variables.$spacing-l;
+        }
+        &-label {
+            color: variables.$color-alt;
+            font-size: variables.$font-size-small;
+            display: inline-block;
+            padding: 5px 10px;
+            background: rgba(225, 237, 255, 0.7);
+            border-radius: 10px;
+        }
+        &-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0 0 0 auto;
+
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: flex-start;
+
+            line-height: 1.5;
+
+            &_num {
+                list-style-type: decimal;
+            }
+            a:not(.button) {
+                color: variables.$color-alt;
+                &:hover {
+                    text-decoration: none;
+                }
+            }
+            & > li {
+                margin-bottom: variables.$spacing-l;
+                margin-right: $item-gap;
+                @media (max-width: variables.$container-breakpoint-lg - 1) {
+                    width: $item-width-m;
+                    &:nth-child(2n) {
+                        margin-right: 0px;
+                    }
+                }
+                @media (min-width: variables.$container-breakpoint-lg) {
+                    width: $item-width-lg;
+                    &:nth-child(3n) {
+                        margin-right: 0px;
+                    }
+                }
+                ul {
+                    list-style-type: none;
+                    margin: variables.$spacing-m 0 variables.$spacing-l;
+                    padding: 0;
+                    li {
+                        opacity: 0.6;
+                        font-size: variables.$font-size-small;
+                        margin-bottom: variables.$spacing-s;
+                    }
+                }
+            }
+        }
+    }
+}

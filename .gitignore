@@ -1,0 +1,77 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+.env
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# vim
+*.swp
+
+# IDE
+.project
+.settings
+.idea/
+.vscode
+__debug_bin*
+venv/
+out/
+
+# local development deckhouse binary
+/deckhouse/deckhouse
+
+# terraform and dhctl artifacts
+*-tfstate/
+.terraform/
+.opentofu/
+
+# e2e tests
+testing/cloud_layouts/**/tmp
+testing/cloud_layouts/**/bootstrap.log
+testing/cloud_layouts/**/configuration.yaml
+testing/cloud_layouts/**/sshkey*
+testing/cloud_layouts/**/registry-mirror/ssl
+testing/cloud_layouts/**/registry-mirror/privkey.pem
+testing/cloud_layouts/**/registry-mirror/auth_config.yaml
+testing/cloud_layouts/**/registry-mirror/registry-config.yaml
+testing/cloud_layouts/**/registry-mirror/test.sh
+
+layouts-tests-tmp/
+
+# ignore generated files
+/modules/040-node-manager/images/bashible-apiserver/pkg/template/test_data/**/generated/**
+
+# macOS Finder files
+*.DS_Store
+._*
+
+# Dev environment
+bin/
+include/
+
+# Python dev environment
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+/shell-operator
+
+# Helm lib
+deckhouse_lib_helm-*.tgz
+#testing
+env.sh
+testing/cloud_layouts/Static/id_rsa
+testing/cloud_layouts/Static/.terraform*
+testing/cloud_layouts/Static/errored*
+testing/cloud_layouts/Static/ssh-connect_str*
+testing/cloud_layouts/Static/opentofu
+testing/cloud_layouts/script-commander_test.sh  
+

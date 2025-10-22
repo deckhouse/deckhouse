@@ -1,0 +1,50 @@
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 -b vertical-pod-autoscaler-1.4.1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/autoscaler.git /src/autoscaler
+    - cd /src/autoscaler
+    - git apply /patches/*.patch --verbose
+    - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
+    - rm -rf /src/autoscaler /src/vertical-pod-autoscaler/e2e/ /patches /src/autoscaler/.git/
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src/vertical-pod-autoscaler/
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+
+    - cd /src/vertical-pod-autoscaler/pkg/admission-controller
+    - go build -ldflags="-s -w" -o /admission-controller
+
+    - cd /src/vertical-pod-autoscaler/pkg/recommender
+    - go build -ldflags="-s -w" -o /recommender
+
+    - cd /src/vertical-pod-autoscaler/pkg/updater
+    - go build -ldflags="-s -w" -o /updater
+
+    - chown 64535:64535 /updater /recommender /admission-controller
+    - chmod 0700 /updater /recommender /admission-controller

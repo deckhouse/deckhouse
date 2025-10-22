@@ -1,0 +1,38 @@
+{{- $context := . }}
+{{- if $context.Values.userAuthn.publishAPI.enabled }}
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: nn2wezldn5xgm2lhfvtwk3tfojqxi33szpzjzzeeeirsk  # kubeconfig-generator
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | nindent 2 }}
+id: kubeconfig-generator
+name: kubeconfig-generator
+secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+redirectURIs:
+- https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
+- http://localhost:8000
+- http://localhost:18000
+- /device/callback
+{{- end }}
+
+{{- if $context.Values.userAuthn.kubeconfigGenerator}}
+  {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
+---
+apiVersion: dex.coreos.com/v1
+kind: OAuth2Client
+metadata:
+  name: {{ index $context.Values.userAuthn.internal.kubeconfigEncodedNames $index}}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "kubernetes-configurator")) | nindent 2 }}
+id: kubeconfig-generator-{{ $index }}
+name: kubeconfig-generator-{{ $index }}
+secret: {{ $context.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+redirectURIs:
+- https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
+- http://localhost:8000
+- http://localhost:18000
+- /device/callback
+  {{- end }}
+{{- end }}

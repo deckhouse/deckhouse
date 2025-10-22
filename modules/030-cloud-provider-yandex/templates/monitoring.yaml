@@ -1,0 +1,5 @@
+{{- include "helm_lib_prometheus_rules" (list . "d8-cloud-provider-yandex") }}
+
+{{- if and .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName .Values.cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey }}
+  {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards/" "monitoring/grafana-dashboards/nat-instance") }}
+{{- end }}

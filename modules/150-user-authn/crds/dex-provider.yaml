@@ -1,0 +1,632 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dexproviders.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: dexproviders
+    singular: dexprovider
+    kind: DexProvider
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
+          properties:
+            spec:
+              type: object
+              required: ['displayName', 'type']
+              properties:
+                type:
+                  type: string
+                  description: 'Type of authentication provider.'
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                displayName:
+                  type: string
+                  description: |
+                    The provider name to show on the authentication provider selection page. The selection page will not be displayed if there is only one provider configured.
+                github:
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Parameters of the GitHub provider (intended for the `type: Github` case only).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Organization application ID from GitHub.'
+                    clientSecret:
+                      type: string
+                      description: 'Organization application secret key from GitHub.'
+                    teamNameField:
+                      type: string
+                      enum: ['name', 'slug', 'both']
+                      default: 'name'
+                      description: |
+                        As an example, group claims for member of 'Site Reliability Engineers' in
+                        Acme organization would yield:
+                         - ['acme:Site Reliability Engineers'] for 'name'
+                         - ['acme:site-reliability-engineers'] for 'slug'
+                         - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'both'
+
+                        'name' will be used by default.
+                    useLoginAsID:
+                      type: boolean
+                      description: |
+                        Flag which will switch from using the internal GitHub id to the users handle (@mention) as the user id.
+                        It is possible for a user to change their own user name but it is very rare for them to do so.
+
+                        Equals to false by default.
+                    orgs:
+                      type: array
+                      description: |
+                        Filter for user organizations. ID token will contain only organizations from this list.
+                        If the user is not in any organization from this list, an authorization will fail.
+
+                        By default, all organizations allowed.
+                      items:
+                        type: object
+                        required: ['name']
+                        properties:
+                          name:
+                            type: string
+                            description: 'Name of organization.'
+                          teams:
+                            type: array
+                            description: |
+                              A list of allowed GitHub teams (filter).
+
+                              The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                              The user token will contain all GitHub teams if the parameter is not set.
+                            items:
+                              type: string
+                gitlab: &gitlab
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Parameters of the GitLab provider (intended for the `type: Gitlab` case only).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Application ID from GitLab.'
+                    clientSecret:
+                      type: string
+                      description: 'Application secret key from GitLab.'
+                    baseURL:
+                      type: string
+                      x-doc-examples: ['https://gitlab.example.com']
+                      description: |
+                        Base part of GitLab URL.
+                    groups:
+                      type: array
+                      description: |
+                        A list (filter) of allowed GitLab groups (**group paths** and not names).
+
+                        The user token will contain a set intersection of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                        The user token will contain all GitLab groups if the parameter is not set;
+                      items:
+                        type: string
+                    useLoginAsID:
+                      type: boolean
+                      description: |
+                        Flag to switch from using the internal GitLab id to the users handle (@mention) as the user id.
+                        It is possible for a user to change their own user name but it is very rare for them to do so.
+
+                        Equals to false by default.
+                bitbucketCloud: &bitbucketCloud
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Parameters of the Bitbucket Cloud (intended for the `type: BitbucketCloud`).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Team application ID from BitbucketCloud (Key).'
+                    clientSecret:
+                      type: string
+                      description: 'Team application secret key from BitbucketCloud.'
+                    teams:
+                      type: array
+                      description: |
+                        A list of allowed Bitbucket Cloud teams (filter).
+
+                        The user token will contain a set intersection of Bitbucket Cloud teams and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                        The user token will contain the user teams in the `groups` claim (similar to other providers).
+                      items:
+                        type: string
+                    includeTeamGroups:
+                      type: boolean
+                      default: false
+                      description: |
+                        Optional parameter to include team groups.
+
+                        If enabled, the groups claim of Dex id_token will looks like this:
+                        ```yaml
+                        ["my_team", "my_team/administrators", "my_team/members"]
+                        ```
+                crowd: &crowd
+                  type: object
+                  required: ['clientID', 'clientSecret', 'baseURL']
+                  description: |
+                    Parameters of the Crowd (intended for the `type: Crowd`).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Application ID from Atlassian Crowd (Application Name).'
+                    clientSecret:
+                      type: string
+                      description: 'Application secret key from Atlassian Crowd (Password).'
+                    baseURL:
+                      type: string
+                      x-doc-examples: ['https://crowd.example.com/crowd']
+                      description: |
+                        Base part of Attlassian Crowd URL.
+                    groups:
+                      type: array
+                      description: |
+                        A list of allowed Crowd groups (filter).
+
+                        The user token will contain a set intersection of Crowd groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                        The user token will contain all Crowd groups if the parameter is not set.
+                      items:
+                        type: string
+                    usernamePrompt:
+                      type: string
+                      description: 'Prompt for username field.'
+                      default: 'Crowd username'
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables basic authorization for the Kubernetes API server.
+
+                        The username and password of the user from the application created in Crowd are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
+                        Works **only** if the `publishAPI` is enabled.
+
+                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
+                oidc: &oidc
+                  type: object
+                  required: ['clientID', 'clientSecret', 'issuer']
+                  description: |
+                    Parameters of the OIDC (intended for the `type: OIDC`).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'OIDC issuer application ID.'
+                    clientSecret:
+                      type: string
+                      description: 'OIDC issuer application secret key.'
+                    issuer:
+                      type: string
+                      x-doc-examples: ['https://accounts.google.com']
+                      description: |
+                        Canonical URL of the provider, also used for configuration discovery.
+                        This value MUST match the value returned in the provider config discovery.
+                    insecureSkipEmailVerified:
+                      type: boolean
+                      default: false
+                      description: |
+                        Allow authentication for clients without verified email address.
+                    basicAuthUnsupported:
+                      type: boolean
+                      description: |
+                        Use POST requests to interact with the provider instead of including the token in the Basic Authorization header.
+                        Generally, Dex automatically determines the type of request to make, while in some cases enabling this parameter can help.
+                      default: false
+                    getUserInfo:
+                      type: boolean
+                      description: |
+                        Request additional info about the authenticated user.
+
+                        Learn more [here](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)...
+                      default: false
+                    userIDKey:
+                      type: string
+                      default: 'sub'
+                      description: |
+                        The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user id.
+                    userNameKey:
+                      type: string
+                      default: 'name'
+                      description: |
+                        The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user name.
+                    claimMapping:
+                      type: object
+                      description: |
+                        Some providers return non-standard claims (eg. mail). Claim mappings are hints for Dex how to map claims to [standard OIDC claims](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
+
+                        Dex can only map a non-standard claim to a standard one if it's not included in the id_token returned by OIDC provider.
+                      properties:
+                        email:
+                          type: string
+                          default: email
+                          description: |
+                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user email.
+                        groups:
+                          type: string
+                          default: groups
+                          description: |
+                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user groups.
+                        preferred_username:
+                          type: string
+                          default: preferred_username
+                          description: |
+                            The [claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) to use as the user preferred username.
+                    claimMappingOverride:
+                      type: boolean
+                      description: |
+                        If enabled, the claim mapping will override the standard OIDC claims.
+
+                        By default, the claim mapping will be used only if the standard OIDC claims are not present, e.g., if there is no `email` claim in the id_token, the `claimMapping.email` will be used.
+                      default: false
+                    scopes:
+                      type: array
+                      default: ["openid", "profile", "email", "groups", "offline_access"]
+                      description: |
+                        List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
+                      items:
+                        type: string
+                    allowedGroups:
+                      type: array
+                      description: |
+                        A list of groups the user must belong to in order to authenticate successfully.
+
+                        If none of the specified groups match the user's groups, authentication will be denied.
+
+                        If the parameter is omitted, no group-based filtering will be applied.
+                      items:
+                        type: string
+                    promptType:
+                      type: string
+                      default: 'consent'
+                      description: |
+                        Determines if the Issuer should ask for confirmation and provide hints during the authentication process.
+
+                        By default, the confirmation will be requested on the first authentication. Possible values may vary depending on the Issuer.
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
+                        ```
+                    insecureSkipVerify:
+                      type: boolean
+                      default: false
+                      description: |
+                        If a custom certificate isn't provided, this option can be used to turn off
+                        TLS certificate checks. As noted, it is insecure and shouldn't be used outside
+                        of explorative phases.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables basic authorization for the Kubernetes API server.
+
+                        The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
+                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+
+                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
+                ldap: &ldap
+                  type: object
+                  required: ['host', 'userSearch']
+                  description: |
+                    Parameters of the LDAP.
+                  properties:
+                    host:
+                      type: string
+                      x-doc-examples: ['ldap.example.com:636']
+                      description: |
+                        Host and optional port of the LDAP server in the form "host:port".
+                        If the port is not supplied, it will be guessed based on "insecureNoSSL",
+                        and "startTLS" flags. 389 for insecure or StartTLS connections, 636
+                        otherwise.
+                    insecureNoSSL:
+                      type: boolean
+                      default: false
+                      description: |
+                        Following field is required if the LDAP host is not using TLS (port 389).
+                        This option inherently leaks passwords to anyone on the same network as Dex.
+                        Equals to false by default.
+                    startTLS:
+                      type: boolean
+                      default: false
+                      description: |
+                        When connecting to the server, connect using the ldap:// protocol then issue
+                        a [StartTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) command. If unspecified, connections will use the ldaps:// protocol
+                    usernamePrompt:
+                      type: string
+                      default: 'LDAP username'
+                      description: |
+                        The attribute to display in the provided password prompt. If unset, will display "LDAP Username".
+                      x-doc-examples: ['SSO Username']
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
+                        ```
+                    insecureSkipVerify:
+                      type: boolean
+                      default: false
+                      description: |
+                        If a custom certificate isn't provided, this option can be used to turn off
+                        TLS certificate checks. As noted, it is insecure and shouldn't be used outside
+                        of explorative phases.
+                    bindDN:
+                      type: string
+                      x-doc-examples: ['uid=serviceaccount,cn=users,dc=example,dc=com']
+                      description: |
+                        The DN for an application service account. The connector uses
+                        these credentials to search for users and groups. Not required if the LDAP
+                        server provides access for anonymous auth.
+                    bindPW:
+                      type: string
+                      x-doc-examples: ['password']
+                      description: |
+                        Password for read-only service account.
+                        Please note that if the bind password contains a `$`, it has to be saved in an
+                        environment variable which should be given as the value to `bindPW`.
+                    userSearch:
+                      type: object
+                      required: ['baseDN', 'username', 'idAttr', 'emailAttr']
+                      description: 'User search maps a username and password entered by a user to a LDAP entry. [Details...](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      properties:
+                        baseDN:
+                          type: string
+                          x-doc-examples: ['cn=users,dc=example,dc=com']
+                          description: 'BaseDN to start the search from.'
+                        filter:
+                          type: string
+                          x-doc-examples: ['(objectClass=person)']
+                          description: 'Optional filter to apply when searching the directory.'
+                        username:
+                          type: string
+                          x-doc-examples: ['uid']
+                          description: |
+                            Username attribute used for comparing user entries. This will be translated
+                            and combined with the other filter as "(<attr>=<username>)".
+                        idAttr:
+                          type: string
+                          x-doc-examples: ['uid']
+                          description: |
+                            LDAP attribute that will be matched to Dex user id entry.
+                        emailAttr:
+                          type: string
+                          x-doc-examples: ['mail']
+                          description: |
+                            LDAP attribute that will be matched to Dex user email entry.
+                            When an email address is not available, use another value unique to the user, like uid.
+                        nameAttr:
+                          type: string
+                          x-doc-examples: ['name']
+                          description: |
+                            LDAP attribute that will be matched to Dex user name entry.
+                            No default value provided.
+                    groupSearch:
+                      type: object
+                      required: ['baseDN', 'userMatchers', 'nameAttr']
+                      description: 'Group search queries for groups given a user entry. [Details](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config)'
+                      properties:
+                        baseDN:
+                          type: string
+                          x-doc-examples: ['cn=users,dc=example,dc=com']
+                          description: 'BaseDN to start the search from.'
+                        filter:
+                          type: string
+                          x-doc-examples: ['(objectClass=person)']
+                          description: 'Optional filter to apply when searching the directory.'
+                        nameAttr:
+                          type: string
+                          x-doc-examples: ['name']
+                          description: |
+                            Represents group name.
+                        userMatchers:
+                          type: array
+                          description: |
+                            Following list contains field pairs that are used to match a user to a group. It adds a
+                            requirement to the filter that an attribute in the group must match the user's
+                            attribute value.
+                          items:
+                            type: object
+                            required: ['userAttr', 'groupAttr']
+                            properties:
+                              userAttr:
+                                type: string
+                                x-doc-examples: ['uid']
+                                description: |
+                                  The name of the attribute that stores the user name.
+                              groupAttr:
+                                type: string
+                                x-doc-examples: ['member']
+                                description: |
+                                  The name of the attribute that stores the group member names.
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['Github']
+                    github: {}
+                  required: ['github']
+                - properties:
+                    inlet:
+                      enum: ['Gitlab']
+                    gitlab: {}
+                  required: ['gitlab']
+                - properties:
+                    inlet:
+                      enum: ['BitbucketCloud']
+                    bitbucketCloud: {}
+                  required: ['bitbucketCloud']
+                - properties:
+                    inlet:
+                      enum: ['Crowd']
+                    crowd: {}
+                  required: ['crowd']
+                - properties:
+                    inlet:
+                      enum: ['OIDC']
+                    oidc: {}
+                  required: ['oidc']
+                - properties:
+                    inlet:
+                      enum: ['LDAP']
+                    ldap: {}
+                  required: ['ldap']
+      additionalPrinterColumns: &additionalPrinterColumns
+        - jsonPath: .spec.type
+          name: Type
+          description: 'Type of authentication provider.'
+          type: string
+        - jsonPath: .spec.displayName
+          name: Display Name
+          description: 'Name that will be displayed on the providers selection screen.'
+          type: string
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          description: |
+            Defines the configuration for connecting a third-party provider.
+
+            With it, you can flexibly configure the integration of the account directory with Kubernetes.
+
+            [Usage example...](usage.html#configuring-a-provider)
+
+            **Warning.** It is forbidden to use users and groups with the `system:` prefix. Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
+          properties:
+            spec:
+              type: object
+              required: ['displayName', 'type']
+              properties:
+                type:
+                  type: string
+                  description: 'Type of authentication provider.'
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                displayName:
+                  type: string
+                  description: |
+                    The provider name to show on the authentication provider selection page. The selection page will not be displayed if there is only one provider configured.
+                github:
+                  type: object
+                  required: ['clientID', 'clientSecret']
+                  description: |
+                    Parameters of the GitHub provider (intended for the `type: Github` case only).
+                  properties:
+                    clientID:
+                      type: string
+                      description: 'Organization application ID from GitHub.'
+                    clientSecret:
+                      type: string
+                      description: 'Organization application secret key from GitHub.'
+                    teamNameField:
+                      type: string
+                      enum: ['Name', 'Slug', 'Both']
+                      default: 'Name'
+                      description: |
+                        As an example, group claims for member of 'Site Reliability Engineers' in
+                        Acme organization would yield:
+                         - ['acme:Site Reliability Engineers'] for 'Name'
+                         - ['acme:site-reliability-engineers'] for 'Slug'
+                         - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
+
+                        'name' will be used by default.
+                    useLoginAsID:
+                      type: boolean
+                      description: |
+                        Flag which will switch from using the internal GitHub id to the users handle (@mention) as the user id.
+                        It is possible for a user to change their own user name but it is very rare for them to do so.
+
+                        Equals to false by default.
+                    orgs:
+                      type: array
+                      description: |
+                        Filter for user organizations. ID token will contain only organizations from this list.
+                        If the user is not in any organization from this list, an authorization will fail.
+
+                        By default, all organizations allowed.
+                      items:
+                        type: object
+                        required: ['name']
+                        properties:
+                          name:
+                            type: string
+                            description: 'Name of organization.'
+                          teams:
+                            type: array
+                            description: |
+                              A list of allowed GitHub teams (filter).
+
+                              The user token will contain a set intersection of teams from GitHub and teams from this list. If the set is empty, the authorization will be considered unsuccessful.
+
+                              The user token will contain all GitHub teams if the parameter is not set.
+                            items:
+                              type: string
+                gitlab: *gitlab
+                bitbucketCloud: *bitbucketCloud
+                crowd: *crowd
+                oidc: *oidc
+                ldap: *ldap
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['Github']
+                    github: { }
+                  required: ['github']
+                - properties:
+                    inlet:
+                      enum: ['Gitlab']
+                    gitlab: { }
+                  required: ['gitlab']
+                - properties:
+                    inlet:
+                      enum: ['BitbucketCloud']
+                    bitbucketCloud: { }
+                  required: ['bitbucketCloud']
+                - properties:
+                    inlet:
+                      enum: ['Crowd']
+                    crowd: {}
+                  required: ['crowd']
+                - properties:
+                    inlet:
+                      enum: ['OIDC']
+                    oidc: {}
+                  required: ['oidc']
+                - properties:
+                    inlet:
+                      enum: ['LDAP']
+                    ldap: {}
+                  required: ['ldap']
+      additionalPrinterColumns: *additionalPrinterColumns

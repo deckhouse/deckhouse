@@ -1,0 +1,13 @@
+name: ingress-nginx
+stage: "General Availability"
+subsystems:
+  - networking
+namespace: d8-ingress-nginx
+descriptions:
+  ru: |
+    Оператор для обслуживания входящего трафика на основе Nginx Ingress Controller.
+  en: |
+    Ingress controller for nginx
+    https://kubernetes.github.io/ingress-nginx
+requirements:
+  deckhouse: ">= 1.68"

@@ -1,0 +1,131 @@
+{{- define "smoke_mini_resources" }}
+cpu: 25m
+memory: 25Mi
+{{- end }}
+
+{{- if not .Values.upmeter.smokeMiniDisabled }}
+{{- $context := . }}
+{{- range $k, $v := .Values.upmeter.internal.smokeMini.sts }}
+  {{- $sts := pluck $k $.Values.upmeter.internal.smokeMini.sts | first }}
+  {{- if and (hasKey $sts "node") (hasKey $sts "zone") }}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $.Chart.Name }}-{{ $k }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: smoke-mini-{{ $k }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "smoke-mini"
+      # Smoke mini is small enough to avoid sufficient vertical scaling.
+      minAllowed:
+        {{- include "smoke_mini_resources" $context | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: smoke-mini-{{ $k }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "smoke-mini")) | nindent 2 }}
+  annotations:
+    node: {{ $sts.node | quote }}
+    {{- if ne ($sts.zone) "NONE" }}
+    zone: {{ $sts.zone | quote }}
+    {{- end }}
+spec:
+  replicas: 1
+  serviceName: smoke-mini-{{ $k }}
+  selector:
+    matchLabels:
+      smoke-mini: {{ $k }}
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+        cluster-autoscaler.kubernetes.io/daemonset-pod: "true"
+      labels:
+        app: smoke-mini
+        smoke-mini: {{ $k }}
+    spec:
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: smoke-mini
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - {{ $sts.node | quote }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" $context | nindent 6 }}
+      containers:
+      - name: smoke-mini
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ $sts.image }}
+        command: [ '/smoke-mini' ]
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            port: 8080
+            path: /ready
+          initialDelaySeconds: 0
+          periodSeconds: 2
+        env:
+        - name: SMOKE_MINI_STS_LIST
+          value: {{ join " " (keys $context.Values.upmeter.internal.smokeMini.sts | sortAlpha) }}
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+          - name: disk
+            mountPath: /disk
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "smoke_mini_resources" $context | nindent 12 }}
+    {{- end }}
+    {{- $storageClass := $sts.effectiveStorageClass }}
+    {{- if ne $storageClass "false" }}
+  volumeClaimTemplates:
+  - metadata:
+      name: disk
+      labels:
+        app: smoke-mini
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: {{ $storageClass | quote }}
+      resources:
+        requests:
+          storage: 256Mi
+    {{- else }}
+      volumes:
+      - name: disk
+        emptyDir: {}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

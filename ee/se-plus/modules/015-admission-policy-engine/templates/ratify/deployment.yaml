@@ -1,0 +1,130 @@
+{{- define "ratify_resources" }}
+cpu: 100m
+memory: 128Mi
+{{- end }}
+
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: ratify
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: ratify
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: ratify
+      minAllowed:
+        {{- include "ratify_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratify
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratify
+      app.kubernetes.io/part-of: gatekeeper
+  template:
+    metadata:
+      labels:
+        app: ratify
+        app.kubernetes.io/part-of: gatekeeper
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "ratify")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+        - name: deckhouse-registry
+      serviceAccountName: ratify
+      containers:
+      - name: ratify
+        image: {{ include "helm_lib_module_image" (list . "ratify") }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9099
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9099
+        command:
+        - "/ratify"
+        args:
+        - "serve"
+        - "--http"
+        - ":6001"
+        - "-c"
+        - "/usr/local/ratify/config.json"
+        - --enable-crd-manager
+        - --cert-dir=/usr/local/tls
+        - --cache-enabled=true
+        - --cache-type=ristretto
+        - --cache-name=dapr-redis
+        - --cache-size=256
+        - --cache-ttl=180s
+        - --metrics-enabled=false
+        ports:
+        - containerPort: 6001
+          name: webhook-server
+        - containerPort: 9099
+          name: healthz
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /.ratify
+          name: home
+        - mountPath: "/usr/local/ratify"
+          name: config
+          readOnly: true
+        - mountPath: /usr/local/tls
+          name: tls
+          readOnly: true
+        env:
+        - name: RATIFY_LOG_LEVEL
+          value: info
+        - name: RATIFY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: RATIFY_NAME
+          value: ratify
+        - name: RATIFY_CERT_ROTATION
+          value: "0"
+        - name: RATIFY_EXPERIMENTAL_HIGH_AVAILABILITY
+          value: "0"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
+      volumes:        
+        - name: config
+          configMap:
+            name: ratify-configuration
+        - name: tls
+          secret:
+            secretName: ratify-webhook-server-cert
+        - emptyDir: {}
+          name: home
+{{- end }}

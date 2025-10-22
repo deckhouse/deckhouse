@@ -1,0 +1,29 @@
+candi:
+  fixes:
+    - summary: Remove deprecated standard section from provider cluster configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2694
+cloud-provider-aws:
+  fixes:
+    - summary: Clarified usage of the WithNat layout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2698
+docs:
+  fixes:
+    - summary: >-
+        Clarified usage of the AWS WithNat layout in the documentation and Getting Started on the
+        site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2698
+    - summary: Stick sidebar to the top of the page in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2686
+    - summary: Fixed list of the supported OS distros.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2598
+node-manager:
+  fixes:
+    - summary: Added VPA for early-oom daemonset.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2695
+upmeter:
+  fixes:
+    - summary: Reduced API calls throttling by the deduplication of preflight checks in probes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2687
+    - summary: Fixed empty status page when there is no data in the upmeter server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2683
+

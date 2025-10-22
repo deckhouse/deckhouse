@@ -1,0 +1,59 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "**/*.go"
+shell:
+  install:
+  - cd /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+    - apt-get install -y ca-certificates golang libcap-utils
+  install:
+  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION}
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - export GO_VERSION=${GOLANG_VERSION} 
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
+  - chmod 0700 /src/stale-dns-connections-cleaner
+---
+image: {{ $.ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /src/stale-dns-connections-cleaner
+  to: /stale-dns-connections-cleaner
+  before: install
+  owner: root
+  group: root
+imageSpec:
+  config:
+    entrypoint: ["/stale-dns-connections-cleaner"]

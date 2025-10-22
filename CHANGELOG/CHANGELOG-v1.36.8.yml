@@ -1,0 +1,5 @@
+flant-integration:
+  fixes:
+    - summary: Fixed telemetry reporting control-plane nodes as nodes for charge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2617
+

@@ -1,0 +1,1009 @@
+x-config-version: 3
+type: object
+properties:
+  globalVersion:
+    type: string
+    pattern: '^[0-9]+\.[0-9]+$'
+    description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
+    examples: ["1.19"]
+    default: "1.21"
+  additionalVersions:
+    type: array
+    description: |
+      Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
+    examples:
+    - ["1.19"]
+    default: []
+    items:
+      type: string
+      pattern: '^[0-9]+\.[0-9]+$'
+  outboundTrafficPolicyMode:
+    type: string
+    enum: [AllowAny, RegistryOnly]
+    x-examples: ["AllowAny"]
+    description: |
+      How to handle requests directed to external services which aren't registered in service mesh.
+      - `AllowAny` — allow.
+      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
+    default: AllowAny
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
+
+      Optional. By default, the `modules.ingressClass` global value is used.
+  federation:
+    type: object
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
+    description: Parameters for federating with other clusters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Designate this cluster as a federation member (see [Enabling federation](./#enabling-the-federation)).
+        default: false
+        x-examples: [true]
+  multicluster:
+    type: object
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
+    description: Multicluster parameters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-the-multicluster)).
+        default: false
+        x-examples: [true]
+  alliance:
+    type: object
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
+    description: Common options both for federation and multicluster.
+    default: {}
+    properties:
+      ingressGateway:
+        type: object
+        description: ingressgateway settings.
+        x-doc-d8Editions:
+          - ee
+          - cse-pro
+        default: {}
+        properties:
+          advertise:
+            type: array
+            description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            default: []
+            x-examples: [[{"address": "172.16.0.5", "port": 15443}]]
+            items:
+              type: object
+              required: ["address", "port"]
+              properties:
+                address:
+                  type: string
+                  example: "172.16.0.5"
+                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                port:
+                  type: integer
+                  minimum: 1024
+                  maximum: 65535
+          inlet:
+            type: string
+            enum: [LoadBalancer, NodePort]
+            x-examples: [LoadBalancer]
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            description: |
+              The method for exposing ingressgateway.
+              - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
+              - `NodePort` — for installations that do not have the LB.
+            default: LoadBalancer
+          nodePort:
+            type: object
+            description: Special settings for NodePort inlet.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            default: {}
+            x-examples: [{}, {"port": 30001}]
+            properties:
+              port:
+                type: integer
+                description: Static port number for NodePort-type Service. Must be in range, set by kube-apiserver --service-node-port-range argument (default is 30000-32767).
+                minimum: 1024
+                maximum: 65535
+          serviceAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            example:
+              yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          nodeSelector:
+            type: object
+            additionalProperties:
+              type: string
+            x-examples: [{"type":"ingress"}]
+            description: |
+              ingressgateway DaemonSet nodeSelector.
+
+              The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+          tolerations:
+            type: array
+            description: |
+              ingressgateway DaemonSet tolerations.
+
+              The same as `spec.tolerations` for the Kubernetes pod.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            items:
+              type: object
+              properties:
+                effect:
+                  type: string
+                key:
+                  type: string
+                operator:
+                  type: string
+                tolerationSeconds:
+                  type: integer
+                  format: int64
+                value:
+                  type: string
+            x-examples:
+            - [{"operator": "Exists"}]
+  tracing:
+    type: object
+    description: Tracing parameters.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: Turn on or off tracing collection and displaying in Kiali.
+        default: false
+        x-examples: [true]
+      sampling:
+        type: number
+        minimum: 0.01
+        maximum: 100.0
+        multipleOf: 0.01
+        description: |
+          The sampling rate option can be used to control what percentage of requests get reported to your tracing system.
+
+          This should be configured depending upon your traffic in the mesh and the amount of tracing data you want to collect.
+
+          It is possible to override this option with the following Pod annotation:
+
+          ```yaml
+          proxy.istio.io/config: |
+            tracing:
+              sampling: 100.0
+          ```
+        default: 1.0
+        x-examples: [50.05]
+      collector:
+        type: object
+        description: Tracing collection settings.
+        default: {}
+        properties:
+          zipkin:
+            type: object
+            description: |
+              Zipkin protocol parameters used by Istio for sending traces. Jaeger supports this protocol.
+
+              If tracing is enabled, this settings section is mandatory.
+            default: {}
+            properties:
+              address:
+                type: string
+                description: Network address of zipkin collector in `<IP of FQDN>:<port>` format.
+                pattern: '[0-9a-zA-Z\.-]+'
+                example: "zipkin.myjaeger.svc:9411"
+      kiali:
+        type: object
+        description: |
+          Span displaying settings for Kiali.
+
+          When not configured, Kiali won't show any tracing dashboards.
+        default: {}
+        properties:
+          jaegerURLForUsers:
+            type: string
+            description: Jaeger UI address for users. Mandatory parameter if Kiali is enabled.
+            example: "https://tracing-service:4443/jaeger"
+          jaegerGRPCEndpoint:
+            type: string
+            description: |
+              Accessible from cluster address of jaeger GRPC interface for system queries by Kiali.
+
+              When not configured, Kiali will only show external links using the `jaegerURLForUsers` config without interpretationing.
+            example: "http://tracing.myjaeger.svc:16685/"
+        x-examples:
+        - {}
+        - jaegerURLForUsers: https://tracing-service:4443/jaeger
+          jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  sidecar:
+    type: object
+    description: Network settings for traffic capture by istio sidecar.
+    default: {}
+    properties:
+      includeOutboundIPRanges:
+        description: |
+          Traffic to these IP ranges is forcibly routed through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/includeOutboundIPRanges` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        default: ["0.0.0.0/0"]
+        example: ["10.1.1.0/24"]
+        x-examples:
+        - []
+        - ["1.1.1.1/32", "1.2.3.0/24"]
+      excludeOutboundIPRanges:
+        description: |
+          Traffic to these IP ranges is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        default: []
+        example: ["10.1.1.0/24"]
+        x-examples:
+        - ["1.1.1.1/32", "1.2.3.0/24"]
+      excludeInboundPorts:
+        description: |
+          The range of inbound ports whose traffic is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeInboundPorts` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+        default: []
+        example: ["8080", "8443"]
+        x-examples:
+        - []
+        - ["8080", "8443"]
+      excludeOutboundPorts:
+        description: |
+          The range of outbound ports whose traffic is guaranteed not to flow through Istio.
+
+          You can redefine this parameter for single Pod using the `traffic.sidecar.istio.io/excludeOutboundPorts` annotation.
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9]{1,5}$'
+        default: []
+        example: ["8080", "8443"]
+        x-examples:
+        - ["8080", "8443"]
+      resourcesManagement:
+        description: |
+          Manages Istio sidecar container resources.
+
+          **Caution!** The setting only applies to new Pods with `istio-proxy`.
+        type: object
+        default: {}
+        x-examples:
+          - static:
+              requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: "2000m"
+                memory: "1Gi"
+        properties:
+          mode:
+            type: string
+            description: |
+              Resource management mode:
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-sidecar-resourcesmanagement-static) parameter section;
+            enum: [ 'Static']
+            default: 'Static'
+          static:
+            type: object
+            description: |
+              Resource management options for the `Static` mode.
+            properties:
+              requests:
+                type: object
+                description: |
+                  Resource requests settings for pods.
+                properties:
+                  cpu:
+                    type: string
+                    pattern: '^[0-9]+m?$'
+                    default: '100m'
+                    description: |
+                      Configuring CPU requests.
+                  memory:
+                    oneOf:
+                      - type: string
+                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      - type: number
+                    default: '128Mi'
+                    description: |
+                      Configuring memory requests.
+              limits:
+                type: object
+                description: |
+                  Configuring CPU and memory limits.
+                properties:
+                  cpu:
+                    type: string
+                    pattern: '^[0-9]+m?$'
+                    default: '2000m'
+                    description: |
+                      Configuring CPU limits.
+                  memory:
+                    oneOf:
+                      - type: string
+                        pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                      - type: number
+                    default: '1Gi'
+                    description: |
+                      Configuring memory limits.
+  ca:
+    type: object
+    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    default: {}
+    properties:
+      cert:
+        type: string
+        description: The root or intermediate certificate in PEM format.
+      key:
+        type: string
+        description: The key to the root certificate in PEM format.
+      chain:
+        type: string
+        description: A certificate chain in PEM format if `cert` is an intermediate certificate.
+      root:
+        type: string
+        description: The root certificate in PEM format if `cert` is an intermediate certificate.
+  controlPlane:
+    type: object
+    description: istiod specific settings.
+    default: {}
+    oneOf:
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['Standard', 'Static']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static', 'VPA']
+    - properties:
+        replicasManagement:
+          properties:
+            mode:
+              enum: ['HPA']
+        resourcesManagement:
+          properties:
+            mode:
+              enum: ['Static']
+    properties:
+      nodeSelector:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Optional `nodeSelector` for istiod. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      tolerations:
+        type: array
+        description: |
+          Optional `tolerations` for istiod. The same as `spec.tolerations` for the Kubernetes pod.
+
+          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+        items:
+          type: object
+          properties:
+            effect:
+              type: string
+            key:
+              type: string
+            operator:
+              type: string
+            tolerationSeconds:
+              type: integer
+              format: int64
+            value:
+              type: string
+      replicasManagement:
+        description: |
+          Replication management settings and scaling of istiod.
+        type: object
+        default: {}
+        x-examples:
+        - mode: Standard
+        - mode: Static
+          static:
+            replicas: 3
+        x-doc-examples:
+        - mode: Standard
+        - mode: Static
+          static:
+            replicas: 3
+        - mode: HPA
+          hpa:
+            minReplicas: 2
+            maxReplicas: 5
+            metrics:
+            - type: CPU
+              targetAverageUtilization: 80
+        properties:
+          mode:
+            type: string
+            description: |
+              Replicas management mode:
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter);
+              - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
+              - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
+            enum: ['Standard', 'Static', 'HPA']
+            default: 'Standard'
+          static:
+            type: object
+            description: |
+              Options for replicas management for the `Static` mode.
+            required: ["replicas"]
+            properties:
+              replicas:
+                type: number
+                minimum: 1
+                description: |
+                  Desired number of replicas.
+          hpa:
+            type: object
+            description: |
+              Options for replicas management for the `HPA` mode.
+            required: ["minReplicas", "maxReplicas", "metrics"]
+            properties:
+              minReplicas:
+                type: number
+                minimum: 1
+                description: |
+                  The lower limit for the number of replicas to which the HPA can scale down.
+              maxReplicas:
+                type: number
+                minimum: 1
+                description: |
+                  The upper limit for the number of replicas to which the HPA can scale up. It cannot be less that `minReplicas`.
+              metrics:
+                type: array
+                description: |
+                  The HPA will use these metrics to decide whether to increase or decrease the number of replicates.
+                minItems: 1
+                items:
+                  type: object
+                  required: ["type","targetAverageUtilization"]
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Metric type.
+                      enum: ['CPU']
+                    targetAverageUtilization:
+                      type: number
+                      description: |
+                        The target value of the average of the resource metric across all relevant pods, represented as a percentage of the requested value of the resource for the pods.
+                      minimum: 1
+                      maximum: 100
+      resourcesManagement:
+        description: |
+          Settings for CPU and memory requests and limits by istiod pods.
+        type: object
+        default: {}
+        x-examples:
+        - mode: VPA
+          vpa:
+            mode: Auto
+            cpu:
+              min: "50m"
+              max: 2
+              limitRatio: 1.5
+            memory:
+              min: "256Mi"
+              max: "2Gi"
+              limitRatio: 1.5
+        - mode: Static
+          static:
+            requests:
+              cpu: "55m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+        properties:
+          mode:
+            type: string
+            description: |
+              Resource management mode:
+              - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-controlplane-resourcesmanagement-static) parameter section;
+              - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-controlplane-resourcesmanagement-vpa) parameter section.
+            enum: ['VPA', 'Static']
+            default: 'VPA'
+          vpa:
+            type: object
+            default: {}
+            description: |
+              Resource management options for the `VPA` mode.
+            properties:
+              mode:
+                type: string
+                description: |
+                  VPA operating mode.
+                enum: ['Initial', 'Auto']
+                default: 'Auto'
+              cpu:
+                type: object
+                default: {}
+                description: |
+                  CPU-related VPA settings.
+                properties:
+                  max:
+                    description: |
+                      The maximum value that the VPA can set for the CPU requests.
+                    default: 2
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                  min:
+                    description: |
+                      The minimum value that the VPA can set for the CPU requests.
+                    default: '50m'
+                    oneOf:
+                    - type: string
+                      pattern: "^[0-9]+m?$"
+                    - type: number
+                  limitRatio:
+                    type: number
+                    examples: [1.5]
+                    description: |
+                      The CPU limits/requests ratio.
+
+                      This ratio is used for calculating the initial CPU limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+              memory:
+                type: object
+                default: {}
+                description: |
+                  Memory-related VPA settings.
+                properties:
+                  max:
+                    description: |
+                      The maximum memory requests the VPA can set.
+                    default: '2Gi'
+                    oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+                  min:
+                    description: |
+                      The minimum memory requests the VPA can set.
+                    default: '256Mi'
+                    oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+                  limitRatio:
+                    type: number
+                    examples: [1.5]
+                    description: |
+                      The memory limits/requests ratio.
+
+                      This ratio is used for calculating the initial memory limits for a pod.
+
+                      If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+          static:
+            type: object
+            description: |
+              Resource management options for the `Static` mode.
+            properties:
+              requests:
+                type: object
+                description: |
+                  Resource requests settings for pods.
+                properties:
+                  cpu:
+                    type: string
+                    pattern: "^[0-9]+m?$"
+                    description: |
+                      Configuring CPU requests.
+                  memory:
+                    oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+                    description: |
+                      Configuring memory requests.
+              limits:
+                type: object
+                description: |
+                  Configuring CPU and memory limits.
+                properties:
+                  cpu:
+                    type: string
+                    attern: "^[0-9]+m?$"
+                    description: |
+                      Configuring CPU limits.
+                  memory:
+                    oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
+                    description: |
+                      Configuring memory limits.
+  dataPlane:
+    type: object
+    default: {}
+    properties:
+      trafficRedirectionSetupMode:
+        type: string
+        description: |
+          Managing the redirection mode of application traffic to be forwarded under Istio control in the Pod's network namespace.
+          - `CNIPlugin` — in this mode, the configuration is performed by a CNI plugin when creating a Pod on a node. This mode does not require additional permissions for Pods and is recommended. This mode has [limitations](./examples.html#cniplugin-application-traffic-redirection-mode-restrictions) when using application init-containers that perform network communication with other services.
+          - `InitContainer` — classic mode, each application Pod is automatically injected with a special init-container that configures the network environment of the Pod. In order to perform this configuration, the init-container is given additional permissions, which may not meet the security requirements of individual installations.
+        default: "InitContainer"
+        enum: ["CNIPlugin", "InitContainer"]
+        x-examples: ["CNIPlugin", "InitContainer"]
+      enableHTTP10:
+        type: boolean
+        default: false
+        x-examples: [ true ]
+        description: |
+          Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
+      proxyConfig:
+        type: object
+        description: |
+          Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+        default: { }
+        properties:
+          holdApplicationUntilProxyStarts:
+            type: boolean
+            x-examples: [ true ]
+            default: false
+            description: |
+              With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
+
+              This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+          idleTimeout:
+            type: string
+            pattern: '^[0-9]+(s|m|h)$'
+            x-examples: [ 24h ]
+            default: 1h
+            description: |
+              Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
+
+              This global flag can be overriden per Pod by an annotation:
+                ```yaml
+                  proxy.istio.io/config: |-
+                    proxyMetadata:
+                      ISTIO_META_IDLE_TIMEOUT: "12h"
+                ```
+              > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
+              > **Warning!** After changing this setting, a restart of the client pods is required.
+      ztunnel:
+        type: object
+        description: |
+          ztunnel specific settings.
+        default: {}
+        x-experimental: true
+        properties:
+          resourcesManagement:
+            description: |
+              Settings for CPU and memory requests and limits by istiod pods.
+            type: object
+            default: {}
+            x-examples:
+            - mode: VPA
+              vpa:
+                mode: Auto
+                cpu:
+                  min: "50m"
+                  max: 2
+                  limitRatio: 1.5
+                memory:
+                  min: "256Mi"
+                  max: "2Gi"
+                  limitRatio: 1.5
+            - mode: Static
+              static:
+                requests:
+                  cpu: "55m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+            properties:
+              mode:
+                type: string
+                description: |
+                  Resource management mode:
+                  - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-dataplane-ztunnel-resourcesmanagement-static) parameter section;
+                  - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-dataplane-ztunnel-resourcesmanagement-vpa) parameter section.
+                enum: ['VPA', 'Static']
+                default: 'VPA'
+              vpa:
+                type: object
+                default: {}
+                description: |
+                  Resource management options for the `VPA` mode.
+                properties:
+                  mode:
+                    type: string
+                    description: |
+                      VPA operating mode.
+                    enum: ['Initial', 'Auto']
+                    default: 'Auto'
+                  cpu:
+                    type: object
+                    default: {}
+                    description: |
+                      CPU-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum value that the VPA can set for the CPU requests.
+                        default: 2
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      min:
+                        description: |
+                          The minimum value that the VPA can set for the CPU requests.
+                        default: '50m'
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The CPU limits/requests ratio.
+
+                          This ratio is used for calculating the initial CPU limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+                  memory:
+                    type: object
+                    default: {}
+                    description: |
+                      Memory-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum memory requests the VPA can set.
+                        default: '2Gi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      min:
+                        description: |
+                          The minimum memory requests the VPA can set.
+                        default: '256Mi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The memory limits/requests ratio.
+
+                          This ratio is used for calculating the initial memory limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+              static:
+                type: object
+                description: |
+                  Resource management options for the `Static` mode.
+                properties:
+                  requests:
+                    type: object
+                    description: |
+                      Resource requests settings for pods.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU requests.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory requests.
+                  limits:
+                    type: object
+                    description: |
+                      Configuring CPU and memory limits.
+                    properties:
+                      cpu:
+                        type: string
+                        attern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU limits.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory limits.
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with module's public web interfaces.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+
+          **Caution!** Unlike other modules, Istio doesn't support non-secured HTTP (`mode: Disabled`).
+        enum:
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  highAvailability:
+    type: boolean
+    x-examples: [true]
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  auth:
+    type: object
+    default: {}
+    x-examples:
+    - externalAuthentication:
+        authURL: "https://dex.d8.svc.cluster.local/dex/auth"
+        authSignInURL: "https://example.com/dex/sign_in"
+      allowedUserGroups:
+      - admins
+    description: Options related to authentication or authorization in the application.
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            x-examples: ["https://example.com/dex/auth"]
+            description: |
+              The URL of the authentication service.
+
+              If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            x-examples: ["https://example.com/dex/sign_in"]
+            description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - [ "1.1.1.1/32" ]
+        description: An array if CIDRs that are allowed to authenticate in module's public web interfaces.
+      satisfyAny:
+        type: boolean
+        x-examples: [true]
+        default: false
+        description: |
+          Enables single authentication.
+
+          If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).

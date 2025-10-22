@@ -1,0 +1,7 @@
+- name: Prometheus Operator
+  link: https://github.com/prometheus-operator/prometheus-operator
+  description: Kubernetes native deployment and management of Prometheus and related monitoring components.
+  logo: https://avatars.githubusercontent.com/u/66682517?s=200&v=4
+  license: Apache License 2.0
+
+

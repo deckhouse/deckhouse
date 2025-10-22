@@ -1,0 +1,9 @@
+name: control-plane-manager
+critical: true
+weight: 40
+subsystems:
+  - kubernetes
+namespace: kube-system
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

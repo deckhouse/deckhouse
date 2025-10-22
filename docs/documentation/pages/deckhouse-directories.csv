@@ -1,0 +1,7 @@
+---
+permalink: en/deckhouse-directories.csv
+layout: none
+searchable: false
+sitemap_include: false
+---
+{%- include deckhouse-directories-csv.liquid -%}

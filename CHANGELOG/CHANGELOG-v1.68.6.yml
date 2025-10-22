@@ -1,0 +1,41 @@
+candi:
+  fixes:
+    - summary: Fix errors in bashible steps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12631
+deckhouse:
+  fixes:
+    - summary: Fix erroneous inclusions in 1.68
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12712
+    - summary: Fix module config ignored.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12711
+    - summary: Fix checking automatic kubernetes version in managed clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12685
+    - summary: Fix module config ignored.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12681
+    - summary: Explicitly set ports in d8-kube-dns deployment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12658
+    - summary: Set EnabledByModuleConfig condition by default for modules without this condition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12558
+    - summary: Fix module condition race.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12525
+deckhouse-controller:
+  fixes:
+    - summary: Fix applying releases and their metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12670
+    - summary: Fix applying releases and their metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12632
+deckhouse-tools:
+  fixes:
+    - summary: d8-cli build fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12709
+docs:
+  fixes:
+    - summary: Corrected a typo in the NFSStorageClass name in the NFS data storage section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12725
+    - summary: Added SE and SE+ restrictions for Istio.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12718
+log-shipper:
+  fixes:
+    - summary: Add delete parsed_data to final kafka transform render
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12659
+

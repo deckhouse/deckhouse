@@ -1,0 +1,29 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedSysctls
+metadata:
+  name: test
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values:
+          - baseline
+          - restricted
+  parameters:
+    allowedSysctls:
+    - kernel.shm_rmid_forced
+    - net.ipv4.ip_local_port_range
+    - net.ipv4.ip_unprivileged_port_start
+    - net.ipv4.tcp_syncookies
+    - net.ipv4.ping_group_range
+    - net.ipv4.ip_local_reserved_ports
+    - net.ipv4.tcp_keepalive_time
+    - net.ipv4.tcp_fin_timeout
+    - net.ipv4.tcp_keepalive_intvl
+    - net.ipv4.tcp_keepalive_probes

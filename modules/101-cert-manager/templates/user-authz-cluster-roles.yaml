@@ -1,0 +1,77 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:cert-manager:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - issuers
+  - challenges
+  - orders
+  - clusterissuers
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+  name: d8:user-authz:cert-manager:editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  - issuers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Admin
+  name: d8:user-authz:cert-manager:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - challenges
+  - orders
+  verbs:
+  - delete
+  - deletecollection
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterEditor
+  name: d8:user-authz:cert-manager:cluster-editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - clusterissuers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

@@ -1,0 +1,40 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: custom-pod
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  sampleLimit: 5000
+  podMetricsEndpoints:
+  # HTTP target with samples limited to 5000
+  - relabelings:
+    {{- include "keep_targets_for_schema" (list "pod" "http") | nindent 4 }}
+    {{- include "endpoint_by_container_port_name" "http" | nindent 4 }}
+    {{- include "base_relabeling" "pod" | nindent 4 }}
+
+  # HTTPS target with samples limited to 5000
+  - scheme: https
+    {{- include "tls_config" "" | nindent 4 }}
+    relabelings:
+    {{- include "keep_targets_for_schema" (list "pod" "https") | nindent 4 }}
+    {{- include "endpoint_by_container_port_name" "https" | nindent 4 }}
+    {{- include "base_relabeling" "pod" | nindent 4 }}
+
+    {{- if .Values.monitoringCustom.internal.prometheusScraperIstioMTLSEnabled }}
+  # HTTPS Istio mTLS target with samples limited to 5000
+  - scheme: https
+    {{- include "tls_config" "prometheus-scraper-istio-mtls" | nindent 4 }}
+    relabelings:
+    {{- include "keep_targets_for_schema" (list "pod" "istio-mtls") | nindent 4 }}
+    {{- include "endpoint_by_container_port_name" "http" | nindent 4 }}
+    {{- include "base_relabeling" "pod" | nindent 4 }}
+    {{- end }}
+
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+    - key: prometheus.deckhouse.io/custom-target
+      operator: Exists

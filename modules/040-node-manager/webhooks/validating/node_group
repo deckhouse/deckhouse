@@ -1,0 +1,322 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+# "e30=" is base64-encoded empty JSON ("{}"). It is used as default so that `fromjson` does not return an error.
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: endpoints
+    apiVersion: v1
+    kind: Endpoints
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames:
+      - kubernetes
+    jqFilter: |
+      {
+        "count": (.subsets[].addresses | length )
+      }
+  - name: cluster_config
+    apiVersion: v1
+    kind: Secret
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-cluster-configuration
+    jqFilter: |
+      {
+        "defaultCRI": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*defaultCRI:[ ]+(.*)\n").captures[0].string),
+        "clusterPrefixLen": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*prefix:[ ]+(.*)\n").captures[0].string | length),
+        "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string)
+      }
+  - name: provider_cluster_config
+    apiVersion: v1
+    kind: Secret
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    namespace:
+      nameSelector:
+        matchNames: ["kube-system"]
+    nameSelector:
+      matchNames:
+        - d8-provider-cluster-configuration
+    jqFilter: |
+      {
+        "zones": (.data."cloud-provider-discovery-data.json" // "e30=" | @base64d | fromjson | .zones // [])
+      }
+  - name: deckhouse_config
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    nameSelector:
+      matchNames: ["global"]
+    jqFilter: '.spec.settings // ""'
+  - name: nodes_with_containerd_custom_conf
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd-config: custom
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
+  - name: nodes_without_containerd_support
+    apiVersion: v1
+    kind: nodes
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    labelSelector:
+      matchLabels:
+        node.deckhouse.io/containerd-v2-unsupported: ""
+    jqFilter: |
+      {
+        "nodeName": .metadata.name,
+        "labels": .metadata.labels
+      }
+kubernetesValidating:
+- name: nodegroup-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["nodegroups"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  operationType="$(context::jq -r '.review.request.operation')"
+
+  clusterType="$(context::jq -r '.snapshots.cluster_config[0].filterResult.clusterType')"
+  if [[ "$clusterType" == "Cloud" ]]; then
+    clusterPrefixLen="$(context::jq -r '.snapshots.cluster_config[0].filterResult.clusterPrefixLen')"
+    nodeGroupNameLen=$(context::jq -r '.review.request.object.metadata.name | length')
+    if [[ "${operationType}" == "CREATE" ]]; then
+      # Dynamic node name is <clusterPrefix>-<nodeGroupName>-<hashes> and one of kubernetes node label contains it.
+      # Label value must be >= 63 characters
+      if [[ $(( 63 - clusterPrefixLen - 1 - nodeGroupNameLen - 21 )) -lt 0 ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden for this cluster to set (cluster prefix + node group name) longer then 42 symbols"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
+  minPerZone=$(context::jq -r '.review.request.object.spec.cloudInstances.minPerZone // 0')
+  maxPerZone=$(context::jq -r '.review.request.object.spec.cloudInstances.maxPerZone // 0')
+
+  if [[ "$maxPerZone" -lt "$minPerZone" ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to set maxPerZone lower than minPerZone for NodeGroup"}
+EOF
+    return 0
+  fi
+
+  # Check zones existence for CloudEphemeral nodes
+  allowedZones=$(context::jq -e -r 'if (.snapshots.provider_cluster_config | length) > 0 then .snapshots.provider_cluster_config[0].filterResult.zones else [] end | if . == [] then [] else .[] end')
+  ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
+
+  if [[ "$allowedZones" != "[]" ]]; then
+    for zone in $(jq -e -r '.[]' <<< "$ngZones"); do
+      if ! grep -qE "^$zone\$" <<< "$allowedZones"; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"unknown zone \"${zone}\""}
+EOF
+        return 0
+      fi
+    done
+  fi
+
+  criType="$(context::jq -r '.review.request.object.spec.cri.type')"
+
+  if [[ "${criType}" == "Docker" ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to set cri type to Docker"}
+EOF
+    return 0
+  fi
+
+  # cri.type cannot be changed if count of endpoints < 3
+  if context::jq -e -r '.review.request.name == "master"' >/dev/null 2>&1; then
+    defaultCRI="$(context::jq -r '.snapshots.cluster_config[0].filterResult.defaultCRI')"
+    if [[ -z "${defaultCRI}" ]]; then
+      defaultCRI="Containerd"
+    fi
+    oldCRIType="$(context::jq -r --arg df "${defaultCRI}" '.review.request.oldObject.spec.cri.type // $df')"
+    newCRIType="$(context::jq -r --arg df "${defaultCRI}" '.review.request.object.spec.cri.type // $df')"
+    endpointsCount="$(context::jq -r '.snapshots.endpoints[].filterResult.count')"
+
+    if [[ ("${newCRIType}" != "${oldCRIType}") && ("${endpointsCount}" -lt 3) ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true, "warnings":["it is disruptive to change cri.type in master node group for cluster with apiserver endpoints < 3"]}
+EOF
+      return 0
+    fi
+  fi
+
+  missing_taints=""
+  has_missing_taints=0
+  taints=$(context::jq -r '.review.request.object.spec.nodeTemplate.taints // []')
+  if [[ "$taints" != "[]" ]]; then
+    customTolerationKeys=$(context::jq -e -r 'if (.snapshots.deckhouse_config | length) > 0 then .snapshots.deckhouse_config[0].filterResult else {} end' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
+    for taint in $(jq -e -r '.[].key' <<< "$taints"); do
+      # Skip 'standart' taints
+      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' ]]; then
+        continue
+      fi
+      if ! printf '%s\n' "${customTolerationKeys[@]}" | grep -q -E "^$taint\$"; then
+        has_missing_taints=1
+        missing_taints="${missing_taints} ${taint}"
+      fi
+    done
+  fi
+
+  if [[ ${has_missing_taints} -eq 1 ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to create a NodeGroup resource with taints not specified in ModuleConfig \"global\" in the array .spec.settings.modules.placement.customTolerationKeys, add:${missing_taints} to customTolerationKeys."}
+EOF
+    return 0
+  fi
+
+  # check for nodeGroup deckhouse.io/v1alpha1
+  if context::jq -e -r '.review.request.object.apiVersion == "deckhouse.io/v1alpha1"' >/dev/null 2>&1; then
+    if context::jq -e -r '.review.request.object.spec.cri.type != "Containerd" and .review.request.object.spec.cri.containerd != null' >/dev/null 2>&1; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to create NodeGroup resource with set .spec.cri.containerd and without .spec.cri.type=\"Containerd\""}
+EOF
+      return 0
+    fi
+  fi
+
+  # check approvalMode
+  if context::jq -e -r '.review.request.object.spec.disruptions.approvalMode == "RollingUpdate" and .review.request.object.spec.nodeType != "CloudEphemeral"' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"it is forbidden to change NodeGroup resource with set .spec.disruptions.approvalMode to \"RollingUpdate\" when spec.nodeType is not \"CloudEphemeral\""}
+EOF
+    return 0
+  fi
+
+  # Only update operation checks
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    # Forbid changing nodeType
+    newNodeType="$(context::jq -r '.review.request.object.spec.nodeType')"
+    oldNodeType="$(context::jq -r '.review.request.oldObject.spec.nodeType')"
+    if [[ "${oldNodeType}" != "${newNodeType}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.nodeType field is immutable"}
+EOF
+        return 0
+    fi
+  fi
+
+  # Forbid more than one taint with the same key and effect
+  if context::jq -e -r '.review.request.object.spec.nodeTemplate.taints // [] | group_by(.key,.effect)[] | select(length > 1)' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.nodeTemplate.taints must contains only one taint with the same key and effect"}
+EOF
+    return 0
+  fi
+
+  # check topologyManager.enabled
+  if context::jq -e -r '.review.request.object.spec.kubelet.resourceReservation.mode == "Off" and .review.request.object.spec.kubelet.topologyManager.enabled == true' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager.enabled to work"}
+EOF
+    return 0
+  fi
+
+  # check topologyManager.enabled and resourceReservation.mode == "static"
+  if context::jq -e -r '.review.request.object.spec.kubelet.resourceReservation.mode == "Static" and .review.request.object.spec.kubelet.topologyManager.enabled == true and .review.request.object.spec.kubelet.resourceReservation.static.cpu == null' >/dev/null 2>&1; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"for .spec.kubelet.topologyManager.enabled and .spec.kubelet.resourceReservation.mode == \"static\" and .spec.kubelet.resourceReservation.static.cpu must be specified"}
+EOF
+    return 0
+  fi
+
+  # Forbid change CRI type if ng has nodes with custom containerd config
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    oldCriType="$(context::jq -r '.review.request.oldObject.spec.cri.type')"
+
+    if [[ "${oldCriType}" != "${newCriType}" ]]; then
+      nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '
+        .snapshots.nodes_with_containerd_custom_conf[]?
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup)
+        | .filterResult.nodeName' | tr '\n' ' ')"
+      if [[ $nodesForbidingChanges != "" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
+
+  # Forbid setting CRI type to ContainerdV2 if any node in the NodeGroup has containerd-v2-not-supported
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    newCriType="$(context::jq -r '.review.request.object.spec.cri.type')"
+    if [[ "${newCriType}" == "ContainerdV2" ]]; then
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
+      unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
+        .snapshots.nodes_without_containerd_support[]
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | .filterResult.nodeName
+      ')"
+      if [[ -n "${unsupportedNodes}" ]]; then
+         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"It is forbidden for NodeGroup \"${nodeGroupName}\" to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@"

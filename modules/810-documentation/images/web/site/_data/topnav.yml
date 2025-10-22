@@ -1,0 +1,19 @@
+## if you want to list an external url, use external_url instead of url. the theme will apply a different link base.
+topnav:
+  en:
+  - title: Topnav
+    items:
+    - title: Documentation
+      url: /
+    - title: Modules
+      url: /modules/
+  ru:
+  - title: Topnav
+    items:
+    - title: Документация
+      url: /
+    - title: Модули
+      url: /modules/
+    - title: Лицензионное соглашение
+      external_url: https://deckhouse.ru/license/
+      ee_only: true

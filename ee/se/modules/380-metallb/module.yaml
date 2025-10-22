@@ -1,0 +1,7 @@
+name: metallb
+stage: "General Availability"
+subsystems:
+  - networking
+namespace: d8-metallb
+requirements:
+  deckhouse: ">= 1.68"

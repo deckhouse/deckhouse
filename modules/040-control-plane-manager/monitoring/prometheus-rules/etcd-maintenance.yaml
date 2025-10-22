@@ -1,0 +1,132 @@
+- name: d8.etcd-maintenance.quota-backend-bytes
+  rules:
+    - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
+      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
+      labels:
+        severity_level: "3"
+        tier: cluster
+      for: "10m"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__kube_etcd_malfunctioning: "KubeEtcdMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: etcd database size is approaching the limit.
+        description: |
+          The etcd database size on `{{ $labels.node }}` is nearing its size limit.
+          This may be caused by a high number of events, such as pod evictions or the recent creation of numerous resources in the cluster.
+
+          Possible solutions:
+
+          - Defragment the etcd database by running the following command:
+
+            ```bash
+            d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+              --cacert /etc/kubernetes/pki/etcd/ca.crt \
+              --cert /etc/kubernetes/pki/etcd/ca.crt \
+              --key /etc/kubernetes/pki/etcd/ca.key \
+              --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+            ```
+
+          - Increase node memory. Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
+
+            Example:
+
+            | Node memory | quota-backend-bytes |
+            | ----------- | ------------------- |
+            | 16 GB       | 2147483648 (2 GB)   |
+            | 24 GB       | 3221225472 (3 GB)   |
+            | 32 GB       | 4294967296 (4 GB)   |
+            | 40 GB       | 5368709120 (5 GB)   |
+            | 48 GB       | 6442450944 (6 GB)   |
+            | 56 GB       | 7516192768 (7 GB)   |
+            | 64 GB       | 8589934592 (8 GB)   |
+            | 72 GB       | 8589934592 (8 GB)   |
+            | ...         | ...                 |
+    - alert: D8NeedDecreaseEtcdQuotaBackendBytes
+      expr: max(d8_etcd_quota_backend_should_decrease) > 0
+      labels:
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "6"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: Deckhouse suggests reducing `quota-backend-bytes`.
+        description: |
+          When the control plane node memory is reduced, Deckhouse may suggest reducing `quota-backend-bytes`.
+          While Deckhouse is capable of automatically increasing this value, reducing it must be done manually.
+
+          To modify `quota-backend-bytes`, set the `controlPlaneManager.etcd.maxDbSize` parameter. Before setting a new value, check the current database usage on every control plane node by running:
+
+          ```
+          for pod in $(d8 k get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
+            d8 k -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
+              --cacert /etc/kubernetes/pki/etcd/ca.crt \
+              --cert /etc/kubernetes/pki/etcd/ca.crt \
+              --key /etc/kubernetes/pki/etcd/ca.key \
+              endpoint status -w json | jq --arg a "$pod" -r \
+              '.[0].Status.dbSize / 1024 / 1024 | tostring | $a + ": " + . + " MB"';
+          done
+          ```
+
+          Things to note:
+
+          - The maximum value for `controlPlaneManager.etcd.maxDbSize` is 8 GB.
+          - If control plane nodes have less than 24 GB, set `controlPlaneManager.etcd.maxDbSize` to 2 GB.
+          - Starting from 24 GB, `quota-backend-bytes` will increase by 1 GB for every extra 8 GB of memory.
+
+            Example:
+
+            | Node memory | quota-backend-bytes |
+            | ----------- | ------------------- |
+            | 16 GB       | 2147483648 (2 GB)   |
+            | 24 GB       | 3221225472 (3 GB)   |
+            | 32 GB       | 4294967296 (4 GB)   |
+            | 40 GB       | 5368709120 (5 GB)   |
+            | 48 GB       | 6442450944 (6 GB)   |
+            | 56 GB       | 7516192768 (7 GB)   |
+            | 64 GB       | 8589934592 (8 GB)   |
+            | 72 GB       | 8589934592 (8 GB)   |
+            | ...         | ...                 |
+    - alert: D8EtcdExcessiveDatabaseGrowth
+      expr: predict_linear(etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}[6h], 24*3600) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
+      for: "30m"
+      labels:
+        severity_level: "4"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: etcd cluster database is growing rapidly.
+        description: |
+          Based on the growth rate observed over the last six hours, Deckhouse predicts that the etcd database will run out of disk space within one day on instance `{{ $labels.instance }}`.
+
+          To prevent disruptions, investigate the cause and take necessary action.
+    - alert: D8EtcdDatabaseHighFragmentationRatio
+      expr: max by (node) (last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes[5m]) / last_over_time(etcd_mvcc_db_total_size_in_bytes[5m])) < 0.5 and max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) > scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.75)
+      for: "10m"
+      labels:
+        severity_level: "7"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: etcd database size in use is less than 50% of the allocated storage.
+        description: |
+          The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the allocated disk space, indicating potential fragmentation. Additionally, the total storage size exceeds 75% of the configured quota.
+
+          To resolve this issue, defragment the etcd database by running the following command:
+
+          ```bash
+          d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+            --cacert /etc/kubernetes/pki/etcd/ca.crt \
+            --cert /etc/kubernetes/pki/etcd/ca.crt \
+            --key /etc/kubernetes/pki/etcd/ca.key \
+            --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+          ```

@@ -1,0 +1,12 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: dex

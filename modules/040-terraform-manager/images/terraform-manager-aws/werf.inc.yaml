@@ -1,0 +1,55 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "aws") }}'
+git:
+- add: /{{ .ModulePath }}candi/cloud-providers/aws
+  to: /deckhouse/candi/cloud-providers/aws
+import:
+- image: terraform-provider-aws
+  add: /terraform-provider-aws
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "aws") }}/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws
+  before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.aws.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-aws.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: terraform-provider-aws
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - apk add --no-cache make bash
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"
+  - mv /go/bin/terraform-provider-aws /terraform-provider-aws
+  - chmod -R 755 /terraform-provider-aws
+  - chown 64535:64535 /terraform-provider-aws

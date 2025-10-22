@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - . # We will force users to get rid of extra unwanted elements in MC through alert
+description:
+  ru: "Удалите все элементы `addressPool` с протоколом `layer2`."
+  en: "Remove all `addressPool` elements with the `layer2` protocol."

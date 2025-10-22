@@ -1,0 +1,9 @@
+type: object
+properties:
+  podNetworkMode:
+    type: string
+    enum: ["HostGW", "VXLAN"]
+    default: "HostGW"
+    description: |
+      Work mode.
+      > **NOTE!** All cluster nodes must be rebooted after switching work mode. You can change the parameter **only** in bare metal clusters.

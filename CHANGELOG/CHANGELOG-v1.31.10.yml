@@ -1,0 +1,17 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Remove default `podNetworkMode` from the config-values.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1248
+docs:
+  fixes:
+    - summary: Review and fix the 'Managing nodes' section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1250
+ingress-nginx:
+  fixes:
+    - summary: Make the VHost Detail dashboard show all locations by default
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1251
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Fix custom metrics workability
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1259
+

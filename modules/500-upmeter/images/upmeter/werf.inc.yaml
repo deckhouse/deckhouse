@@ -1,0 +1,69 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/upmeter
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "**/*.go"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v4.18.2 $(cat /run/secrets/SOURCE_REPO)/golang-migrate/migrate.git /src/migrate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache gcc musl-dev jq-dev oniguruma-dev curl
+  install:
+  - cd /src/upmeter
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
+  - cd /src/migrate
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' -o /migrate ./cmd/migrate
+  - chown 64535:64535 /migrate /upmeter
+  - chmod 0700 /migrate /upmeter
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/upmeter/pkg/db/migrations/agent
+  to: /data/migrations/agent
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/upmeter/pkg/db/migrations/server
+  to: /data/migrations/server
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /migrate
+  to: /migrate
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /upmeter
+  to: /upmeter
+  before: setup
+git:  
+{{- include "image mount points" . }}  

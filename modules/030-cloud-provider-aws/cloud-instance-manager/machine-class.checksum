@@ -1,0 +1,29 @@
+{{- $options := dict -}}
+{{- if hasKey .nodeGroup.instanceClass "ami" -}}
+  {{- $_ := set $options "ami" .nodeGroup.instanceClass.ami -}}
+{{- end -}}
+{{- $_ := set $options "instanceType" .nodeGroup.instanceClass.instanceType -}}
+{{- if hasKey .nodeGroup.instanceClass "spot" -}}
+  {{- $_ := set $options "spot" .nodeGroup.instanceClass.spot -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGb 20.0 -}}
+    {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
+  {{- end -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "iops" -}}
+  {{ $_ := set $options "iops" .nodeGroup.instanceClass.iops -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalSecurityGroups" }}
+  {{- $_ := set $options "additionalSecurityGroups" .nodeGroup.instanceClass.additionalSecurityGroups -}}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" -}}
+  {{ $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
+{{- end -}}
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

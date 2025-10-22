@@ -1,0 +1,148 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: "90f0955ee984feab5c50611987008def"
+  creationTimestamp: null
+  generation: 1
+  name: test
+  resourceVersion: "406077723"
+  uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-alpha
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: superseded
+  name: echo-v0.4.50
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  moduleName: echo
+  version: 0.4.50
+  weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: superseded
+  name: echo-v0.4.51
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  moduleName: echo
+  version: 0.4.51
+  weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: suspended
+  name: echo-v0.4.52
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  moduleName: echo
+  version: 0.4.52
+  weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: superseded
+  name: echo-v0.4.53
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  moduleName: echo
+  version: 0.4.53
+  weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    release.deckhouse.io/notified: "false"
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: test-alpha
+    release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
+    source: test
+    status: pending
+  name: echo-v0.4.54
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test
+    uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
+spec:
+  moduleName: echo
+  version: 0.4.54
+  weight: 910
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: echo
+status:
+  phase: Ready

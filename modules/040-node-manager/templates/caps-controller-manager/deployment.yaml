@@ -1,0 +1,124 @@
+{{- define "static_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: caps-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "caps-controller-manager"
+      minAllowed:
+        {{- include "static_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: caps-controller-manager
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: caps-controller-manager
+      cluster.x-k8s.io/provider: infrastructure-static
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: caps-controller-manager
+        cluster.x-k8s.io/provider: infrastructure-static
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "caps-controller-manager")) | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: caps-controller-manager
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: caps-controller-manager
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible"  dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: cert
+            readOnly: true
+          - mountPath: /tmp
+            name: tmp
+        args:
+          - "--leader-elect"
+          # Todo remove after rewrite caps
+          - "--leader-elect-lease-duration=3m"
+          - "--leader-elect-renew-deadline=2m50s"
+          - "--leader-elect-retry-period=5s"
+          - "--sync-period=1m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "static_controller_manager_resources" . | nindent 12 }}
+  {{- end }}
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: caps-controller-manager-webhook-tls
+        - name: tmp
+          emptyDir: {}
+{{- end }}

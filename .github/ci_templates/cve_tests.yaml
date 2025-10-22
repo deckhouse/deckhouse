@@ -1,0 +1,133 @@
+{!{ define "set_security_scan_requirement_status" }!}
+
+# <template: set_security_scan_requirement_status>
+set_security_scan_requirement_status: 
+  name: Set commit status after security scan run
+  runs-on: ubuntu-latest
+  needs: test_cve_report_main
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh -y
+    - name: Auth with GitHub CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Set PR Label
+      env:
+        PR_NUMBER: ${{ inputs.issue_number }}
+      run: |
+        echo "PR Number: $PR_NUMBER"
+        if [ "${{ needs.test_cve_report_main.result }}" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/success"
+        else
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/failed"
+        fi
+# </template: set_security_scan_requirement_status>
+{!{- end -}!}
+
+{!{ define "remove_labels_job" }!}
+{!{- $ctx := . -}!}
+# <template: remove_labels_job>
+remove_labels:
+  name: Remove labels
+  runs-on: ubuntu-latest
+  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Remove labels
+      id: remove
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const label = "security/cve";
+          const ci = require('./.github/scripts/js/ci');
+          const issue_number = context.payload.inputs.issue_number;
+          console.log("Issue number is", issue_number);
+          return await ci.removeLabel({github, context, core, issue_number, label});
+# </template: remove_labels_job>
+{!{- end -}!}
+
+{!{ define "exctract_pr_number" }!}
+# <template: exctract_pr_number>
+- name: Extract PR number and form TAG
+  id: extract_pr
+  run: |
+    echo "REF=${{ github.event.inputs.pull_request_ref }}"
+    PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
+    echo "PR_NUMBER=$PR_NUMBER"
+    REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+    if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+      TAG="pr${PR_NUMBER}"
+    else
+      TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+    fi
+    echo "TAG=$TAG" >> $GITHUB_ENV
+
+# </template: exctract_pr_number>
+{!{- end -}!}
+{!{ define "cve_scan_deckhouse_images" }!}
+# <template: cve_scan_deckhouse_images>
+- name: Set scan target type
+  run: |
+    if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
+      echo "SCAN_TARGET=only_main" >> $GITHUB_ENV
+    elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.pull_request_ref }}" ]; then
+      echo "SCAN_TARGET=pr" >> $GITHUB_ENV
+    elif [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+      echo "SCAN_TARGET=regular" >> $GITHUB_ENV
+    fi
+- name: Run Deckhouse images CVE tests on ${{env.TAG}}
+  env:
+    DEFECTDOJO_API_TOKEN: ${{secrets.DEFECTDOJO_API_TOKEN}}
+    DEFECTDOJO_HOST: ${{secrets.DEFECTDOJO_HOST}}
+    DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+    DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+    DEV_REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+    DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    PROD_REGISTRY: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+    PROD_REGISTRY_USER: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+    PROD_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+    TRIVY_BIN_VERSION: "v0.63.0"
+    TRIVY_PROJECT_ID: "2181"
+    TRIVY_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2
+    TRIVY_JAVA_DB_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-java-db:1
+    TRIVY_POLICY_URL: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1
+    SEVERITY: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  run: |
+    echo "⚓️ 🏎 Running Deckhouse images CVE tests on ${TAG}..."
+    ./.github/scripts/cve_scan.sh
+# </template: cve_scan_deckhouse_images>
+{!{- end -}!}
+
+{!{ define "cve_tests_upload_reports_artifacts" }!}
+# <template: cve_tests_upload_reports_artifacts>
+- name: Archive report artifacts
+  if: success()
+  run: |
+    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+- name: Create fail artifact
+  if: failure()
+  run: |
+    echo "Trivy tests for ${TAG} have failed." > "${{ env.WORKDIR }}/artifacts/${TAG}_test-failed.txt"
+    tar -zcvf ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+- name: Upload report artifacts
+  if: success()
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: cve-reports
+    path: |
+      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
+- name: Upload fail artifact
+  if: failure()
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: cve-reports
+    path: |
+      ${{ env.WORKDIR }}/artifacts/${{ env.TAG }}_test-failed.txt
+      ${{ env.WORKDIR }}/artifacts/trivy_json_reports.tar.gz
+- name: Remove workdir
+  run: |
+    rm -r ${{ env.WORKDIR }}
+# </template: cve_tests_upload_reports_artifacts>
+{!{- end -}!}

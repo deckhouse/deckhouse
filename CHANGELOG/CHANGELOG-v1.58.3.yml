@@ -1,0 +1,65 @@
+candi:
+  fixes:
+    - summary: Fix regex validation pattern of the `additionalRolePolicies` field.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7696
+dhctl:
+  features:
+    - summary: Generate `DeckhouseRelease` manifests for mirrored releases.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7697
+  fixes:
+    - summary: Avoid mirroring versions in `dhctl mirror` that were not yet released.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7716
+ingress-nginx:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+    - summary: Fix missed libs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7717
+      impact: Ingress controller will restart.
+kube-dns:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+local-path-provisioner:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+loki:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+monitoring-kubernetes:
+  fixes:
+    - summary: Change go get.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7731
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+node-manager:
+  fixes:
+    - summary: Fixed kubelet resource reservation for Static nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7724
+operator-prometheus:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+operator-trivy:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+prometheus:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+    - summary: Minor documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7694
+prometheus-metrics-adapter:
+  fixes:
+    - summary: Change go get.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7731
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+user-authn:
+  fixes:
+    - summary: Use `go get` instead of `go get -u` to image immutability.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/7726
+

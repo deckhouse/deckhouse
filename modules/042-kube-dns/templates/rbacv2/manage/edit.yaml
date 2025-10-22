@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: kube-dns
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-networking-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: kube-system
+  name: d8:manage:permission:module:kube-dns:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - kube-dns
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

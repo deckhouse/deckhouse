@@ -1,0 +1,13 @@
+candi:
+  fixes:
+    - summary: memory.available calculation python2 fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13899
+openvpn:
+  fixes:
+    - summary: Fixed condition of alert triggering for client certificate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13900
+service-with-healthchecks:
+  fixes:
+    - summary: change port kube-rbac-proxy in agent DaemonSet
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13891
+

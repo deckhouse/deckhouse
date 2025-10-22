@@ -1,0 +1,5 @@
+- name: Chrony
+  link: https://chrony.tuxfamily.org
+  description: chrony is a versatile implementation of the Network Time Protocol (NTP)
+  logo: /images/logos/kubernetes.svg
+  license: GNU General Public License version 2

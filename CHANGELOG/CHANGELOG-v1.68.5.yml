@@ -1,0 +1,33 @@
+candi:
+  fixes:
+    - summary: Fix `disable_unattended_upgrades` bashible step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12548
+docs:
+  fixes:
+    - summary: Correct mistakes in the crds for the Storage section in Deckhouse Kubernetes Platform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12625
+    - summary: Update Deckhouse CLI installation guide
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12573
+    - summary: Fixed sidebar behaviour with links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12566
+    - summary: >-
+        Correct mistakes in the documentation for the storage section in Deckhouse Kubernetes
+        Platform.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12499
+extended-monitoring:
+  fixes:
+    - summary: Minor certificate alerts improvements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12459
+metallb:
+  fixes:
+    - summary: Add clearing of alert metric group D8MetallbObsoleteLayer2PoolsAreUsed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12648
+operator-trivy:
+  fixes:
+    - summary: Updated info about databases with vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12536
+prometheus:
+  features:
+    - summary: add grafana enable flag
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12460
+

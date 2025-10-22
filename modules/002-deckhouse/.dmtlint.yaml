@@ -1,0 +1,33 @@
+linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.license.properties.edition"
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: deckhouse
+          container: init-downloaded-modules
+      liveness-probe:
+        - kind: Deployment
+          name: deckhouse
+          container: deckhouse
+      readiness-probe:
+        - kind: Deployment
+          name: webhook-handler
+          container: handler
+      image-digest:
+        - kind: Deployment
+          name: deckhouse
+          container: deckhouse
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:deckhouse:webhook-handler
+      placement:
+        - kind: ClusterRole
+          name: d8:rbac-proxy
+        - kind: ClusterRoleBinding
+          name: d8-sudouser

@@ -1,0 +1,268 @@
+kind: VsphereClusterConfiguration
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      description: |
+        Описывает конфигурацию облачного кластера в vSphere.
+
+        Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
+
+        Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+        ```shell
+        d8 p edit provider-cluster-configuration
+        ```
+
+        > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+      x-doc-search: |
+        ProviderClusterConfiguration
+      properties:
+        masterNodeGroup:
+          description: |
+            Спецификация для описания NodeGroup master-узлов.
+
+            > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+          properties:
+            replicas:
+              description: |
+                Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+            zones:
+              description: |
+                Список зон, в которых допустимо создавать узлы.
+
+                Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+            instanceClass:
+              description: |
+                Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.ru/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+              properties: &instanceClassProperties
+                numCPUs:
+                  description: |
+                    Количество виртуальных процессорных ядер, выделяемых виртуальной машине.
+                memory:
+                  description: |
+                    Количество памяти (в мегабайтах), выделенной виртуальной машине.
+                template:
+                  description: |
+                    Путь до VirtualMachine Template, который будет склонирован для создания новой виртуальной машины.
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
+
+                    Указывается относительно vSphere datacenter.
+                datastore:
+                  description: |
+                    Путь до Datastore, на котором будут созданы склонированные виртуальные машины.
+
+                    Указывается относительно vSphere datacenter.
+                additionalNetworks:
+                  description: |
+                    Список путей до сетей, которые будут подключены к виртуальной машине.
+
+                    Указывается относительно vSphere datacenter.
+                rootDiskSize:
+                  description: |
+                    Размер (в гигабайтах) корневого диска в виртуальной машине.
+
+                    Если в template указан диск меньшего размера, автоматически произойдет его расширение.
+                resourcePool:
+                  description: |
+                    Путь до Resource Pool, в котором будут созданы склонированные виртуальные машины.
+
+                    Указывается относительно зоны (vSphere Cluster).
+                mainNetworkIPAddresses:
+                  description: |
+                    Cписок статических IP-адресов (с CIDR-префиксом), назначаемых (по очереди) узлам в основной сети (параметр `mainNetwork`).
+
+                    По умолчанию включен DHCP-клиент.
+                  items:
+                    properties:
+                      address:
+                        description: IP-адрес с CIDR префиксом.
+                      gateway:
+                        description: |
+                          IP-адрес шлюза по умолчанию.
+
+                          Должен находится в подсети, указанной в параметре `address`.
+                      nameservers:
+                        properties:
+                          addresses:
+                            description: Список DNS-серверов.
+                          search:
+                            description: |
+                              Список доменов для поиска на указанных DNS-серверах.
+                runtimeOptions:
+                  description: |
+                    Дополнительные (опциональные) параметры виртуальных машин.
+                  properties:
+                    nestedHardwareVirtualization:
+                      description: |
+                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html) на созданных виртуальных машинах.
+                    cpuShares:
+                      description: |
+                        Относительная величина CPU Shares для создаваемых виртуальных машин.
+                    cpuLimit:
+                      description: |
+                        Верхний лимит (в MHz) потребляемой частоты процессоров для создаваемых виртуальных машин.
+                    cpuReservation:
+                      description: |
+                        Величина зарезервированной для виртуальной машины частоты CPU (в MHz).
+                    memoryShares:
+                      description: |
+                        Относительная величина Memory Shares для создаваемых виртуальных машин.
+                    memoryLimit:
+                      description: |
+                        Верхний лимит (в мегабайтах) потребляемой памяти для создаваемых виртуальных машин.
+                    memoryReservation:
+                      description: |
+                        Процент зарезервированной для виртуальной машины памяти в кластере. В процентах относительно `.spec.memory`.
+        nodeGroups:
+          description: |
+            Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+          items:
+            properties:
+              name:
+                description: |
+                  Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+              replicas:
+                description: |
+                  Количество узлов.
+              nodeTemplate:
+                description: |
+                  Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+                properties:
+                  labels:
+                    description: |
+                      Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                  annotations:
+                    description: |
+                      Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                  taints:
+                    description: |
+                      Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                      > Доступны только поля `effect`, `key`, `values`.
+              zones:
+                description: |
+                  Список зон, в которых допустимо создавать узлы.
+
+                  Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
+              instanceClass:
+                description: |
+                  Частичное содержимое полей [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                properties:
+                  <<: *instanceClassProperties
+        sshPublicKey:
+          description: |
+            Публичный ключ для доступа на узлы.
+        regionTagCategory:
+          description: |
+            Имя категории тегов, использующихся для идентификации региона (vSphere Datacenter).
+        zoneTagCategory:
+          description: |
+            Имя категории тегов, использующихся для идентификации зоны (vSphere Cluster).
+        disableTimesync:
+          x-doc-default: true
+          description: |
+            Отключение синхронизации времени со стороны vSphere.
+
+            > **Внимание!** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
+        externalNetworkNames:
+          description: |
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления ExternalIP в `.status.addresses` в Node API объект.
+        internalNetworkNames:
+          description: |
+            Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления InternalIP в `.status.addresses` в Node API объект.
+        internalNetworkCIDR:
+          description: |
+            Подсеть для master-узлов во внутренней сети.
+
+            Адреса выделяются с десятого адреса. Например, для подсети `192.168.199.0/24` будут использованы адреса начиная с `192.168.199.10`.
+
+            Будет использоваться при использовании `additionalNetworks` в `masterInstanceClass`.
+        vmFolderPath:
+          description: |
+            Путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+        vmFolderExists:
+          description: |
+            Установите значение в `true`, если путь заданный в `vmFolderPath` существует. Установка более одного кластера в папку невозможна.
+        storagePolicyID:
+          description: |
+            ID политики хранилищ SPBM (Storage Policy Based Management).
+        region:
+          description: |
+            Тег, прикрепленный к vSphere Datacenter, в котором будут происходить все операции: заказ виртуальных машин, размещение их дисков на datastore, подключение к network.
+        zones:
+          description: |
+            Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
+        baseResourcePool:
+          description: |
+            Относительный (от vSphere Cluster) путь до существующего родительского `resourcePool` для всех создаваемых (в каждой зоне) `resourcePool'ов`.
+        useNestedResourcePool:
+          description: |
+            Создание вложенного пула (`true`) или использование основного пула (`false`).
+        layout:
+          description: |
+            Название схемы размещения.
+
+            [Подробнее](https://deckhouse.ru/modules/cloud-provider-vsphere/layouts.html) о возможных схемах размещения провайдера.
+        provider:
+          description: Параметры подключения к vCenter.
+          properties:
+            server:
+              description: Хост или IP-адрес vCenter сервера.
+            username:
+              description: Login ID.
+            password:
+              description: Пароль.
+            insecure:
+              description:  Установите `true`, если vCenter использует самоподписанный сертификат.
+        nsxt:
+          description: |
+            Поддержка cloud controller manager'ом балансировщиков (LoadBalancer) в Vsphere через NSX-T.
+          properties:
+            defaultIpPoolName:
+              description: |
+                Имя пула IP-адресов по умолчанию, который используется, если в SVC не установлена аннотация `loadbalancer.vmware.io/class`.
+            defaultTcpAppProfileName:
+              description: |
+                Имя профиля по умолчанию, используемого для TCP-соединений в NSX-T.
+            defaultUdpAppProfileName:
+              description: |
+                Имя профиля по умолчанию, используемого для UDP-соединений в NSX-T.
+            size:
+              description: |
+                Размер сервиса балансировщика (LoadBalancer).
+            tier1GatewayPath:
+              description: |
+                Путь к политике NSX-T tier1 gateway.
+            user:
+              description: |
+                Имя пользователя NSX-T.
+            password:
+              description: |
+                Пароль пользователя NSX-T.
+            host:
+              description: |
+                Адрес NSX-T.
+            insecureFlag:
+              description: |
+                Должен быть установлен в `true`, если NSX-T использует самоподписанный сертификат.
+            loadBalancerClass:
+              description: |
+                Дополнительная секция, определяющая классы балансировщика (LoadBalancer Class) (чтобы использовать класс, установите аннотацию `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` на SVC).
+              items:
+                properties:
+                  name:
+                    description: |
+                      Имя класса балансировщика (LoadBalancer Class) для установки аннотации `loadbalancer.vmware.io/class: <ИМЯ КЛАССА>` в SVC.
+                  ipPoolName:
+                    description: |
+                      Имя пула IP-адресов.
+                  tcpAppProfileName:
+                    description: |
+                      Имя профиля по умолчанию, используемого для TCP-соединений.
+                  udpAppProfileName:
+                    description: |
+                      Имя профиля по умолчанию, используемого для UDP-соединений.

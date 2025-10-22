@@ -1,0 +1,44 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8dnspolicy
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "DNS Policy."
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Pods with hostNetwork must have 'ClusterFirstWithHostNet' policy."
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DNSPolicy
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          hostNetwork := input.review.object.spec.hostNetwork
+          hostNetwork == true
+
+          dnsPolicy := input.review.object.spec.dnsPolicy
+          dnsPolicy != "ClusterFirstWithHostNet"
+
+          msg := get_message(input.review.object.metadata.name)
+        }
+
+        violation[{"msg": msg}] {
+          hostNetwork := input.review.object.spec.hostNetwork
+          hostNetwork == true
+
+          not input.review.object.spec.dnsPolicy
+
+          msg := get_message(input.review.object.metadata.name)
+        }
+
+        get_message(name) = message {
+          message := sprintf("Pod <%v> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy", [name])
+        }

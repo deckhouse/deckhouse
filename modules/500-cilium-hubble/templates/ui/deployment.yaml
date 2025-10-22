@@ -1,0 +1,229 @@
+{{- define "frontend_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
+{{- define "backend_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
+{{- define "proxy_resources" }}
+cpu: 10m
+memory: 20Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: hubble-ui
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: frontend
+      minAllowed:
+        {{- include "frontend_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+    - containerName: backend
+      minAllowed:
+        {{- include "backend_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: hubble-ui
+  namespace: d8-cni-cilium
+  {{- include "helm_lib_module_labels" (list . (dict "app" "hubble-ui" )) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: hubble-ui
+  template:
+    metadata:
+      annotations:
+        cilium.io/hubble-ui-envoy-configmap-checksum: {{ include (print $.Template.BasePath "/ui/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: hubble-ui
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: "ui"
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+      - name: frontend
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "uiFrontend") }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/usr/sbin/nginx", "-s", "quit"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "frontend_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - name: hubble-ui-nginx-conf
+          mountPath: /usr/conf/nginx.conf
+          subPath: nginx.conf
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/nginx
+        - name: run
+          mountPath: /var/run
+      - name: backend
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "uiBackend") }}
+        env:
+        - name: EVENTS_SERVER_PORT
+          value: "8090"
+        - name: FLOWS_API_ADDR
+          value: "hubble-relay:443"
+        - name: TLS_TO_RELAY_ENABLED
+          value: "true"
+        - name: TLS_RELAY_SERVER_NAME
+          value: ui.hubble-relay.cilium.io
+        - name: TLS_RELAY_CA_CERT_FILES
+          value: /var/lib/hubble-ui/certs/hubble-relay-ca.crt
+        - name: TLS_RELAY_CLIENT_CERT_FILE
+          value: /var/lib/hubble-ui/certs/client.crt
+        - name: TLS_RELAY_CLIENT_KEY_FILE
+          value: /var/lib/hubble-ui/certs/client.key
+        ports:
+        - name: grpc
+          containerPort: 8090
+        # https://github.com/cilium/hubble-ui/issues/853
+        #livenessProbe:
+        #  httpGet:
+        #    path: /healthz
+        #    port: 8090
+        #readinessProbe:
+        #  httpGet:
+        #    path: /healthz
+        #    port: 8090
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "backend_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - name: hubble-ui-client-certs
+          mountPath: /var/lib/hubble-ui/certs
+          readOnly: true
+      - name: kube-rbac-proxy
+      {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "kubeRbacProxy" "cniCilium") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+                fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /api/health
+            upstreams:
+            - upstream: http://127.0.0.1:8081/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-cni-cilium
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: hubble-ui
+        ports:
+          - containerPort: 8443
+            name: https
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        resources:
+          requests:
+          {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: hubble-ui-nginx
+        name: hubble-ui-nginx-conf
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - emptyDir:
+          medium: Memory
+        name: cache
+      - emptyDir:
+          medium: Memory
+        name: run
+      - name: hubble-ui-client-certs
+        projected:
+          defaultMode: 0400
+          sources:
+          - secret:
+              name: hubble-ui-client-certs
+              items:
+              - key: ca.crt
+                path: hubble-relay-ca.crt
+              - key: tls.crt
+                path: client.crt
+              - key: tls.key
+                path: client.key

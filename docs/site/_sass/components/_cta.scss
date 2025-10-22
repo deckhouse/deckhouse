@@ -1,0 +1,20 @@
+@use "components/common/_variables.scss";
+
+.cta {
+    padding: 50px 0;
+    background: variables.$color-alt;
+    color: variables.$color-inverse;
+    margin-top: 50px;
+    &__content {
+        box-sizing: border-box;
+
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+    }
+    &__text {
+        margin-right: 50px;
+        line-height: 1.5;
+    }
+}

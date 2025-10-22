@@ -1,0 +1,32 @@
+kind: ZvirtCloudProviderDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [ZvirtCloudProviderDiscoveryData]
+      zones:
+        type: array
+        items:
+          type: string
+      storageDomains:
+        type: array
+        items:
+          type: object
+          required: [name]
+          properties:
+            name:
+              type: string
+              minLength: 1
+            isEnabled:
+              type: boolean
+            isDefault:
+              type: boolean
+        description: List of storage classes.

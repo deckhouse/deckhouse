@@ -1,0 +1,63 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: kube-state-metrics-main
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "prometheus" "main")) | nindent 2 }}
+spec:
+  honorLabels: true
+  authorization:
+    credentials:
+      key: token
+      name: prometheus-token
+  scheme: HTTPS
+  tlsConfig:
+    insecureSkipVerify: true
+  staticConfigs:
+    - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+  metricRelabelings:
+  - sourceLabels: [__name__]
+    targetLabel: __name__
+    regex: kube_verticalpodautoscaler_labels_info
+    replacement: kube_verticalpodautoscaler_labels
+  - sourceLabels: [__name__]
+    targetLabel: name
+    regex: kube_verticalpodautoscaler_labels
+    replacement: ''
+  - action: labeldrop
+    regex: customresource_version|customresource_kind|customresource_group
+  relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - targetLabel: scrape_endpoint
+      replacement: main
+    - targetLabel: job
+      replacement: kube-state-metrics
+  metricsPath: '/main/metrics'
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: kube-state-metrics-self
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-state-metrics" "prometheus" "main")) | nindent 2 }}
+spec:
+  honorLabels: true
+  authorization:
+    credentials:
+      key: token
+      name: prometheus-token
+  scheme: HTTPS
+  tlsConfig:
+    insecureSkipVerify: true
+  staticConfigs:
+    - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+  relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    - targetLabel: scrape_endpoint
+      replacement: main
+    - targetLabel: job
+      replacement: kube-state-metrics
+  metricsPath: '/self/metrics'

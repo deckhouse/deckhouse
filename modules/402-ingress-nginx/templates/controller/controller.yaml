@@ -1,0 +1,513 @@
+{{- define "init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- define "ingress-controller" }}
+{{- $context := index . 0 }}
+{{- $crd := index . 1 }}
+{{- $name := index . 2 }}
+{{- $failover := index . 3 }}
+{{- $crdChecksum := toJson $crd | sha256sum }}
+{{- $loadBalancer := (or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")) }}
+{{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
+{{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
+
+{{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
+{{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $hostPort := $crd.spec.hostPort | default dict }}
+{{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $hostPortWithSSLPassthrough := $crd.spec.hostPortWithSSLPassthrough | default dict }}
+{{- $gracePeriod := 0 }}
+{{- $defaultGracePeriod := 60 }}
+{{- if $loadBalancer }}
+  {{- $defaultGracePeriod = 120 }}
+{{- else if eq $crd.spec.inlet "HostWithFailover" }}
+  {{- $defaultGracePeriod = 0 }}
+{{- end }}
+{{- $gracePeriod = (kindIs "invalid" $crd.spec.waitLoadBalancerOnTerminating) | ternary $defaultGracePeriod $crd.spec.waitLoadBalancerOnTerminating }}
+{{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
+{{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
+{{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
+
+{{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps.kruise.io/v1alpha1"
+    kind: DaemonSet
+    name: controller-{{ $name }}
+    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
+      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
+      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
+      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
+  updatePolicy:
+    updateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: controller
+      minAllowed:
+        cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
+      maxAllowed:
+        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
+        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
+      {{- if $crd.spec.enableIstioSidecar }}
+    - containerName: istio-proxy
+      mode: "Off"
+      {{- end }}
+    {{- else }}
+  updatePolicy:
+    updateMode: "Off"
+    {{- end }}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name)) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+---
+apiVersion: apps.kruise.io/v1alpha1
+kind: DaemonSet
+metadata:
+  name: controller-{{ $name }}
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name)) | nindent 2 }}
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{- if $failover }}
+    ingress-nginx-failover: ""
+    {{- end }}
+  {{- end }}
+  annotations:
+    ingress-nginx-controller.deckhouse.io/controller-version: {{ $controllerVersion | quote }}
+    ingress-nginx-controller.deckhouse.io/inlet: {{ $crd.spec.inlet | quote }}
+    ingress-nginx-controller.deckhouse.io/checksum: {{ $crdChecksum }}
+spec:
+  revisionHistoryLimit: 3
+{{/*  OpenKruise controller can handle minReadySeconds even for HostWithFailover inlet (while hook can't) */}}
+{{/*  We want to add some delay to avoid immediately pod rollout and give some time for traffic to be handled */}}
+  minReadySeconds: 60
+  updateStrategy:
+    type: RollingUpdate
+    {{- if $loadBalancer }}
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    {{- else }}
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+    {{- end }}
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+{{/*  Extra functionality by kruise-controller  https://openkruise.io/docs/user-manuals/advanceddaemonset#lifecycle-hook*/}}
+  lifecycle:
+    preDelete:
+      labelsHandler:
+        ingress.deckhouse.io/block-deleting: "true"
+  {{- end }}
+  selector:
+    matchLabels:
+      app: controller
+      name: {{ $name }}
+  template:
+    metadata:
+      labels:
+      {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+        ingress.deckhouse.io/block-deleting: "true"
+      {{- end }}
+      {{- if $crd.spec.enableIstioSidecar }}
+        sidecar.istio.io/inject: "true"
+      {{- end }}
+        app: controller
+        name: {{ $name }}
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        container.apparmor.security.beta.kubernetes.io/controller: unconfined
+{{- end }}
+      {{- if $crd.spec.enableIstioSidecar }}
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+        traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
+        inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
+      {{- end }}
+      {{- with $crd.spec.controllerPodsAdditionalAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+  {{- if $crd.spec.nodeSelector }}
+      nodeSelector:
+        {{- $crd.spec.nodeSelector | toYaml | nindent 8 }}
+  {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $context "frontend") | nindent 6 }}
+  {{- end }}
+  {{- if $crd.spec.tolerations }}
+      tolerations:
+      {{- $crd.spec.tolerations | toYaml | nindent 6 }}
+  {{- else }}
+{{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
+  {{- end }}
+{{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      serviceAccountName: ingress-nginx
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: 420
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+  {{- else }}
+      dnsPolicy: ClusterFirst
+      hostNetwork: false
+  {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - image: {{ include "helm_lib_module_image" (list $context "init") }}
+        name: init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+          runAsNonRoot: true
+          runAsUser: 64535
+          runAsGroup: 64535
+          fsGroup: 64535
+        volumeMounts:
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
+        command:
+        - /bin/bash
+        - -ec
+        - |
+          mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
+            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
+            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
+            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/tmp/nginx
+          /usr/bin/touch /chroot/var/log/nginx/access.log
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          {{- if eq $controllerVersion "1.9" }}
+          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
+          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
+          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
+          {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "init_resources" $context | nindent 12 }}
+        {{- end }}
+      containers:
+      - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
+        name: controller
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add:
+            - SETGID
+            - SETUID
+            - CHOWN
+            - DAC_OVERRIDE
+            - SYS_ADMIN
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+        {{- else }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+        {{- end }}
+          readOnlyRootFilesystem: true
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          value: "127.0.0.1"
+        {{- if $geoIP2.maxmindLicenseKey }}
+        - name: LUA_USE_GEOIP2
+          value: "true"
+        {{- end }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        - name: NGINX_PROFILING_ENABLED
+          value: "true"
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /controller/healthz
+            port: 4207
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /controller/healthz
+            port: 4207
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 2
+          timeoutSeconds: 5
+        args:
+        - /nginx-ingress-controller
+        - --configmap=$(POD_NAMESPACE)/{{ $name }}-config
+        - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
+        - --ingress-class={{ $crd.spec.ingressClass }}
+        - --healthz-port=10254
+        - --http-port=80
+        - --https-port=443
+        - --update-status=true
+        {{- if eq $controllerVersion "1.12" }}
+        - --enable-metrics=true
+        {{- end }}
+        {{- if $loadBalancer }}
+        - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
+        {{- end }}
+        # sleep before shutting down the nginx, required by cloud LoadBalancers to terminate gracefully.
+        - --shutdown-grace-period={{ $gracePeriod }}
+        {{- if $defaultSSLCertificateSecretRef.name }}
+        - --default-ssl-certificate={{ printf "%s/%s" $defaultSSLCertificateSecretRef.namespace $defaultSSLCertificateSecretRef.name }}
+        {{- end }}
+        - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}
+        {{- if eq "nginx" $crd.spec.ingressClass }}
+        - --watch-ingress-without-class=true
+        {{- end }}
+        {{- if $crd.spec.annotationValidationEnabled }}
+        - --enable-annotation-validation=true
+        {{- end }}
+  {{- if $crd.spec.customErrors }}
+        - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
+  {{- end }}
+    {{- if $geoIP2.maxmindLicenseKey }}
+        - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+      {{- if $geoIP2.maxmindEditionIDs }}
+        - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+      {{- end }}
+    {{- end }}
+        - --healthz-host=127.0.0.1
+        - --election-id={{ printf "ingress-controller-leader-%s" $crd.spec.ingressClass }}
+        {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
+        - --enable-ssl-passthrough
+        {{- end }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - /wait-shutdown
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
+  {{- if and $loadBalancer (not $resourcesRequests) }}
+            cpu: "350m"
+            memory: "500Mi"
+  {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
+    {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
+            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
+            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
+  {{- end }}
+        ports:
+        - containerPort: 80
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 80
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpPort }}
+          hostPort: {{ $hostPort.httpPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+          protocol: TCP
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 443
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithSSLPassthrough"}}
+    {{- if $hostPortWithSSLPassthrough.httpsPort }}
+          hostPort: {{ $hostPortWithSSLPassthrough.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
+    {{- end }}
+  {{- end }}
+        - containerPort: 443
+          protocol: UDP
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 443
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPort"}}
+    {{- if $hostPort.httpsPort }}
+          hostPort: {{ $hostPort.httpsPort }}
+    {{- end }}
+  {{- end }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol"}}
+    {{- if $hostPortWithProxyProtocol.httpsPort }}
+          hostPort: {{ $hostPortWithProxyProtocol.httpsPort }}
+    {{- end }}
+  {{- end }}
+        volumeMounts:
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+        - name: valgrind
+          mountPath: /chroot/var/log/valgrind
+        - name: proc
+          mountPath: /chroot/proc
+{{- end }}
+      - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
+        name: protobuf-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        volumeMounts:
+          - mountPath: /var/files
+            name: telemetry-config-file
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /controller/healthz
+            upstreams:
+            - upstream: http://127.0.0.1:10254/
+              path: /controller/
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-controller-metrics
+                  name: ingress-nginx
+            - upstream: http://127.0.0.1:9091/metrics
+              path: /protobuf/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-protobuf-metrics
+                  name: ingress-nginx
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /controller-probe
+              - -server
+              - 127.0.0.1:10254
+        ports:
+        - containerPort: 4207
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 4207
+  {{- end }}
+          name: https-metrics
+        resources:
+          requests:
+            memory: 20Mi
+            cpu: 10m
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: etc-ingress-controller
+        emptyDir: {}
+      - name: var-lib-nginx
+        emptyDir: {}
+      - name: var-log-nginx
+        emptyDir: {}
+      - name: secret-nginx-auth-tls
+        secret:
+          secretName: ingress-nginx-{{ $crd.name }}-auth-tls
+      - name: telemetry-config-file
+        configMap:
+          name: d8-ingress-telemetry-config
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
+      - name: valgrind
+        hostPath:
+          path: /var/log/valgrind
+          type: DirectoryOrCreate
+      - name: proc
+        emptyDir: {}
+{{- end }}
+{{- end }}
+
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{ include "ingress-controller" (list $context $crd $crd.name false) }}
+
+  {{- if eq $crd.spec.inlet "HostWithFailover" }}
+    {{ include "ingress-controller" (list $context $crd (printf "%s-failover" $crd.name) true) }}
+  {{- end }}
+{{- end }}

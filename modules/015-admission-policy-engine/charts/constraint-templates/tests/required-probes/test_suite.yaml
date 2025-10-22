@@ -1,0 +1,21 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-required-probes
+tests:
+  - name: operation-policy
+    template: ../../templates/operation/required-probes.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed-2
+        object: disallowed2.yaml
+        assertions:
+          - violations: yes

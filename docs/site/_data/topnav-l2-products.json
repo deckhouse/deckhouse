@@ -1,0 +1,392 @@
+{
+  "en": [
+    {
+      "title": "Kubernetes Platform",
+      "url": "/products/kubernetes-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/kubernetes-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/documentation/v1/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Getting started",
+          "url": "/products/kubernetes-platform/gs/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Guides",
+          "url": "/products/kubernetes-platform/guides/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Modules",
+          "url": "/modules/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/virtualization-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/virtualization-platform/documentation/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Getting started",
+          "url": "/products/virtualization-platform/gs/bm/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Going to Production",
+          "url": "/products/virtualization-platform/guides/production.html",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/observability-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/observability-platform/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/commander/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/kubernetes-platform/modules/commander/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/stronghold/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/stronghold/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/delivery-kit/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "Learn more",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Documentation",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    }
+  ],
+  "ru": [
+    {
+      "title": "Kubernetes Platform",
+      "url": "/products/kubernetes-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/kubernetes-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Возможности",
+          "url": "/products/kubernetes-platform/features/",
+          "target": "",
+          "rel": "",
+          "items": [
+            {
+              "title": "Обзор",
+              "url": "/products/kubernetes-platform/features/",
+              "target": "",
+              "rel": ""
+            },
+            {
+              "title": "Наблюдаемость",
+              "url": "/products/kubernetes-platform/features/observability/",
+              "target": "",
+              "rel": ""
+            }
+          ]
+        },
+        {
+          "title": "ФСТЭК-редакция",
+          "url": "/products/kubernetes-platform/certified-security-edition/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Условия и цены",
+          "url": "/products/kubernetes-platform/pricing/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/documentation/v1/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/kubernetes-platform/gs/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Руководства",
+          "url": "/products/kubernetes-platform/guides/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Модули",
+          "url": "/modules/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Virtualization Platform",
+      "url": "/products/virtualization-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/virtualization-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/virtualization-platform/documentation/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/virtualization-platform/gs/bm/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Подготовка к Production",
+          "url": "/products/virtualization-platform/guides/production.html",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Observability Platform",
+      "url": "/products/observability-platform/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/observability-platform/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/modules/observability-platform/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Commander",
+      "url": "/products/commander/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/commander/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/kubernetes-platform/modules/commander/stable/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Stronghold",
+      "url": "/products/stronghold/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/stronghold/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Условия и цены",
+          "url": "/products/stronghold/pricing/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/stronghold/documentation/",
+          "target": "",
+          "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/stronghold/gs/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/delivery-kit/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    },
+    {
+      "title": "Code",
+      "url": "/products/code/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/code/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Документация",
+          "url": "/products/code/documentation/",
+          "target": "",
+          "rel": "doc"
+        }
+      ]
+    },
+    {
+      "title": "Prom++",
+      "url": "/products/prompp/",
+      "target": "",
+      "rel": "",
+      "items": [
+        {
+          "title": "О продукте",
+          "url": "/products/prompp/",
+          "target": "",
+          "rel": ""
+        }
+      ]
+    }
+  ]
+}

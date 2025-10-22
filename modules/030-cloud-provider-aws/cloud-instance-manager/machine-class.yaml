@@ -1,0 +1,60 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: AWSMachineClass
+metadata:
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  ami: {{ .nodeGroup.instanceClass.ami | default .Values.nodeManager.internal.cloudProvider.aws.instances.ami | quote }}
+  region: {{ .Values.nodeManager.internal.cloudProvider.aws.region | quote }}
+  machineType: {{ .nodeGroup.instanceClass.instanceType | quote }}
+  iam:
+    name: {{ .Values.nodeManager.internal.cloudProvider.aws.instances.iamProfileName | quote }}
+  keyName: {{ .Values.nodeManager.internal.cloudProvider.aws.keyName | quote }}
+  sourceDestCheck: false
+{{- if hasKey .nodeGroup.instanceClass "spot" }}
+  {{- if .nodeGroup.instanceClass.spot }}
+  spotPrice: ""
+  {{- end }}
+{{- end }}
+  networkInterfaces:
+  - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.aws.internal.zoneToSubnetIdMap .zoneName | quote }}
+    associatePublicIPAddress: {{ .Values.nodeManager.internal.cloudProvider.aws.instances.associatePublicIPAddress }}
+    deleteOnTermination: true
+    securityGroupIDs:
+{{- $security_groups := list }}
+{{- if .Values.nodeManager.internal.cloudProvider.aws.instances.additionalSecurityGroups }}
+  {{- $security_groups = concat $security_groups .Values.nodeManager.internal.cloudProvider.aws.instances.additionalSecurityGroups }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.additionalSecurityGroups }}
+  {{- $security_groups = concat $security_groups .nodeGroup.instanceClass.additionalSecurityGroups }}
+{{- end }}
+{{- range $security_groups | uniq }}
+    - {{ . | quote }}
+{{- end }}
+  useMachineNameAsNodeName: true
+  tags:
+    # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
+    kubernetes.io/cluster/{{ .Values.global.discovery.clusterUUID }}: "1"
+    kubernetes.io/role/{{ .Values.global.discovery.clusterUUID }}: "1"
+{{ $effectiveAdditionalTags := dict }}
+{{- if .Values.nodeManager.internal.cloudProvider.aws.tags }}
+  {{ $effectiveAdditionalTags = merge $effectiveAdditionalTags .Values.nodeManager.internal.cloudProvider.aws.tags }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalTags" }}
+  {{-  $effectiveAdditionalTags = mergeOverwrite $effectiveAdditionalTags .nodeGroup.instanceClass.additionalTags }}
+{{- end }}
+{{- range $k, $v := $effectiveAdditionalTags }}
+    {{ $k }}: {{ $v | quote }}
+{{- end }}
+
+  blockDevices:
+  - ebs:
+      volumeSize: {{ .nodeGroup.instanceClass.diskSizeGb | default 20 }}
+      volumeType: {{ .nodeGroup.instanceClass.diskType | default "gp2" | quote }}
+{{- if .nodeGroup.instanceClass.iops }}
+      iops: {{ .nodeGroup.instanceClass.iops }}
+{{- end }}
+  secretRef:
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}

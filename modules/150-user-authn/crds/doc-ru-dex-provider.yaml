@@ -1,0 +1,363 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает конфигурацию подключения стороннего провайдера.
+
+            С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
+
+            [Пример использования...](usage.html#примеры-настройки-провайдера)
+          properties:
+            spec:
+              properties:
+                type:
+                  description: |
+                    Тип внешнего провайдера.
+                displayName:
+                  description: |
+                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации.
+
+                    Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
+                github:
+                  description: |
+                    Параметры провайдера GitHub (можно указывать? только если `type: Github`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID организации на GitHub.
+                    clientSecret:
+                      description: |
+                        Secret организации на GitHub.
+                    teamNameField:
+                      description: |
+                        Формат команд, которые будут получены из GitHub.
+
+                        Если в организации `acme` есть группа `Site Reliability Engineers`, в случае:
+                        * `name` будет получена группа с именем `['acme:Site Reliability Engineers']`;
+                        * `slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
+                        * `both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
+                    useLoginAsID:
+                      description: |
+                        Позволяет вместо использования внутреннего GitHub ID использовать имя пользователя.
+                    orgs:
+                      description: |
+                        Массив названий организаций в GitHub.
+                      items:
+                        properties:
+                          name:
+                            description: |
+                              Название организации.
+                          teams:
+                            description: |
+                              Список команд, допустимых для приема из GitHub.
+
+                              Токен пользователя будет содержать объединенное множество команд из GitHub и команд из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
+
+                              Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
+                gitlab: &gitlab
+                  description: |
+                    Параметры провайдера GitLab (можно указывать, только если `type: Gitlab`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID приложения, созданного в GitLab (Application ID).
+                    clientSecret:
+                      description: |
+                        Secret приложения, созданного в GitLab (Secret).
+                    baseURL:
+                      description: |
+                        Адрес GitLab.
+                    groups:
+                      description: |
+                        Список-фильтр групп (**пути групп — path**, а не имена), допустимых для приема из GitLab.
+
+                        Токен пользователя будет содержать пересечение множеств групп из GitLab и групп из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
+
+                        Если параметр не указан, токен пользователя будет содержать все группы из GitLab.
+                    useLoginAsID:
+                      description: |
+                        Позволяет вместо использования внутреннего GitLab ID, использовать имя пользователя.
+                bitbucketCloud: &bitbucketCloud
+                  description: |
+                    Параметры провайдера Bitbucket Cloud (можно указывать, только если `type: BitbucketCloud`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID приложения, созданного в Bitbucket Cloud (Key).
+                    clientSecret:
+                      description: |
+                        Secret приложения, созданного в Bitbucket Cloud (Secret).
+                    teams:
+                      description: |
+                        Список-фильтр команд, допустимых для приема из Bitbucket Cloud.
+
+                        Токен пользователя будет содержать пересечение множеств команд из Bitbucket Cloud и команд из этого списка. Если если множество окажется пустым, авторизация не будет считаться успешной.
+
+                        Токен будет содержать команды пользователя в claim `groups`, как и у других провайдеров.
+                    includeTeamGroups:
+                      description: |
+                        Включает в список команд все группы команды, в которых состоит пользователь.
+
+                        Пример групп пользователя с включенной опцией:
+                        ```yaml
+                        groups=["my_team", "my_team/administrators", "my_team/members"]
+                        ```
+                crowd: &crowd
+                  description: |
+                    Параметры провайдера Crowd (можно указывать, только если `type: Crowd`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID приложения, созданного в Crowd (Application Name).
+                    clientSecret:
+                      description: |
+                        Пароль приложения, созданного в Crowd (Password).
+                    baseURL:
+                      description: |
+                        Адрес Crowd.
+                    groups:
+                      description: |
+                        Список-фильтр групп, допустимых для приема из Crowd.
+
+                        Токен пользователя будет содержать пересечение множеств групп из Crowd и групп из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
+
+                        Если параметр не указан, токен пользователя будет содержать все группы из Crowd.
+                    usernamePrompt:
+                      description: |
+                        Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
+                      default: 'Crowd username'
+                    enableBasicAuth:
+                      description: |
+                        Включает возможность basic-авторизации для Kubernetes API server.
+
+                        В качестве credentials для basic-авторизации указываются логин и пароль пользователя из приложения, созданного в Crowd (возможно включить при указании только одного провайдера с типом OIDC/Crowd).
+
+                        Работает **только** при включенном `publishAPI`.
+
+                        Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
+                oidc: &oidc
+                  description: |
+                    Параметры провайдера OIDC (можно указывать, только если `type: OIDC`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID приложения, созданного в OIDC-провайдере.
+                    clientSecret:
+                      description: |
+                        Пароль приложения, созданного в OIDC-провайдере.
+                    issuer:
+                      description: |
+                        Адрес OIDC-провайдера.
+                    insecureSkipEmailVerified:
+                      description: |
+                        Игнорировать информацию о статусе подтверждения email пользователя.
+
+                        Как именно подтверждается email, решает сам провайдер. В ответе от провайдера приходит лишь информация — подтвержден email или нет.
+                    basicAuthUnsupported:
+                      description: |
+                        Использовать POST-запросы для общения с провайдером вместо добавления токена в Basic Authorization header.
+
+                        В большинстве случаев Dex сам определяет, какой запрос ему нужно сделать, но иногда включение этого параметра может помочь.
+                    getUserInfo:
+                      description: |
+                        Запрашивать дополнительные данные об успешно подключенном пользователе.
+
+                        [Подробнее...](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
+                    userIDKey:
+                      description: |
+                        [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения ID пользователя.
+                    userNameKey:
+                      description: |
+                        [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения имени пользователя.
+                    claimMapping:
+                      description: |
+                        Некоторые провайдеры возвращают нестандартные claim'ы (например, mail). Claim mappings помогают Dex преобразовать их в [стандартные claim'ы OIDC](https://openid.net/specs/openid-connect-core-1_0.html#Claims).
+
+                        Dex может преобразовать нестандартный claim в стандартный, только если id_token, полученный от OIDC-провайдера, не содержит аналогичный стандартный claim.
+                      properties:
+                        email:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения email пользователя.
+                        groups:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения групп пользователя.
+                        preferred_username:
+                          description: |
+                            [Claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims), который будет использован для получения предпочтительного имени пользователя.
+                    claimMappingOverride:
+                      description: |
+                        Если включено, сопоставление claim'ов (`claimMapping`) будет переопределять стандартные claim'ы OIDC.
+
+                        По умолчанию сопоставление claim'ов будет использоваться только в том случае, если стандартные claim'ы OIDC отсутствуют, например, если в id_token нет claim'а `email`, будет использоваться `claimMapping.email`.
+                    allowedGroups:
+                      description: |
+                        Список групп, которые должны быть у пользователя для успешной аутентификации.
+
+                        Если список содержит группу, которой у пользователя нет, аутентификация будет отклонена.
+
+                        Если параметр не задан, проверка принадлежности к группам не выполняется.
+                    scopes:
+                      description: |
+                        Список [полей](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) для включения в ответ при запросе токена.
+                    promptType:
+                      description: |
+                        Определяет — должен ли Issuer запрашивать подтверждение и давать подсказки при аутентификации.
+
+                        По умолчанию будет запрошено подтверждение при первой аутентификации. Допустимые значения могут изменяться в зависимости от Issuer.
+                    rootCAData:
+                      description: |
+                        Цепочка CA в формате PEM, используемая для валидации TLS.
+                    insecureSkipVerify:
+                      description: |
+                        Не производить проверку подлинности провайдера с помощью TLS. Небезопасно, не рекомендуется использовать в production-окружениях.
+                    enableBasicAuth:
+                      description: |
+                        Включает возможность basic-авторизации для Kubernetes API server.
+
+                        В качестве credentials для basic-авторизации указываются логин и пароль пользователя из приложения, созданного в OIDC (возможно включить при указании только одного провайдера с типом OIDC/Crowd).
+
+                        Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
+
+                        Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
+                ldap: &ldap
+                  description: |
+                    Параметры провайдера LDAP.
+                  properties:
+                    host:
+                      description: |
+                        Адрес и порт (опционально) LDAP-сервера.
+                    insecureNoSSL:
+                      description: |
+                        Подключаться к каталогу LDAP не по защищенному порту.
+                    startTLS:
+                      description: |
+                        Использовать [STARTTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) для шифрования.
+                    usernamePrompt:
+                      description: |
+                        Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
+                    rootCAData:
+                      description: |
+                        Цепочка CA в формате PEM, используемая для валидации TLS.
+                    insecureSkipVerify:
+                      description: |
+                        Не производить проверку подлинности провайдера с помощью TLS. Небезопасно, не рекомендуется использовать в production-окружениях.
+                    bindDN:
+                      description: |
+                        Путь до сервис-аккаунта приложения в LDAP.
+                    bindPW:
+                      description: |
+                        Пароль для сервис-аккаунта приложения в LDAP.
+                    userSearch:
+                      description: |
+                        Настройки фильтров пользователей, которые помогают сначала отфильтровать директории, в которых будет производиться поиск пользователей,
+                        а затем найти пользователя по полям (его имени, адресу электронной почты или отображаемому имени).
+
+                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
+                      properties:
+                        baseDN:
+                          description: 'Откуда будет начат поиск пользователей.'
+                        filter:
+                          description: |
+                            Позволяет добавить фильтр для директории с пользователями.
+                        username:
+                          description: |
+                            Имя атрибута, из которого будет получен username пользователя.
+                        idAttr:
+                          description: |
+                            Имя атрибута, из которого будет получен ID пользователя.
+                        emailAttr:
+                          description: |
+                            Имя атрибута, из которого будет получен email пользователя.
+                        nameAttr:
+                          description: |
+                            Атрибут отображаемого имени пользователя.
+                    groupSearch:
+                      description: |
+                        Настройки фильтра для поиска групп для указанного пользователя.
+
+                        [Подробнее](https://github.com/dexidp/dex/blob/3b7292a08fd2c61900f5e6c67f3aa2ee81827dea/Documentation/connectors/ldap.md#example-mapping-a-schema-to-a-search-config) о процессе фильтрации...
+                      properties:
+                        baseDN:
+                          description: 'Откуда будет начат поиск групп'
+                        filter:
+                          description: |
+                            Фильтр для директории с группами.
+                        nameAttr:
+                          description: |
+                            Имя атрибута, в котором хранится уникальное имя группы.
+                        userMatchers:
+                          description: |
+                            Список сопоставлений атрибута имени юзера с именем группы.
+                          items:
+                            properties:
+                              userAttr:
+                                description: |
+                                  Имя атрибута, в котором хранится имя пользователя.
+                              groupAttr:
+                                description: |
+                                  Имя атрибута, в котором хранятся имена пользователей, состоящих в группе.
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает конфигурацию подключения стороннего провайдера.
+
+            С его помощью можно гибко настроить интеграцию каталога учетных записей с Kubernetes.
+
+            [Пример использования...](usage.html#примеры-настройки-провайдера)
+
+            **Внимание.** Запрещено использовать пользователей и группы с префиксом `system:`. Аутентификация таких пользователей или участников этих групп будет отклонена, а в логах `kube-apiserver` появится соответствующее предупреждение.
+          properties:
+            spec:
+              properties:
+                type:
+                  description: |
+                    Тип внешнего провайдера.
+                displayName:
+                  description: |
+                    Имя провайдера, которое будет отображено на странице выбора провайдера для аутентификации.
+
+                    Если настроен всего один провайдер, страница выбора провайдера показываться не будет.
+                github:
+                  description: |
+                    Параметры провайдера GitHub (можно указывать, только если `type: Github`).
+                  properties:
+                    clientID:
+                      description: |
+                        ID организации на GitHub.
+                    clientSecret:
+                      description: |
+                        Secret организации на GitHub.
+                    teamNameField:
+                      description: |
+                        Формат команд, которые будут получены из GitHub.
+
+                        Если в организации `acme` есть группа `Site Reliability Engineers`, в случае:
+                        * `Name` будет получена группа с именем `['acme:Site Reliability Engineers']`;
+                        * `Slug` будет получена группа с именем `['acme:site-reliability-engineers']`;
+                        * `Both` будут получены группы с именами `['acme:Site Reliability Engineers', 'acme:site-reliability-engineers']`.
+                    useLoginAsID:
+                      description: |
+                        Позволяет вместо использования внутреннего GitHub ID использовать имя пользователя.
+                    orgs:
+                      description: |
+                        Массив названий организаций в GitHub.
+                      items:
+                        properties:
+                          name:
+                            description: |
+                              Название организации.
+                          teams:
+                            description: |
+                              Список-фильтр команд, допустимых для приема из GitHub.
+
+                              Токен пользователя будет содержать пересечение множеств команд из GitHub и команд из этого списка. Если множество окажется пустым, авторизация не будет считаться успешной.
+
+                              Если параметр не указан, токен пользователя будет содержать все команды из GitHub.
+                gitlab: *gitlab
+                bitbucketCloud: *bitbucketCloud
+                crowd: *crowd
+                oidc: *oidc
+                ldap: *ldap

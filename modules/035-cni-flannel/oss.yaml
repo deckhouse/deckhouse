@@ -1,0 +1,5 @@
+- name: Flannel
+  link: https://github.com/flannel-io/flannel
+  description: A simple and easy way to configure a layer 3 network fabric designed for Kubernetes.
+  logo: https://github.com/flannel-io/flannel/raw/master/logos/flannel-glyph-color.svg
+  license: Apache License 2.0

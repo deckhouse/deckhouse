@@ -1,0 +1,74 @@
+linters-settings:
+  container:
+    exclude-rules:
+      check-run-as-non-root:
+        - kind: Deployment
+          name: kiali
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: install-cni
+        - kind: Deployment
+          name: kiali
+        - kind: DaemonSet
+          name: ingressgateway
+          container: istio-proxy
+      controller-security-context:
+        - kind: Deployment
+          name: kiali
+      security-context:
+        - kind: Deployment
+          name: kiali
+      readiness-probe:
+        - kind: Deployment
+          name: operator-1x21
+          container: operator
+        - kind: Deployment
+          name: metadata-exporter
+          container: metadata-discovery
+      liveness-probe:
+        - kind: Deployment
+          name: operator-1x21
+          container: operator
+        - kind: Deployment
+          name: metadata-exporter
+          container: metadata-discovery
+  templates:
+    exclude-rules:
+      service-port:
+        - name: istiod
+          port: http-monitoring
+        - name: istiod
+          port: grpc-xds
+        - name: istiod
+          port: https-dns
+        - name: istiod
+          port: https-webhook
+        - name: ingressgateway
+          port: tls
+        - name: metadata-exporter
+          port: http
+        - name: api-proxy
+          port: https
+      pdb:
+        - kind: Deployment
+          name: operator-1x21
+          container: operator
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: kube-rbac-proxy
+  module:
+    conversions:
+      disable: true
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:istio:multicluster:api-proxy
+      placement:
+        - kind: ServiceAccount
+          name: operator-1x19
+        - kind: ServiceAccount
+          name: operator-1x21
+        - kind: ServiceAccount
+          name: operator-1x25  

@@ -1,0 +1,27 @@
+{{- /*
+We're not using distroless image for now to support ceph utilities
+that we include for now to support in-tree Ceph Volume Provisioner
+ */}}
+
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := toString $value.patch }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kube-controller-manager
+  to: /usr/bin/kube-controller-manager
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/kube-controller-manager"]
+{{- end }}

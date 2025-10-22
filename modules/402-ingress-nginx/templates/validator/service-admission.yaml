@@ -1,0 +1,21 @@
+{{- $context := . }}
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if $crd.spec.validationEnabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $crd.name }}-admission
+  namespace: d8-ingress-nginx
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $crd.name )) | nindent 2 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: https-webhook
+      port: 443
+      targetPort: webhook
+  selector:
+    app: validator
+    name: {{ $crd.name }}
+  {{- end }}
+{{- end }}

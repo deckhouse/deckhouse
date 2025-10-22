@@ -1,0 +1,39 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- $providerDiscoveryData := .Values.cloudProviderHuaweicloud.internal.providerDiscoveryData | required "internal.providerDiscoveryData is required" }}
+{{- $zones := $providerDiscoveryData.zones }}
+{{- $region := "default" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  type: {{ b64enc "huaweicloud" | quote }}
+  region: {{ b64enc $region | quote }}
+  zones: {{ $zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "HuaweiCloudInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "" | quote }}
+  capiClusterKind: {{ b64enc "HuaweiCloudCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  capiClusterName: {{ b64enc "huaweicloud" | quote }}
+  capiMachineTemplateKind: {{ b64enc "HuaweiCloudMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+
+  {{- $huaweicloudValues := dict }}
+
+  {{- $_ := set $huaweicloudValues "sshPublicKey" $providerClusterConfiguration.sshPublicKey }}
+  {{- $_ := set $huaweicloudValues "cloud" $providerClusterConfiguration.provider.cloud }}
+  {{- $_ := set $huaweicloudValues "region" $providerClusterConfiguration.provider.region }}
+  {{- $_ := set $huaweicloudValues "accessKey" $providerClusterConfiguration.provider.accessKey }}
+  {{- $_ := set $huaweicloudValues "secretKey" $providerClusterConfiguration.provider.secretKey }}
+  {{- $_ := set $huaweicloudValues "authUrl" $providerClusterConfiguration.provider.authUrl }}
+  {{- $_ := set $huaweicloudValues "domainName" $providerClusterConfiguration.provider.domainName }}
+  {{- $_ := set $huaweicloudValues "projectId" $providerClusterConfiguration.provider.projectID }}
+  {{- $_ := set $huaweicloudValues "subnetId" $providerDiscoveryData.instances.vpcSubnetId }}
+  {{- $_ := set $huaweicloudValues "securityGroupId" $providerDiscoveryData.instances.securityGroupId }}
+
+  huaweicloud: {{ $huaweicloudValues | toJson | b64enc | quote }}

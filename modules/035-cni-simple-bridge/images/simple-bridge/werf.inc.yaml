@@ -1,0 +1,45 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: base/python
+  add: /
+  to: /
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
+  before: install
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/sbin/iptables-wrapper"]
+---
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /usr/sbin/ip /usr/sbin/bridge" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+git:
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
+  to: /relocate
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate

@@ -1,0 +1,54 @@
+.how-to-buy {
+  &__intro {
+    &.intro {
+      padding-bottom: 0;
+    }
+
+    & .intro__wrap {
+      display: flex;
+    }
+
+    & .intro__row > div {
+      width: 77%;
+    }
+
+    & .button_default {
+      margin-left: 30px;
+    }
+
+    & .intro__pic {
+      width: 45%;
+    }
+  }
+
+  &__detailed-analysis {
+    & ul p {
+      width: 100%;
+    }
+  }
+
+  &__detailed-analysis,
+  &__joint-defense,
+  &__support-options,
+  &__production {
+    & ul p {
+      margin-bottom: 30px;
+    }
+  }
+
+  &__support-options {
+    & ul p:last-child {
+      margin: 0;
+    }
+  }
+
+  &__our-partners {
+    & .features__item-list > li ul li {
+      margin-bottom: 7px;
+    }
+
+    & sup {
+      line-height: 1.2;
+    }
+  }
+}

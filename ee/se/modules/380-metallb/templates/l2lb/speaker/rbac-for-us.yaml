@@ -1,0 +1,182 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: l2lb-speaker
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-speaker")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:metallb:l2lb:speaker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-speaker")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - nodes
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - policy
+    resourceNames:
+      - l2lb-speaker
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+  - apiGroups:
+      - internal.network.deckhouse.io
+    resources:
+      - sdninternall2lbservices
+      - sdninternall2lbservices/status
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+  - apiGroups:
+      - metallb.io
+    resources:
+      - servicel2statuses
+      - servicel2statuses/status
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:metallb:l2lb:speaker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-speaker")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:metallb:l2lb:speaker
+subjects:
+  - kind: ServiceAccount
+    name: l2lb-speaker
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: l2lb:speaker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-speaker")) | nindent 2 }}
+  namespace: d8-{{ .Chart.Name }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - addresspools
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - bfdprofiles
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - bgppeers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - l2advertisements
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - bgpadvertisements
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - ipaddresspools
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - metallb.io
+    resources:
+      - communities
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "l2lb-speaker")) | nindent 2 }}
+  name: l2lb:speaker
+  namespace: d8-{{ .Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: l2lb:speaker
+subjects:
+  - kind: ServiceAccount
+    name: l2lb-speaker
+    namespace:  d8-{{ .Chart.Name }}

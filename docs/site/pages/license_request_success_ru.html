@@ -1,0 +1,26 @@
+---
+title: Тестовая лицензия на один месяц
+description: Тестовая лицензия на один месяц
+permalink: ru/license_request_success.html
+layout: page-nosidebar
+lang: ru
+searchable: false
+sitemap_include: false
+toc: false
+---
+
+<p>Спасибо за ваш интерес к платформе Deckhouse Kubernetes Platrofm!</p>
+<p>Ваш токен для доступа к EE-редакции платформы (мы также отправили его вам на почту):</p>
+<p id="license-token" style="font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: #0066FF;"></p>
+<p>Лицензия будет действовать на протяжении одного месяца, а для её продления потребуется связаться с командой Deckhouse (<a href="mailto:sales@deckhouse.ru">sales@deckhouse.ru</a>).</p>
+<p>Начните использовать Deckhouse с нашего <a href="https://deckhouse.ru/products/kubernetes-platform/gs/">руководства по Быстрому старту</a>.</p>
+<p>По всем возникающим вопросам можно обращаться в <a href="{{ site.social_links[page.lang]['telegram'] }}">Telegram</a>!</p>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const licenseTokenContent = document.getElementById('license-token');
+    const token = window.location.search.split('=');
+
+    licenseTokenContent.innerText = token[1];
+  });
+</script>

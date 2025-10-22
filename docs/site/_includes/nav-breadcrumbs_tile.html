@@ -1,0 +1,17 @@
+<div class="breadcrumbs-container breadcrumbs-container__tile">
+    <div class="breadcrumbs__left">
+        {% if page.search_bage_enabled %}
+            <!--start search-->
+            <div class="search">
+                <form action='{{ "search.html" | prepend: '/documentation/' | prepend: page.product_code | true_relative_url }}' method="get">
+                    <input type="text" class="search__input search__input-tile" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text_guides[page.lang] }}">
+                </form>
+            </div>
+            <!--end search-->
+        {% endif %}
+    </div>
+    <div class="breadcrumbs__right">
+        <!-- empty now -->
+    </div>
+
+</div>

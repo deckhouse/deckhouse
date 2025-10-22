@@ -1,0 +1,183 @@
+---
+{{ $grafanaVersion := "10.4.19" }}
+{{ $bundledPlugins := "petrslavotinek-carpetplot-panel,vonage-status-panel,btplc-status-dot-panel,natel-plotly-panel,savantly-heatmap-panel,grafana-piechart-panel,grafana-worldmap-panel,esnet-matrix-panel" }}
+{{ $gfPathPlugins := "/usr/share/grafana/plugins-bundled" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+final: false
+fromCacheVersion: "2025-06-10"
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - mkdir -p /usr/src/app
+  - cd /usr/src/app
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana.git .
+  - git apply /patches/*.patch --verbose
+  - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /grafana-public
+  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /grafana-plugins
+  - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git /usr/src/app/scripts /usr/src/app/devenv/docker
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+final: false
+fromCacheVersion: "2025-10-03"
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bullseye" "builder/golang-bookworm-svace-1.25" }}
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+  add: /usr/src/app
+  to: /usr/src/app
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get -y --no-install-recommends install gcc musl musl-tools git
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch v0.7.0 $(cat /run/secrets/SOURCE_REPO)/google/wire.git /src/wire
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc GRAFANA_VERSION={{ $grafanaVersion }}
+  - cd /src/wire/cmd/wire && go install
+  - rm -rf /src/wire
+  - cd /usr/src/app
+  - /go/bin/wire gen -tags oss ./pkg/server
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags -w -ldflags "-X main.version=$GRAFANA_VERSION -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana`) | indent 6 }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /app
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /app
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o entrypoint main.go
+  - chown -R 64535:64535 /app/
+  - chmod 0700 /app/entrypoint
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+final: false
+fromImage: common/alt-p11-artifact
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
+  add: /usr/src/app/bin/linux-amd64/grafana
+  to: /usr/share/grafana/bin/grafana
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+  add: /grafana-public/public
+  to: /usr/share/grafana/public
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+  add: /usr/src/app/conf
+  to: /usr/share/grafana/conf
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
+  add: /grafana-plugins
+  to: /grafana-plugins
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/grafana_home_dashboard.json
+  to: /usr/share/grafana/public/dashboards/grafana_home_dashboard.json
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/web
+  to: /img
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - |
+    export PATH="/usr/share/grafana/bin:$PATH" \
+    GF_PATHS_CONFIG="/etc/grafana/grafana.ini" \
+    GF_PATHS_DATA="/var/lib/grafana" \
+    GF_PATHS_HOME="/usr/share/grafana" \
+    GF_PATHS_LOGS="/var/log/grafana" \
+    GF_PATHS_PLUGINS="{{ $gfPathPlugins }}" \
+    GF_PATHS_PROVISIONING="/etc/grafana/provisioning"
+  - cd $GF_PATHS_HOME
+  - |
+    mkdir -p "$GF_PATHS_HOME/.aws" \
+             "$GF_PATHS_PROVISIONING/datasources" \
+             "$GF_PATHS_PROVISIONING/dashboards" \
+             "$GF_PATHS_PROVISIONING/notifiers" \
+             "$GF_PATHS_PROVISIONING/plugins" \
+             "$GF_PATHS_PROVISIONING/access-control" \
+             "$GF_PATHS_LOGS" \
+             "$GF_PATHS_PLUGINS" \
+             "$GF_PATHS_DATA"
+  - cp "$GF_PATHS_HOME/conf/sample.ini" "$GF_PATHS_CONFIG"
+  - cp "$GF_PATHS_HOME/conf/ldap.toml" /etc/grafana/ldap.toml
+  - cp /img/* "$GF_PATHS_HOME/public/img"
+  - chmod -R 777 "$GF_PATHS_DATA" "$GF_PATHS_HOME/.aws" "$GF_PATHS_LOGS" "$GF_PATHS_PLUGINS" "$GF_PATHS_PROVISIONING" "$GF_PATHS_HOME"
+  - |
+    IFS="," && \
+    BUNDLED_PLUGINS={{ $bundledPlugins }} && \
+    for plugin in ${BUNDLED_PLUGINS}; do \
+      plugin_path="$(find /grafana-plugins -type f -name "${plugin}*")"
+      grafana cli --pluginsDir "${GF_PATHS_PLUGINS}" --pluginUrl ${plugin_path} plugins install ${plugin}; \
+    done
+  - chmod +r /etc/grafana/grafana.ini
+  - export BUNDLED_PLUGINS_PATH="${GF_PATHS_PLUGINS}"
+  - chown -R 64535:64535 /usr/share/grafana
+  - chown -R 64535:64535 /etc/grafana
+  - chown -R 64535:64535 /var/lib/grafana
+  - chown -R 64535:64535 /var/log/grafana
+  - chmod 0700 ./bin/grafana
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
+  add: /app/entrypoint
+  to: /usr/local/bin/entrypoint
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+  add: /usr/share/grafana/
+  to: /usr/share/grafana
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+  add: /etc/grafana/
+  to: /etc/grafana
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+  add: /var/lib/grafana/
+  to: /var/lib/grafana
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grafana-distr
+  add: /var/log/grafana/
+  to: /var/log/grafana
+  before: install
+git:  
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/entrypoint"]
+    workingDir: "/usr/share/grafana"
+    env: { "PATH": "/usr/share/grafana/bin:$PATH", "GF_PATHS_CONFIG": "/etc/grafana/grafana.ini", "GF_PATHS_DATA": "/var/lib/grafana", "GF_PATHS_HOME": "/usr/share/grafana", "GF_PATHS_LOGS": "/var/log/grafana", "GF_PATHS_PLUGINS": "{{ $gfPathPlugins }}", "GF_PATHS_PROVISIONING": "/etc/grafana/provisioning", "BUNDLED_PLUGINS_PATH": "{{ $gfPathPlugins }}" }
+    expose: ["3000"]

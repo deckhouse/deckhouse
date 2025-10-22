@@ -1,0 +1,26 @@
+diff --git a/pkg/loki/modules.go b/pkg/loki/modules.go
+index 573f101..9caaead 100644
+--- a/pkg/loki/modules.go
++++ b/pkg/loki/modules.go
+@@ -1154,7 +1154,7 @@ func (t *Loki) initCompactor() (services.Service, error) {
+ 		t.InternalServer.HTTP.Path("/compactor/ring").Methods("GET", "POST").Handler(t.compactor)
+ 	}
+ 
+-	if t.Cfg.CompactorConfig.RetentionEnabled {
++	if t.Cfg.CompactorConfig.RetentionEnabled && isDeletingLogsAllowed() {
+ 		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("PUT", "POST").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.AddDeleteRequestHandler))
+ 		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("GET").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.GetAllDeleteRequestsHandler))
+ 		t.Server.HTTP.Path("/loki/api/v1/delete").Methods("DELETE").Handler(t.addCompactorMiddleware(t.compactor.DeleteRequestsHandler.CancelDeleteRequestHandler))
+@@ -1165,6 +1165,12 @@ func (t *Loki) initCompactor() (services.Service, error) {
+ 	return t.compactor, nil
+ }
+ 
++func isDeletingLogsAllowed() bool {
++	rawVal := os.Getenv("ALLOW_DELETE_LOGS")
++	val, _ := strconv.ParseBool(rawVal)
++	return val
++}
++
+ func (t *Loki) addCompactorMiddleware(h http.HandlerFunc) http.Handler {
+ 	return t.HTTPAuthMiddleware.Wrap(deletion.TenantMiddleware(t.Overrides, h))
+ }

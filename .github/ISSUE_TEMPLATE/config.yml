@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+- name: 📚 Documentation
+  url: https://deckhouse.io/documentation/
+  about: Check the documentation for help
+
+- name: 🤔 Ask a question
+  url: https://github.com/deckhouse/deckhouse/discussions/new?category=q-a
+  about: Ask and discuss questions with other community members
+
+- name: 💬 Telegram channel [EN]
+  url: https://t.me/deckhouse
+  about: Please ask and answer questions here
+
+- name: 🇷🇺 Telegram channel [RU]
+  url: https://t.me/deckhouse_ru
+  about: Please ask and answer questions here

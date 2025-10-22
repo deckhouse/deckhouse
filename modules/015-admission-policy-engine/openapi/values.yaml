@@ -1,0 +1,160 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      bootstrapped:
+        type: boolean
+        default: false
+      podSecurityStandards:
+        default: {}
+        type: object
+        properties:
+          enforcementActions:
+            type: array
+            default: []
+            items:
+              type: string
+              enum:
+              - deny
+              - dryrun
+              - warn
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
+      webhook:
+        type: object
+        default: {}
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      trackedConstraintResources:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            apiGroups:
+              type: array
+              items:
+                type: string
+            resources:
+              type: array
+              items:
+                type: string
+            operations:
+              type: array
+              items:
+                type: string
+      trackedMutateResources:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            apiGroups:
+              type: array
+              items:
+                type: string
+            resources:
+              type: array
+              items:
+                type: string
+            operations:
+              type: array
+              items:
+                type: string
+      operationPolicies:
+        type: array
+        default: []
+        items:
+          # this spec is validated by CRD's openapi spec
+          type: object
+          additionalProperties: true
+      securityPolicies:
+        type: array
+        default: []
+        items:
+          # this spec is validated by CRD's openapi spec
+          type: object
+          additionalProperties: true
+      denyVulnerableImages:
+        type: object
+        default: {}
+        properties:
+          webhook:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              key:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              ca:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          dockerConfigJson:
+            type: object
+            default: {}
+            properties:
+              auths:
+                type: object
+                additionalProperties:
+                  auth:
+                    type: string
+                  username:
+                    type: string
+                  password:
+                    type: string
+                  identitytoken:
+                    type: string
+                  registrytoken:
+                    type: string
+      trivyConfigData:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Configuration for trivy. Fetched from the trivy config map.
+      ratify:
+        type: object
+        default: {}
+        properties:
+          imageReferences:
+            type: array
+            items:
+              type: object
+              properties:
+                reference:
+                  type: string
+                publicKeys:
+                  type: array
+                  items:
+                    type: string
+          webhook:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              key:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              ca:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]

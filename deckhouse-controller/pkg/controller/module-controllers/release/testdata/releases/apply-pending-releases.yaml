@@ -1,0 +1,117 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: commander-1.0.1
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: commander
+  version: 1.0.1
+  weight: 900
+status:
+  phase: Superseded
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: commander-1.0.2
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: commander
+  version: 1.0.2
+  weight: 900
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: commander-1.0.3
+  labels:
+    module: commander
+    modules.deckhouse.io/update-policy: commander
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: commander
+  version: 1.0.3
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: parca-1.2.1
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: parca
+  version: 1.2.1
+  weight: 900
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: parca-1.2.2
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: parca
+  version: 1.2.2
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: test
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: parca
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: commander
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: commander

@@ -1,0 +1,13 @@
+{{- if hasKey .Values.prometheus.internal.prometheusScraperIstioMTLS "certificate" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-scraper-istio-mtls
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.prometheus.internal.prometheusScraperIstioMTLS.certificate | b64enc }}
+  tls.key: {{ .Values.prometheus.internal.prometheusScraperIstioMTLS.key | b64enc }}
+{{- end }}

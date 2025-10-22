@@ -1,0 +1,136 @@
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+    security-scanning.deckhouse.io/enabled: ""
+    security.deckhouse.io/pod-policy: baseline
+  name: test
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: isolated
+  namespace: test
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  - ports:
+    - port: 53
+      protocol: UDP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-ingress-nginx
+      podSelector:
+        matchLabels:
+          app: controller
+  podSelector:
+    matchLabels: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: allowed-uid-gid-9f86d081
+  namespace: test
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    runAsUser:
+      ranges:
+      - max: 2
+        min: 1
+      rule: MustRunAs
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: AuthorizationRule
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: user-gmail.com
+  namespace: test
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: user@gmail.com
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure
+  name: all-pods
+  namespace: test
+spec:
+  hard:
+    limits.memory: 15Gi
+    requests.cpu: 1

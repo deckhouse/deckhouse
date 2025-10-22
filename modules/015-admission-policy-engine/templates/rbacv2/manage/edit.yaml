@@ -1,0 +1,45 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    rbac.deckhouse.io/aggregate-to-security-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-admission-policy-engine
+  name: d8:manage:permission:module:admission-policy-engine:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - operationpolicies
+  - securitypolicies
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - admission-policy-engine
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

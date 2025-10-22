@@ -1,0 +1,12 @@
+name: operator-prometheus
+stage: "General Availability"
+subsystems:
+  - observability
+namespace: d8-operator-prometheus
+description: |
+  This module installs the prometheus operator for creating Prometheus installations
+descriptions:
+  en: |
+    This module installs the prometheus operator for creating Prometheus installations
+requirements:
+  deckhouse: ">= 1.68"

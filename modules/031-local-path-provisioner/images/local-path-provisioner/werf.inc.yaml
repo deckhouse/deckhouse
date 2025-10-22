@@ -1,0 +1,55 @@
+{{- $localPathProvisionerVersion := "0.0.31"}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /local-path-provisioner
+    to: /usr/bin/local-path-provisioner
+    after: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/local-path-provisioner"]
+git:
+{{- include "image mount points" . }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} $(cat /run/secrets/SOURCE_REPO)/rancher/local-path-provisioner.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.VERSION={{$localPathProvisionerVersion}} -extldflags -static -s -w" -o /local-path-provisioner
+  - chown -R 64535:64535 /local-path-provisioner
+  - chmod 0700 /local-path-provisioner

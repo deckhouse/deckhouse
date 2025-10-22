@@ -1,0 +1,16 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: Fix creating long name of backup secret in state.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5332
+    - summary: Add commands to help fill `domainName` and `volumeTypeMap`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5211
+okmeter:
+  features:
+    - summary: >-
+        Mount `containerd` socket into `okmeter` DaemonSet Pods to meet the requirement for
+        `containerd` monitoring feature.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5304
+      impact: >-
+        Rolling upgrade of the `okmeter` DaemonSet. This will cause a short disruption in node
+        monitoring.
+

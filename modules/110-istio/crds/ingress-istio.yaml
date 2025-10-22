@@ -1,0 +1,241 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ingressistiocontrollers.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: istio
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: ingressistiocontrollers
+    singular: ingressistiocontroller
+    kind: IngressIstioController
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          properties:
+            spec:
+              type: object
+              required: ['ingressGatewayClass', 'inlet']
+              properties:
+                ingressGatewayClass:
+                  type: string
+                  description: |
+                    Ingress gateway class is used by application [Gateway](https://istio.io/latest/docs/reference/config/networking/gateway/) resources for identifying the right Ingress gateway setup.
+
+                    The identification is organized by setting the spec.selector: `istio.deckhouse.io/ingress-gateway-class: <ingressGatewayClass value>`.
+                  x-doc-examples: ['istio']
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                inlet:
+                  type: string
+                  description: |
+                    The way traffic goes to cluster from the outer network.
+                    * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
+                    * `NodePort` — Ingress controller is deployed and available through nodes' ports via `nodePort`.
+                    * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
+
+                      **Caution!** There can be only one controller with this inlet type on a host.
+                  enum: ["LoadBalancer","HostPort","NodePort"]
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                tolerations:
+                  type: array
+                  description: |
+                    [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
+
+                    If the parameter is omitted or `false`, it will be determined [automatically](../../#advanced-scheduling).
+
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: ["NoSchedule","PreferNoSchedule","NoExecute"]
+                      operator:
+                        type: string
+                        default: "Equal"
+                        enum: ["Exists","Equal"]
+                      key:
+                        type: string
+                      tolerationSeconds:
+                        format: int64
+                        type: integer
+                      value:
+                        type: string
+                loadBalancer:
+                  type: object
+                  x-doc-required: false
+                  description: |
+                    A section of parameters of the `LoadBalancer` inlet.
+                  properties:
+                    annotations:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Annotations to assign to the service for flexible configuration of the load balancer.
+                      additionalProperties:
+                        type: string
+                hostPort:
+                  type: object
+                  description: |
+                    `HostPort` inlet settings.
+                  anyOf:
+                  - {required: ["httpPort"]}
+                  - {required: ["httpsPort"]}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Port for insecure HTTP connections.
+
+                        If the parameter is not set, the connection over HTTP cannot be established.
+
+                        This parameter is mandatory if `httpsPort` is not set.
+                      x-doc-examples: [80]
+                    httpsPort:
+                      type: integer
+                      description: |
+                        Port for secure HTTPS connections.
+
+                        If the parameter is not set, the connection over HTTPS cannot be established.
+
+                        This parameter is mandatory if `httpPort` is not set.
+                      x-doc-examples: [443]
+                nodePort:
+                  type: object
+                  description: |
+                    `HostPort` inlet settings.
+                  anyOf:
+                    - {required: ["httpPort"]}
+                    - {required: ["httpsPort"]}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Port for insecure HTTP connections.
+
+                        If the parameter is not set, the connection over HTTP cannot be established.
+
+                        This parameter is mandatory if `httpsPort` is not set.
+                      x-doc-examples: [30080]
+                    httpsPort:
+                      type: integer
+                      description: |
+                        Port for secure HTTPS connections.
+
+                        If the parameter is not set, the connection over HTTPS cannot be established.
+
+                        This parameter is mandatory if `httpPort` is not set.
+                      x-doc-examples: [30443]
+                resourcesRequests:
+                  required: ['mode']
+                  type: object
+                  description: |
+                    Max amounts of CPU and memory resources that the pod can request when selecting a node (if the VPA is disabled, then these values become the default ones).
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        The mode for managing resource requests.
+                      enum: ['VPA', 'Static']
+                      default: 'VPA'
+                    vpa:
+                      type: object
+                      description: |
+                        Parameters of the vpa mode.
+                      properties:
+                        mode:
+                          type: string
+                          description: |
+                            The VPA usage mode.
+                          enum: ['Initial', 'Auto']
+                          default: 'Initial'
+                        cpu:
+                          type: object
+                          description: |
+                            CPU-related parameters.
+                          properties:
+                            max:
+                              description: |
+                                Maximum allowed CPU requests.
+                              default: '100m'
+                              type: string
+                            min:
+                              description: |
+                                Minimum allowed CPU requests.
+                              default: '50m'
+                              type: string
+                        memory:
+                          type: object
+                          description: |
+                            The amount of memory requested.
+                          properties:
+                            max:
+                              description: |
+                                Maximum allowed memory requests.
+                              default: '200Mi'
+                              type: string
+                            min:
+                              description: |
+                                Minimum allowed memory requests.
+                              default: '100Mi'
+                              type: string
+                    static:
+                      type: object
+                      description: |
+                        Static mode settings.
+                      properties:
+                        cpu:
+                          type: string
+                          description: |
+                            CPU requests.
+                          default: '350m'
+                        memory:
+                          type: string
+                          description: |
+                            Memory requests.
+                          default: '500Mi'
+              oneOf:
+                - properties:
+                    inlet:
+                      enum: ['LoadBalancer']
+                    loadBalancer: {}
+                - properties:
+                    inlet:
+                      enum: ['HostPort']
+                    hostPort: {}
+                  required: ['hostPort']
+                - properties:
+                    inlet:
+                      enum: ['NodePort']
+                    nodePort: {}
+                  required: ['nodePort']
+      additionalPrinterColumns:
+        - jsonPath: .spec.ingressGatewayClass
+          name: Ingress_Gateway_Class
+          description: 'Name of served istio ingress gateway class.'
+          type: string
+        - jsonPath: .spec.inlet
+          name: Inlet
+          description: 'The way traffic goes to current Ingress Controller from the outer network.'
+          type: string
+

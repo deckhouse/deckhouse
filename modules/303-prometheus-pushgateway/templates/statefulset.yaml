@@ -1,0 +1,84 @@
+{{- define "prometheus_pushgateway_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- range $instance := .Values.prometheusPushgateway.instances }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $instance }}
+  namespace: kube-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $instance)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: {{ $instance }}
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus-pushgateway"
+      minAllowed:
+        {{- include "prometheus_pushgateway_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $instance }}
+  namespace: kube-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $instance)) | nindent 2 }}
+spec:
+  # Prometheus Pushgateway stores metrics in memory, so if we make more replicas, the data cannot be deleted correctly.
+  replicas: 1
+  serviceName: {{ $instance }}
+  selector:
+    matchLabels:
+      app: {{ $instance }}
+  template:
+    metadata:
+      labels:
+        app: {{ $instance }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: prometheus-pushgateway
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "pushgateway") }}
+        ports:
+        - name: http-metrics
+          containerPort: 9091
+          protocol: TCP
+        livenessProbe:
+            httpGet:
+              port: 9091
+              path: /metrics
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+        readinessProbe:
+            httpGet:
+              port: 9091
+              path: /metrics
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "prometheus_pushgateway_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

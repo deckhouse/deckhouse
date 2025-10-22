@@ -1,0 +1,12 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+  add: /updater
+  to: /updater
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/updater"]
+    cmd: ["--v=4", "--stderrthreshold=info"]

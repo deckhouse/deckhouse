@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: system-roles.deckhouse.io
+  group: main
+  labelSelector:
+    matchLabels:
+      heritage: deckhouse
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
+EOF
+}
+
+function __main__() {
+  operation=$(context::jq -r '.review.request.operation')
+  user=$(context::jq -r '.review.request.userInfo.username')
+
+if [ "$operation" = "CREATE" ]; then
+  clusterRoleName=$(context::jq -r '.review.request.object.metadata.name')
+  if [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"ClusterRole \"$clusterRoleName\" has forbidden label \"heritage:deckhouse\"" }
+EOF
+    return 0
+  fi
+fi
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@"

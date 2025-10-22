@@ -1,0 +1,56 @@
+{{- $version := "0.68.0" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus-operator/prometheus-operator.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -r .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go mod vendor
+    - export VERSION=$(cat VERSION | tr -d " \t\n\r")
+    - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
+    - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o /operator cmd/operator/main.go
+    - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o /prometheus-config-reloader cmd/prometheus-config-reloader/main.go
+    - chmod 0700 /operator /prometheus-config-reloader
+    - chown -R 64535:64535 /operator /prometheus-config-reloader
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /operator
+  to: /bin/operator
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/operator"]

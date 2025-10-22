@@ -1,0 +1,17 @@
+cloud-provider-aws:
+  fixes:
+    - summary: Fixed zone selection for bastion in WithNAT layout
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1021
+cloud-provider-openstack:
+  fixes:
+    - summary: Set volume availability zone in dhctl on bootstrap
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1033
+istio:
+  features:
+    - summary: nodeSelector and tolerations customization for control-plane
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1034
+user-authn:
+  fixes:
+    - summary: Fixed .spec.ldap.bindPW escaping in DexProvider
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1032
+

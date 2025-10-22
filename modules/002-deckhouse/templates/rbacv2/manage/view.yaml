@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: deckhouse
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-system
+  name: d8:manage:permission:module:deckhouse:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - deckhousereleases
+  - moduleconfigs
+  - moduledocumentations
+  - modulepulloverrides
+  - modulereleases
+  - modules
+  - modulesources
+  - moduleupdatepolicies
+  verbs:
+  - get
+  - list
+  - watch

@@ -1,0 +1,2 @@
+providerAccessKeyId: {{ .Values.nodeManager.internal.cloudProvider.aws.providerAccessKeyId | b64enc }}
+providerSecretAccessKey: {{ .Values.nodeManager.internal.cloudProvider.aws.providerSecretAccessKey | b64enc }}

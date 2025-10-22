@@ -1,0 +1,107 @@
+type: object
+properties:
+  storageClass:
+    description: |
+      > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
+
+      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+
+        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+        * Этот параметр имеет смысл использовать только в исключительных ситуациях.
+        * Этот параметр применяется в процессе включения модуля.
+  defaultClusterStorageClass:
+    type: string
+    default: null
+    description: |-
+      Имя StorageClass, который DKP определит как StorageClass используемый в кластере по умолчанию.
+
+      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
+
+      Если значение не указано, фактический StorageClass используемый в кластере по умолчанию будет определяться в следующем порядке:
+
+       * StorageClass в кластере, имеющий default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`);
+       * Первый (по алфавиту) StorageClass из создаваемых модулем облачного провайдера (если какой-либо модуль облачного провайдера используется).
+  highAvailability:
+    description: |
+      Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
+
+      Если значение не указано, оно определяется автоматически как `true` для кластеров с более чем одним master-узлом. В остальных случаях значение определяется как `false`.
+  modules:
+    description: |
+      Общие параметры модулей Deckhouse.
+    properties:
+      ingressClass:
+        description: |
+          Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
+
+          Если имя IngressClass задано как `nginx`, соответствующий Ingress-контроллер автоматически считается Ingress-контроллером, используемым по умолчанию для всех модулей. При использовании любого другого имени Ingress-контроллера, он не будет использоваться по умолчанию.
+      publicDomainTemplate:
+        description: |
+          Шаблон DNS-имен c ключом `%s` в качестве динамической части строки.
+
+          Модули Deckhouse используют этот шаблон при создании Ingress-ресурсов.
+
+          Например, для шаблона `%s.kube.company.my` модуль prometheus создаст Ingress-ресурс на адрес `grafana.kube.company.my` для доступа к Grafana.
+
+          **Обратите внимание:**
+          - Если параметр не указан, Ingress-ресурсы создаваться не будут.
+          - Домен, указанный в шаблоне, не может совпадать или быть поддоменом домена, заданного в параметре [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain). Мы не рекомендуем менять значение `clusterDomain` без особой необходимости.
+          - Для корректной работы шаблона необходимо предварительно настроить службы DNS как в сетях, где будут располагаться узлы кластера, так и в сетях, из которых к служебным веб-интерфейсам платформы будут обращаться клиенты.
+          - В случае, если шаблон совпадает с доменом сети узлов, используйте только А записи для назначения служебным веб-интерфейсам платформы адресов Frontend узлов. Например, для узлов заведена зона `company.my`, а шаблон имеет вид `%s.company.my`.
+      placement:
+        description: |
+          Настройки, определяющие расположение компонентов модулей Deckhouse по умолчанию.
+        properties:
+          customTolerationKeys:
+            description: |
+              Список ключей пользовательских toleration.
+
+              Необходимо указывать, чтобы позволить планировщику размещать критически важные компоненты Deckhouse, такие как cni и csi, на выделенных узлах.
+      https:
+        description: |
+          Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+        properties:
+          mode:
+            description: |
+              Режим работы HTTPS:
+              * `CertManager` — модули Deckhouse будут работать по HTTPS, самостоятельно заказывая сертификат с помощью ClusterIssuer, указанного в параметре `certManager.clusterIssuerName`;
+              * `CustomCertificate` — модули Deckhouse будут работать по HTTPS, используя сертификат из пространства имен `d8-system`;
+              * `Disabled` — модули Deckhouse будут работать только по HTTP (некоторые модули могут не работать, например [user-authn](https://deckhouse.ru/modules/user-authn/));
+              * `OnlyInURI` — модули Deckhouse будут работать по HTTP, подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          certManager:
+            properties:
+              clusterIssuerName:
+                description: |
+                  Имя `ClusterIssuer`, используемого модулями Deckhouse.
+
+                  В модуле [cert-manager](https://deckhouse.ru/modules/cert-manager/) доступны следующие `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Также вы можете использовать свой `ClusterIssuer`.
+          customCertificate:
+            properties:
+              secretName:
+                description: |
+                  Имя Secret'а в пространстве имен `d8-system`, который будет использоваться модулями Deckhouse.
+
+                  Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+      resourcesRequests:
+        description: |
+          Количество ресурсов (CPU и памяти), выделяемых для работы компонентов Deckhouse, работающих на каждом узле кластера (обычно это DaemonSet'ы, например `cni-flannel`, `monitoring-ping`).
+
+          [Подробнее](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) про единицы измерения ресурсов.
+        properties:
+          controlPlane:
+            description: |
+              Количество ресурсов (CPU и памяти), выделяемых для компонентов control plane, работающих на каждом master-узле кластера. Не работает для not-managed-облаков (например, GKE).
+            properties:
+              cpu:
+                description: |
+                  Количество CPU, выделяемых для компонентов control plane, работающих на каждом master-узле кластера.
+              memory:
+                description: |
+                  Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
+      storageClass:
+        description: |
+          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+
+            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+            * Этот параметр имеет смысл использовать только в исключительных ситуациях.
+            * Этот параметр применяется в процессе включения модуля.

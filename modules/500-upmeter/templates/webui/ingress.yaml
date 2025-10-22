@@ -1,0 +1,108 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webui
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "upmeter"
+    web.deckhouse.io/export-icon: "/public/img/upmeter.png"
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.webui.externalAuthentication.authURL }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-webui
+{{- end }}
+{{- if .Values.upmeter.auth.webui.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-webui") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: webui
+            port:
+              name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: upmeter-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
+  annotations:
+{{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.webui.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.webui.externalAuthentication.authSignInURL }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.webui.externalAuthentication.authURL }}
+{{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    nginx.ingress.kubernetes.io/auth-secret: basic-auth-webui
+{{- end }}
+{{- if .Values.upmeter.auth.webui.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," }}
+{{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls-webui") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+    http:
+      paths:
+      - path: /api
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: upmeter
+            port:
+              name: https
+  {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: webui
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: ingress-tls-webui
+  {{ include "helm_lib_module_generate_common_name" (list . .Chart.Name) | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . .Chart.Name) }}
+  issuerRef:
+    name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+{{- end }}

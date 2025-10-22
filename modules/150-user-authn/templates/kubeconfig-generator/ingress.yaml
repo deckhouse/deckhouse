@@ -1,0 +1,33 @@
+{{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubeconfig-generator
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    web.deckhouse.io/export-name: "kubeconfig"
+    web.deckhouse.io/export-icon: "/public/img/kubeconfig-generator.jpeg"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-ingress-tls") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: kubeconfig-generator
+            port:
+              number: 5555
+{{- end }}

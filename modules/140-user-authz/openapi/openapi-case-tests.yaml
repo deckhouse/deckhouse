@@ -1,0 +1,16 @@
+positive:
+  configValues:
+    - enableMultiTenancy: true
+      controlPlaneConfigurator:
+        enabled: false
+  values:
+    - internal:
+        customClusterRoles:
+          user: []
+          privilegedUser: []
+          editor: []
+          admin: []
+          clusterEditor: []
+          clusterAdmin: []
+        clusterAuthRuleCrds: []
+        authRuleCrds: []

@@ -1,0 +1,44 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Управляет настройками RBAC и авторизацией в пределах конкретного пространства имен (namespace'а).
+
+            > Ресурс `AuthorizationRule` используется в [текущей ролевой модели](./#текущая-ролевая-модель) и не используется в экспериментальной ролевой модели.
+          properties:
+            spec:
+              properties:
+                accessLevel:
+                  description: |
+                    Уровень доступа:
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и User, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
+                    * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
+                    * `Admin` — то же самое, что и Editor, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`).
+
+                portForwarding:
+                  description: |
+                    Разрешить/запретить выполнять `port-forward`.
+                allowScale:
+                  description: |
+                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                subjects:
+                  description: |
+                    Пользователи и/или группы, которым необходимо предоставить права.
+
+                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
+                    - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+                  items:
+                    properties:
+                      kind:
+                        description: 'Тип ресурса.'
+                      name:
+                        description: 'Имя ресурса.'
+                        example: 'some-group-name'
+                      namespace:
+                        description: 'Namespace для ServiceAccount.'

@@ -1,0 +1,240 @@
+{{ $supportedProviders := list "aws" "gcp" "azure" }}
+{{ $cloudPlatform := "none" }}
+{{ if and (.Values.global.clusterConfiguration) (hasKey .Values.global.clusterConfiguration "cloud") }}
+  {{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
+  {{ if has $currentProvider $supportedProviders }}
+    {{ $cloudPlatform = $currentProvider }}
+  {{ end }}
+{{ end }}
+
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision"}}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
+spec:
+{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
+  {{- end }}
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: {{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
+spec:
+
+  namespace: d8-{{ $.Chart.Name }}
+
+  values:
+    istiodRemote:
+        enabled: false
+    global:
+      istiod:
+        enableAnalysis: false
+      istiodRemote:
+        enabled: false
+      defaultPodDisruptionBudget:
+        enabled: false
+      configValidation: false      # to deploy the ValidatingWebhookConfiguration resources by D8
+      operatorManageWebhooks: true # to deploy the MutatingWebhookConfiguration resources by D8
+      istioNamespace: d8-{{ $.Chart.Name }}
+      meshID: d8-istio-mesh
+      network: {{ include "istioNetworkName" $ }}
+      multiCluster:
+        clusterName: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
+  {{- if $.Values.istio.multicluster.enabled }}
+      meshNetworks:
+      {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+        {{- if $multicluster.enableIngressGateway }}
+        {{ $multicluster.networkName }}:
+          endpoints:
+          - fromRegistry: {{ $multicluster.name }}
+          gateways:
+          {{- range $ingressGateway := $multicluster.ingressGateways }}
+          - address: {{ $ingressGateway.address }}
+            port: {{ $ingressGateway.port }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+  {{- end }}
+      externalIstiod: false
+      jwtPolicy: {{ include "istioJWTPolicy" $ }}
+      proxy:
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+  {{- if $.Values.istio.sidecar.resourcesManagement }}
+    {{- if and (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static) }}
+        resources:
+          {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
+    {{- else }}
+        resources: {}
+    {{- end }}
+  {{- else }}
+        resources: {}
+  {{- end }}
+        logLevel: warning
+        componentLogLevel: "misc:error"
+        includeIPRanges:      {{ $.Values.istio.sidecar.includeOutboundIPRanges | default list "0.0.0.0/0" | join "," | quote }}
+        excludeIPRanges:      {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }}
+        excludeOutboundPorts: {{ $.Values.istio.sidecar.excludeOutboundPorts    | default list | join "," | quote }}
+        excludeInboundPorts:  {{ $.Values.istio.sidecar.excludeInboundPorts     | default list | join "," | quote }}
+      proxy_init:
+        image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+      revision: {{ $revision }}
+      logging:
+        level: "default:info"
+      logAsJson: false
+      imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+      - d8-istio-sidecar-registry
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+
+    meshConfig:
+      rootNamespace: d8-{{ $.Chart.Name }}
+      trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+      accessLogFile: /dev/stdout
+
+      # The rules below exclude upmeter-related namespaces from istiod's point of view.
+      # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
+      discoverySelectors:
+      - matchExpressions:
+        - {key: "heritage", operator: NotIn, values: [upmeter]}
+        - {key: "module", operator: NotIn, values: [upmeter]}
+
+      outboundTrafficPolicy:
+    {{- $outboundTrafficPolicyModeDict := dict "AllowAny" "ALLOW_ANY" "RegistryOnly" "REGISTRY_ONLY" }}
+        mode: {{ get $outboundTrafficPolicyModeDict $.Values.istio.outboundTrafficPolicyMode }}
+      defaultConfig:
+        proxyMetadata:
+          CLOUD_PLATFORM: {{ $cloudPlatform }}
+          ISTIO_META_DNS_CAPTURE: "true"
+          ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+          PROXY_CONFIG_XDS_AGENT: "true"
+          ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+        holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
+    {{- if $.Values.istio.tracing.enabled }}
+        tracing:
+          sampling: {{ $.Values.istio.tracing.sampling }}
+          zipkin:
+            address: {{ $.Values.istio.tracing.collector.zipkin.address }}
+    {{- end }}
+
+    {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
+      caCertificates:
+      {{- range $metadata := $.Values.istio.internal.remotePublicMetadata }}
+      - pem: {{ $metadata.rootCA | quote }}
+      {{- end }}
+    {{- end }}
+
+    pilot:
+      # We're deploying the istio-cni DS with module templates.
+      cni:
+        enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+      enabled: true
+      env:
+        PILOT_SKIP_VALIDATE_TRUST_DOMAIN: "true"
+        ISTIO_MULTIROOT_MESH: "true"
+        ENABLE_ENHANCED_RESOURCE_SCOPING: "true"
+  {{- if $.Values.istio.enableHTTP10 }}
+        PILOT_HTTP10: "1"
+  {{- end }}
+  {{- if ($.Values.istio.internal.enableAmbientMode) }}
+        PILOT_ENABLE_AMBIENT: "true"
+  {{- end }}
+      autoscaleEnabled: false
+      taint:
+        enabled: false
+      podAnnotations:
+        istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
+  {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
+      replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
+      replicaCount: {{ $.Values.istio.controlPlane.replicasManagement.static.replicas }}
+  {{- end }}
+  # if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA", do not declare the replicaCount in spec.
+      rollingMaxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+      image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix )) }}
+      resources:
+{{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 8 }}
+  {{- if $.Values.istio.controlPlane.nodeSelector }}
+      nodeSelector:
+{{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+  {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+  {{- end }}
+  {{- if $.Values.istio.controlPlane.tolerations }}
+      tolerations:
+{{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 8 }}
+  {{- else }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
+  {{- end }}
+    telemetry:
+      enabled: true
+      v2:
+        enabled: true
+        prometheus:
+          enabled: true
+        stackdriver:
+          enabled: false
+    sidecarInjectorWebhook:
+      injectedAnnotations:
+        istio.deckhouse.io/full-version: "{{ $fullVersion }}"
+{{- if ($.Values.global.enabledModules | has "cni-cilium") }}
+      defaultTemplates: ["sidecar", "d8-seccomp"]
+{{ else }}
+      defaultTemplates: ["sidecar", "d8-seccomp"]
+{{- end }}
+      templates:
+        d8-seccomp: |
+          spec:
+            {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+            initContainers:
+            - name: istio-validation
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            {{- end }}
+            containers:
+            - name: istio-proxy
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+              livenessProbe:
+                httpGet:
+                  path: /healthz/ready
+                  port: 15021
+                initialDelaySeconds: 10
+                periodSeconds: 2
+                timeoutSeconds: 3
+                failureThreshold: 30
+        d8-hold-istio-proxy-termination-until-application-stops: |
+          spec:
+            containers:
+            - name: istio-proxy
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh", "-c", "curl -X POST localhost:15000/drain_listeners?inboundonly; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
+      neverInjectSelector:
+      - matchExpressions:
+        - key: job-name
+          operator: Exists
+  {{- end }}
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if .Values.userAuthn.internal.discoveredDexCA }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex-ca
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+data:
+  oidcCA: |
+    {{- .Values.userAuthn.internal.discoveredDexCA | nindent 4 }}
+{{- end }}

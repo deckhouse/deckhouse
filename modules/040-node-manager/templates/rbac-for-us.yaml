@@ -1,0 +1,80 @@
+{{- if include "machine_controller_manager_enabled" . }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:machine-controller-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - delete
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:machine-controller-manager
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:machine-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- end }}
+{{- end }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:kubelet-bootstrap
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node-bootstrapper
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers:d8-node-manager
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-autoapprove-bootstrap
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers:d8-node-manager
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-autoapprove-certificate-rotation
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:nodes

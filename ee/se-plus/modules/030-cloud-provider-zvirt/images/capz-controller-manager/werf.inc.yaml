@@ -1,0 +1,54 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/capz-controller-manager"]
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /capz-controller-manager
+  to: /capz-controller-manager
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+  - cd /src
+  - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capz-controller-manager cmd/main.go
+  - chown 64535:64535 /capz-controller-manager
+  - chmod 0700 /capz-controller-manager

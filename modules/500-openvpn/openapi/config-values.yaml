@@ -1,0 +1,264 @@
+x-config-version: 2
+type: object
+properties:
+  inlet:
+    type: string
+    enum:
+      - ExternalIP
+      - LoadBalancer
+      - HostPort
+      - Direct
+    description: |
+      The way the connection is implemented.
+
+      The following inlet types are supported:
+      * `ExternalIP` — when there are nodes with public IPs. It is used together with the `externalIP` parameter.
+      * `LoadBalancer` — for all cloud providers and cloud-based placement strategies that support the provision of LoadBalancers.
+      * `HostPort` — the port of the OpenVPN server will be available on the node where it is scheduled. The port can be configured in the `hostPort` parameter.
+      * `Direct` — for non-standard cases. You need to create a service called `openvpn-external` in the `d8-openvpn` namespace. It will route traffic to the Pod with the `app: openvpn` label to the port called `ovpn-tcp` (or just 1194). This service provides the externalIP, the IP address of the balancer or its host. If none of these are present, you need to specify the `externalHost` parameter.
+  loadBalancer:
+    type: object
+    description: |
+      A section of optional parameters of the `LoadBalancer` inlet.
+    default: {}
+    properties:
+      annotations:
+        type: object
+        description: |
+          Annotations to assign to the service for flexible configuration of the load balancer.
+
+          > **Note** that module does not take into account the specifics of setting annotations in different clouds. If annotations for the provision of the load balancer are only used when the service is being created, then you need to restart the module (disable/enable it) to update them.
+        additionalProperties:
+          type: string
+      sourceRanges:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDRs that are allowed to connect to the Load Balancer.
+
+          The cloud provider may not support this option or ignore it.
+  hostPort:
+    type: integer
+    description: |
+      Port to connect to the OpenVPN server, which will be available on the node where it is scheduled.
+
+      The parameter is available when selecting inlet `HostPort`.
+    x-doc-default: '5416'
+  externalIP:
+    type: string
+    description: |
+      The IP address of a cluster node to connect OpenVPN clients.
+
+      It is only required if the `ExternalIP` inlet is used.
+  externalPort:
+    type: integer
+    description: |
+      The port to expose on the `externalIP` or load balancer.
+    x-doc-default: '5416'
+  tunnelNetwork:
+    type: string
+    description: |
+      Tunnel network for OpenVPN server.
+    x-doc-default: '172.25.175.0/24'
+    default: '172.25.175.0/24'
+    x-examples: ["172.25.175.0/24", "172.25.178.0/255.255.255.0"]
+  pushDefaultGatewayToClient:
+    type: boolean
+    default: false
+    x-doc-default: false
+    description: |
+      Routing all client traffic through the VPN. A default route will be added to clients.
+  pushToClientRoutes:
+    type: array
+    items:
+      type: string
+    description: |
+      A list of routes to send to clients upon their connection.
+
+      By default, this list is generated automatically using the local cluster network, service subnet, and Pod subnet.
+    x-examples: [["172.25.176.0/24", "172.25.178.0/255.255.255.0"]]
+  pushToClientDNS:
+    type: string
+    description: |
+      The IP address of the DNS server to send to clients upon connection.
+
+      By default, the IP address of the `kube-system/kube-dns` service is used.
+  pushToClientSearchDomains:
+    type: array
+    items:
+      type: string
+    description: |
+      A list of search domains to send to clients upon connection.
+
+      The default value is a value from the `global.discovery.clusterDomain` variable.
+  auth:
+    type: object
+    description: |
+      Options related to authentication or authorization in the application.
+    default: {}
+    properties:
+      externalAuthentication:
+        type: object
+        description: |
+          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+
+          > **Note!** External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
+        properties:
+          authURL:
+            type: string
+            description: |
+              The URL of the authentication service. If the user is authenticated, the service should return an HTTP 200 response code.
+          authSignInURL:
+            type: string
+            description: |
+              The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
+      allowedUserGroups:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of user groups that can access the OpenVPN admin panel.
+
+          This parameter is used if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled or the [externalAuthentication](#parameters-auth-externalauthentication) parameter is set.
+
+          > **Caution!** Note that you must add those groups to the appropriate field in the [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider) config if this module is used together with the user-authn one.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        description: |
+          The CIDR range for which authentication to access the OpenVPN is allowed.
+  externalHost:
+    type: string
+    description: |
+      An IP address or a domain clients use to connect to the OpenVPN server.
+
+      By default, data from an `openvpn-external` service are used.
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for the OpenVPN admin panel.
+
+      By default, the `modules.ingressClass` global value is used.
+  https:
+    type: object
+    description: |
+      What certificate type to use with the OpenVPN admin panel.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        enum:
+          - Disabled
+          - CertManager
+          - CustomCertificate
+          - OnlyInURI
+        description: |
+          The HTTPS usage mode:
+          * `CertManager` — the OpenVPN admin panel will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
+          * `CustomCertificate` — the OpenVPN admin panel will use the certificate from the `d8-system` namespace for HTTPS.
+          * `Disabled` — in this mode, the OpenVPN admin panel works over HTTP only.
+          * `OnlyInURI` — the OpenVPN admin panel will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/modules/user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            description: |
+              What ClusterIssuer to use for the OpenVPN admin panel (currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available; also, you can define your own).
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+            x-doc-default: "letsencrypt"
+      customCertificate:
+        type: object
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the Secret in the `d8-system` namespace to use with the OpenVPN admin panel (this Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format).
+
+            x-doc-default: 'false'
+  highAvailability:
+    type: boolean
+    description: |
+      Manually enable the high availability mode.
+
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+  nodeSelector:
+    type: object
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    additionalProperties:
+      type: string
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  tcpEnabled:
+    type: boolean
+    default: true
+  udpEnabled:
+    type: boolean
+    default: false
+  pmacctEnabled:
+    description: |
+      Enable logging of user's activity via VPN in JSON format.
+
+      All connections within `tun` interfaces will be collected via `libpcap` and logged
+      as `{"event_type": "purge", "ip_src": "172.25.175.10", "ip_dst": "10.222.0.10", "port_src": 32172, "port_dst": 53, "ip_proto": "udp", "packets": 1, "bytes": 53}`
+    type: boolean
+    default: false
+  clientCertExpirationDays:
+    type: integer
+    description: |
+      Certificate client expired period for OpenVPN in days. Specifies the number of days for which a client certificate generated using EasyRSA will be issued.
+
+      Client certificate lifetime must be at least 1 day and no more than 10 years.
+    minimum: 1
+    maximum: 3650
+    default: 3650
+oneOf:
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [true]
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [false]
+  - properties:
+      tcpEnabled:
+        enum: [false]
+      udpEnabled:
+        enum: [true]

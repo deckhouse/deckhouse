@@ -1,0 +1,68 @@
+{{ $memcachedExporterVersion := "0.15.3" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $memcachedExporterVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/memcached_exporter.git /src
+  - rm -rf /src/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ $.ModuleName }}/prometheus-promu-artifact
+  add: /src/promu
+  to: /go/bin/promu
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make curl git
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - cd /src
+  - make build
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y memcached
+  install:
+  - /binary_replace.sh -i "/usr/bin/memcached" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter-artifact
+    add: /src/memcached_exporter
+    to: /usr/bin/memcached_exporter
+    before: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/memcached_exporter"]
+    expose: ["9150"]

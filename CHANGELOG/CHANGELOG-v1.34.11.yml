@@ -1,0 +1,16 @@
+candi:
+  features:
+    - summary: Forbid use docker.io package.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2175
+      impact: >-
+        After upgrading Deckhouse, all nodes with the installed `docker.io` package will request
+        `disruptive update`. You will receive `NodeRequiresDisruptionApprovalForUpdate` if you have
+        manual `approvalMode` in the NodeGroup.
+  fixes:
+    - summary: Fix bash for start kubelet step.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2174
+monitoring-kubernetes:
+  fixes:
+    - summary: Decrease threshold of `NodeSUnreclaimBytesUsageHigh` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2174
+

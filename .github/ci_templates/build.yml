@@ -1,0 +1,250 @@
+{!{ define "check_changelog_template" }!}
+# <template: check_changelog_template>
+check_changelog:
+  name: Check changelog
+  runs-on: ubuntu-latest
+  steps:
+  {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+    - name: Check for tag
+      run: |
+        if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+          echo "Not a tag push, skipping changelog check."
+          exit 0
+        fi
+
+        TAG_VERSION="${GITHUB_REF#refs/tags/}"
+        FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
+
+        if [ ! -f "$FILE" ]; then
+          echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+          exit 1
+        else
+          echo "✅ Changelog file $FILE found."
+        fi
+# </template: check_changelog_template>
+{!{ end }!}
+
+{!{ define "build_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $buildType := index . 1 -}!}
+# <template: build_template>
+runs-on: [self-hosted, large]
+outputs:
+  tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+steps:
+{!{ if eq $buildType "release" }!}
+  {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
+{!{ end }!}
+
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key" "access_token" "COSIGN_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
+
+  - name: Set up Go 1.24
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.24'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+  - name: Build and push deckhouse images
+    id: build
+    env:
+{!{- if eq $buildType "dev" }!}
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+{!{- end }!}
+      DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+      DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+      DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+      DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+      COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+      CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- else }!}
+      CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- end }!}
+    run: |
+      # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+        # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+        REPO_SUFFIX=
+      fi
+
+      # Put tags on produced images and push to dev and release repositories.
+      #
+      # There are 2 modes: "dev" and "release".
+      # The "dev" mode builds branches only:
+      # - Build using dev-registry as primary and deckhouse registry as secondary.
+      # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+      # The "release" mode builds branches and tags:
+      # - Build using deckhouse registry as final and dev-registry as primary.
+      # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+      # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+      # IMAGE_NAME is a name of image from werf.yaml.
+      # IMAGE_DST is an image name for docker push.
+      function publish_image() {
+        IMAGE_NAME=$1
+        IMAGE_DST=$2
+        IMAGE_SRC="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageName" images_tags_werf.json)"
+        echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST}".
+        echo "⚓️ 📥 [$(date -u)] Pull '${IMAGE_NAME}' image as ${IMAGE_SRC}."
+        docker pull "${IMAGE_SRC}"
+        echo "⚓️ 🏷 [$(date -u)] Tag '${IMAGE_NAME}' image as ${IMAGE_DST}."
+        docker image tag "${IMAGE_SRC}" "${IMAGE_DST}"
+        echo "⚓️ 📤 [$(date -u)] Push '${IMAGE_NAME}' image as ${IMAGE_DST}."
+        docker image push "${IMAGE_DST}"
+        echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${IMAGE_NAME}'."
+        docker image rmi "${IMAGE_DST}" || true;
+      }
+
+      # CE/EE/FE -> ce/ee/fe
+      REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+      # Temporary directory is moved to ensure
+      TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+      echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
+      mkdir -p "$TEMP_WORKDIR"
+
+      # Registry path to publish images for Git tags.
+      if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+      else
+        SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+      fi
+
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+      if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        # Release tag build, set deckhouse registry as final
+        export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+
+        # Set cosign auth values
+        export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+        export COSIGN_VAULT_KEY="dh-2025-aug"
+        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+        AUTH_ROLE="dh-signer_dh-signer"
+
+        # The Git tag may contain a '+' sign, so use slugify for this situation.
+        # Slugify doesn't change a tag with safe-only characters.
+        IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+        export WERF_DISABLE_META_TAGS=true
+      else
+        # Other build, set deckhouse registry as secondary
+        export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+
+        # Set cosign auth values
+        export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+        export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+        AUTH_ROLE="dh-signer-dev_dh-signer-dev"
+
+        # Determine image tag
+        if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
+        fi
+        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+      fi
+      # Set cosign auth values
+      export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+      ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+      export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+      ACTIONS_ID_TOKEN="null" #clear value
+      AUTH_ROLE="null" #clear value
+
+      type werf && source $(werf ci-env github --verbose --as-file)
+      werf build \
+        --parallel=true --parallel-tasks-limit=10 \
+        --save-build-report=true \
+        --tmp-dir="$TEMP_WORKDIR" \
+        --build-report-path images_tags_werf.json
+
+      cp images_tags_werf.json "$TEMP_WORKDIR"
+
+      # Publish images for Git branch.
+      if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+        echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+        publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
+        publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+        # For release branches, also push release-channel to dev
+        if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+          publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+          publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+          publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+        fi
+      else
+        echo "Branch unset, skipping branch publish."
+      fi
+
+      # Publish images for Git tag.
+      if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+        publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${IMAGE_TAG}"
+        publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG}"
+        publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${IMAGE_TAG}"
+        publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${IMAGE_TAG}"
+      else
+        echo "Not a release tag, skipping tag publish."
+      fi
+
+      # Save 'tests' image name to pass it as output for 'tests' jobs.
+      TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+      echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+      # Filter out data from build report
+      egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
+      mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+
+  - name: Check DKP images manifests in public registry
+    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+    id: check_images
+    env:
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+      DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+    run: |
+      EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+  - name: Save build report
+    if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+    uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+    with:
+      name: build_report_${{ env.WERF_ENV }}
+      path: |
+        ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+
+# </template: build_template>
+{!{ end }!}

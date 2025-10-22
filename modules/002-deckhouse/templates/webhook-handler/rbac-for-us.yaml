@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webhook-handler
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:deckhouse:webhook-handler
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+rules:
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  verbs: ["create", "list", "update"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "update"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["*"] # We want to read all resources from the deckhouse.io group
+  verbs: ["get","list","watch"]
+- apiGroups: [""]
+  resources: ["secrets","endpoints","configmaps","namespaces", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["network.deckhouse.io"]
+  resources: ["metalloadbalancerclasses"]
+  verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:deckhouse:webhook-handler
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:deckhouse:webhook-handler
+subjects:
+  - kind: ServiceAccount
+    name: webhook-handler
+    namespace: d8-system

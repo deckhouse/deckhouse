@@ -1,0 +1,58 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс CloudInstanceClass модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                flavorName:
+                  description: |
+                    Тип заказываемых виртуальных машин.
+
+                    Получить список всех доступных типов машин можно с помощью команды `huaweicloud flavor list`.
+
+                    Для узлов всех видов, кроме master-узлов, желательно использовать тип виртуальных машин с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком такого типа виртуальных машин является невозможность миграции узлов между гипервизорами.
+
+                    Пример команды создания типа виртуальной машины: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
+                imageName:
+                  description: |
+                    Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                    Получить список всех доступных образов можно с помощью команды `huaweicloud image list`.
+
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти на странице [Поддерживаемые версии Kubernetes и ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData` или `instances.imageName`.
+                rootDiskSize:
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+
+                    Параметр также влияет на тип диска.
+                rootDiskType:
+                  description: |
+                    Тип root-диска.
+
+                    Параметр используется для указания типа тома, который будет использоваться для корневого диска.
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
+                subnets:
+                  description: |
+                    Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
+                securityGroups:
+                  description: |
+                    Группы безопасности, которые будут применяться к сетевым портам виртуальных машин в дополнение к группам безопасности, установленным в конфигурации облачного провайдера.
+
+                    Данные группы безопасности позволяют устанавливать правила брандмауэра для предоставленных инстансов.
+
+                    Группа `SecurityGroups` может не поддерживаться поставщиком облачных услуг.
+                serverGroupID:
+                  description: Группа серверов, в которую следует назначить машину.

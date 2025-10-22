@@ -1,0 +1,114 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/nginx-static
+git:
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
+  to: /opt/nginx-static/conf/nginx.conf
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+    add: /app
+    to: /app
+    before: setup
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/src
+  stageDependencies:
+    setup:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
+  to: /src/static
+  stageDependencies:
+    setup:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - cd /src/deckhouse-cli
+  - git describe --tags > VERSION
+  - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
+  - rm -rf /src/deckhouse-cli/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-bookworm
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+    add: /app/dist
+    to: /app
+    before: install
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src/static
+    to: /static
+    before: install
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src/deckhouse-cli
+    to: /src
+    before: install
+  - image: common/task-artifact
+    add: /task
+    to: /usr/local/bin/task
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+shell:
+  beforeInstall:
+    {{- include "debian packages proxy" . | nindent 4 }}
+    - apt-get install -y libbtrfs-dev jq
+    - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+    - export GOPRIVATE="flant.internal"
+    - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+    - git config --global --add safe.directory '*'
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+    - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
+    - cd /src
+    - task build:dist:all
+    - mkdir -p /app/files/d8-cli
+    - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
+    - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
+    - mv /static/robots.txt /app
+    - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
+final: false
+from: {{ .Images.BASE_NODE_20_ALPINE }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/src
+  to: /app
+  before: setup
+mount:
+- from: tmp_dir
+  to: /app/node_modules
+- from: tmp_dir
+  to: /root/.npm/_cacache
+- from: tmp_dir
+  to: /tmp/node-complile-cache
+shell:
+  setup:
+  {{- include "node packages proxy" . | nindent 2 }}
+  - cd /app
+  - npm install
+  - npm run build
+  - chown 64535:64535 /app

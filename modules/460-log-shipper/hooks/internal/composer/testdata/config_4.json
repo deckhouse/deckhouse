@@ -1,0 +1,44 @@
+{
+  "sources": {
+    "cluster_logging_config/testsource": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true,
+      "rotate_wait_secs": 3600,
+      "delay_deletion_ms": 3600000
+    }
+  },
+  "sinks": {
+    "destination/cluster/testoutput": {
+      "type": "vector",
+      "inputs": [
+        "cluster_logging_config/testsource"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "version": "2",
+      "address": "192.168.0.1:9200",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": false
+      }
+    }
+  }
+}

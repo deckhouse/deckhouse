@@ -1,0 +1,97 @@
+- name: d8.monitoring-custom.warnings
+  rules:
+  - alert: CustomServiceMonitorFoundInD8Namespace
+    expr: |
+      max(d8_monitoring_custom_unknown_service_monitor_total{job="deckhouse"} > 0)
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      summary: Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
+      description: |-
+        There are ServiceMonitors in the Deckhouse namespace that were not created by Deckhouse.
+
+        To resolve the issue, move these ServiceMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
+
+        To list all ServiceMonitors in the Deckhouse namespace, run the following command:
+
+        ```bash
+        d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+
+  - alert: CustomPodMonitorFoundInCluster
+    expr: |
+      max(d8_monitoring_custom_unknown_pod_monitor_total{job="deckhouse"} > 0)
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      summary: Deckhouse namespace contains PodMonitors not created by Deckhouse.
+      description: |-
+        There are PodMonitors in the Deckhouse namespace that were not created by Deckhouse.
+
+        To resolve the issue, move these PodMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
+
+        To list all PodMonitors in the Deckhouse namespace, run the following command:
+
+        ```bash
+        d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+
+  - alert: D8CustomPrometheusRuleFoundInCluster
+    expr: |
+      max(d8_monitoring_custom_unknown_prometheus_rules_total{job="deckhouse"} > 0)
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      summary: Deckhouse namespace contains PrometheusRules not created by Deckhouse.
+      description: |-
+        There are PrometheusRules in the Deckhouse namespace that were not created by Deckhouse.
+
+        To resolve the issue, replace these PrometheusRules with the CustomPrometheusRules object.
+
+        To list all PrometheusRules in the Deckhouse namespace, run the following command:
+
+        ```bash
+        d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
+        ```
+
+        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+
+  - alert: D8OldPrometheusCustomTargetFormat
+    expr: |
+      max(d8_monitoring_custom_old_prometheus_custom_targets_total{job="deckhouse"} > 0)
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse"
+      summary: Services with the `prometheus-custom-target` label are being used for metric collection.
+      description: |-
+        Deckhouse has detected that services with the `prometheus-custom-target` label are being used to collect metrics in the cluster.
+
+        The label format has been changed. To resolve the issue, replace the `prometheus-custom-target` label with `prometheus.deckhouse.io/custom-target`.
+
+        To list all services labeled with `prometheus-custom-target`, run the following command:
+
+        ```bash
+        d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
+        ```
+
+        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).

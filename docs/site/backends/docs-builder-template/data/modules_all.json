@@ -1,0 +1,479 @@
+{
+  "commander": {
+    "editions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "ce"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "commercialBadgeMessage": {
+      "en": "A separate license may be required",
+      "ru": "Может потребоваться отдельная лицензия"
+    },
+    "tags": [
+      "managing",
+      "application",
+      "web-interface"
+    ],
+    "external": "true",
+    "path": "/modules/commander/stable/"
+  },
+  "commander-agent": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "path": "",
+    "tags": [
+      "helper"
+    ]
+  },
+  "code": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "application",
+      "web-interface"
+    ],
+    "external": "true",
+    "path": "/modules/code/stable/"
+  },
+  "console": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "The system part of Deckhouse is read-only in the web UI",
+        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
+      }
+    },
+    "tags": [
+      "managing",
+      "observability",
+      "web-interface"
+    ],
+    "external": "true",
+    "path": "/modules/console/stable/"
+  },
+  "csi-ceph": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-ceph/stable/"
+  },
+  "csi-hpe": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-hpe/stable/"
+  },
+  "csi-huawei": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-huawei/stable/"
+  },
+  "csi-nfs": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-nfs/stable/"
+  },
+  "csi-netapp": {
+    "editions": [
+      "ee",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-netapp/stable/"
+  },
+  "csi-s3": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-s3/stable/"
+  },
+  "csi-scsi-generic": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-scsi-generic/stable/"
+  },
+  "csi-yadro-tatlin-unified": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/csi-yadro-tatlin-unified/stable/"
+  },
+  "delivery-kit": {
+    "editions": [
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "delivery"
+    ],
+    "external": "true",
+    "path": ""
+  },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/stable/"
+  },
+  "managed-memcached": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-memcached/stable/"
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "security"
+    ],
+    "external": "true",
+    "path": "/modules/neuvector/stable/"
+  },
+  "observability": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "observability"
+    ],
+    "external": "true"
+  },
+  "observability-platform": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "commercialBadgeMessage": {
+      "en": "A separate license is required",
+      "ru": "Требуется отдельная лицензия"
+    },
+    "tags": [
+      "observability",
+      "web-interface",
+      "application"
+    ],
+    "external": "true",
+    "path": "/modules/observability-platform/stable/"
+  },
+  "operator-argo": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "delivery"
+    ],
+    "external": "true",
+    "path": "/modules/operator-argo/stable/"
+  },
+  "pod-reloader": {
+    "tags": [
+      "core"
+    ],
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/pod-reloader/stable/"
+  },
+  "payload-registry": {
+    "tags": [
+      "registry"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
+  },
+  "runtime-audit-engine": {
+    "tags": [
+      "security"
+    ],
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/runtime-audit-engine/stable/"
+  },
+  "sdn": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "network"
+    ],
+    "external": "true",
+    "path": "/modules/sdn/stable/"
+  },
+  "sds-local-volume": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on the ability to create snapshots",
+        "ru": "Ограничение на возможность создания снимков"
+      }
+    },
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/sds-local-volume/stable/"
+  },
+  "sds-node-configurator": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/sds-node-configurator/stable/"
+  },
+  "sds-replicated-volume": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on the ability to create snapshots",
+        "ru": "Ограничение на возможность создания снимков"
+      }
+    },
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/sds-replicated-volume/stable/"
+  },
+  "secrets-store-integration": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "security"
+    ],
+    "external": "true",
+    "path": "/modules/secrets-store-integration/stable/"
+  },
+  "snapshot-controller": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/snapshot-controller/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/modules/storage-volume-data-manager/stable/"
+  },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "network"
+    ],
+    "external": "true",
+    "path": "/modules/static-routing-manager/early-access/"
+  },
+  "stronghold": {
+    "editionsWithRestrictions": [
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
+    "commercialBadgeMessage": {
+      "en": "A separate license is required",
+      "ru": "Требуется отдельная лицензия"
+    },
+    "tags": [
+      "security",
+      "web-interface"
+    ],
+    "external": "true",
+    "path": "/modules/stronghold/stable/"
+  },
+  "virtualization": {
+    "editions": [
+      "ce",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce"
+    ],
+    "tags": [
+      "virtualization"
+    ],
+    "external": "true",
+    "path": "/modules/virtualization/stable/"
+  }
+}

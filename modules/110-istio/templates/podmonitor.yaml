@@ -1,0 +1,44 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+  {{- if $.Values.istio.internal.applicationNamespacesToMonitor }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-sidecars
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main" "app" "istio-sidecar")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - scheme: http
+    path: /stats/prometheus
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      regex: istio-proxy
+      action: keep
+    - sourceLabels: [ __address__]
+      regex: ([^:]+)(:\d+)?
+      targetLabel: __address__
+      replacement: ${1}:15020
+    - regex: endpoint
+      action: labeldrop
+    - targetLabel: job
+      replacement: istio-sidecars
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_pod_ready]
+      regex: "true"
+      action: keep
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+  selector:
+    matchExpressions:
+    - key: service.istio.io/canonical-name
+      operator: Exists
+  namespaceSelector:
+    matchNames:
+    {{- $.Values.istio.internal.applicationNamespacesToMonitor | toYaml | nindent 4 }}
+  {{- end }}
+{{- end }}

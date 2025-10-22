@@ -1,0 +1,163 @@
+properties:
+  storageClass:
+    description: |
+      Имя StorageClass, который будет использоваться по умолчанию в кластере.
+
+      Если значение не указано, используется StorageClass существующей PVC Loki. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
+
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
+  diskSizeGigabytes:
+    description: |
+      Начальный размер диска для хранения логов или размер PVC при указании параметра [storageClass](#parameters-storageclass).
+
+      Вы должны самостоятельно указать необходимый размер диска для хранения логов за период, указанный в параметре `retentionPeriodHours`.
+
+      Занятый объем автоматически мониторится с помощью модуля [extended-monitoring](../extended-monitoring/configuration.html#namespaced-kubernetes-объекты)
+  retentionPeriodHours:
+    description: |
+      Желаемый минимальный период хранения логов в часах.
+
+      Данный параметр не участвует в управлении глубиной хранения логов, так как Loki удаляет старые данные только при заполнении диска.
+
+      В случае, если Loki удалит данные, возраст которых еще не достиг указанного периода хранения, вы получите алерт `LokiInsufficientDiskForRetention`. В этой ситуации необходимо увеличить размер диска или уменьшить значение данного параметра.
+  storeSystemLogs:
+    description: |
+      Сохранять логи из пространства имен `d8-*` в loki.
+
+      Для работы необходим включенный модуль [log-shipper](../log-shipper/).
+  lokiConfig:
+    description: |
+      Опции Loki, доступные для изменения.
+
+      Подробнее о настройки Loki читайте в [документации Loki](https://grafana.com/docs/loki/v2.9.x/configure/).
+
+      > Внимание! Ошибочные  настройки могут привести к неработоспособности Loki.
+    properties:
+      ingestionRateMB:
+        description: |
+          Общий лимит скорости приема логов в мегабайтах в секунду.
+      ingestionBurstSizeMB:
+        description: |
+          Общий лимит всплеска объема принимаемых логов. Например, максимальный размер запроса на запись.
+      maxStreamsPerUser:
+        description: |
+          Максимальное общее количество потоков логов для экземпляра Loki.
+
+          Каждый поток логов имеет уникальный набор меток. Количество потоков равно количеству уникальных наборов меток. Например: `{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}`.
+
+          Значение 0 отключает ограничение.
+      maxLabelNamesPerSeries:
+        description: |
+          Максимальное количество меток, которые могут быть использованы в одном потоке логов.
+      maxEntriesLimitPerQuery:
+        description: |
+          Максимальное количество записей, возвращаемых для одного запроса.
+      maxChunksPerQuery:
+        description: |
+          Максимальное количество файлов, которые могут быть скачаны в рамках одного запроса.
+      perStreamRateLimit:
+        description: |
+          Максимальная скорость в байтах в секунду для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
+      perStreamRateLimitBurst:
+        description: |
+          Максимальный размер всплеска объема логов для одного потока. Может быть как числом, так и строкой с единицей измерения (KB, MB, GB).
+      grpcServerMaxSendMsgSize:
+        description: |
+          Ограничение на размер сообщения gRPC, которое может отправить сервер, в байтах.
+      grpcServerMaxRecvMsgSize:
+        description: |
+          Ограничение на размер сообщения gRPC, которое может получить сервер, в байтах.
+      grpcServerMaxConcurrentStreams:
+        description: |
+          Ограничение на количество одновременных потоков для вызовов gRPC.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  resourcesManagement:
+    description: |
+      Настройки запросов (requests) и ограничений (limits) использования CPU и памяти подами Loki.
+    properties:
+      mode:
+        description: |
+          Режим управления ресурсами:
+          - `Static` — классический, с помощью указания запросов/ограничений (requests/limits). Настраивается в секции параметров [static](#parameters-resourcesmanagement-static);
+          - `VPA` — с помощью [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). Настраивается в секции параметров [vpa](#parameters-resourcesmanagement-vpa).
+      vpa:
+        description: |
+          Настройка управления ресурсами в режиме `VPA`.
+        properties:
+          mode:
+            description: |
+              Режим работы VPA.
+          cpu:
+            description: |
+              Настройки VPA при работе с CPU.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования CPU относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования CPU для пода (CPU limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+          memory:
+            description: |
+              Настройки VPA при работе с памятью.
+            properties:
+              max:
+                description: |
+                  Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              min:
+                description: |
+                  Минимальное значение, которое может выставить VPA для запроса к памяти (memory requests).
+              limitRatio:
+                description: |
+                  Коэффициент расчета ограничений использования памяти относительно запросов (limits/requests).
+
+                  Применяется для расчета начальных ограничений использования памяти для пода (memory limits).
+
+                  Если параметр указан, то VPA, при пересчете запросов памяти (memory requests) будет пересчитывать ограничения использования памяти (memory limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
+      static:
+        description: |
+          Настройка управления ресурсами в режиме `Static`.
+        properties:
+          requests:
+            description: |
+              Настройки запросов ресурсов (requests) подов.
+            properties:
+              cpu:
+                description: |
+                  Настройка запроса CPU (CPU requests).
+              memory:
+                description: |
+                  Настройка запроса памяти (memory requests).
+          limits:
+            description: |
+              Настройка ограничений (limits) использования CPU и памяти.
+            properties:
+              cpu:
+                description: |
+                  Настройка ограничений использования CPU (CPU limits).
+              memory:
+                description: |
+                  Настройка ограничений использования памяти (memory limits).
+  allowDeleteLogs:
+    description: |
+      Включение / выключение эндпоинтов API для удаления логов.

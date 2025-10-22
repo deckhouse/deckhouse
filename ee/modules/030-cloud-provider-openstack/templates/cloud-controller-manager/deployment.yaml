@@ -1,0 +1,146 @@
+{{- define "openstack_cloud_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $ccmImageName := join "" (list "cloudControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $ccmImage := include "helm_lib_module_image_no_fail" (list . $ccmImageName) }}
+{{- if $ccmImage }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cloud-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "openstack-cloud-controller-manager"
+      minAllowed:
+        {{- include "openstack_cloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cloud-controller-manager
+  template:
+    metadata:
+      labels:
+        app: cloud-controller-manager
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cloud-controller-manager")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      hostNetwork: true
+      dnsPolicy: Default
+      serviceAccountName: cloud-controller-manager
+      containers:
+        - name: openstack-cloud-controller-manager
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ $ccmImage }}
+          args:
+          - --leader-elect=true
+          - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
+          - --allocate-node-cidrs=true
+          - --configure-cloud-routes=true
+          - --cloud-config=/etc/config/cloud-config
+          - --cloud-provider=openstack
+          - --bind-address=127.0.0.1
+          - --secure-port=10471
+          - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+          - --v=2
+          {{- if .Values.global.clusterConfiguration.cloud }}
+            {{- if .Values.global.clusterConfiguration.cloud.prefix }}
+          - --cluster-name={{ .Values.global.clusterConfiguration.cloud.prefix }}
+            {{- end }}
+          {{- end }}
+          env:
+      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
+      {{- if not .Values.global.clusterIsBootstrapped }}
+          - name: KUBERNETES_SERVICE_HOST
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: KUBERNETES_SERVICE_PORT
+            value: "6443"
+      {{- end }}
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10471
+              host: 127.0.0.1
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10471
+              host: 127.0.0.1
+              scheme: HTTPS
+          volumeMounts:
+            - mountPath: /etc/kubernetes/pki
+              name: k8s-certs
+              readOnly: true
+            - mountPath: /etc/config
+              name: config
+              readOnly: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "openstack_cloud_controller_manager_resources" . | nindent 14 }}
+  {{- end }}
+      volumes:
+      - hostPath:
+          path: /etc/kubernetes/pki
+          type: DirectoryOrCreate
+        name: k8s-certs
+      - name: config
+        secret:
+          secretName: cloud-controller-manager
+{{- end }}

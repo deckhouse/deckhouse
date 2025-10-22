@@ -1,0 +1,63 @@
+{{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.vcd | required "cloudProvider.vcd is required" -}}
+{{- $metadata := dict -}}
+{{- if $cloudProviderValues.metadata -}}
+  {{- $metadata = merge (deepCopy $cloudProviderValues.metadata) $metadata }}
+{{- end -}}
+{{- if .nodeGroup.instanceClass.additionalMetadata -}}
+  {{- $metadata = merge (deepCopy .nodeGroup.instanceClass.additionalMetadata) $metadata -}}
+{{- end -}}
+
+{{- $templateOrg := "" }}
+{{- $catalog := "" }}
+{{- $template := .nodeGroup.instanceClass.template }}
+{{- $templateParts := regexSplit "/" .nodeGroup.instanceClass.template -1 }}
+{{- if eq (len $templateParts) 2 }}
+  {{- $catalog = $templateParts | first }}
+  {{- $template = $templateParts | last }}
+{{- else if eq (len $templateParts) 3 }}
+  {{- $templateOrg = (index $templateParts 0) }}
+  {{- $catalog = (index $templateParts 1) }}
+  {{- $template = (index $templateParts 2) }}
+{{- end }}
+
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: VCDMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo using for keep machine template after rollout
+    # see this https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+    {{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+      diskSize: {{ mul (.nodeGroup.instanceClass.rootDiskSizeGb) 1024 1024 1024 }}
+    {{- end }}
+    {{- if .nodeGroup.instanceClass.sizingPolicy }}
+      sizingPolicy: {{ .nodeGroup.instanceClass.sizingPolicy | quote }}
+    {{- end }}
+    {{- if .nodeGroup.instanceClass.placementPolicy }}
+      placementPolicy: {{ .nodeGroup.instanceClass.placementPolicy | quote }}
+    {{- end }}
+      storageProfile: {{ .nodeGroup.instanceClass.storageProfile | quote }}
+      template: {{ $template | quote }}
+    {{- if $templateOrg }}
+      templateOrg: {{ $templateOrg | quote }}
+    {{- end }}
+    {{- if $catalog }}
+      catalog: {{ $catalog | quote }}
+    {{- end }}
+    {{- if gt (len $metadata) 0 }}
+      metadata:
+      {{- range $key, $value := $metadata }}
+      - key: {{ $key | quote }}
+        value: {{ $value | quote }}
+        type: String
+        userAccess: READWRITE
+        isSystem: false
+      {{- end }}
+    {{- end }}

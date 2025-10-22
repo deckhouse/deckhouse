@@ -1,0 +1,127 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+final: false
+fromImage: common/distroless
+import:
+- image: dhctl # from main werf.yaml
+  add: /dhctl/bin/dhctl
+  to: /dhctl
+  before: setup
+- image: terraform
+  add: /terraform/terraform
+  to: /bin/terraform
+  before: setup
+git:
+- add: /{{ .ModulePath }}
+  to: /deckhouse
+  includePaths:
+    - "candi/openapi"
+    - "candi/terraform_versions.yml"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
+final: false
+fromImage: common/distroless
+import:
+- image: dhctl # from main werf.yaml
+  add: /dhctl/bin/dhctl
+  to: /dhctl
+  before: setup
+- image: opentofu
+  add: /opentofu/opentofu
+  to: /bin/opentofu
+  before: setup
+git:
+- add: /{{ .ModulePath }}
+  to: /deckhouse
+  includePaths:
+    - "candi/openapi"
+    - "candi/terraform_versions.yml"
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/terraform
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.terraform }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/opentofu
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.opentofu }} $(cat /run/secrets/SOURCE_REPO)/opentofu/opentofu.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
+---
+# use artifact for one place import for base and install images
+image: terraform
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
+  - chmod 755 /terraform/terraform
+---
+# use artifact for one place import for base and install images
+image: opentofu
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X github.com/opentofu/opentofu/version.dev=no" -o /opentofu/opentofu ./cmd/tofu
+  - chmod 755 /opentofu/opentofu

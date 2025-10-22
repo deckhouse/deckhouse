@@ -1,0 +1,131 @@
+{{- define "x509_certificate_exporter_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+
+{{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: x509-certificate-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "x509-certificate-exporter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: x509-certificate-exporter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: x509-certificate-exporter
+      minAllowed:
+        {{- include "x509_certificate_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: x509-certificate-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "x509-certificate-exporter")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      module: {{ $.Chart.Name }}
+      app: x509-certificate-exporter
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        module: {{ $.Chart.Name }}
+        app: x509-certificate-exporter
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      restartPolicy: Always
+      serviceAccountName: x509-certificate-exporter
+      containers:
+      - name: x509-certificate-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "x509_certificate_exporter_resources" . | nindent 12 }}
+            {{- end }}
+        image: {{ include "helm_lib_module_image" (list . "x509CertificateExporter") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --watch-kube-secrets
+        - --secret-type=kubernetes.io/tls:tls.crt
+        - --secret-type=Opaque:cert.crt
+        - --secret-type=Opaque:tls.crt
+        - --max-cache-duration=3600s
+        - --kube-api-rate-limit-qps=3
+        - --kube-api-rate-limit-burst=5
+        - --listen-address=127.0.0.1:9793
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9793"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 9793
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 9793
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 9793
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:9793/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: x509-certificate-exporter
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

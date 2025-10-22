@@ -1,0 +1,5 @@
+ci:
+  fixes:
+    - summary: Fix build for tags.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1210
+

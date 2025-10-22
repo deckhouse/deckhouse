@@ -1,0 +1,9 @@
+ingress-nginx:
+  fixes:
+    - summary: Add missing `severity_level` for NginxIngressConfigTestFailed rule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8661
+istio:
+  fixes:
+    - summary: Fixed Istio module release requirements checker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8678
+

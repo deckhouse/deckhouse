@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: secret-copier
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+  name: d8:manage:permission:module:secret-copier:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - secret-copier
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

@@ -1,0 +1,430 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      vpa:
+        type: object
+        default: {}
+        x-examples:
+          - longtermMaxCPU: "220m"
+            longtermMaxMemory: "1650Mi"
+            maxCPU: "6600m"
+            maxMemory: "4950Mi"
+        properties:
+          maxCPU:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+m?$"
+              - type: number
+            x-examples: ["1000m"]
+          maxMemory:
+            oneOf:
+              - type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+              - type: number
+            x-examples: ["1500Mi"]
+          longtermMaxCPU:
+            oneOf:
+              - type: string
+                pattern: "^[0-9]+m?$"
+              - type: number
+            x-examples: ["220", 2.24]
+          longtermMaxMemory:
+            oneOf:
+              - type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+              - type: number
+            x-examples: ["1500Gi"]
+      prometheusMain:
+        type: object
+        default: {}
+        x-examples:
+          - effectiveStorageClass: "ceph-ssd"
+          - effectiveStorageClass: false
+        properties:
+          effectiveStorageClass:
+            oneOf:
+              - type: string
+              - type: boolean
+          retentionGigabytes:
+            type: integer
+          diskSizeGigabytes:
+            type: integer
+          diskFilesystemSize:
+            type: number
+          diskUsage:
+            type: number
+      prometheusLongterm:
+        type: object
+        default: {}
+        x-examples:
+          - effectiveStorageClass: "ceph-ssd"
+            retentionGigabytes: 30
+        properties:
+          effectiveStorageClass:
+            oneOf:
+              - type: string
+              - type: boolean
+          retentionGigabytes:
+            type: integer
+          diskSizeGigabytes:
+            type: integer
+          diskFilesystemSize:
+            type: number
+          diskUsage:
+            type: number
+      grafana:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: true
+          alertsChannelsConfig:
+            type: object
+            default: {}
+            properties:
+              notifiers:
+                default: []
+                type: array
+                items:
+                  type: object
+                  required:
+                  - name
+                  - type
+                  - uid
+                  - org_id
+                  - is_default
+                  - disable_resolve_message
+                  - settings
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum: ["prometheus-alertmanager"]
+                    uid:
+                      type: string
+                    org_id:
+                      type: number
+                      enum: [1]
+                    is_default:
+                      type: boolean
+                      default: false
+                    send_reminder:
+                      type: boolean
+                      default: false
+                    frequency:
+                      type: string
+                    disable_resolve_message:
+                      type: boolean
+                      default: false
+                    settings:
+                      type: object
+                      required:
+                      - url
+                      properties:
+                        url:
+                          type: string
+                        basicAuthUser:
+                          type: string
+                    secure_settings:
+                      type: object
+                      default: {}
+                      properties:
+                        basicAuthPassword:
+                          type: string
+          additionalDatasources:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                access:
+                  type: string
+                url:
+                  type: string
+                user:
+                  type: string
+                database:
+                  type: string
+                withCredentials:
+                  type: boolean
+                name:
+                  type: string
+                uid:
+                  type: string
+                orgId:
+                  type: integer
+                editable:
+                  type: boolean
+                version:
+                  type: integer
+                isDefault:
+                  type: boolean
+                basicAuth:
+                  type: boolean
+                basicAuthUser:
+                  type: string
+                jsonData:
+                  type: object
+                  additionalProperties: true
+                secureJsonData:
+                  type: object
+                  additionalProperties: true
+          customLogo:
+            type: object
+            default: {}
+            properties:
+              enabled:
+                type: boolean
+                default: false
+              checksum:
+                type: string
+        x-examples:
+          - additionalDatasources:
+              - type: graphite
+                access: proxy
+                url: /graphite-1
+                name: testtesttest
+                uid: testtesttest
+                orgId: 1
+                editable: false
+                version: 1
+                isDefault: false
+                jsonData:
+                  anything: 1
+                  nothing: special
+            alertsChannelsConfig:
+              notifiers:
+                - org_id: 1
+                  type: prometheus-alertmanager
+                  name: "test"
+                  uid: "test"
+                  is_default: false
+                  disable_resolve_message: false
+                  send_reminder: false
+                  settings:
+                    basicAuthUser: user
+                    url: "http://test-alert-manager-url"
+                  secure_settings:
+                    basicAuthPassword: "password"
+      remoteWrite:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            spec:
+              type: object
+              properties:
+                url:
+                  type: string
+                basicAuth:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    password:
+                      type: string
+                      format: password
+                bearerToken:
+                  type: string
+                customAuthToken:
+                  type: string
+                headers:
+                  type: object
+                  additionalProperties: true
+                writeRelabelConfigs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                        default: "replace"
+                      separator:
+                        type: string
+                        default: ";"
+                      targetLabel:
+                        type: string
+                      regex:
+                        type: string
+                        default: ".*"
+                      modulus:
+                        type: integer
+                      replacement:
+                        type: string
+                        default: "$1"
+                      sourceLabels:
+                        type: array
+                        items:
+                          type: string
+                tlsConfig:
+                  type: object
+                  properties:
+                    insecureSkipVerify:
+                      type: boolean
+                    ca:
+                      type: string
+        default: []
+        x-examples:
+          -
+            - name: test-remote-write
+              spec:
+                basicAuth:
+                  password: password
+                  username: username
+                customAuthToken: test
+                url: https://test-victoriametrics.domain.com/api/v1/write
+                writeRelabelConfigs:
+                - action: keep
+                  regex: "prometheus_build_.*"
+                  sourceLabels: [ "__name__" ]
+      alertmanagers:
+        type: object
+        default: {}
+        properties:
+          byService:
+            additionalProperties:
+              type: array
+          byAddress:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                scheme:
+                  type: string
+                target:
+                  type: string
+                path:
+                  type: string
+                  default: "/"
+                basicAuth:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                    password:
+                      type: string
+                bearerToken:
+                  type: string
+                tlsConfig:
+                  type: object
+                  properties:
+                    ca:
+                      type: string
+                    cert:
+                      type: string
+                    key:
+                      type: string
+                    insecureSkipVerify:
+                      type: boolean
+          internal:
+            additionalProperties:
+              type: array
+        x-examples:
+          - byService:
+            - name: mysvc1
+              namespace: myns1
+              pathPrefix: /myprefix/
+              port: 81
+            - name: mysvc2
+              namespace: myns1
+              pathPrefix: /myprefix/
+              port: test
+          - byAddress:
+            - name: myaddress11
+              scheme: http
+              target: 1.2.3.4
+              path: metrics
+          - internal:
+            - name: wechat
+              receivers:
+              - name: wechat-example
+                wechatConfigs:
+                - apiSecret:
+                    key: apiSecret
+                    name: wechat-config
+                  apiURL: http://wechatserver:8080/
+                  corpID: wechat-corpid
+              route:
+                groupBy:
+                - job
+                groupInterval: 5m
+                groupWait: 30s
+                receiver: wechat-example
+                repeatInterval: 12h
+      customCertificateData:
+        type: object
+        default: {}
+        x-examples:
+          - tls.crt: plainstring
+            tls.key: plainstring
+            ca.crt: plainstring
+        properties:
+          ca.crt:
+            type: string
+          tls.key:
+            type: string
+          tls.crt:
+            type: string
+      deployDexAuthenticator:
+        type: boolean
+        x-examples: [true]
+      prometheusAPIClientTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+            certificate_updated: false
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
+          certificate_updated:
+            type: boolean
+      prometheusScraperTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+            certificate_updated: false
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
+          certificate_updated:
+            type: boolean
+      prometheusScraperIstioMTLS:
+        type: object
+        default: {}
+        x-examples:
+          - certificate: somestring
+            key: somestring
+        properties:
+          certificate:
+            type: string
+          key:
+            type: string
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
+
+

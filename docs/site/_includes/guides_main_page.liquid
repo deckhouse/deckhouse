@@ -1,0 +1,31 @@
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src='/assets/js/tile.js?v={{ assetHash }}'></script>
+
+<p class="tile__descr">{{ site.data.i18n.common['guides_description'][page.lang] }}</p>
+
+<div class="block__tile">
+  {%- for guide in site.data[page.product_code]['guides'] %}
+  <a class="button-tile" href="{{ guide.link }}">
+    <h2 class="button-tile__title">{{ guide.name[page.lang] }}</h2>
+    <p class="button-tile__descr">{{ guide.description[page.lang] }}</p>
+    <div class="button-tile__bottom">
+      <div class="button-tile__tags">
+        {%- for tag in guide.tags %}
+        <span class="sidebar__badge--container">
+          <span class="sidebar__badge_v2">{{ tag }}</span>
+        </span>
+        {% endfor %}
+      </div>
+      {%- if guide.minutesToRead %}
+        <div class="button-tile__time">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="6" cy="6" r="5.25" stroke="#5E6697" stroke-width="1.5"/>
+            <path d="M4.25 6H6V3.375" stroke="#5E6697" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p class="button-tile__descr tile__descr--time">{{ guide.minutesToRead }} min</p>
+        </div>
+      {%- endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>

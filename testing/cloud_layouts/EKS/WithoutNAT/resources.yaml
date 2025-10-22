@@ -1,0 +1,48 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: LocalPathProvisioner
+metadata:
+  name: localpath-all
+spec:
+  path: "/opt/local-path-provisioner"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dotfile-secret
+data:
+  .secret-file: dmFsdWUtMg0KDQo=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dotfile-cm
+  namespace: d8-system
+data:
+  .file: "content"
+---
+# testing creating multiple resources for one non exists resource
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns-with-multiple-resources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: application-controller-sa
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-application-controller-sa
+    app.kubernetes.io/part-of: argocd
+  name: argocd-application-controller-sa
+  namespace: test-ns-with-multiple-resources
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-application-controller-sa
+  namespace: test-ns-with-multiple-resources
+  annotations:
+    kubernetes.io/service-account.name: argocd-application-controller-sa
+type: kubernetes.io/service-account-token

@@ -1,0 +1,196 @@
+positive:
+  configValues:
+    # all in
+    - storageClass: "storage-class"
+      highAvailability: true
+      modules:
+        ingressClass: "my-ingress"
+        publicDomainTemplate: "%s.example.com"
+        placement:
+          customTolerationKeys:
+            - dedicated.example.com
+            - node-dedicated.example.com/master
+        https:
+          certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        resourcesRequests:
+          controlPlane:
+            cpu: "1"
+            memory: "1Gi"
+    # decimal CPU
+    - modules:
+        resourcesRequests:
+          controlPlane:
+            cpu: 1.25
+            memory: "1G"
+    # decimal CPU and memory with dot
+    - modules:
+        resourcesRequests:
+          controlPlane:
+            cpu: 1.25
+            memory: "1.5G"
+    # modules.https.mode Disabled work properly
+    - modules:
+        https:
+          mode: Disabled
+    # modules.https.mode OnlyInURI work properly
+    - modules:
+        https:
+          mode: OnlyInURI
+    # public domain template contain %s in the middle of the domain template
+    - modules:
+        publicDomainTemplate: "example-%s.com"
+  values:
+    # all-in
+    - internal:
+        modules:
+          resourcesRequests:
+            milliCpuControlPlane: 1024
+            memoryControlPlane: 536870912
+      clusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterConfiguration
+        podSubnetNodeCIDRPrefix: "24"
+        podSubnetCIDR: 10.244.0.0/16
+        serviceSubnetCIDR: 192.168.0.0/16
+        kubernetesVersion: "1.29"
+        clusterDomain: test
+        clusterType: "Cloud"
+        cloud:
+          prefix: test
+          provider: OpenStack
+      clusterIsBootstrapped: true
+      deckhouseVersion: dev
+      deckhouseEdition: FE
+      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus"]
+      discovery:
+        clusterControlPlaneIsHighlyAvailable: true
+        clusterMasterCount: 3
+        podSubnet: "10.10.10.10/24"
+        serviceSubnet: "10.20.10.10/24"
+        defaultStorageClass: "some-storage-class"
+        clusterDNSAddress: "10.10.20.10"
+        kubernetesCA: |
+          K8S
+          CA
+          Multilne
+        prometheusScrapeInterval: 30
+        clusterUUID: deadbeef-4bda-11ec-81d3-0242ac130003
+        clusterDomain: cluster.local
+        d8SpecificNodeCountByRole:
+          system: 2
+        kubernetesVersions: [ "1.29.2", "1.29.3", "1.29.2" ]
+        kubernetesVersion: "1.29.2"
+        extensionAPIServerAuthenticationRequestheaderClientCA: |
+          Extention Api server
+          CA
+          Multiline
+      modulesImages:
+        registry:
+          registry: registry.deckhouse.io/deckhouse/fe
+          dockercfg: Y2ZnCg==
+          address: registry.deckhouse.io
+          path: /deckhouse/fe
+          scheme: https
+          CA: testCA
+        tags:
+          module:
+            image: hash
+    # static cluster configuration
+    - clusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        clusterDomain: cluster.local
+        clusterType: Static
+        defaultCRI: Containerd
+        kind: ClusterConfiguration
+        kubernetesVersion: "1.29"
+        podSubnetCIDR: 10.111.0.0/16
+        podSubnetNodeCIDRPrefix: "24"
+        serviceSubnetCIDR: 10.222.0.0/16
+negative:
+  configValues:
+  # incorrect type. begin with small letter
+  - modules:
+      https:
+        certManager:
+          clusterIssuerName: letsencrypt
+        mode: certManager
+  # public domain template does not contain %s
+  - modules:
+      https:
+        publicDomainTemplate: "sub.example.com"
+  # public domain template starts with dot
+  - modules:
+      https:
+        publicDomainTemplate: ".%s.example.com"
+  # public domain template ends with dot
+  - modules:
+      https:
+        publicDomainTemplate: "%s.example.com."
+  # public domain template contain %s on the end of the domain template
+  - modules:
+      https:
+        publicDomainTemplate: "example.com%s"
+  # incorrect resource request: cpu for every node
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          cpu: "100incorrect"
+  # incorrect resource request: cpu as memory
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          cpu: "1024M"
+  # incorrect resource request: cpu as memory
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          cpu: "1000Mi"
+  # incorrect resource request: memory for every node
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          memory: "gigabit"
+
+  # incorrect resource request: cpu for every node
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          memory: "0ne"
+
+  # incorrect resource request: memory with incorrect value
+  - modules:
+      resourcesRequests:
+        controlPlane:
+          memory: "1.Gi"
+
+  # incorrect resource request: cpu for master node
+  - modules:
+      resourcesRequests:
+        masterNode:
+          cpu: "1incorrect"
+
+  # incorrect resource request: memory for master node
+  - modules:
+      resourcesRequests:
+        masterNode:
+          memory: "1Gigabyte"
+  values:
+    # cluster configuration: not support k8s version
+    - clusterConfiguration:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterConfiguration
+        podSubnetNodeCIDRPrefix: "24"
+        podSubnetCIDR: 10.244.0.0/16
+        serviceSubnetCIDR: 192.168.0.0/16
+        kubernetesVersion: "1.16"
+        clusterDomain: test
+        clusterType: "Cloud"
+        cloud:
+          prefix: test
+          provider: OpenStack
+    # docker cfg not in base64 format
+    - modulesImages:
+        registry:
+          dockercfg: cfg

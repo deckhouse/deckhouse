@@ -1,0 +1,27 @@
+# CE Bundle "Managed"
+admissionPolicyEngineEnabled: true
+certManagerEnabled: true
+dashboardEnabled: true
+deckhouseEnabled: true
+documentationEnabled: true
+deckhouseToolsEnabled: true
+deschedulerEnabled: true
+extendedMonitoringEnabled: true
+flowSchemaEnabled: true
+ingressNginxEnabled: true
+localPathProvisionerEnabled: true
+logShipperEnabled: true
+monitoringCustomEnabled: true
+monitoringDeckhouseEnabled: true
+monitoringKubernetesEnabled: true
+monitoringPingEnabled: true
+multitenancyManagerEnabled: true
+namespaceConfiguratorEnabled: true
+operatorPrometheusEnabled: true
+prometheusEnabled: true
+prometheusMetricsAdapterEnabled: true
+secretCopierEnabled: true
+snapshotControllerEnabled: true
+upmeterEnabled: true
+userAuthzEnabled: true
+verticalPodAutoscalerEnabled: true

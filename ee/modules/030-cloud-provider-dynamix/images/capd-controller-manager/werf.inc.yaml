@@ -1,0 +1,52 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/capd-controller-manager"]
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /capd-controller-manager
+  to: /capd-controller-manager
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+fromCacheVersion: "2025-02-14.1"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - export VERSION="v0.5.0"
+  - export VERSION_COMMON="v0.5.0"
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/capd-controller-manager.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
+  - cd /src/dynamix-common
+  - rm -rf .git vendor
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+fromCacheVersion: "2025-02-14.2"
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /capd-controller-manager cmd/main.go
+  - chown 64535:64535 /capd-controller-manager
+  - chmod 0700 /capd-controller-manager

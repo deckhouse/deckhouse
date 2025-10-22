@@ -1,0 +1,72 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dex
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    http:
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: dex
+            port:
+              number: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dex-auth
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+    nginx.ingress.kubernetes.io/limit-rpm: "1000"
+    # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "2"
+    # Send alert only if dex doesn't work at all (resolves issue #204).
+    # We use 101% here to switch off warnings because this threshold value is out of the range.
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex" "threshold.extended-monitoring.deckhouse.io/5xx-warning" "101" "threshold.extended-monitoring.deckhouse.io/5xx-critical" "100")) | nindent 2 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+  - hosts:
+    - {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  {{- end }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    http:
+      paths:
+      - path: /auth
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: dex
+            port:
+              number: 443
+      - path: /healthz
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: dex
+            port:
+              number: 443

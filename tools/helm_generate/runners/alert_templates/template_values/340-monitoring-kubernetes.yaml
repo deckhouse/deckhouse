@@ -1,0 +1,7 @@
+global:
+  enabledModules:
+    - "kube-dns"
+  modules:
+    publicDomainTemplate: ""
+    https:
+      mode: Disabled

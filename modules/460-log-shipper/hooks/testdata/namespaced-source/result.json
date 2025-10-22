@@ -1,0 +1,201 @@
+{
+  "sources": {
+    "cluster_logging_config/tests-whispers_whispers-logs:tests-whispers": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "app=test,log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.namespace=tests-whispers,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    }
+  },
+  "transforms": {
+    "transform/destination/loki-storage/00_parse_json": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/09_clean_up"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-es-dest/00_elastic_dedot": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/09_clean_up"
+      ],
+      "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
+      "type": "remap"
+    },
+    "transform/destination/test-es-dest/01_extra_fields": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-es-dest/00_elastic_dedot"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
+      "type": "remap"
+    },
+    "transform/destination/test-es-dest/02_del_parsed_data": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/destination/test-es-dest/01_extra_fields"
+      ],
+      "source": "if exists(.parsed_data) {\n    del(.parsed_data)\n}",
+      "type": "remap"
+    },
+    "transform/source/tests-whispers_whispers-logs/00_owner_ref": {
+      "drop_on_abort": false,
+      "inputs": [
+        "cluster_logging_config/tests-whispers_whispers-logs:tests-whispers"
+      ],
+      "source": "if exists(.pod_owner) {\n    .pod_owner = string!(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string!(.pod_labels.\"pod-template-hash\")\n        }\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            .pod_owner = replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            .pod_owner = replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'-[0-9]{8,11}$') {\n            .pod_owner = replace(.pod_owner, \"Job/\", \"CronJob/\")\n            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
+      "type": "remap"
+    },
+    "transform/source/tests-whispers_whispers-logs/01_local_timezone": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/00_owner_ref"
+      ],
+      "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
+      "type": "remap"
+    },
+    "transform/source/tests-whispers_whispers-logs/02_parse_json": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/01_local_timezone"
+      ],
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}",
+      "type": "remap"
+    },
+    "transform/source/tests-whispers_whispers-logs/03_log_filter": {
+      "condition": "exists(.parsed_data.foo)",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/02_parse_json"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/04_log_filter": {
+      "condition": "!exists(.parsed_data.foo)",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/03_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/05_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/04_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/06_log_filter": {
+      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/05_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/07_log_filter": {
+      "condition": "match!(.parsed_data.foo, r'^wvrr$')",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/06_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/08_log_filter": {
+      "condition": "if exists(.parsed_data.foo) \u0026\u0026 is_string(.parsed_data.foo) {\n    matched = false\n    matched0, err = match(.parsed_data.foo, r'^wvrr$')\n    if err != null {\n        true\n    }\n    matched = matched || matched0\n    !matched\n} else {\n    true\n}",
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/07_log_filter"
+      ],
+      "type": "filter"
+    },
+    "transform/source/tests-whispers_whispers-logs/09_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/08_log_filter"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
+    }
+  },
+  "sinks": {
+    "destination/cluster/loki-storage": {
+      "type": "loki",
+      "inputs": [
+        "transform/destination/loki-storage/00_parse_json"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "encoding": {
+        "only_fields": [
+          "message"
+        ],
+        "codec": "text",
+        "timestamp_format": "rfc3339"
+      },
+      "endpoint": "http://loki.loki:3100",
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
+      "labels": {
+        "container": "{{ container }}",
+        "foo": "bar",
+        "host": "{{ host }}",
+        "image": "{{ image }}",
+        "namespace": "{{ namespace }}",
+        "node": "{{ node }}",
+        "node_group": "{{ node_group }}",
+        "pod": "{{ pod }}",
+        "pod_ip": "{{ pod_ip }}",
+        "pod_labels_*": "{{ pod_labels }}",
+        "pod_owner": "{{ pod_owner }}",
+        "stream": "{{ stream }}"
+      },
+      "remove_label_fields": true,
+      "out_of_order_action": "rewrite_timestamp"
+    },
+    "destination/cluster/test-es-dest": {
+      "type": "elasticsearch",
+      "inputs": [
+        "transform/destination/test-es-dest/02_del_parsed_data"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "api_version": "v8",
+      "endpoint": "http://192.168.1.1:9200",
+      "encoding": {
+        "timestamp_format": "rfc3339"
+      },
+      "batch": {
+        "max_bytes": 10485760,
+        "timeout_secs": 1
+      },
+      "tls": {
+        "verify_hostname": true,
+        "verify_certificate": true
+      },
+      "compression": "gzip",
+      "bulk": {
+        "action": "index",
+        "index": "logs-%F"
+      },
+      "mode": "bulk",
+      "suppress_type_name": true
+    }
+  }
+}

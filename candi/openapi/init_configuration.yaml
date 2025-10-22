@@ -1,0 +1,65 @@
+kind: InitConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Deckhouse configuration to start after installation.
+    additionalProperties: false
+    required: [apiVersion, kind, deckhouse]
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: InitConfiguration
+      deckhouse:
+        imagesRepo: nexus.company.my/deckhouse/ee
+        registryDockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
+        registryScheme: HTTPS
+        registryCA: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
+    properties:
+      apiVersion:
+        type: string
+        description: Version of the Deckhouse API.
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [InitConfiguration]
+      deckhouse:
+        type: object
+        description: Initial parameters required to install Deckhouse.
+        properties:
+          imagesRepo:
+            type: string
+            pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
+            description: |
+              Address of a container registry with Deckhouse images.
+
+              Specify it if Deckhouse Enterprise Edition edition or third-party registry (e.g. proxy server in a closed environment) is used.
+
+              The address matches the edition of Deckhouse used. The public container registry address for Deckhouse Enterprise Edition is `registry.deckhouse.io/deckhouse/ee`.
+            minLength: 1
+            default: registry.deckhouse.io/deckhouse/ce
+          registryDockerCfg:
+            type: string
+            description: |
+              A Base64-encoded string from the Docker client configuration file (in Linux it is usually `$HOME/.docker/config.json`), for accessing a third-party container registry.
+
+              For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
+            minLength: 1
+            default: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=
+          registryCA:
+            type: string
+            description: |
+              Root CA certificate to validate the container registry’s HTTPS certificate (if self-signed certificates are used).
+          registryScheme:
+            type: string
+            description: Registry access scheme (HTTP or HTTPS).
+            enum: [HTTP, HTTPS]
+            default: HTTPS
+          devBranch:
+            type: string
+            deprecated: true
+            description: |
+              The parameter is used for development needs. Will be replaced with the CLI-tools.

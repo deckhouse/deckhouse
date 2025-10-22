@@ -1,0 +1,219 @@
+{{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:caps-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - clusters/status
+  verbs:
+    - get
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - machines
+  verbs:
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - cluster.x-k8s.io
+  resources:
+    - machines/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - ""
+  resources:
+    - nodes
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - nodegroups
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - sshcredentials
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - staticinstances
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - staticinstances/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - events.k8s.io
+  resources:
+    - events
+  verbs:
+    - create
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticclusters
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticclusters/status
+  verbs:
+    - get
+    - patch
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines
+  verbs:
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - infrastructure.cluster.x-k8s.io
+  resources:
+    - staticmachines/status
+  verbs:
+    - get
+    - patch
+    - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:caps-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:caps-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:caps-controller-manager-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+    - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:caps-controller-manager-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caps-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:caps-controller-manager-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+{{- end }}

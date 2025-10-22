@@ -1,0 +1,314 @@
+x-config-version: 2
+type: object
+x-doc-example:
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: control-plane-manager
+  spec:
+    version: 2
+    enabled: true
+    settings:
+      apiserver:
+        bindToWildcard: true
+        certSANs:
+          - bakery.infra
+          - devs.infra
+        loadBalancer: { }
+properties:
+  apiserver:
+    type: object
+    default: {}
+    description: |
+      `kube-apiserver` parameters.
+    properties:
+      serviceAccount:
+        type: object
+        default: {}
+        x-examples:
+          - {}
+          - additionalAPIAudiences: [ "istio-ca" ]
+        description: |
+          ServiceAccount issuing settings.
+        properties:
+          issuer:
+            type: string
+            description: |
+              ServiceAccount issuer. This is the URL of the API server. The values of this field are used as the `iss` claim of the token and to verify Service Account JWT tokens.
+
+              **Note**, all pods in the cluster using ServiceAccount tokens must be restarted upon changing this option.
+            x-examples:
+              - "https://api.example.com"
+          additionalAPIAudiences:
+            type: array
+            description: |
+              A list of API audiences to add when provisioning ServiceAccount tokens.
+
+              The default audiences list includes:
+
+              - `serviceAccount.issuer`, if specified.
+              - `serviceAccount.additionalAPIIssuers`, if specified.
+              - `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local` – this audience is always added for backward compatibility.
+
+              The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences.
+
+              This option is beneficial when migrating from one API issuer to another.
+            items:
+              type: string
+          additionalAPIIssuers:
+            type: array
+            description: |
+              A list of additional issuers to include when provisioning ServiceAccount tokens.
+
+              Issuers (`iss`) are used to verify the source of the tokens, ensuring they originate from trusted entities.
+
+              The first issuer is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`. When multiple issuers are specified, the first issuer is used to generate tokens, and all provided issuers are accepted for token verification.
+
+              This option is beneficial when migrating from one API issuer to another.
+            items:
+              type: string
+      admissionPlugins:
+        type: array
+        description: |
+          List of enabled additional [admission plugins](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+
+          **Note**, that in addition to the admission plugins enabled by default in Kubernetes, the following admission plugins are also always enabled:
+          - `ExtendedResourceToleration`
+          - `PodNodeSelector`
+          - `PodTolerationRestriction`
+          - `EventRateLimit` with the following config:
+
+            ```yaml
+            apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+            kind: Configuration
+            limits:
+            - type: Namespace
+              qps: 50
+              burst: 100
+              cacheSize: 2000
+            ```
+
+          > Note that th `PodNodeSelector` admission plugin [does not require](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) specifiying a global configuration, it relies on annotated Namespaces.
+        x-examples:
+          - ["AlwaysPullImages", "NamespaceAutoProvision"]
+        items:
+          type: string
+          enum:
+            - AlwaysPullImages
+            - NamespaceAutoProvision
+            - OwnerReferencesPermissionEnforcement
+            - PodNodeSelector
+            - PodTolerationRestriction
+      bindToWildcard:
+        type: boolean
+        default: false
+        description: |
+          Specifies whether to listen on `0.0.0.0`.
+
+          By default, the API server listens on the hostIP. The latter usually corresponds to the Internal node address; however, the actual IP depends on the cluster type (Static or Cloud) and the layout selected.
+      certSANs:
+        type: array
+        description: |
+          Array of [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), with which the API server certificate will be generated.
+
+          In addition to the passed list, the following list is always used:
+          * `kubernetes`;
+          * `kubernetes.default`;
+          * `kubernetes.default.svc`;
+          * `kubernetes.default.svc.cluster.local`;
+          * Kubernetes API server address;
+          * `127.0.0.1`;
+          * host name;
+          * host IP.
+        x-examples:
+          - ["my-site.com", "192.168.67.76"]
+        items:
+          type: string
+          pattern: '^[0-9a-zA-Z\.-]+$'
+      authn:
+        type: object
+        default: {}
+        description: |
+          Optional authentication parameters for Kubernetes API clients.
+
+          By default, they are taken from [user-authn](https://deckhouse.io/modules/user-authn/) module ConfigMap.
+        properties:
+          oidcIssuerURL:
+            type: string
+            description: |
+              OIDC provider URL.
+            x-examples:
+              - "https://my-super-site.tech/"
+          oidcIssuerAddress:
+            type: string
+            description: |
+              OIDC provider network address alias.
+            x-examples:
+              - "1.2.3.4"
+              - ""
+          oidcCA:
+            type: string
+            description: |
+              OIDC provider CA.
+          webhookURL:
+            type: string
+            description: |
+              Authentication webhook URL.
+            x-examples:
+              - "https://127.0.0.1:40443/"
+          webhookCA:
+            type: string
+            description: |
+              Authorization webhook CA.
+          webhookCacheTTL:
+            type: string
+            pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+            description: |
+              The duration to cache responses from the webhook token authenticator.
+
+              It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+            x-examples:
+            - "5m"
+      authz:
+        type: object
+        default: {}
+        description: |
+          Optional authorization parameters for Kubernetes API clients.
+
+          By default, they are taken from [user-authz](https://deckhouse.io/modules/user-authz/) module ConfigMap.
+        properties:
+          webhookURL:
+            type: string
+            description: |
+              Authorization webhook URL.
+            x-examples:
+              - "https://127.0.0.1:40443/"
+          webhookCA:
+            type: string
+            description: |
+              Authorization webhook CA.
+      loadBalancer:
+        type: object
+        description: |
+          If set, a service `kube-system/d8-control-plane-apiserver` of the `LoadBalancer` type will be created.
+        properties:
+          annotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: |
+              Annotations to attach to a service to fine-tune the load balancer.
+              > **Caution!** The module does not take into account the specifics of setting annotations in various cloud environments. If the annotations for load balancer provisioning are only applied when creating a service, you will need to delete and add the `apiserver.loadBalancer` parameter to update such parameters.
+          sourceRanges:
+            type: array
+            description: |
+              A list of CIDRs that are allowed to connect to the API.
+
+              The cloud provider may not support this option or ignore it.
+            items:
+              type: string
+              pattern: '^[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\/[0-9]+$'
+          port:
+            type: integer
+            default: 443
+            minimum: 1
+            maximum: 65534
+            description: |
+              External LoadBalancer TCP port.
+      auditPolicyEnabled:
+        type: boolean
+        default: false
+        description: |
+          Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `kube-system/audit-policy` Secret.
+      basicAuditPolicyEnabled:
+        type: boolean
+        default: true
+        description: |
+          Enforce basic Deckhouse audit policies.
+      auditLog:
+        type: object
+        default:
+          output: File
+        description: |
+          Audit policy settings
+        required:
+          - output
+        properties:
+          output:
+            type: string
+            description: |
+              Audit logs target stream.
+            default: File
+            x-examples: ["Stdout"]
+            enum:
+              - File
+              - Stdout
+          path:
+            type: string
+            description: |
+              Directory path for logs if the output is "File", otherwise ignored.
+            # Avoid trailing slash
+            pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
+            default: /var/log/kube-audit
+      encryptionEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enables [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+
+          Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
+          > **Note!** This mode cannot be disabled!
+  etcd:
+    type: object
+    description: |
+      `etcd` parameters.
+    properties:
+      backup:
+        type: object
+        default: {}
+        description: |
+          etcd backup parameters.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Enable etcd backup.
+          cronSchedule:
+            type: string
+            default: "0 0 * * *"
+            x-examples:
+            - "0 1 * * *"
+            description: |
+              Backup schedule etcd in cron format. The local time zone of the `kube-controller-manager` is used.
+          hostPath:
+            type: string
+            default: /var/lib/etcd
+            description: |
+              Host path on masters nodes for etcd backup.
+      maxDbSize:
+        description: |
+          [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.
+          Deckhouse automatically manages the `quota-backend-bytes` parameter.
+          If the `maxDbSize` parameter is set, deckhouse will use this value for the `quota-backend-bytes` etcd parameter.
+
+          Minimum: 512MB.
+
+          Maximum: 8GB.
+
+          **Experimental**. It can be removed in the future.
+        type: number
+        format: int64
+        minimum: 536870912
+        maximum: 8589934592
+  nodeMonitorGracePeriodSeconds:
+    type: integer
+    default: 40
+    description: |
+      The number of seconds after which the node will enter the `Unreachable` status in case of lost connection.
+  failedNodePodEvictionTimeoutSeconds:
+    type: integer
+    default: 300
+    description: |
+      The number of seconds after which pods will be deleted from the node with the `Unreachable` status.
+      > **Note!** If you change the parameter, the pods  must be restarted.

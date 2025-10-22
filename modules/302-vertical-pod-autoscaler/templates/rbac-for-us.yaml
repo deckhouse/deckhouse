@@ -1,0 +1,131 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:vertical-pod-autoscaler:controllers-reader
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - '*' # VPA can scale not only the built-in resources like Deployment or StatefulSet, but also Custom Resources.
+  resources:
+  - '*/scale' # VPA use the `/scale` subresource for identify the Pods managed by a Custom Resource: https://github.com/kubernetes/autoscaler/blob/c8e47217692c1fe70f53f4841a3b83b70cc0e878/vertical-pod-autoscaler/FAQ.md?plain=1#L113 
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - replicationcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - statefulsets
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:controllers-reader
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:vertical-pod-autoscaler:controllers-reader
+subjects:
+- kind: ServiceAccount
+  name: d8-vertical-pod-autoscaler-updater
+  namespace: kube-system
+- kind: ServiceAccount
+  name: d8-vertical-pod-autoscaler-recommender
+  namespace: kube-system
+- kind: ServiceAccount
+  name: d8-vertical-pod-autoscaler-admission-controller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:vertical-pod-autoscaler:actor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  - limitranges
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+- apiGroups:
+  - "poc.autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - "autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - "autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers/status
+  verbs:
+  - get
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:actor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:vertical-pod-autoscaler:actor
+subjects:
+- kind: ServiceAccount
+  name: d8-vertical-pod-autoscaler-recommender
+  namespace: kube-system
+- kind: ServiceAccount
+  name: d8-vertical-pod-autoscaler-updater
+  namespace: kube-system

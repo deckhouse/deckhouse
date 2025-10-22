@@ -1,0 +1,29 @@
+- name: admission-policy-engine.boostrap
+  rules:
+    - alert: D8AdmissionPolicyEngineNotBootstrapped
+      expr: d8_admission_policy_engine_not_bootstrapped == 1
+      for: 10m
+      labels:
+        severity_level: "7"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: Admission-policy-engine module hasn't been bootstrapped for 10 minutes.
+        description: |-
+          The admission-policy-engine module couldn't bootstrap.
+          
+          Steps to troubleshoot:
+          
+          1. Verify that the module's components are up and running:
+          
+             ```bash
+             d8 k get pods -n d8-admission-policy-engine
+             ```
+          
+          2. Check logs for issues, such as missing constraint templates or incomplete CRD creation:
+          
+             ```bash
+             d8 k logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
+             ```

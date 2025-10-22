@@ -1,0 +1,101 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- if $value.csi.gcp }}
+    {{- $src_version := toString $value.csi.gcp}}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $src_version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/bin/gce-pd-csi-driver
+  to: /gce-pd-csi-driver
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev_containerized/scsi_id
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/deploy/kubernetes/udev/google_nvme_id
+  to: /lib/udev_containerized/google_nvme_id
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/gce-pd-csi-driver"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches/{{ $src_version }}
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
+  - cd /src
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - mkdir -p bin
+  - CGO_ENABLED=0 go build -ldflags "-extldflags=static -X main.version={{ $value.csi.gcp }}" -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/
+  {{- end }}
+{{- end }}
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
+  install:
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

@@ -1,0 +1,74 @@
+#!/bin/bash
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# d8-ca-updater it's wrapper for update-ca-certificate/update-ca-trust commands, which use default way for introduce ca-certificate to system. 
+#
+# redhat and debian based distributive use different ways for install ca-certificates. 
+# redhat-based distros use /usr/share/pki/ca-trust-source/ca-bundle.trust.p11-kit file, which contain the complete Mozilla CA store. A system administrator can incorporate additional certificates by placing their PEM files under /etc/pki/ca-trust/source or /usr/share/pki/ca-trust-source directory and running 'update-ca-trust' command to set things straight. This will generate the /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem.
+# debian-based distros use /etc/ssl/certs/ca-certificates.crt, which is generated each time by 'update-ca-certificate' command. This command finds certificates in /usr/share/ca-certificates or /usr/local/share/ca-certificates directories and recreate  main ca-certificates.crt.
+set -Eeo pipefail
+
+CERT_SRC_DIR="/opt/deckhouse/share/ca-certificates/mozilla"
+REDHAT_CA_DIR=/etc/pki/ca-trust
+DEBIAN_CA_DIR=/usr/local/share/ca-certificates
+mkdir -p /etc/ssl/certs
+
+link_redhat_CAs() {
+  mkdir -p "$REDHAT_CA_DIR/extracted/pem/" "$REDHAT_CA_DIR/source/anchors/"
+  ln -sf "$CERT_SRC_DIR"/*.crt "$REDHAT_CA_DIR/source/anchors/"
+}
+
+link_debian_CAs() {
+  mkdir -p "$DEBIAN_CA_DIR"
+  ln -sf "$CERT_SRC_DIR"/*.crt "$DEBIAN_CA_DIR"
+}
+
+copy_redhat_ca_bundle() {
+  cp -f "$CERT_SRC_DIR/ca-bundle/ca-certificates.crt" "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem"
+  ln -sf "$REDHAT_CA_DIR/extracted/pem/tls-ca-bundle.pem" /etc/ssl/certs/ca-bundle.crt
+  ln -sf /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+}
+
+copy_debian_ca_bundle() {
+  cp -f "$CERT_SRC_DIR/ca-bundle/ca-certificates.crt" /etc/ssl/certs/ca-certificates.crt
+}
+
+
+if command -v update-ca-trust >/dev/null 2>&1; then
+  link_redhat_CAs
+  update-ca-trust
+elif command -v update-ca-certificates >/dev/null 2>&1; then
+  link_debian_CAs
+  update-ca-certificates -f
+else 
+  if ! command -v openssl >/dev/null 2>&1; then
+    echo "ERROR: OpenSSL not found!" >&2
+    exit 1
+  fi
+
+  OPENSSLDIR=$(openssl version -d | awk '{print $2}' | tr -d '"')
+  case "$OPENSSLDIR" in
+    /etc/pki/tls)
+      link_redhat_CAs
+      copy_redhat_ca_bundle ;;
+    /usr/lib/ssl)
+      link_debian_CAs
+      copy_debian_ca_bundle ;;
+    *)
+      echo "ERROR: Can't determine OS! Unknown path for OPENSSLDIR: $OPENSSLDIR" >&2
+      exit 1 ;;
+  esac
+fi

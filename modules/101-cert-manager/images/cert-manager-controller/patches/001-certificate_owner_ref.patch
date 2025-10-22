@@ -1,0 +1,380 @@
+diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
+index 38feef444..bf2a2f74f 100644
+--- a/deploy/crds/crd-certificates.yaml
++++ b/deploy/crds/crd-certificates.yaml
+@@ -109,6 +109,9 @@ spec:
+                         enum:
+                           - DER
+                           - CombinedPEM
++                certificateOwnerRef:
++                  description: CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted. If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++                  type: boolean
+                 commonName:
+                   description: |-
+                     Requested common name X509 certificate subject attribute.
+diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
+index 9e6804a88..516d8388e 100644
+--- a/internal/apis/certmanager/types_certificate.go
++++ b/internal/apis/certmanager/types_certificate.go
+@@ -261,6 +261,11 @@ type CertificateSpec struct {
+ 	// the controller and webhook components.
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat
+ 
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	CertificateOwnerRef *bool
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
+diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
+index 8970450a2..797154bd9 100644
+--- a/internal/apis/certmanager/v1/zz_generated.conversion.go
++++ b/internal/apis/certmanager/v1/zz_generated.conversion.go
+@@ -889,6 +889,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *v1.Certif
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
+ 	return nil
+ }
+@@ -930,6 +931,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
+ 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+ 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+ 	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
++	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	out.NameConstraints = (*v1.NameConstraints)(unsafe.Pointer(in.NameConstraints))
+ 	return nil
+ }
+diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
+index d64f9cd5e..1e9379d05 100644
+--- a/internal/apis/certmanager/zz_generated.deepcopy.go
++++ b/internal/apis/certmanager/zz_generated.deepcopy.go
+@@ -487,6 +487,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = new(NameConstraints)
+ 		(*in).DeepCopyInto(*out)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+
+diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
+index 89979e7ac..f10578840 100644
+--- a/pkg/apis/certmanager/v1/types_certificate.go
++++ b/pkg/apis/certmanager/v1/types_certificate.go
+@@ -286,6 +286,12 @@ type CertificateSpec struct {
+ 	// +optional
+ 	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
+ 
++	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
++	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
++	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
++	// +optional
++	CertificateOwnerRef *bool `json:"certificateOwnerRef,omitempty"`
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
+diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
+index e889ecf1a..3b29f924f 100644
+--- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
++++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
+@@ -487,6 +487,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = new(NameConstraints)
+ 		(*in).DeepCopyInto(*out)
+ 	}
++	if in.CertificateOwnerRef != nil {
++		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
++		*out = new(bool)
++		**out = **in
++	}
+ 	return
+ }
+ 
+diff --git a/pkg/controller/certificates/issuing/internal/secret.go b/pkg/controller/certificates/issuing/internal/secret.go
+index 856e48c9b..1d6194067 100644
+--- a/pkg/controller/certificates/issuing/internal/secret.go
++++ b/pkg/controller/certificates/issuing/internal/secret.go
+@@ -107,10 +107,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
+ 		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
+ 		WithData(secret.Data).WithType(secret.Type)
+ 
++	certificateOwnerRef := s.enableSecretOwnerReferences
++	// Check the CertificateOwnerRef field of the certificate, and if it is not nil, override enableSecretOwnerReferences with the CertificateOwnerRef value.
++	if crt.Spec.CertificateOwnerRef != nil {
++		certificateOwnerRef = *crt.Spec.CertificateOwnerRef
++	}
++
+ 	// If Secret owner reference is enabled, set it on the Secret. This results
+ 	// in a no-op if the Secret already exists and has the owner reference set,
+ 	// and visa-versa.
+-	if s.enableSecretOwnerReferences {
++	if certificateOwnerRef {
+ 		ref := *metav1.NewControllerRef(crt, certificateGvk)
+ 		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
+ 			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
+diff --git a/pkg/controller/certificates/issuing/internal/secret_test.go b/pkg/controller/certificates/issuing/internal/secret_test.go
+index 111cff988..597020381 100644
+--- a/pkg/controller/certificates/issuing/internal/secret_test.go
++++ b/pkg/controller/certificates/issuing/internal/secret_test.go
+@@ -66,6 +66,30 @@ func Test_SecretsManager(t *testing.T) {
+ 		gen.SetCertificateDNSNames("example.com"),
+ 	), fixedClock)
+ 
++	baseCertWithCertificateOwnerRefEnabled := gen.Certificate("test",
++		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
++		gen.SetCertificateSecretName("output"),
++		gen.SetCertificateRenewBefore(time.Hour*36),
++		gen.SetCertificateDNSNames("example.com"),
++		gen.SetCertificateUID(apitypes.UID("test-uid")),
++		gen.SetCertificateOwnerRef(true),
++	)
++	baseCertBundleWithCertificateOwnerRefEnabled := testcrypto.MustCreateCryptoBundle(t, gen.CertificateFrom(baseCertWithCertificateOwnerRefEnabled,
++		gen.SetCertificateDNSNames("example.com"),
++	), fixedClock)
++
++	baseCertWithCertificateOwnerRefDisabled := gen.Certificate("test",
++		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
++		gen.SetCertificateSecretName("output"),
++		gen.SetCertificateRenewBefore(time.Hour*36),
++		gen.SetCertificateDNSNames("example.com"),
++		gen.SetCertificateUID(apitypes.UID("test-uid")),
++		gen.SetCertificateOwnerRef(false),
++	)
++	baseCertBundleWithCertificateOwnerRefDisabled := testcrypto.MustCreateCryptoBundle(t, gen.CertificateFrom(baseCertWithCertificateOwnerRefDisabled,
++		gen.SetCertificateDNSNames("example.com"),
++	), fixedClock)
++
+ 	baseCertWithSecretTemplate := gen.CertificateFrom(baseCertBundle.Certificate,
+ 		gen.SetCertificateSecretTemplate(map[string]string{
+ 			"template":  "annotation",
+@@ -89,16 +113,7 @@ func Test_SecretsManager(t *testing.T) {
+ 			cmapi.CertificateAdditionalOutputFormat{Type: "CombinedPEM"},
+ 		),
+ 	)
+-	keystorePassword := "something"
+-	baseCertWithJKSKeystore := gen.CertificateFrom(baseCertBundle.Certificate,
+-		gen.SetCertificateKeystore(&cmapi.CertificateKeystores{JKS: &cmapi.JKSKeystore{Create: true, Password: &keystorePassword}}),
+-	)
+-
+-	baseCertWithPKCS12Keystore := gen.CertificateFrom(baseCertBundle.Certificate,
+-		gen.SetCertificateKeystore(&cmapi.CertificateKeystores{PKCS12: &cmapi.PKCS12Keystore{Create: true, Password: &keystorePassword}}),
+-	)
+-
+-	block, _, _ := pem.SafeDecodePrivateKey(baseCertBundle.PrivateKeyBytes)
++	block, _ := pem.Decode(baseCertBundle.PrivateKeyBytes)
+ 	tlsDerContent := block.Bytes
+ 
+ 	tests := map[string]struct {
+@@ -166,6 +181,77 @@ func Test_SecretsManager(t *testing.T) {
+ 			expectedErr: false,
+ 		},
+ 
++		"if secret does not exist, but certificateOwnerRef is set to true, create new Secret, with owner disabled": {
++			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
++			certificate:        baseCertBundleWithCertificateOwnerRefEnabled.Certificate,
++			existingSecret:     nil,
++			secretData:         SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
++			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
++				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
++					expUID := apitypes.UID("test-uid")
++					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
++						WithAnnotations(
++							map[string]string{
++								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io",
++								cmapi.IssuerKindAnnotationKey: "Issuer", cmapi.IssuerNameAnnotationKey: "ca-issuer",
++
++								cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName, cmapi.AltNamesAnnotationKey: strings.Join(baseCertBundle.Cert.DNSNames, ","),
++								cmapi.IPSANAnnotationKey:  strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
++								cmapi.URISANAnnotationKey: strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
++							}).
++						WithLabels(make(map[string]string)).
++						WithData(map[string][]byte{
++							corev1.TLSCertKey:       baseCertBundle.CertBytes,
++							corev1.TLSPrivateKeyKey: []byte("test-key"),
++							cmmeta.TLSCAKey:         []byte("test-ca"),
++						}).
++						WithType(corev1.SecretTypeTLS).
++						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
++							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
++							Name: ptr.To("test"), UID: &expUID,
++							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
++						})
++
++					assert.Equal(t, expCnf, gotCnf)
++
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
++					assert.Equal(t, expOpts, gotOpts)
++
++					return nil, nil
++				}
++			},
++			expectedErr: false,
++		},
++
++		"if secret does not exist, but certificateOwnerRef is set to false, create new Secret, with owner enabled": {
++			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
++			certificate:        baseCertBundleWithCertificateOwnerRefDisabled.Certificate,
++			existingSecret:     nil,
++			secretData:         SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
++			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
++				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
++					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
++						WithAnnotations(
++							map[string]string{
++								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io", cmapi.IssuerKindAnnotationKey: "Issuer",
++								cmapi.IssuerNameAnnotationKey: "ca-issuer", cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName,
++								cmapi.AltNamesAnnotationKey: strings.Join(baseCertBundle.Cert.DNSNames, ","), cmapi.IPSANAnnotationKey: strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
++								cmapi.URISANAnnotationKey: strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
++							}).
++						WithLabels(make(map[string]string)).
++						WithData(map[string][]byte{corev1.TLSCertKey: baseCertBundle.CertBytes, corev1.TLSPrivateKeyKey: []byte("test-key"), cmmeta.TLSCAKey: []byte("test-ca")}).
++						WithType(corev1.SecretTypeTLS)
++					assert.Equal(t, expCnf, gotCnf)
++
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
++					assert.Equal(t, expOpts, gotOpts)
++
++					return nil, nil
++				}
++			},
++			expectedErr: false,
++		},
++
+ 		"if secret does not exist, create new Secret, with owner enabled": {
+ 			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
+ 			certificate:        baseCertBundle.Certificate,
+@@ -252,6 +338,7 @@ func Test_SecretsManager(t *testing.T) {
+ 			},
+ 			expectedErr: false,
+ 		},
++
+ 		"if secret does exist, update existing Secret and leave custom annotations and labels, with owner enabled": {
+ 			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
+ 			certificate:        baseCertBundle.Certificate,
+@@ -297,6 +384,103 @@ func Test_SecretsManager(t *testing.T) {
+ 						})
+ 					assert.Equal(t, expCnf, gotCnf)
+ 
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
++					assert.Equal(t, expOpts, gotOpts)
++
++					return nil, nil
++				}
++			},
++			expectedErr: false,
++		},
++
++		"if secret does exist, but certificateOwnerRef is set to true, update existing Secret and leave custom annotations, with owner disabled": {
++			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
++			certificate:        baseCertBundleWithCertificateOwnerRefEnabled.Certificate,
++			existingSecret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Namespace:   gen.DefaultTestNamespace,
++					Name:        "output",
++					Annotations: map[string]string{"my-custom": "annotation"},
++					Labels:      map[string]string{},
++				},
++				Data: map[string][]byte{corev1.TLSCertKey: []byte("foo"), corev1.TLSPrivateKeyKey: []byte("foo"), cmmeta.TLSCAKey: []byte("foo")},
++				Type: corev1.SecretTypeTLS,
++			},
++			secretData: SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
++			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
++				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
++					expUID := apitypes.UID("test-uid")
++					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
++						WithAnnotations(
++							map[string]string{
++								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io",
++								cmapi.IssuerKindAnnotationKey: "Issuer", cmapi.IssuerNameAnnotationKey: "ca-issuer",
++
++								cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName,
++								cmapi.AltNamesAnnotationKey:   strings.Join(baseCertBundle.Cert.DNSNames, ","),
++								cmapi.IPSANAnnotationKey:      strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
++								cmapi.URISANAnnotationKey:     strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
++							}).
++						WithLabels(make(map[string]string)).
++						WithData(map[string][]byte{
++							corev1.TLSCertKey:       baseCertBundle.CertBytes,
++							corev1.TLSPrivateKeyKey: []byte("test-key"),
++							cmmeta.TLSCAKey:         []byte("test-ca"),
++						}).
++						WithType(corev1.SecretTypeTLS).
++						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
++							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
++							Name: ptr.To("test"), UID: &expUID,
++							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
++						})
++
++					assert.Equal(t, expCnf, gotCnf)
++
++					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
++					assert.Equal(t, expOpts, gotOpts)
++
++					return nil, nil
++				}
++			},
++			expectedErr: false,
++		},
++
++		"if secret does exist, but certificateOwnerRef is set to false ,update existing Secret and leave custom annotations, with owner enabled": {
++			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: true},
++			certificate:        baseCertBundleWithCertificateOwnerRefDisabled.Certificate,
++			existingSecret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{
++					Namespace:   gen.DefaultTestNamespace,
++					Name:        "output",
++					Annotations: map[string]string{"my-custom": "annotation"},
++					Labels:      map[string]string{},
++				},
++				Data: map[string][]byte{corev1.TLSCertKey: []byte("foo"), corev1.TLSPrivateKeyKey: []byte("foo"), cmmeta.TLSCAKey: []byte("foo")},
++				Type: corev1.SecretTypeTLS,
++			},
++			secretData: SecretData{Certificate: baseCertBundle.CertBytes, CA: []byte("test-ca"), PrivateKey: []byte("test-key")},
++			applyFn: func(t *testing.T) testcoreclients.ApplyFn {
++				return func(_ context.Context, gotCnf *applycorev1.SecretApplyConfiguration, gotOpts metav1.ApplyOptions) (*corev1.Secret, error) {
++					expCnf := applycorev1.Secret("output", gen.DefaultTestNamespace).
++						WithAnnotations(
++							map[string]string{
++								cmapi.CertificateNameKey: "test", cmapi.IssuerGroupAnnotationKey: "foo.io",
++								cmapi.IssuerKindAnnotationKey: "Issuer", cmapi.IssuerNameAnnotationKey: "ca-issuer",
++
++								cmapi.CommonNameAnnotationKey: baseCertBundle.Cert.Subject.CommonName,
++								cmapi.AltNamesAnnotationKey:   strings.Join(baseCertBundle.Cert.DNSNames, ","),
++								cmapi.IPSANAnnotationKey:      strings.Join(utilpki.IPAddressesToString(baseCertBundle.Cert.IPAddresses), ","),
++								cmapi.URISANAnnotationKey:     strings.Join(utilpki.URLsToString(baseCertBundle.Cert.URIs), ","),
++							}).
++						WithLabels(make(map[string]string)).
++						WithData(map[string][]byte{
++							corev1.TLSCertKey:       baseCertBundle.CertBytes,
++							corev1.TLSPrivateKeyKey: []byte("test-key"),
++							cmmeta.TLSCAKey:         []byte("test-ca"),
++						}).
++						WithType(corev1.SecretTypeTLS)
++					assert.Equal(t, expCnf, gotCnf)
++
+ 					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
+ 					assert.Equal(t, expOpts, gotOpts)
+
+diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
+index 6991f5c16..37f61a8b3 100644
+--- a/test/unit/gen/certificate.go
++++ b/test/unit/gen/certificate.go
+@@ -292,8 +292,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
+ 	}
+ }
+ 
+-func SetCertificateKeystore(keystores *v1.CertificateKeystores) CertificateModifier {
++func SetCertificateKeystore(ownerRef bool, keystores *v1.CertificateKeystores) CertificateModifier {
+ 	return func(crt *v1.Certificate) {
+ 		crt.Spec.Keystores = keystores
++		crt.Spec.CertificateOwnerRef = &ownerRef
+ 	}
+ }
+ 

@@ -1,0 +1,272 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bashible
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resourceNames:
+  - bashible-bashbooster
+  - node-users
+{{- range $bundle := $.Values.nodeManager.internal.allowedBundles }}
+  {{- range $.Values.nodeManager.internal.nodeGroups }}
+  - bashible-{{ .name }}-{{ $bundle }}
+  {{- end }}
+{{- end }}
+  resources:
+  - secrets
+  verbs:
+  - get
+
+---
+# todo remove after 1.47
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bashible-mcm-bootstrapped-nodes
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  verbs:
+  - patch
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances/status
+  verbs:
+  - patch
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:nodeuser-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers/status
+  verbs:
+  - patch
+  - update
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:node-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/status
+  verbs:
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-manager:bashible-mcm-bootstrapped-masters
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resourceNames:
+  - d8-masters-kubernetes-data-device-path
+  resources:
+  - secrets
+  verbs:
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:bashible-events
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups: ["events.k8s.io"]
+    resources:
+    - events
+    verbs:
+    - get
+    - list
+    - create
+    - update
+    - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible
+subjects:
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# todo remove after 1.47
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bashible-mcm-bootstrapped-nodes
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bashible-mcm-bootstrapped-nodes
+subjects:
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:instance-bootstrapped-nodes
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:nodeuser-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:nodeuser-bootstrapped-nodes
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:node-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:node-bootstrapped-nodes
+subjects:
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-manager:bashible-mcm-bootstrapped-masters
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:bashible-mcm-bootstrapped-masters
+subjects:
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:bashible-events
+  namespace: default
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:bashible-events
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:bashible-apiserver
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups:
+      - bashible.deckhouse.io
+    resources:
+      - bashibles
+      - nodegroupbundles
+      - bootstrap
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:bashible-apiserver
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:bashible-apiserver
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: system:bootstrappers:d8-node-manager
+    apiGroup: rbac.authorization.k8s.io

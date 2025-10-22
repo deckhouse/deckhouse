@@ -1,0 +1,42 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-artifact
+    add: /src/self-signed-generator
+    to: /self-signed-generator
+    before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/self-signed-generator" ]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-w -s" -o self-signed-generator main.go`) | indent 6 }}
+    - chown 64535:64535 self-signed-generator
+    - chmod 0700 self-signed-generator

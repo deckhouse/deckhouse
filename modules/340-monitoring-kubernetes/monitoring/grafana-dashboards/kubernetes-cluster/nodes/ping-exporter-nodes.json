@@ -1,0 +1,1457 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 22,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 777,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "From all nodes",
+      "type": "row"
+    },
+    {
+      "columns": [],
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Average measurement values grouped by ping request targets",
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 2,
+        "desc": true
+      },
+      "styles": [
+        {
+          "alias": "Time",
+          "align": "auto",
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "pattern": "Time",
+          "type": "hidden"
+        },
+        {
+          "alias": "Destination Node",
+          "align": "auto",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "decimals": 2,
+          "pattern": "destination_node",
+          "thresholds": [],
+          "type": "string",
+          "unit": "short"
+        },
+        {
+          "alias": "Avg packet loss",
+          "align": "auto",
+          "colorMode": "value",
+          "colors": [
+            "rgba(50, 172, 45, 0.97)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(245, 54, 54, 0.9)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 3,
+          "mappingType": 1,
+          "pattern": "Value #A",
+          "thresholds": [
+            "0.01",
+            "0.1"
+          ],
+          "type": "number",
+          "unit": "percentunit"
+        },
+        {
+          "alias": "Avg mean RTT",
+          "align": "auto",
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #B",
+          "thresholds": [],
+          "type": "number",
+          "unit": "ms"
+        },
+        {
+          "alias": "Avg mean deviation",
+          "align": "auto",
+          "colorMode": "value",
+          "colors": [
+            "rgba(50, 172, 45, 0.97)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(245, 54, 54, 0.9)"
+          ],
+          "dateFormat": "YYYY-MM-DD HH:mm:ss",
+          "decimals": 2,
+          "mappingType": 1,
+          "pattern": "Value #C",
+          "thresholds": [
+            "0.5",
+            "1"
+          ],
+          "type": "number",
+          "unit": "ms"
+        }
+      ],
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "C"
+        }
+      ],
+      "transform": "table",
+      "type": "table-old"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RTT max"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "RTT min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RTT min"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 727,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "legendFormat": "RTT",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "RTT max",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "RTT min",
+          "refId": "C"
+        }
+      ],
+      "title": "Average mean RTT with min/max",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 3,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byValue",
+              "options": {
+                "op": "gte",
+                "reducer": "allIsZero",
+                "value": 0
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byValue",
+              "options": {
+                "op": "gte",
+                "reducer": "allIsNull",
+                "value": 0
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "id": 302,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "( \n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{destination_node}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Mean packet loss",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 2,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "id": 304,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{destination_node}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Mean RTT",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 3,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "id": 473,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "repeatDirection": "v",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{destination_node}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Mean deviation",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": true,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 17,
+      "panels": [
+        {
+          "columns": [],
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "Average measurement values grouped by ping request sources",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 23
+          },
+          "id": 643,
+          "scroll": true,
+          "showHeader": true,
+          "sort": {
+            "col": 2,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "align": "auto",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Destination Node",
+              "align": "auto",
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "destination_node",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Avg packet loss",
+              "align": "auto",
+              "colorMode": "value",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 3,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [
+                "0.01",
+                "0.1"
+              ],
+              "type": "number",
+              "unit": "percentunit"
+            },
+            {
+              "alias": "Avg mean RTT",
+              "align": "auto",
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "ms"
+            },
+            {
+              "alias": "Avg mean deviation",
+              "align": "auto",
+              "colorMode": "value",
+              "colors": [
+                "rgba(50, 172, 45, 0.97)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(245, 54, 54, 0.9)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [
+                "0.5",
+                "1"
+              ],
+              "type": "number",
+              "unit": "ms"
+            }
+          ],
+          "targets": [
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__range]))",
+              "format": "table",
+              "instant": true,
+              "intervalFactor": 1,
+              "refId": "C"
+            }
+          ],
+          "transform": "table",
+          "type": "table-old"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 35,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 2,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "RTT max"
+                },
+                "properties": [
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "RTT min"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "RTT min"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 29
+          },
+          "id": 28,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "repeatDirection": "v",
+          "targets": [
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "sum (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n/\nsum (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "max (max_over_time(kube_node_ping_rtt_max{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT max",
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "min (min_over_time(kube_node_ping_rtt_min{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "RTT min",
+              "refId": "C"
+            }
+          ],
+          "title": "Average mean RTT with min/max",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 100,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 3,
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byValue",
+                  "options": {
+                    "op": "gte",
+                    "reducer": "allIsZero",
+                    "value": 0
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byValue",
+                  "options": {
+                    "op": "gte",
+                    "reducer": "allIsNull",
+                    "value": 0
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 34
+          },
+          "id": 676,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "targets": [
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "(\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n  -\n  sum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n)\n/\n  sum by (destination_node) (increase(kube_node_ping_packets_sent_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_node}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Mean packet loss",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 2,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 34
+          },
+          "id": 677,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "repeatDirection": "v",
+          "targets": [
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "sum by (destination_node) (increase(kube_node_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))\n/\nsum by (destination_node) (increase(kube_node_ping_packets_received_total{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_node}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Mean RTT",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 2,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 34
+          },
+          "id": 678,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull",
+                "max",
+                "min"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "repeatDirection": "v",
+          "targets": [
+            {
+              "datasource": {
+                "uid": "$ds_prometheus"
+              },
+              "expr": "avg by (destination_node) (avg_over_time(kube_node_ping_rtt_mdev{node=~\"$source_node\", destination_node=~\"$destination_node\"}[$__rate_interval]))",
+              "format": "time_series",
+              "intervalFactor": 1,
+              "legendFormat": "{{destination_node}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Mean deviation",
+          "type": "timeseries"
+        }
+      ],
+      "repeat": "source_node",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "From $source_node",
+      "type": "row"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "nodes"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "main",
+          "value": "$ds_prometheus"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Source",
+        "multi": true,
+        "name": "source_node",
+        "options": [],
+        "query": "label_values(kube_node_ping_packets_sent_total, node)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(kube_node_ping_packets_sent_total, destination_node)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Destination",
+        "multi": true,
+        "name": "destination_node",
+        "options": [],
+        "query": "label_values(kube_node_ping_packets_sent_total, destination_node)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "Nodes ping",
+  "uid": "U8z-arLik",
+  "version": 1,
+  "weekStart": ""
+}

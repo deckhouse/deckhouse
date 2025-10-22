@@ -1,0 +1,31 @@
+Subject: [PATCH] recommender aggregation patch
+---
+Index: vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go b/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go
+--- a/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go	(revision 6103ee137400558dda0e97e2e070ab36a2f9bbe7)
++++ b/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go	(date 1750279467250)
+@@ -129,12 +129,14 @@
+ 	// checkpoint to avoid having multiple peaks in the same interval after the state is restored from
+ 	// the checkpoint. Therefore we are extracting the current peak from all containers.
+ 	// TODO: Avoid the nested loop over all containers for each VPA.
+-	for _, pod := range cluster.Pods() {
+-		for containerName, container := range pod.Containers {
+-			aggregateKey := cluster.MakeAggregateStateKey(pod, containerName)
+-			if vpa.UsesAggregation(aggregateKey) {
+-				if aggregateContainerState, exists := aggregateContainerStateMap[containerName]; exists {
+-					subtractCurrentContainerMemoryPeak(aggregateContainerState, container, now)
++	if len(vpa.ContainersInitialAggregateState) != 0 {
++		for _, pod := range cluster.Pods() {
++			for containerName, container := range pod.Containers {
++				aggregateKey := cluster.MakeAggregateStateKey(pod, containerName)
++				if vpa.UsesAggregation(aggregateKey) {
++					if aggregateContainerState, exists := aggregateContainerStateMap[containerName]; exists {
++						subtractCurrentContainerMemoryPeak(aggregateContainerState, container, now)
++					}
+ 				}
+ 			}
+ 		}

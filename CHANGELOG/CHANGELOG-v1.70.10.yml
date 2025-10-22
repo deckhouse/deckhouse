@@ -1,0 +1,11 @@
+dhctl:
+  fixes:
+    - summary: Fix dhctl output in case of invalid config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14203
+    - summary: Release infrastructure dependency lock.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14105
+docs:
+  features:
+    - summary: Add unified manual about edition switch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14127
+

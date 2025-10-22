@@ -1,0 +1,117 @@
+{%- assign modules = site.data.modules.all %}
+{%- assign supported_img_url = '/images/icons/supported_v2.svg' %}
+{%- assign notsupported_img_url = '/images/icons/not_supported_v2.svg' %}
+{%- assign partially_supported_img_url = '/images/icons/intermediate_v2.svg' %}
+{%- assign siteD8Edition = 'ee' %}
+{%- assign editionsWeight = site.data.modules.editions-weight %}
+{%- if site.mode == 'module' and site.d8Revision %}
+  {%- assign siteD8Edition = site.d8Revision | downcase %}
+{%- endif %}
+{%- if siteD8Edition == 'fe'  %}
+  {%- assign siteD8Edition = 'ee' %}
+{%- endif %}
+
+<table class="supported_versions fixed-header-table table__small" markdown="0" style="table-layout: fixed">
+  <colgroup>
+    <col width="214px">
+    <col width="64px">
+    <col width="64px">
+    <col width="64px">
+    <col width="64px">
+    <col width="64px">
+    <col width="80px">
+    <col width="80px">
+  </colgroup>
+  <thead>
+  <tr>
+    <th style="text-align: center"></th>
+    {%- for edition in editionsWeight %}
+      {%- assign skip = false %}
+      {%- assign currentEdition = edition[0] %}
+      {%- if currentEdition == 'fe' %}{% assign skip = true %}{% endif %}
+      {%- if site.data.editions[currentEdition].languages.size > 0 %}
+        {%- if site.data.editions[currentEdition].languages contains page.lang %}
+          {%- assign skip = false %}
+        {%- else %}
+          {%- assign skip = true %}
+        {%- endif %}
+      {%- endif %}
+      {%- if skip %}{% continue %}{% endif %}
+      <th style="text-align: center">{%- if site.data.editions[currentEdition]['name_version'] %}{{ site.data.editions[currentEdition]['name_version'] }}{% else %}{{ site.data.editions[currentEdition]['name'] }}{% endif -%}
+      </th>
+    {%- endfor %}
+  </tr>
+  </thead>
+  <tbody>
+  {%- for module in modules %}
+    {%- assign moduleName = module[0] %}
+    {%- assign moduleDoesntBelongToEdition = false %}
+
+    {%- unless module[1].editions contains siteD8Edition %}
+      {%- assign moduleDoesntBelongToEdition = true %}
+    {%- endunless %}
+
+    {%- assign modulePath = "" %}
+    {%- if module[1].path.size > 0 %}
+      {%- if module[1].external == "true"  %}
+        {%- assign modulePath = module[1].path | prepend: site.urls[page.lang] %}
+      {%- elsif moduleDoesntBelongToEdition %}
+        {%- assign modulePath = module[1].path | prepend: '/' | prepend: site.urls[page.lang] %}
+      {%- else %}
+        {%- assign modulePath = module[1].path | prepend: '/' %}
+      {%- endif %}
+    {%- endif %}
+
+    <tr>
+      <td style="text-align: left">
+      {%- if modulePath.size > 0 %}
+        <a href="{{ modulePath }}"
+          {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+        >{{ moduleName }}</a>
+      {%- else %}
+        <span
+          {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+        >{{ moduleName }}</span>
+      {%- endif %}
+      </td>
+      {%- for edition in editionsWeight %}
+        {%- assign skip = false %}
+        {%- assign currentEdition = edition[0] %}
+        {%- if currentEdition == 'fe' %}{% assign skip = true %}{% endif %}
+        {%- if site.data.editions[currentEdition].languages.size > 0 %}
+          {%- if site.data.editions[currentEdition].languages contains page.lang %}
+            {%- assign skip = false %}
+          {%- else %}
+            {%- assign skip = true %}
+          {%- endif %}
+        {%- endif %}
+        {%- if skip %}{% continue %}{% endif %}
+
+        <td style="text-align: center;">
+          {%- if module[1].editions contains currentEdition %}
+
+               {%- if module[1].editionsWithRestrictions contains currentEdition %}
+
+                  {%- assign restrictionComment = site.data.i18n.comparison['module_has_restions'][page.lang] %}
+                  {%- if module[1].editionsWithRestrictionsComments["all"] %}
+                     {%- assign restrictionComment = module[1].editionsWithRestrictionsComments["all"][page.lang] %}
+                  {%- endif %}
+                  {%- if module[1].editionsWithRestrictionsComments[currentEdition] %}
+                     {%- assign restrictionComment = module[1].editionsWithRestrictionsComments[currentEdition][page.lang] %}
+                  {%- endif %}
+                  <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
+                                                    data-tippy-content="{{ restrictionComment }}"></span>
+               {%- else %}
+                 <img src="{{ supported_img_url }}">
+               {%- endif %}
+
+          {%- else %}
+            <img src="{{ notsupported_img_url }}">
+          {%- endif %}
+        </td>
+      {%- endfor %}
+    </tr>
+  {%- endfor %}
+
+  </tbody>
+</table>

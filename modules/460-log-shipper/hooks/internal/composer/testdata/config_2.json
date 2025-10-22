@@ -1,0 +1,80 @@
+{
+  "sources": {
+    "cluster_logging_config/testsource:baar": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux),log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.namespace=baar,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    },
+    "cluster_logging_config/testsource:foot": {
+      "type": "kubernetes_logs",
+      "extra_label_selector": "aaaa=bbbb,baz in (norf,qux),log-shipper.deckhouse.io/exclude notin (true)",
+      "extra_field_selector": "metadata.namespace=foot,metadata.name!=$VECTOR_SELF_POD_NAME",
+      "extra_namespace_label_selector": "log-shipper.deckhouse.io/exclude notin (true)",
+      "annotation_fields": {
+        "container_image": "image",
+        "container_name": "container",
+        "pod_ip": "pod_ip",
+        "pod_labels": "pod_labels",
+        "pod_name": "pod",
+        "pod_namespace": "namespace",
+        "pod_node_name": "node",
+        "pod_owner": "pod_owner"
+      },
+      "node_annotation_fields": {
+        "node_labels": "node_labels"
+      },
+      "glob_minimum_cooldown_ms": 1000,
+      "use_apiserver_cache": true
+    }
+  },
+  "sinks": {
+    "destination/cluster/testoutput": {
+      "type": "socket",
+      "inputs": [
+        "cluster_logging_config/testsource:baar",
+        "cluster_logging_config/testsource:foot"
+      ],
+      "healthcheck": {
+        "enabled": false
+      },
+      "buffer": {
+        "max_size": 268435488,
+        "type": "disk",
+        "when_full": "block"
+      },
+      "address": "192.168.0.1:9000",
+      "encoding": {
+        "codec": "json",
+        "timestamp_format": "rfc3339"
+      },
+      "mode": "tcp",
+      "tls": {
+        "ca_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
+        "crt_file": "-----BEGIN CERTIFICATE-----\nMIIC0DCCAbigAwIBAgIUSmTpJQESJpl0nCQPkHpoO/wslhUwDQYJKoZIhvcNAQEL\nBQAwETEPMA0GA1UEAwwGdWJ1bnR1MB4XDTIwMDMxNTExMzcwN1oXDTMwMDMxMzEx\nMzcwN1owETEPMA0GA1UEAwwGdWJ1bnR1MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAzNjtX5hklYzf+Obx52Paq0gIP4S/u1OKhS+zx1xDGlqPYtjL7p3a\neBFzDRppXcra8YWL97JtnaPzvduyoEEiTYvkWrrwM6szH8+dGH1MTfCRGKZQrXHL\nnT6HRv7s/TFcJ6Fg2R505vzPS+bxWgvfdZR1cTmALwd2YNde1p4wPfW+89MJxYX0\ndXrM/VM88cpRsVRlP6HyLLs562BnPsWJYTAeLpmI/NW/a3zc1Czh0nPruOoQ84dE\nVTjbuNL0yH3Yj3OW/KhlIbRn1zoYXxPwQgKl2xKgHHXyDAD/fr3/KNH8+gh+6QMA\nu6sPY1Xf2GXCJkXZuURG3mpidfYzzjU/+wIDAQABoyAwHjAJBgNVHRMEAjAAMBEG\nA1UdEQQKMAiCBnVidW50dTANBgkqhkiG9w0BAQsFAAOCAQEAIcBO2GzXEMYlu510\nD22JZqdtyALuER+fDptwnKHKeRawiYNYNJWATeRXsF1IINxHYRQcye8G8TMhbMVk\nvOhV0DzE1Qv4HY2jSJ6mydhAhQKAQSeHVvHou7/Al3FT5Oz92iFore4B+aFFYyI6\nayKtYvW/LpOu1i07Ty/DVY0TB7/0oc+wn3zPTdWvcUJ/Ka+SiMJXvfqhRgDx+AQT\nsnY2JzFHSiY/V7UccAHlZaQO7rscv9gfCDtDg/AU1RmB+L9h3cru0ki16ISxLo6P\nRlc+xbMFjJ0fhbyrJt8sJhQkfzrHf6IUzf/xiNmPGekOj/eZG1l089DrFLhOpM6R\nvukJXQ==\n-----END CERTIFICATE-----\n",
+        "key_file": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM2O1fmGSVjN/4\n5vHnY9qrSAg/hL+7U4qFL7PHXEMaWo9i2Mvundp4EXMNGmldytrxhYv3sm2do/O9\n27KgQSJNi+RauvAzqzMfz50YfUxN8JEYplCtccudPodG/uz9MVwnoWDZHnTm/M9L\n5vFaC991lHVxOYAvB3Zg117WnjA99b7z0wnFhfR1esz9UzzxylGxVGU/ofIsuznr\nYGc+xYlhMB4umYj81b9rfNzULOHSc+u46hDzh0RVONu40vTIfdiPc5b8qGUhtGfX\nOhhfE/BCAqXbEqAcdfIMAP9+vf8o0fz6CH7pAwC7qw9jVd/YZcImRdm5REbeamJ1\n9jPONT/7AgMBAAECggEAf2cLe0EUjc6oHe3E1dzMy2ppdtfhR2iV5m/cqElBkspw\nE1Iyw515muN/Ys7iaWsY8M3WV5+pfTnTBmn1lqXr577xr1xEuF3p1gcR9YE4S+Eq\n3OHTm4wCzzFsgUNbsb1ZS2ybB25h1qe1ZcekpBRuTnqe8GSKzLUfcuuAGIsaBe4K\n0MwfuJyHRsjBI5+8gNPTh+j/dubLPpMZCW/wgtwfTi1PzONNPYXSF80AVnO2pfpg\nowvNpHGadGQP+dUVGLQE8luB891AR7zNTL4w9nMxDDD2xrjp4EIBu064GpXXemie\n5yJnHhxKPLuuyZy1VcArHjo4hgUkReYmJ59jWEtrwQKBgQD/5myGVfBhdx2nnzpi\n8a/5U5A83NTtaH/r/PYFZnF+ln89I67u6cGpEZ22LgkyDdEZrxrjzBU3YzOu9hGG\nkuOQq87RvIw2SdS+eDFFBH1+cT4mtSRaMsmf3q4Ysgkt8T8X1w2n/41BSHsdDySt\ntGec12sF9I8idO7lVYMttK5BJwKBgQDM7WacU+wypwmJx87KBNLrT3fWycO1smes\nahAt+WkujU/38NHRSfo2n54u0Tl2Bo0sZUc1StKt5NCkG05s95fIhwnjJn1uksEh\njGJTs5ioljgXseqNGmMAJK3GIcjaKMA1R4zdCeWkXH1NY/J/DP7+lDXHdO7CXUHu\nsfmppnknDQKBgCS6L41APFXgwLLUGY8l3PnN0n/Jug2w19tI3Q59W4CtnOlre6ny\nhsb7LkV9afhzHzWueg+DtO/UHxDXZECKSHr1DaPwibco9Y24tmmPcWt6WU845FTF\nwUZesWH9+29KlqGXTfB0rxNVkcXj7IG5yL0r9cJPDVQGsFrd4QvoSLI1AoGBAKGw\nSn7b5IhOrULtyOYyiiypxfdNuMJa4lvyT5PGr0vQqaEKfLIyOV7x8AAmirzqDGdT\n/aw5viMAX/KrrORjMnpAufdkviEJX6LVvhsmoDOcWuOvOE5e3HAXgJjMvUoMTyN6\nsdURYwSdCSyPyJygJ228iPY3986ZgFUSTdeihwLdAoGAOjGd45RkSeMjJnhJJkj5\nGElkOkzx+Ao720WC9Fh0wOU3xABrp/mYqyqoftJcJiZx93aIr/V9jHC0jWuuuSqF\n1w+pQws9UWwZ+K4LYdc/NzxIdQ1tJbtwc7bkTI96Rn1rfvLsR7+oKKMeQSDoGQWa\nGZREgFbmcvHckfWfWdXqTFc=\n-----END PRIVATE KEY-----\n",
+        "verify_hostname": true,
+        "verify_certificate": true,
+        "enabled": true
+      },
+      "keepalive": {
+        "time_secs": 7200
+      }
+    }
+  }
+}

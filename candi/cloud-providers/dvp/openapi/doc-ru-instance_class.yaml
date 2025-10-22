@@ -1,0 +1,84 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                virtualMachine:
+                  description: |
+                    Настройки виртуальной машины для созданного master-узла.
+                  properties:
+                    cpu:
+                      description: |
+                        Настройки процессора для виртуальной машины.
+                      properties:
+                        cores:
+                          description: |
+                            Количество ядер процессора для виртуальной машины.
+                        coreFraction:
+                          description: |
+                            Процент гарантированной доли CPU, которая будет выделена виртуальной машине.
+                    memory:
+                      description: |
+                        Определяет параметры памяти для виртуальной машины.
+                      properties:
+                        size:
+                          description: |
+                            Количество ресурсов памяти, разрешенных для виртуальной машины.
+                    virtualMachineClassName:
+                      description: |
+                        Имя VirtualMachineClass.
+
+                        Ресурс VirtualMachineClass предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Он позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
+                    bootloader:
+                      description: |
+                        Определяет загрузчик для виртуальной машины.
+
+                        * `BIOS` — используется BIOS;
+                        * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
+                        * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                additionalDisks:
+                  description: |
+                    Параметры дополнительных дисков виртуальной машины.
+
+                    Каждый элемент массива описывает отдельный дополнительный диск.
+                    Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                  type: array
+                  items:
+                    type: object
+                    required: ["size", "storageClass"]
+                    properties:
+                      size:
+                        description: |
+                          Размер дополнительного диска.
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      storageClass:
+                        description: |
+                          Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                        type: string
+                rootDisk:
+                  description: |
+                    Указывает настройки для корневого диска виртуальной машины.
+                  properties:
+                    size:
+                      description: |
+                        Размер корневого диска.
+                    storageClass:
+                      description: |
+                        Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+                    image:
+                      description: |
+                        Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
+                      properties:
+                        kind:
+                          description: |
+                            Тип источника изображения.
+                        name:
+                          description: |
+                            Имя образа, который будет использоваться для создания корневого диска.
+                            > Для установки требуются образы ОС Linux с предустановленным cloud-init.

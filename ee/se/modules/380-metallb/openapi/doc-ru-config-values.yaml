@@ -1,0 +1,118 @@
+type: object
+properties:
+  loadBalancerClass:
+    description: |
+      Необязательное поле, описывающее класс LoadBalancer. Поле LoadBalancerClass следует использовать в режиме L2 LoadBalancer для указания MetalLoadBalancerClass, задающего параметры балансировщика для Service.
+  nodeSelector:
+    description: |
+      Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    description: |
+      Структура, аналогичная параметру `spec.tolerations` пода Kubernetes для главного контроллера.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  speaker:
+    description: |
+      Настройки для компонента `speaker`, который реализует протокол публикации IP-адресов LoadBalancer'а для внешней инфраструктуры.
+    properties:
+      nodeSelector:
+        description: |
+          Селектор узлов, на которых будет работать DaemonSet speaker. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
+
+          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      tolerations:
+        description: |
+          Структура для DaemonSet speaker'а, аналогичная параметру `spec.tolerations` пода Kubernetes.
+
+          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  bgpPeers:
+    description: |
+      Список внешних BGP-роутеров, которые будут работать с этим модулем.
+
+      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
+    items:
+      properties:
+        peer-address:
+          description: |
+            IP внешнего BGP-роутера.
+        peer-asn:
+          description: |
+            Номер автономной системы на внешнем BGP-роутере.
+        my-asn:
+          description: |
+            Номер автономной системы для кластера.
+        peer-port:
+          description: |
+            Порт, к которому устанавливать сессию.
+        source-address:
+          description: |
+            IP-адрес для исходящих соединений.
+        router-id:
+          description: |
+            ID BGP-роутера для анонса.
+        hold-time:
+          description: |
+            Таймаут, после которого партнерский BGP-пир считается утерянным. Это значение делится на 3 и получается интервал для keep-alive.
+
+            Рекомендуемое значение — `3s` (keep-alive раз в секунду), протокол BGP не поддерживает меньшие значения.
+            По умолчанию — `90s` (keep-alive раз в 30 секунд).
+        node-selector:
+          description: |
+            Дополнительный псевдоселектор, который реализуется приложением speaker'а. Говорит о том, с каких узлов стоит устанавливать связь с внешними BGP-роутерами. Не путать с `speaker.nodeSelector` и  `nodeSelector`.
+
+            Опциональный параметр.
+
+            Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
+        password:
+          description: |
+            Пароль аутентификации для BGP-маршрутизаторов, использующих TCP MD5-аутентифицированные сессии.
+  addressPools:
+    description: |
+      Список диапазонов IP, которые будут выдаваться сервисам.
+
+      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+    items:
+      properties:
+        name:
+          description: |
+            Имя пула. Должно соответствовать RFC 1123: разделенные точками части в нижнем регистре, состоящие из букв и '-'. Каждое имя должно начинаться и заканчиваться буквой алфавита.
+        protocol:
+          description: |
+            Технология публикации сервисов, которую должен реализовать speaker.
+        addresses:
+          description: |
+            Список диапазонов, где диапазон — это либо подсеть с маской, либо диапазон значений с "-" в качестве разделителя.
+        auto-assign:
+          description: |
+            Флаг auto-assign используется для предотвращения автоматического выделения IP из пула.
+        avoid-buggy-ips:
+          description: |
+            Запрещает использование адресов из пула, заканчивающихся на `.0` и `.255`.
+        bgp-advertisements:
+          description: |
+            Определяет BGP advertisements.
+          items:
+            properties:
+              aggregation-length:
+                description: |
+                  Опция aggregation-length позволяет «свернуть» префикс в более крупный.
+
+                  Работает для адресов IPv4.
+              localpref:
+                description: |
+                  Атрибут `BGP LOCAL_PREF` используется алгоритмом BGP best path.
+
+                  Путь с более высоким localpref предпочтительнее пути с более низким localpref.
+              communities:
+                description: |
+                  BGP communities, связанные с анонсом. Каждый элемент — это ключ из параметра [bgpCommunities](#parameters-bgpcommunities).
+  bgpCommunities:
+    description: |
+      Список BGP communities.
+    items:
+      type: object
+      additionalProperties:
+        description: |
+          Пара `ключ: значение`.

@@ -1,0 +1,16 @@
+- name: d8.log-shipper.warnings
+  rules:
+    - alert: D8LogShipperClusterLogDestinationD8LokiAuthorizationRequired
+      expr: |
+        max by (resource_name) (d8_log_shipper_cluster_log_destination_d8_loki_authorization_required) == 1
+      for: 5m
+      labels:
+        severity_level: "9"
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: Authorization parameters required for the ClusterLogDestination resource.
+        description: |-
+          Deckhouse has detected the ClusterLogDestination resource `{{$labels.resource_name}}` without authorization parameters.
+
+          Add the authorization parameters to the ClusterLogDestination resource following the [instructions](https://deckhouse.io/modules/log-shipper/faq.html#how-to-add-authorization-to-the-clusterlogdestination-resource).

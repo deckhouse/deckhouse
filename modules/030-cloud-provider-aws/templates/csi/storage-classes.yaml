@@ -1,0 +1,38 @@
+{{- range $index, $storageClass := .Values.cloudProviderAws.internal.storageClasses }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "ebs-csi-driver")) | nindent 2 }}
+  {{- include "helm_lib_module_storage_class_annotations" (list $ $index $storageClass.name) | nindent 2 }}
+  name: {{ $storageClass.name | quote }}
+provisioner: ebs.csi.aws.com
+parameters:
+  type: {{ $storageClass.type | quote }}
+{{- if hasKey $storageClass "iopsPerGB" }}
+  {{- if and (ne $storageClass.type "io1") (ne $storageClass.type "io2")  }}
+    {{ cat "`.iopsPerGB` parameter applies only for `io1` and `io2` volume typess" | fail }}
+  {{- end }}
+  iopsPerGB: {{ $storageClass.iopsPerGB | quote }}
+{{- end }}
+{{- if hasKey $storageClass "iops" }}
+  {{- if ne $storageClass.type "gp3" }}
+    {{ cat "`.iops` parameter applies only for gp3 volume types" | fail }}
+  {{- end }}
+  {{- if or (lt ($storageClass.iops | int) 3000) (gt ($storageClass.iops | int) 16000) }}
+    {{ printf "The value of `.iops` parameter: %d should be from 3000 to 16000" ($storageClass.iops | int) | fail }}
+  {{- end }}
+  iops: {{ $storageClass.iops | quote }}
+{{- end }}
+{{- if hasKey $storageClass "throughput" }}
+  {{- if ne $storageClass.type "gp3" }}
+    {{ cat "`.throughput` parameter applies only for gp3 volume types" | fail }}
+  {{- end }}
+  {{- if or (lt ($storageClass.throughput | int) 125) (gt ($storageClass.throughput | int) 1000) }}
+    {{ printf "The value of `.throughput` parameter: %d should be from 125 to 1000" ($storageClass.throughput | int) | fail }}
+  {{- end }}
+  throughput: {{ $storageClass.throughput | quote }}
+{{- end }}
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}

@@ -1,0 +1,5 @@
+node-manager:
+  fixes:
+    - summary: partial rollback of changes in images cluster-autoscaler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12854
+

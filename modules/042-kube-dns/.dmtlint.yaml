@@ -1,0 +1,21 @@
+linters-settings:
+  container:
+    exclude-rules:
+      controller-security-context:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
+      security-context:
+        - kind: Deployment
+          name: d8-kube-dns-sts-pods-hosts-appender-webhook
+  templates:
+    exclude-rules:
+      service-port:
+        - name: d8-kube-dns-sts-pods-hosts-appender-webhook
+          port: https
+  openapi:
+    exclude-rules:
+      enum:
+        - properties.internal.properties.specificNodeType

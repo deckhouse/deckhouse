@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetes:
+  - name: dexauthenticators
+    apiVersion: deckhouse.io/v1
+    kind: DexAuthenticator
+    queue: "dexauthenticators-list"
+    group: main
+    executeHookOnEvent: []
+    executeHookOnSynchronization: false
+    keepFullObjectsInMemory: false
+    jqFilter: |
+      {
+        "name": .metadata.name,
+        "namespace": .metadata.namespace,
+        "applicationDomain": .spec.applicationDomain,
+        "ingressClass": .spec.applicationIngressClassName,
+        "additionalDomains": [
+          .spec.additionalApplications[]? | [.domain, .ingressClassName]
+        ]
+      }
+kubernetesValidating:
+- name: dexauthenticators-unique.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1", "v1alpha1", "v2alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexauthenticators"]
+    scope:       "Namespaced"
+EOF
+}
+
+function __main__() {
+  newAuthNamespace=$(context::jq -r '.review.request.object.metadata.namespace')
+  newAuthName=$(context::jq -r '.review.request.object.metadata.name')
+  apiVersion=$(context::jq -r '.review.request.object.apiVersion')
+  
+
+  domains_to_check=()
+  
+  if [[ "$apiVersion" == "deckhouse.io/v2alpha1" ]]; then
+
+    while read -r domain ingressClass; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
+        domains_to_check+=("$domain $ingressClass")
+      fi
+    done < <(context::jq -r '.review.request.object.spec.applications[]? | "\(.domain) \(.ingressClassName)"')
+  else
+
+    main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
+    main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
+    domains_to_check+=("$main_domain $main_ingress_class")
+
+
+    while read -r domain ingressClass; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
+        domains_to_check+=("$domain $ingressClass")
+      fi
+    done < <(context::jq -r '.review.request.object.spec.additionalApplications[]? | "\(.domain) \(.ingressClassName)"')
+  fi
+  
+
+  for domain_pair in "${domains_to_check[@]}"; do
+    read -r domain ingressClass <<< "$domain_pair"
+    
+    result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" '
+      .snapshots.dexauthenticators[].filterResult | 
+      select(
+        .applicationDomain == $domain and .ingressClass == $class or
+        (.additionalDomains | arrays | any(.[0] == $domain and .[1] == $class))
+      )
+    ')
+    
+    if [ "$result" ]; then
+      existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
+      
+
+      if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
+        continue
+      fi
+      
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth' for domain '$domain'" }
+EOF
+      return 0
+    fi
+  done
+  
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+hook::run "$@"

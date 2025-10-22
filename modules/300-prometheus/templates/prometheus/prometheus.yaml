@@ -1,0 +1,366 @@
+{{- define "prometheus_resources" }} # for reference see modules/300-prometheus/hooks/detect_vpa_max.go
+cpu: 200m
+memory: 1000Mi
+{{- end }}
+
+{{- define "config_reloader_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "calcTimeout" -}}
+{{- $duration := . | default "30s" }}
+{{- $totalSeconds := 0 }}
+{{- range $match := regexFindAll "([0-9]+)([a-zA-Z]+)" $duration -1 }}
+  {{- $value := regexFind "[0-9]+" $match | int }}
+  {{- $unit := regexFind "[a-zA-Z]+" $match }}
+  {{- if eq $unit "y" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 31536000) }}
+  {{- else if eq $unit "w" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 604800) }}
+  {{- else if eq $unit "d" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 86400) }}
+  {{- else if eq $unit "h" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 3600) }}
+  {{- else if eq $unit "m" }}
+    {{- $totalSeconds = add $totalSeconds (mul $value 60) }}
+  {{- else if eq $unit "s" }}
+    {{- $totalSeconds = add $totalSeconds $value }}
+  {{- else if eq $unit "ms" }}
+    {{- $totalSeconds = add $totalSeconds (div $value 1000) }}
+  {{- end }}
+{{- end }}
+{{- $totalSeconds }}
+{{- end }}
+
+{{- define "toSeconds" -}}
+{{- $duration := . }}
+{{- $now := now }}
+{{- sub ($now | unixEpoch) ($now |  date_modify (printf "-%s" $duration) | unixEpoch) }}
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prometheus-main
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: prometheus-main
+  updatePolicy:
+    updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus"
+      minAllowed:
+        {{- include "prometheus_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: {{ .Values.prometheus.vpa.maxCPU | default .Values.prometheus.internal.vpa.maxCPU | quote }}
+        memory: {{ .Values.prometheus.vpa.maxMemory | default .Values.prometheus.internal.vpa.maxMemory | quote }}
+    - containerName: config-reloader
+      minAllowed:
+        {{- include "config_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: main
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  retention: {{ .Values.prometheus.retentionDays }}d
+  retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
+{{- if (.Values.global.enabledModules | has "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
+  version: v2.53.2
+{{- else }}
+  image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+  version: v2.55.1
+{{- end }}
+  enableRemoteWriteReceiver: true
+  enableFeatures:
+  - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
+  - extra-scrape-metrics # https://prometheus.io/docs/prometheus/2.44/feature_flags/#extra-scrape-metrics usage scrape_sample_limit
+  imagePullSecrets:
+  - name: deckhouse-registry
+  listenLocal: true
+  query:
+    maxSamples: 100000000
+    lookbackDelta: {{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
+  additionalArgs:
+    - name: scrape.timestamp-tolerance
+      value: 10ms
+  {{- include "prometheus_init_containers" (list . "prometheus-main-db") | nindent 2 }}
+  containers:
+  - name: prometheus
+    startupProbe:
+      failureThreshold: 300
+{{- if (.Values.global.enabledModules | has "prompp") }}
+    envFrom:
+      - configMapRef:
+          name: prometheus-pp-envs
+{{- end }}
+  - name: kube-rbac-proxy
+    {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 4 }}
+    image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+    args:
+    - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
+    - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+    - "--v=2"
+    - "--logtostderr=true"
+    - "--stale-cache-interval=1h30m"
+    - "--livez-path=/livez"
+    ports:
+    - containerPort: 9090
+      name: https
+    livenessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
+    readinessProbe:
+      httpGet:
+        path: /livez
+        port: 9090
+        scheme: HTTPS
+    env:
+    - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: KUBE_RBAC_PROXY_CONFIG
+      value: |
+        upstreams:
+        - upstream: http://127.0.0.1:9090/
+          path: /
+          authorization:
+            resourceAttributes:
+              namespace: d8-monitoring
+              apiGroup: monitoring.coreos.com
+              apiVersion: v1
+              resource: prometheuses
+              subresource: http
+              name: main
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+{{- end }}
+    volumeMounts:
+    - name: kube-rbac-proxy-ca
+      mountPath: /etc/kube-rbac-proxy
+  - name: config-reloader
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- include "config_reloader_resources" . | nindent 8 }}
+{{- end }}
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+              prometheus: longterm
+          topologyKey: kubernetes.io/hostname
+{{- if (include "helm_lib_ha_enabled" .) }}
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
+            prometheus: main
+        topologyKey: kubernetes.io/hostname
+{{- end }}
+  scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
+  scrapeTimeout: {{ mulf (include "calcTimeout" .Values.prometheus.scrapeInterval) 0.8 | int }}s
+  evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+  minReadySeconds: {{ mul (include "toSeconds" .Values.prometheus.scrapeInterval) 2 }}
+  # Empty field because when scraping metrics via the Federation API,
+  # labels from externalLabels are being added,
+  # which makes the series in long-term storage and regular Prometheus different
+  externalLabels: {}
+  prometheusExternalLabelName: ""
+  replicaExternalLabelName: ""
+  serviceAccountName: prometheus
+  podMonitorNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/monitor-watcher-enabled: "true"
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/monitor-watcher-enabled: "true"
+  ruleNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/rules-watcher-enabled: "true"
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/scrape-configs-watcher-enabled: "true"
+  probeNamespaceSelector:
+    matchLabels:
+      prometheus.deckhouse.io/probe-watcher-enabled: "true"
+  podMetadata:
+    labels:
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-warning: "94"
+      threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "96"
+    annotations:
+      checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
+  serviceMonitorSelector:
+    matchLabels:
+      prometheus: main
+  podMonitorSelector:
+    matchLabels:
+      prometheus: main
+  probeSelector:
+    matchLabels:
+      prometheus: main
+  scrapeConfigSelector:
+    matchLabels:
+      prometheus: main
+  secrets:
+  - alertmanagers-tls-config
+  rules:
+    alert:
+      resendDelay: 29s
+  ruleSelector:
+    matchLabels:
+      prometheus: main
+      component: rules
+{{- $externalLabels := .Values.prometheus.externalLabels }}
+{{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
+{{- if .Values.prometheus.internal.remoteWrite }}
+  remoteWrite:
+  {{- range .Values.prometheus.internal.remoteWrite }}
+  - url: {{ .spec.url }}
+    {{- if .spec.basicAuth }}
+    basicAuth:
+      username:
+        name: d8-prometheus-remote-write-{{ .name }}
+        key: username
+      password:
+        name: d8-prometheus-remote-write-{{ .name }}
+        key: password
+    {{- else if .spec.bearerToken }}
+    bearerToken: {{ .spec.bearerToken }}
+    {{- end }}
+    {{- if or .spec.customAuthToken .spec.headers }}
+    headers:
+      {{- if .spec.customAuthToken }}
+      X-Auth-Token: {{ .spec.customAuthToken | quote }}
+      {{- end }}
+      {{- range $key, $value := .spec.headers }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if .spec.writeRelabelConfigs }}
+    writeRelabelConfigs:
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
+      {{- with $externalLabels }}
+      {{- range $key, $value := . }}
+      - sourceLabels: [{{ $key }}]
+        regex: "^$"
+        targetLabel: {{ $key }}
+        replacement: {{ $value | quote }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .spec.tlsConfig }}
+      {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
+      {{- if .spec.tlsConfig.ca }}
+        {{- $_ := unset $tlsConfig "ca" }}
+        {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-remote-write-ca-%s" .name) "key" "ca.crt")) }}
+      {{- end }}
+    tlsConfig:
+      {{- $tlsConfig | toYaml | nindent 6 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+  additionalScrapeConfigs:
+    name: prometheus-main-additional-configs
+    key: scrapes.yaml
+  additionalAlertRelabelConfigs:
+    name: prometheus-main-additional-configs
+    key: alert-relabels.yaml
+  additionalAlertManagerConfigs:
+    name: prometheus-main-additional-configs
+    key: alert-managers.yaml
+{{- $alertmanagers_byservice := false }}
+{{- $alertmanagers_internal := false }}
+{{- if hasKey .Values.prometheus.internal.alertmanagers "byService" }}
+  {{- if len .Values.prometheus.internal.alertmanagers.byService }}
+    {{- $alertmanagers_byservice = true }}
+  {{- end }}
+{{- end }}
+{{- if hasKey .Values.prometheus.internal.alertmanagers "internal" }}
+  {{- if len .Values.prometheus.internal.alertmanagers.internal }}
+    {{- $alertmanagers_internal = true }}
+  {{- end }}
+{{- end }}
+  alerting:
+    alertmanagers:
+    - name: alerts-receiver
+      namespace: d8-monitoring
+      pathPrefix: /
+      port: http
+  {{- if $alertmanagers_byservice }}
+    {{- range .Values.prometheus.internal.alertmanagers.byService }}
+    - namespace: {{ .namespace }}
+      name: {{ .name }}
+      port: {{ .port }}
+      scheme: http
+      pathPrefix: {{ .pathPrefix }}
+    {{- end }}
+  {{- end }}
+  {{- if $alertmanagers_internal }}
+    {{- range .Values.prometheus.internal.alertmanagers.internal }}
+    - namespace: d8-monitoring
+      name: {{ .name }}
+      port: https
+      scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+    {{- end }}
+  {{- end }}
+{{- if .Values.global.modules.publicDomainTemplate }}
+  externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
+{{- end }}
+  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+    fsGroup: 64535
+  {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 2 }}
+  {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 2 }}
+  {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 2 }}
+{{- $storageClass := .Values.prometheus.internal.prometheusMain.effectiveStorageClass }}
+{{- if $storageClass }}
+  storage:
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.prometheus.internal.prometheusMain.diskSizeGigabytes }}Gi
+        storageClassName: {{ $storageClass }}
+{{- end }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
+      {{- include "prometheus_resources" . | nindent 6 }}
+  volumes:
+  - name: kube-rbac-proxy-ca
+    configMap:
+      defaultMode: 420
+      name: kube-rbac-proxy-ca.crt

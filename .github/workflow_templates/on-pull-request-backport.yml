@@ -1,0 +1,177 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Run automatic cherry-pick on backport PRs
+
+on:
+  pull_request:
+    types:
+      - closed
+      - labeled
+    branches:
+      - main
+  issue_comment:
+    types:
+      - created
+
+jobs:
+  detect_pr_by_label:
+    concurrency: source_pr
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.milestone != null && contains(github.event.pull_request.labels.*.name, 'status/backport') }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_branch: ${{ steps.from_milestone.outputs.release_branch }}
+      commit: ${{ steps.from_milestone.outputs.commit }}
+      pr_number: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Get Release branch from milestone
+        id: from_milestone
+        env:
+          MILESTONE: ${{ github.event.pull_request.milestone.title }}
+          HEAD_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          releaseBranch="release-$(echo ${MILESTONE} | sed -nre 's/v?([0-9]+\.[0-9]+)\.[0-9]+/\1/p')"
+          echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
+          echo "commit=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+  detect_pr_by_comment:
+    concurrency: source_pr
+    if: ${{ github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.state == 'closed' && github.event.pull_request.user.login != 'deckhouse-BOaTswain' && !contains(github.event.issue.labels.*.name, 'issue/release') }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_branch: ${{ steps.comment_info.outputs.branch }}
+      commit: ${{ steps.pr_info.outputs.commit }}
+      pr_number: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regexp_match
+        with:
+          text: ${{ github.event.comment.body }}
+          regex: '^/backport\sv?(\d+\.\d+)(\.\d+)?$' # /backport 1.34 || /backport v1.34 || /backport 1.34.12 || /backport v1.34.12
+      - name: Get comment info
+        id: comment_info
+        if: ${{ steps.regexp_match.outputs.match != null }}
+        env:
+          MINOR_RELEASE: ${{ steps.regexp_match.outputs.group1 }}
+        run: |
+          releaseBranch="release-${MINOR_RELEASE}"
+          echo "branch=${releaseBranch}" >> $GITHUB_OUTPUT
+      - name: Get Pull Request info
+        id: pr_info
+        if: ${{ steps.regexp_match.outputs.match != null }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const response = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{ github.event.issue.number }}
+            })
+            core.setOutput('commit', response.data.merge_commit_sha)
+
+  backport_to_release_branch:
+    runs-on: ubuntu-latest
+    needs: [detect_pr_by_label, detect_pr_by_comment]
+    if: always() && (needs.detect_pr_by_label.outputs.release_branch || needs.detect_pr_by_comment.outputs.release_branch)
+    steps:
+      - name: Detect source
+        id: prepare
+        run: |
+          releaseBranch=${{needs.detect_pr_by_label.outputs.release_branch}}
+          commit=${{needs.detect_pr_by_label.outputs.commit}}
+          prNumber=${{needs.detect_pr_by_label.outputs.pr_number}}
+          if [ -z $releaseBranch ]; then
+            releaseBranch=${{needs.detect_pr_by_comment.outputs.release_branch}}
+            commit=${{needs.detect_pr_by_comment.outputs.commit}}
+            prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
+          fi
+          echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
+          echo "commit=${commit}" >> $GITHUB_OUTPUT
+          echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
+      - name: Check release branch exists
+        id: check_target_branch
+        uses: actions/github-script@v6
+        env:
+          RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
+        with:
+          script: |
+            const response = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'heads/' + process.env.RELEASE_BRANCH
+            })
+      - name: Checkout
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      - name: Cherry pick
+        id: cherry_pick_pr
+        uses: deckhouse/backport-action@v1.0.0
+        env:
+          RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
+          COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
+          SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
+          branch: ${{ env.RELEASE_BRANCH }}
+          commit: ${{ env.COMMIT_SHA }}
+          labels: auto,backported
+          automerge: true
+          merge_method: squash
+      - name: Remove backport label
+        if: always()
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ steps.prepare.outputs.pr_number }}
+          labels: "status/backport"
+      - name: Add success label
+        if: steps.cherry_pick_pr.conclusion == 'success'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ steps.prepare.outputs.pr_number }}
+          labels: "status/backport/success"
+      - name: Add successful comment
+        if: steps.cherry_pick_pr.conclusion == 'success'
+        env:
+          release_branch: ${{ steps.prepare.outputs.release_branch }}
+          cherry_pr_number: ${{ steps.cherry_pick_pr.outputs.cherry_pr_number }}
+          cherry_pr_url: ${{ steps.cherry_pick_pr.outputs.cherry_pr_url }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ steps.prepare.outputs.pr_number }}
+          reactions: hooray
+          body: "Cherry pick PR [${{ env.cherry_pr_number }}](${{ env.cherry_pr_url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
+      - name: Add error label
+        if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ steps.prepare.outputs.pr_number }}
+          labels: "status/backport/failed"
+      - name: Add error comment
+        if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
+        uses: peter-evans/create-or-update-comment@v2
+        env:
+          error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
+          common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          issue-number: ${{ steps.prepare.outputs.pr_number }}
+          reactions: "confused"
+          body: ${{ env.error_message || env.common_error }}

@@ -1,0 +1,637 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: securitypolicies.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: securitypolicies
+    singular: securitypolicy
+    kind: SecurityPolicy
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      additionalPrinterColumns:
+      - jsonPath: .status.deckhouse.synced
+        name: Synced
+        type: string
+        description: A status message that is shown if the current version of the security policy has been processed by the operator.
+      - name: Observed
+        jsonPath: .status.deckhouse.observed.lastTimestamp
+        type: string
+        description: A timestamp of when the resource was last observed by the operator.
+        priority: 1
+      - name: Processed
+        jsonPath: .status.deckhouse.processed.lastTimestamp
+        type: string
+        description: A timestamp of when the resource was last processed by the operator.
+        priority: 1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ["spec"]
+          description: |
+            Describes a security policy for a cluster.
+
+            Each `SecurityPolicy` custom resource describes rules for the objects in the cluster.
+          properties:
+            status:
+              type: object
+              properties:
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last observed version of the resource was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: A timestamp of when the operator last noted a change to the resource.
+                        checkSum:
+                          type: string
+                          description: The checksum of last observed resource.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: A timestamp of when the resource was last applied in the cluster.
+                        checkSum:
+                          type: string
+                          description: The checksum of last applied resource.
+            spec:
+              type: object
+              required: ["match", "policies"]
+              properties:
+                enforcementAction:
+                  type: string
+                  default: Deny
+                  description: |
+                    An enforcement action as a result of the constraint:
+                    - `Deny` — Deny action.
+                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana in dashboard `Security/Admission policy engine`.
+                    - `Warn` — No action; similar to `Dryrun`. Provides information about the constraint that would result in a denial if the `Deny` action is used.
+                  enum:
+                    - Warn
+                    - Deny
+                    - Dryrun
+                policies:
+                  type: object
+                  description: |
+                    Policies that pods and containers must comply with.
+                  properties:
+                    allowedHostPaths:
+                      type: array
+                      description: The list of allowed hostpath prefixes. An empty list means any path can be used.
+                      x-doc-examples: [[{"pathPrefix":"/dev", "readOnly": true}]]
+                      items:
+                        type: object
+                        required: ["pathPrefix"]
+                        properties:
+                          pathPrefix:
+                            type: string
+                            description: |
+                              The path prefix to match against the host volume.
+
+                              It does not support the `*` mask. Trailing slashes are trimmed when validating the path prefix with a host path.
+
+                              For example, the `/foo` prefix allows `/foo`, `/foo/` and `/foo/bar` path, but doesn't allow `/food` or `/etc/foo` path.
+                          readOnly:
+                            type: boolean
+                            default: false
+                            description: When set to true, allows host volumes to be matched against the [pathPrefix](#securitypolicy-v1alpha1-spec-policies-allowedhostpaths-pathprefix) only if all the volume mounts are read-only.
+                    allowHostIPC:
+                      type: boolean
+                      description: Allows sharing the host's IPC namespace with containers.
+                    allowHostPID:
+                      type: boolean
+                      description: Allows sharing the host's PID namespace with containers.
+                    allowHostNetwork:
+                      type: boolean
+                      description: Allows containers to use the host's network.
+                    allowRbacWildcards:
+                      type: boolean
+                      default: true
+                      description: |
+                        Allows using wildcards (`*`) in namespaced Role and RoleBinding resources.
+
+                        ClusterRole and ClusterRoleBinding are not validated by SecurityPolicy.
+
+                        **By default** (if not specified) — `true`. This means that if the field is omitted or explicitly set to `true`, using wildcards is allowed. If you want to deny wildcards, set this parameter to `false`.
+                    allowedHostPorts:
+                      type: array
+                      description: The list of `hostPort` ranges allowed by the rule.
+                      items:
+                        type: object
+                        properties:
+                          min:
+                            type: integer
+                            description: Min value for the `hostPort`.
+                          max:
+                            type: integer
+                            description: Max value for the `hostPort`.
+                    allowPrivileged:
+                      type: boolean
+                      description: |
+                        Allows running containers in a privileged mode.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
+                    allowPrivilegeEscalation:
+                      type: boolean
+                      description: |
+                        Allows container processes to gain more privileges than its parent process.
+
+                        **By default** (if not specified) — `false`. This means that if the field is omitted or explicitly set to `false`, the container is denied any privilege escalation. If you want to allow elevated privileges, set this parameter to `true`.
+                    allowedProcMount:
+                      type: string
+                      description: Allows `/proc` mount type for containers.
+                      x-doc-examples: ["Unmasked."]
+                      enum:
+                        - Default
+                        - Unmasked
+                    allowedCapabilities:
+                      type: array
+                      description: |
+                        The list of capabilities that the containers are permitted to use.
+
+                        To allow all capabilities, use `ALL`.
+                      x-doc-examples: [["SETGID", "SETUID", "NET_BIND_SERVICE"]]
+                      items:
+                        type: string
+                        description: A linux capability.
+                        enum: &caps
+                          - ALL
+                          - SETPCAP
+                          - SYS_MODULE
+                          - SYS_RAWIO
+                          - SYS_PACCT
+                          - SYS_ADMIN
+                          - SYS_NICE
+                          - SYS_RESOURCE
+                          - SYS_TIME
+                          - SYS_TTY_CONFIG
+                          - MKNOD
+                          - AUDIT_WRITE
+                          - AUDIT_CONTROL
+                          - MAC_OVERRIDE
+                          - MAC_ADMIN
+                          - NET_ADMIN
+                          - SYSLOG
+                          - CHOWN
+                          - NET_RAW
+                          - DAC_OVERRIDE
+                          - FOWNER
+                          - DAC_READ_SEARCH
+                          - FSETID
+                          - KILL
+                          - SETGID
+                          - SETUID
+                          - LINUX_IMMUTABLE
+                          - NET_BIND_SERVICE
+                          - NET_BROADCAST
+                          - IPC_LOCK
+                          - IPC_OWNER
+                          - SYS_CHROOT
+                          - SYS_PTRACE
+                          - SYS_BOOT
+                          - LEASE
+                          - SETFCAP
+                          - WAKE_ALARM
+                          - BLOCK_SUSPEND
+                    requiredDropCapabilities:
+                      type: array
+                      description: |
+                        The list of capabilities that have to be dropped from the containers.
+
+                        To exclude all capabilities, use `ALL`'.
+                      x-doc-examples: [["SETGID", "SETUID", "NET_BIND_SERVICE"]]
+                      items:
+                        type: string
+                        description: A linux capability to drop from the containers' specs.
+                        enum: *caps
+                    allowedAppArmor:
+                      type: array
+                      description: |
+                        The list of AppArmor profiles the containers are permitted to use.
+                      x-doc-examples: [["runtime/default", "unconfined"]]
+                      items:
+                        type: string
+                        description: An AppArmor profile.
+                    allowedFlexVolumes:
+                      type: array
+                      description: The list of Flex Volume drivers the containers are permitted to use.
+                      items:
+                        type: object
+                        properties:
+                          driver:
+                            type: string
+                            description: A driver name.
+                    allowedUnsafeSysctls:
+                      type: array
+                      description: |
+                        The list of explicitly allowed unsafe sysctls.
+
+                        To allow all unsafe sysctls, use `*`.
+                      x-doc-examples: [["kernel.msg*", "net.core.somaxconn"]]
+                      items:
+                        type: string
+                    allowedServiceTypes:
+                      type: array
+                      description: The list of allowed [service types](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+                      x-doc-examples: [["LoadBalancer", "ClusterIP"]]
+                      items:
+                        type: string
+                        enum:
+                          - ClusterIP
+                          - NodePort
+                          - LoadBalancer
+                          - ExternalName
+                    blockWildcardDomains:
+                      type: boolean
+                      description: Block creation of Ingress objects with `*` in DNS domains.
+                    forbiddenSysctls:
+                      type: array
+                      description: |
+                        The list of forbidden sysctls.
+
+                        Takes precedence over allowed unsafe sysctls ([allowedUnsafeSysctls](#securitypolicy-v1alpha1-spec-policies-allowedunsafesysctls)).
+                      x-doc-examples: [["kernel.msg*", "net.core.somaxconn"]]
+                      items:
+                        type: string
+                    fsGroup:
+                      type: object
+                      description: Specifies which `fsGroup` values the security context is permitted to use.
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: Specifies the strategy of the `fsGroup` selection.
+                          enum:
+                            - MustRunAs
+                            - MayRunAs
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: The list of `fsGroup` ID ranges that are allowed in `MustRunAs' mode.
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: Min ID value.
+                              max:
+                                type: integer
+                                description: Max ID value.
+                    runAsUser:
+                      type: object
+                      description: Specifies which `runAsUser` values the security context is permitted to use.
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: Specifies the strategy of the user ID selection.
+                          enum:
+                            - MustRunAs
+                            - MustRunAsNonRoot
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: The list of user ID ranges that are allowed in `MustRunAs' mode.
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: Min ID value.
+                              max:
+                                type: integer
+                                description: Max ID value.
+                    runAsGroup:
+                      type: object
+                      description: Specifies which `runAsGroup` values the security context is permitted to use.
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: Specifies the strategy of the group ID selection.
+                          enum:
+                            - MustRunAs
+                            - MayRunAs
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: The list of group ID ranges that are allowed in `MustRunAs' mode.
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: Min ID value.
+                              max:
+                                type: integer
+                                description: Max ID value.
+                    supplementalGroups:
+                      type: object
+                      description: Specifies what supplemental groups are allowed to be used by the security context.
+                      required: ["rule"]
+                      properties:
+                        rule:
+                          type: string
+                          description: Specifies the strategy of the supplemental group ID selection.
+                          enum:
+                            - MustRunAs
+                            - MayRunAs
+                            - RunAsAny
+                        ranges:
+                          type: array
+                          description: The list of supplemental group ID ranges that are allowed in `MustRunAs' mode.
+                          items:
+                            type: object
+                            properties:
+                              min:
+                                type: integer
+                                description: Min ID value.
+                              max:
+                                type: integer
+                                description: Max ID value.
+                    readOnlyRootFilesystem:
+                      type: boolean
+                      description: If set to true, only the pods with the read-only root filesystem across all containers will be permitted to run. See the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core) for more details.
+                    automountServiceAccountToken:
+                      type: boolean
+                      description: Allows pods to run with `automountServiceAccountToken` enabled.
+                    allowedClusterRoles:
+                      type: array
+                      description: "A list of allowed cluster roles to bind to users."
+                      items:
+                        type: string
+                    seccompProfiles:
+                      type: object
+                      description: Specifies the list of allowed profiles that can be set for the Pod or container's seccomp annotations.
+                      properties:
+                        allowedProfiles:
+                          type: array
+                          description: |
+                            The list of allowed profile values for seccomp on Pods/containers.
+
+                            Both formats are supported:
+                            - Via annotations: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                              `localhost/*` allows any local profile.
+                            - Via securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              For `Localhost`, specify the allowed profiles using the `allowedLocalhostFiles` parameter.
+
+                            Profile types:
+                            - `Unconfined` — no restrictions (not recommended for security reasons).
+                            - `RuntimeDefault` — the default profile provided by the container runtime (e.g., Docker, CRI-O).
+                            - `Localhost` — a custom profile defined on the host (flexible and tailored to the application).
+
+                            Using `*` allows all profiles. It's not necessary to specify both formats — they are automatically mapped to each other.
+                          items:
+                            type: string
+                        allowedLocalhostFiles:
+                          type: array
+                          description: |
+                            Defines the local seccomp profiles (in JSON format) that can be used if `Localhost` is set in the `allowedProfiles` parameter.
+
+                            An empty list prohibits the use of any local profiles.
+                          items:
+                            type: string
+                    seLinux:
+                      type: array
+                      description: Specifies which SElinux labels the security context is permitted to use.
+                      items:
+                        type: object
+                        properties:
+                          level:
+                            type: string
+                            description: A SELinux level label that applies to the container.
+                          role:
+                            type: string
+                            description: A SELinux role label that applies to the container.
+                          type:
+                            type: string
+                            description: A SELinux type label that applies to the container.
+                          user:
+                            type: string
+                            description: A SELinux user label that applies to the container.
+                    allowedVolumes:
+                      type: array
+                      description: The set of the permitted volume plugins.
+                      x-doc-examples: [["hostPath", "persistentVolumeClaim"]]
+                      items:
+                        type: string
+                        enum:
+                          - '*'
+                          - none
+                          - awsElasticBlockStore
+                          - azureDisk
+                          - azureFile
+                          - cephFS
+                          - cinder
+                          - configMap
+                          - csi
+                          - downwardAPI
+                          - emptyDir
+                          - ephemeral
+                          - fc
+                          - flexVolume
+                          - flocker
+                          - gcePersistentDisk
+                          - gitRepo
+                          - glusterfs
+                          - hostPath
+                          - iscsi
+                          - nfs
+                          - persistentVolumeClaim
+                          - photonPersistentDisk
+                          - portworxVolume
+                          - projected
+                          - quobyte
+                          - rbd
+                          - scaleIO
+                          - secret
+                          - storageos
+                          - vsphereVolume
+                    verifyImageSignatures:
+                      type: array
+                      x-doc-d8Editions:
+                        - se+
+                        - ee
+                        - cse-lite
+                        - cse-pro
+                      x-doc-examples:
+                        - - reference: docker.io/myrepo/*
+                            publicKeys:
+                                - |-
+                                  -----BEGIN PUBLIC KEY-----
+                                  .....
+                                  -----END PUBLIC KEY-----
+                          - reference: company.registry.com/*
+                            dockerCfg: <Base64_dockerCfg>
+                            publicKeys:
+                                - |-
+                                  -----BEGIN PUBLIC KEY-----
+                                  .....
+                                  -----END PUBLIC KEY-----
+                      description: |
+                        List of policies to verify container images signatures.
+
+                        Container images must be signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                      items:
+                        type: object
+                        required: ["publicKeys", "reference"]
+                        properties:
+                          dockerCfg:
+                            type: string
+                            description: |
+                              A string in Base64 with authentication data for the container image repository.
+
+                              If the container images are available anonymously, it is not specified.
+                          publicKeys:
+                            type: array
+                            description: The list of Cosign compliant public keys.
+                            items:
+                              type: string
+                          ca:
+                            type: string
+                            description: |
+                              A custom certificate authority to use when connecting to the container image repository.
+                          reference:
+                            type: string
+                            description: |
+                              Absolute address or template for container images.
+
+                              If it contains the `*` symbol, it is considered a template for container image addresses. The `*` symbol can only appear once and only at the end. For example, for the value `company.registry.com/*`, any container images from the repository `company.registry.com` will be checked with the specified keys and access parameters.
+
+                              If it does not contain the `*` symbol, it is considered an absolute address for a container image. For example, for the value `company.registry.com/nginx`, only the nginx image from the repository `company.registry.com` will be checked with the specified keys and access parameters.
+                            x-doc-examples: ["docker.io/myuser/*", "*"]
+                            pattern: '^[a-z0-9\.\-:@\/]*\*?$'
+                match:
+                  type: object
+                  description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.
+                  anyOf:
+                  - required: [namespaceSelector]
+                  - required: [labelSelector]
+                  properties:
+                    namespaceSelector:
+                      anyOf:
+                        - required: [matchNames]
+                        - required: [excludeNames]
+                        - required: [labelSelector]
+                      type: object
+                      description: Specifies the Namespace selector to filter objects with.
+                      properties:
+                        matchNames:
+                          type: array
+                          description: Includes only a particular set of namespaces. Supports glob pattern.
+                          items:
+                            type: string
+                        excludeNames:
+                          type: array
+                          description: Includes all namespaces except a particular set. Support glob pattern.
+                          items:
+                            type: string
+                        labelSelector:
+                          type: object
+                          description: |
+                            Specifies the label selector to filter namespaces.
+
+                            You can get more info in [the documentation](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                          anyOf:
+                            - required: [ matchLabels ]
+                            - required: [ matchExpressions ]
+                          properties:
+                            matchLabels:
+                              type: object
+                              description: The list of the labels that the namespace should have.
+                              x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                              additionalProperties:
+                                type: string
+                            matchExpressions:
+                              type: array
+                              description: The list of label expressions for namespaces.
+                              x-doc-examples:
+                              - - key: tier
+                                  operator: In
+                                  values:
+                                  - production
+                                  - staging
+                              items:
+                                type: object
+                                required:
+                                  - key
+                                  - operator
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                    enum:
+                                      - In
+                                      - NotIn
+                                      - Exists
+                                      - DoesNotExist
+                                  values:
+                                    type: array
+                                    items:
+                                      type: string
+                    labelSelector:
+                      type: object
+                      description: |
+                        Specifies the label selector to filter Pods with.
+
+                        You can get more into [here](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                      anyOf:
+                        - required:
+                            - matchLabels
+                        - required:
+                            - matchExpressions
+                      properties:
+                        matchLabels:
+                          type: object
+                          description: The list of the labels that the Pod should have.
+                          x-doc-examples: [{ "foo": "bar", "baz": "who" }]
+                          additionalProperties:
+                            type: string
+                        matchExpressions:
+                          type: array
+                          description: The list of label expressions for Pods.
+                          x-doc-examples:
+                          - - key: tier
+                              operator: In
+                              values:
+                              - production
+                              - staging
+                          items:
+                            type: object
+                            required:
+                              - key
+                              - operator
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string

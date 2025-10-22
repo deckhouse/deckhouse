@@ -1,0 +1,11 @@
+name: monitoring-kubernetes-control-plane
+stage: "General Availability"
+subsystems:
+  - observability
+namespace: d8-monitoring
+
+requirements:
+  modules:
+    prometheus: ">= 0.0.0"
+    control-plane-manager: ">= 0.0.0"
+  deckhouse: ">= 1.68"

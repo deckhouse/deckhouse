@@ -1,0 +1,47 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: AzureMachineClass
+metadata:
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  location: {{ .Values.nodeManager.internal.cloudProvider.azure.location | quote }}
+  resourceGroup: {{ .Values.nodeManager.internal.cloudProvider.azure.resourceGroupName }}
+  subnetInfo:
+    vnetName: {{ .Values.nodeManager.internal.cloudProvider.azure.vnetName }}
+    subnetName: {{ .Values.nodeManager.internal.cloudProvider.azure.subnetName }}
+  secretRef:
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+    namespace: d8-cloud-instance-manager
+  {{- $additionalTags := mergeOverwrite dict (.Values.nodeManager.internal.cloudProvider.azure.additionalTags | default dict) (.nodeGroup.instanceClass.additionalTags | default dict) }}
+  tags:
+    # This is mandatory as the safety controller uses this tag to identify VMs created by this controller.
+    kubernetes.io-cluster-{{ .Values.global.discovery.clusterUUID }}: "1"
+    kubernetes.io-role-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+    {{- range $k, $v := $additionalTags }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+  properties:
+    hardwareProfile:
+      vmSize: {{ .nodeGroup.instanceClass.machineSize | quote }}
+    storageProfile:
+      imageReference:
+        # Uniform Resource Name of the OS image to be used , it has the format 'publisher:offer:sku:version'
+        urn: {{ .nodeGroup.instanceClass.urn | default .Values.nodeManager.internal.cloudProvider.azure.urn | quote }}
+      osDisk:
+        caching: "ReadWrite" # Caching Strategy (None/ReadOnly/ReadWrite)
+        managedDisk:
+          storageAccountType: {{ .nodeGroup.instanceClass.diskType | default .Values.nodeManager.internal.cloudProvider.azure.diskType | quote }}
+        diskSizeGB: {{ .nodeGroup.instanceClass.diskSizeGb | default 50 }}
+        createOption: "FromImage" # Create option for disk (Empty/Attach/FromImage)
+    osProfile:
+      adminUsername: azureuser
+      linuxConfiguration:
+        disablePasswordAuthentication: true
+        ssh:
+          publicKeys:
+            path: /home/azureuser/.ssh/authorized_keys
+            keyData: {{ .Values.nodeManager.internal.cloudProvider.azure.sshPublicKey }}
+    zone: {{ .zoneName }}
+    networkProfile:
+      acceleratedNetworking: {{ .nodeGroup.instanceClass | dig "acceleratedNetworking" true }}

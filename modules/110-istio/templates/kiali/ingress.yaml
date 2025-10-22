@@ -1,0 +1,51 @@
+{{- if .Values.global.modules.publicDomainTemplate }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kiali
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kiali")) | nindent 2 }}
+  annotations:
+    web.deckhouse.io/export-name: "istio"
+    web.deckhouse.io/export-icon: "/public/img/istio.ico"
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.istio.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
+    nginx.ingress.kubernetes.io/auth-signin: {{ .Values.istio.auth.externalAuthentication.authSignInURL | quote }}
+    nginx.ingress.kubernetes.io/auth-url: {{ .Values.istio.auth.externalAuthentication.authURL | quote }}
+  {{- else }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: kiali-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+  {{- end }}
+  {{- if .Values.istio.auth.satisfyAny }}
+    nginx.ingress.kubernetes.io/satisfy: "any"
+  {{- end }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
+      proxy_ssl_protocols TLSv1.2;
+      proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" . | nindent 6 }}
+spec:
+  ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "istio") }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: kiali
+            port:
+              name: https
+        path: /
+        pathType: ImplementationSpecific
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
+  tls:
+    - hosts:
+        - {{ include "helm_lib_module_public_domain" (list . "istio") }}
+      secretName: {{ include "helm_lib_module_https_secret_name" (list . "istio-ingress-tls") }}
+  {{- end }}
+{{- end }}

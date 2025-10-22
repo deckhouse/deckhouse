@@ -1,0 +1,127 @@
+positive:
+  configValues:
+  - logLevel: Info
+    bundle: Default
+  - logLevel: Error
+    bundle: Minimal
+  - update:
+      mode: Manual
+  - update:
+      mode: Auto
+      windows:
+        - from: '8:00'
+          to: '13:00'
+  - update:
+      mode: Auto
+  - update:
+      notification:
+        webhook: https://example.com/webhook
+        auth:
+          basic:
+            username: user
+            password: pass
+  - update:
+      notification:
+        webhook: https://example.com/webhook
+        auth:
+          bearerToken: token
+
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        license: "somekey"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+        password: "p"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Unmanaged
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+        license: "somekey"
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+        password: "p"
+  values:
+  - internal:
+      currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
+negative:
+  configValues:
+  - logLevel: FooBar
+    bundle: Default
+# TODO oneOf is deleted in values.yaml, this case is positive now.
+#  - update:
+#      mode: Manual
+#      windows:
+#        - from: '8:00'
+#          to: '13:00'
+  - registry:
+      mode: Unmanaged
+      unmanaged: {}
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+        password: "p"
+  - registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+        license: "key"
+        username: "u"
+        password: "p"
+  - registry:
+      mode: Unmanaged
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+  - registry:
+      mode: Direct
+  - registry:
+      mode: Direct
+      direct: {}
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        username: "u"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        password: "p"
+  - registry:
+      mode: Direct
+      direct:
+        imagesRepo: registry.deckhouse.io/test
+        license: "key"
+        username: "u"
+        password: "p"
+  - registry:
+      mode: Direct
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/test
+
+  values:
+  - internal:
+      currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev??sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4

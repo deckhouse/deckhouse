@@ -1,0 +1,84 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+#  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - d8
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "d8": "{{ .CandiVersionMap.d8.d8CliVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-bullseye
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: common/task-artifact
+  add: /task
+  to: /usr/local/bin/task
+  before: install
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libbtrfs-dev -y
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+  - export GOPRIVATE="flant.internal"
+  - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+  - git config --global --add safe.directory '*'
+  - mkdir -p ~/.ssh
+  - touch ~/.ssh/known_hosts
+  - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
+  - cd /src/deckhouse-cli
+  - task build:dist:linux:amd64
+  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
+  - mv /src/scripts/* /
+  - chmod +x /d8 /install /uninstall
+  - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer

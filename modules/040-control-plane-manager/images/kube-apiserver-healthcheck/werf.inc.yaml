@@ -1,0 +1,50 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+fromCacheVersion: 2025-06-11
+import:
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/kube-apiserver-healthcheck
+  to: /usr/local/bin/kube-apiserver-healthcheck
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/kube-apiserver-healthcheck"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/golang-alpine
+fromCacheVersion: 2025-06-11
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
+  - chown 0:64535 kube-apiserver-healthcheck
+  - chmod 0700 kube-apiserver-healthcheck
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/
+  to: /src
+  includePaths:
+  - go.mod
+  - go.sum
+  - main.go

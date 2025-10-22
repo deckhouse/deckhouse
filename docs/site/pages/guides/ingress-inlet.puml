@@ -1,0 +1,40 @@
+@startuml
+
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam PartitionFontColor grey
+skinparam backgroundColor transparent
+
+if (\nIs ordering of\nload balancers supported?\n) then (Yes)
+partition OpenStack-based cloud, AWS, GCP, Azure... {
+  split
+    :inlet **LoadBalancer**;
+     kill
+  split again
+    :inlet **LoadBalancerWithProxyProtocol**;
+    kill
+  end split
+  }
+else (No)
+partition Bare metal, vSphere cloud... {
+  split
+    ->Option 1;
+    :Add multiple DNS A-records;
+  split again
+    ->Option 2;
+    :Use external Load Balancer
+    (Cloudflare, Qrator, MetalLB (for bare metal)...);
+  end split
+  split
+     :inlet **HostPort**;
+     kill
+  split again
+    :inlet **HostPortWithProxyProtocol**;
+    kill
+  end split
+  }
+endif
+@enduml

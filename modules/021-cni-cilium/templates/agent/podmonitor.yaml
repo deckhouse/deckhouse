@@ -1,0 +1,31 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cilium-agent
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "agent" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: "cilium-agent"
+  selector:
+    matchLabels:
+      app: agent
+  namespaceSelector:
+    matchNames:
+    - d8-{{ .Chart.Name }}
+{{- end }}

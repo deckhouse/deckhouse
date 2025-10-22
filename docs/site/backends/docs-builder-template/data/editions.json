@@ -1,0 +1,40 @@
+{
+  "ce": {
+    "name": "CE",
+    "title": "Community Edition"
+  },
+  "be": {
+    "name": "BE",
+    "title": "Basic Edition"
+  },
+  "se": {
+    "name": "SE",
+    "title": "Standard Edition"
+  },
+  "ee": {
+    "name": "EE",
+    "title": "Enterprise Edition"
+  },
+  "cse-lite": {
+    "name": "CSE Lite",
+    "name_version": "CSE Lite (1.67)",
+    "title": "Certified Security Edition Lite (1.67)",
+    "title_version": "Certified Security Edition Lite",
+    "languages": [
+      "ru"
+    ]
+  },
+  "cse-pro": {
+    "name": "CSE Pro",
+    "name_version": "CSE Pro (1.67)",
+    "title": "Certified Security Edition Pro",
+    "title_version": "Certified Security Edition Pro (1.67)",
+    "languages": [
+      "ru"
+    ]
+  },
+  "se-plus": {
+    "name": "SE+",
+    "title": "Standard Edition+"
+  }
+}

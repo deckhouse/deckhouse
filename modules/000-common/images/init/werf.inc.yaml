@@ -1,0 +1,23 @@
+{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep /bin/true" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+git:
+{{- include "image mount points" . }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y netcat
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+

@@ -1,0 +1,50 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/usr/sbin/pmacctd"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b 1.7.9 $(cat /run/secrets/SOURCE_REPO)/pmacct/pmacct.git .
+  - |
+    cat > .gitmodules <<EOF
+    [submodule "src/external_libs/libcdada"]
+      path = src/external_libs/libcdada
+      url = $(cat /run/secrets/SOURCE_REPO)/msune/libcdada.git
+    EOF
+  - git submodule update --init
+  - rm -rf /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: common/relocate-artifact
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential libpcap-devel libjansson-devel
+  install:
+  - cd /src
+  - ./autogen.sh
+  - ./configure --prefix=/usr --enable-jansson
+  - make
+  - make install
+  - /binary_replace.sh -i "/usr/sbin/pmacctd" -o /relocate

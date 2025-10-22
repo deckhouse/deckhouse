@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-priority-expander
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | nindent 2 }}
+data:
+  priorities: |-
+    {{- if hasKey $.Values.nodeManager.internal "clusterAutoscalerPriorities" }}
+    {{- range $k, $v := $.Values.nodeManager.internal.clusterAutoscalerPriorities }}
+    {{ $k | atoi }}:
+      {{- $v | toYaml | nindent 6 }}
+    {{- end }}
+    {{- else }}
+    {}
+    {{- end }}

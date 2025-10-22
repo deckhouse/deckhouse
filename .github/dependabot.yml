@@ -1,0 +1,875 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+version: 2
+
+updates:
+# go.mod
+- package-ecosystem: "gomod"
+  directory: "/deckhouse-controller/register"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/dhctl"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/docs/site/backends/docs-builder"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/docs/site/backends/registry-modules-watcher"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/140-user-authz/images/webhook/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/coredns/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/iptables-loop/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/015-admission-policy-engine/images/trivy-provider/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer-legacy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/infra-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/030-cloud-provider-vcd/images/infra-controller-manager-legacy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/040-node-manager/images/d8-shutdown-inhibitor/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/api-proxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/metadata-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/metrics-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/500-operator-trivy/images/report-updater/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/610-service-with-healthchecks/images/artifact"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/cloud-data"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/dependency/k8s/drain"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/dependency/vsphere"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/registry"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/registry-packages-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/000-common/images/check-kernel-version/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/000-common/images/vxlan-offloading-fixer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/002-deckhouse/images/webhook-handler/src/label-converter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/toml-merge/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/check-wg-kernel-compat/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/safe-agent-updater/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-aws/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-azure/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/capdvp-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/cloud-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/dvp-common"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/dvp-csi-driver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-gcp/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-data-discoverer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-metrics-exporter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-yandex/images/cloud-migrator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/031-local-path-provisioner/images/helper/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/036-kube-proxy/images/init-container/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/bashible-apiserver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/caps-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/early-oom/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/fencing-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/dex-authenticator/url-exec-prober"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/self-signed-generator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/alerts-receiver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/grafana-v10/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/300-prometheus/images/trickster/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/301-prometheus-metrics-adapter/images/prometheus-reverse-proxy/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/340-extended-monitoring/images/extended-monitoring-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/340-monitoring-ping/images/monitoring-ping/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/failover-cleaner/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/kube-rbac-proxy/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/protobuf-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/proxy-failover/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/proxy-failover-iptables/failover"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/460-log-shipper/images/vector/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/470-chrony/images/chrony/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/500-openvpn/images/easyrsa-migrator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/500-openvpn/images/openvpn/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/500-upmeter/images/smoke-mini/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/500-upmeter/images/upmeter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/log"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/metrics-storage"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/tools"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/tools/regcopy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+# pip
+- package-ecosystem: "pip"
+  directory: "/.github/scripts/python/e2e-commander-clean"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/ee/modules/450-keepalived/images/keepalived/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/ee/modules/450-network-gateway/images/dnsmasq/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/modules/002-deckhouse/images/webhook-handler/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/modules/300-prometheus/images/grafana-dashboard-provisioner/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+# npm
+- package-ecosystem: "npm"
+  directory: "/modules/500-upmeter/images/webui/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+
+# Do not update actions because we use templating yet dependabot tries to update autogenerated files
+- package-ecosystem: "github-actions"
+  directory: "/"
+  labels:
+  - "type/dependencies"
+  - "area/dx"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0

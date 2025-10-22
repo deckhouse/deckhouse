@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webui
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webui")) | nindent 2 }}
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  selector:
+    app: webui

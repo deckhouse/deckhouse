@@ -1,0 +1,33 @@
+giterminismConfigVersion: 1
+config:
+  goTemplateRendering: # The rules for the Go-template functions
+    allowEnvVariables:
+      - /CI_.+/
+      - /REPO_MCM_.+/
+      - SOURCE_REPO
+      - GOPROXY
+      - WERF_DISABLE_META_TAGS
+      - CLOUD_PROVIDERS_SOURCE_REPO
+      - OBSERVABILITY_SOURCE_REPO
+      - DISTRO_PACKAGES_PROXY
+      - CARGO_PROXY
+      - DECKHOUSE_PRIVATE_REPO
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
+      - SVACE_ENABLED
+      - SVACE_ANALYZE_HOST
+      - SVACE_ANALYZE_SSH_USER
+  secrets:
+    allowValueIds:
+      - SOURCE_REPO
+      - GOPROXY
+      - CLOUD_PROVIDERS_SOURCE_REPO
+      - CARGO_PROXY
+      - DECKHOUSE_PRIVATE_REPO
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
+  stapel:
+    mount:
+      allowBuildDir: true
+      allowFromPaths:
+        - ~/go-pkg-cache

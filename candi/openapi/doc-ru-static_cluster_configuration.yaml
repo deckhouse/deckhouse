@@ -1,0 +1,26 @@
+kind: StaticClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Параметры статического (bare metal) кластера.
+
+      Чтобы изменить содержимое ресурса `StaticClusterConfiguration` в работающем кластере, выполните следующую команду:
+
+      ```shell
+      d8 p edit static-cluster-configuration
+      ```
+    properties:
+      apiVersion:
+        description: Используемая версия API Deckhouse.
+      internalNetworkCIDRs:
+        description: |
+          Список внутренних сетей узлов кластера.
+
+          Внутренние сети используются для связи компонентов Kubernetes (`kube-apiserver`, `kubelet` и т. д.) между собой.
+
+          Параметр обязателен к заполнению, если:
+          - Узлы кластера имеют более одного сетевого интерфейса
+          - Развертывание кластера происходит внутри Deckhouse Virtualization Platform
+
+          > При смене значения, в список подсетей должны подпадать существующие адреса узлов кластера.

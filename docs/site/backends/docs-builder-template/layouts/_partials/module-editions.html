@@ -1,0 +1,136 @@
+{{- $moduleName := .moduleName }}
+{{- if not $moduleName }}{{ return }}{{ end }}
+{{- $moduleData := index site.Data.modules_all $moduleName }}
+{{- $editionsData := site.Data.editions }}
+{{- $lang := .lang }}
+
+{{- $editionsWithoutRestrictions := slice -}}
+{{- $editionsWithRestrictions := $moduleData.editionsWithRestrictions -}}
+
+{{- if $moduleData }}
+<div class="info alert__wrap">
+  <svg class="alert__icon icon--info">
+    <use xlink:href="/images/sprite.svg#info-icon"></use>
+  </svg>
+<div>
+{{ if $editionsWithRestrictions }}
+    <p>
+      {{ if index $moduleData.editionsWithRestrictionsComments "all" }}
+        <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ index $moduleData.editionsWithRestrictionsComments "all" $lang }}'>
+          {{- T "module_available_with_limitations_prefix" -}}
+        </span>: 
+      {{- else }}
+        {{- T "module_available_with_limitations_prefix" }}: 
+      {{- end }}
+      {{- range $index, $edition := $moduleData.editions }}
+        {{- if eq $edition "fe" }}
+          {{- continue -}}
+        {{- end }}
+
+        {{- $editionLanguages := index $editionsData $edition "languages" -}}
+        {{- if $editionLanguages -}}
+            {{- if not (in $editionLanguages $lang) -}}
+                {{- continue -}}
+            {{- end -}}
+        {{- end -}}
+
+        {{- if in $editionsWithRestrictions $edition }}
+          {{- continue -}}
+        {{- end }}
+        {{- $editionsWithoutRestrictions = $editionsWithoutRestrictions | append $edition -}}
+      {{- end }}
+
+    <strong>
+      {{- $lastIndex := sub (len $editionsWithRestrictions) 1 -}}
+      {{- range $index, $edition := $editionsWithRestrictions }}
+
+         {{- $comment := index $moduleData.editionsWithRestrictionsComments $edition -}}
+         {{- if $comment }}
+           {{- $commentLang := index $comment $lang -}}
+           <span style="border-bottom: 1px dotted #000" data-tippy-content="{{ $commentLang }}">
+             {{- with index $editionsData $edition }}
+               {{- if .name_version }}
+                 {{ .name_version }}
+               {{- else }}
+                 {{ .name }}
+               {{- end }}
+             {{- end }}
+           </span>
+         {{- else }}
+           {{- with index $editionsData $edition }}
+             {{- if .name_version }}
+               {{ .name_version }}
+             {{- else }}
+               {{ .name }}
+             {{- end }}
+           {{- end }}
+         {{- end }}
+
+         {{- if lt $index $lastIndex }}, {{ end }}
+      {{- end }}
+
+    </strong>
+    </p>
+    {{ if gt (len $editionsWithoutRestrictions) 0 }}
+
+        <p>
+        {{- T "module_available_without_limitations_prefix" }}: 
+        <strong>
+          {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
+          {{- range $index, $edition := $editionsWithoutRestrictions }}
+
+            {{- with index $editionsData $edition }}
+              {{- if .name_version }}
+                {{ .name_version }}
+              {{- else }}
+                {{ .name }}
+              {{- end }}
+            {{- end }}
+
+            {{- if lt $index $lastIndex }}, {{ end }}
+
+          {{ end }}
+
+        </strong>
+        </p>
+    {{ end }}
+
+
+{{- else }}
+
+    {{- range $index, $edition := $moduleData.editions -}}
+        {{- if eq $edition "fe" -}}
+            {{- continue -}}
+        {{- end -}}
+        {{- $editionLanguages := index $editionsData $edition "languages" -}}
+        {{- if $editionLanguages -}}
+            {{- if not (in $editionLanguages $lang) -}}
+                {{- continue -}}
+            {{- end -}}
+        {{- end -}}
+        {{- if in $editionsWithoutRestrictions $edition -}}
+            {{- continue -}}
+        {{- end -}}
+        {{- $editionsWithoutRestrictions = $editionsWithoutRestrictions | append $edition -}}
+    {{- end -}}
+    {{ if gt (len $editionsWithoutRestrictions) 0 }}
+    <p>{{ T "module_available_editions_prefix" }}: 
+    <strong>
+      {{- $lastIndex := sub (len $editionsWithoutRestrictions) 1 -}}
+      {{- range $i, $edition := $editionsWithoutRestrictions -}}
+        {{- with index $editionsData $edition -}}
+          {{- if .name_version -}}
+            {{ .name_version }}
+          {{- else -}}
+            {{ .name }}
+          {{- end -}}
+        {{- end -}}
+        {{- if ne $i $lastIndex -}}, {{ end -}}
+      {{- end -}}
+    </strong>
+    </p>
+    {{- end }}
+{{- end }}
+</div>
+</div>
+{{- end }}

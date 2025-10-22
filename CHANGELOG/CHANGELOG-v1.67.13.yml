@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Fix checking automatic kubernetes version in managed clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12684
+

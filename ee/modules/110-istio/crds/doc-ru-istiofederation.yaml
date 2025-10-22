@@ -1,0 +1,27 @@
+spec:
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для настройки удалённого кластера как доверенного.
+          properties:
+            spec:
+              properties:
+                trustDomain:
+                  description: |
+                    TrustDomain удаленного кластера.
+                   
+                    Указание этого параметра является обязательным, однако на данный момент он не используется, так как текущая версия Istio не поддерживает привязку TrustDomain к корневому сертификату центра сертификации (CA).
+                metadataEndpoint:
+                  description: |
+                   HTTPS-эндпоинт, который используется для публикации метаданных удаленного кластера.
+                metadata:
+                  properties:
+                    insecureSkipVerify:
+                      description: |
+                        Исключение проверки HTTPS-сертификата на стороне клиента для URL, который используется для публикации метаданных удаленного кластера.
+                    ca:
+                      description: |
+                        Сертификат для проверки HTTPS URL, который используется для публикации метаданных удаленного кластера.

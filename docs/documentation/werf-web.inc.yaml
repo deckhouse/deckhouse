@@ -1,0 +1,3 @@
+{{ tpl (.Files.Get "werf-s3-loader.inc.yaml") $ }}
+{{ tpl (.Files.Get "werf-documentation-static.inc.yaml") $ }}
+{{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}

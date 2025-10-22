@@ -1,0 +1,80 @@
+{% assign revision=include.revision %}
+
+{% if revision != "ce" %}
+{% include getting_started/stronghold/global/EE_ACCESS.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+<div markdown="1">
+  The recommended settings for a Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
+{% if page.platform_type == 'cloud' %}- `resources.yml` — description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc).{% endif %}
+
+**Please pay attention to**:
+- <span class="mustChange">highlighted</span> parameters you *must* define.
+- <span class="mightChange">parameters</span> you might want to change.
+{%- if page.platform_type == 'baremetal' %}
+- The installation must be performed from a **personal computer** with SSH access to the node, the **master node** of the future cluster.
+{%- endif %}
+{%- if page.platform_type == 'existing' %}
+- We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
+{%- endif %}
+
+Create the `config.yml` file.
+{% capture includePath %}_includes/getting_started/stronghold/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+{% snippetcut name="config.yml" selector="config-yml" %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+{% endsnippetcut %}
+
+{%- if page.platform_type == 'existing' %}
+{% offtopic title="About nodeSelector, taints and tolerations..." %}
+You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
+
+> Example of specifying a `nodeSelector` for the 'deckhouse` module for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: deckhouse
+>   spec:
+>     version: 1
+>     enabled: true
+>   settings:
+>     nodeSelector:
+>       node-role.kubernetes.io/master: master
+> ```
+
+Also, you can list the necessary cluster node taints in ModuleConfig `global` in the array `.spec.settings.modules.placement.customTolerationKeys` so that Deckhouse automatically specifies the appropriate tolerance for its components.
+
+> Example of specifying `customTolerationKeys` for the 'deckhouse` module and the list of tolerations in the `customTolerationKeys` array for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: global
+> spec:
+>   settings:
+>     modules:
+>       placement:
+>         customTolerationKeys:
+>         - Systemload
+>         - kubernetes.io/instance
+> ```
+{% endofftopic %}
+{% endif %}
+</div>
+
+<script>
+  $(document).ready(function() {
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
+      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
+    })
+  });
+</script>
+
+{% if revision != "ce" %}
+</div>
+{% endif %}

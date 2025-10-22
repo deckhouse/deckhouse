@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+# Copyright 2021 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: keepalivedinstances-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["keepalivedinstances"]
+    scope:       "Cluster"
+kubernetes:
+- name: keepalived_instances
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: deckhouse.io/v1alpha1
+  kind: KeepalivedInstance
+  jqFilter: |
+    {
+      "name": .metadata.name,
+      "ids": [.spec.vrrpInstances[].id]
+    }
+EOF
+}
+
+function __main__() {
+  jq_new_instances_path='.review.request.object.spec.vrrpInstances'
+
+  jq_group_new_instances="
+    $jq_new_instances_path
+    | group_by(.id)"
+
+  jq_get_duplicated_new_instances="
+    $jq_group_new_instances
+    | map(select(length>1) | .[0])"
+
+  allowed=true
+  message=""
+
+  operation="$(context::jq -r '.review.request.operation')"
+  ids_to_check="$(context::jq -r "${jq_new_instances_path}[].id")"
+
+  # for update we need to skip checking ids in cluster
+  # for KeepalivedInstance with passed name
+  # because it is already present in cluster :-)
+  filtered_name=""
+  if [[ "$operation" == "UPDATE" ]]; then
+    filtered_name=$(context::jq -r '.review.request.name')
+  fi
+
+  # try to find duplicates in input ids
+  if context::jq -er "
+    $jq_get_duplicated_new_instances
+    | length > 0" > /dev/null;
+  then
+      # found duplicates
+      allowed=false
+      duplicated_ids="$(context::jq -r "
+        $jq_get_duplicated_new_instances
+        | [.[].id]
+        | join(\", \")"
+      )"
+      message="${message}vrrpInstance.id found duplicates for ids: $duplicated_ids; "
+
+      # does not skip verify using ids in clusters that
+      # new ids may be in cluster and we want to report about all errors
+
+      # deduplicate
+      ids_to_check="$(context::jq -er "
+        $jq_group_new_instances
+        | map(.[0])
+        | .[].id"
+      )"
+  fi
+
+  for id in $ids_to_check; do
+    if context::jq -e --argjson id "$id" --arg filter "$filtered_name" '
+      [
+        .snapshots.keepalived_instances[].filterResult
+        | select(.name != $filter)
+        | .ids
+      ] | flatten | index($id)
+   ' >/dev/null; then
+
+      allowed=false
+      message="${message}vrrpInstance.id '$id' is already in use; "
+    fi
+
+  done
+
+  if [[ "$allowed" == "true" ]]; then
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":true}
+EOF
+  else
+    cat <<EOF > $VALIDATING_RESPONSE_PATH
+{"allowed":false, "message":"${message}"}
+EOF
+  fi
+}
+
+hook::run $@

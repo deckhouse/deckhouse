@@ -1,0 +1,39 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This workflow reacts to labels and restart workflows if needed.
+# Cloud layout tests and deploy web are restarted only when PR is labeled.
+# Validation workflow is restarted when PR is labeled or unlabeled.
+name: Rerun workflows for pull request
+
+on:
+  pull_request_target:
+    types: [labeled, unlabeled]
+jobs:
+{!{ tmpl.Exec "pull_request_info_job" . | strings.Indent 2 }!}
+  rerun_workflow_for_pull_request:
+    name: Rerun workflow for pull request
+    runs-on: ubuntu-latest
+    needs:
+      - pull_request_info
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Rerun workflow
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            const ref = "${{ needs.pull_request_info.outputs.ref }}"
+            return await ci.runWorkflowForPullRequest({ github, context, core, ref });

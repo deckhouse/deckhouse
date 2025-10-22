@@ -1,0 +1,77 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /discoverer
+  to: /discoverer
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/discoverer"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /go_lib/cloud-data
+  to: /deckhouse/go_lib/cloud-data
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /pkg/log
+  to: /deckhouse/pkg/log
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+  - export VERSION="v0.6.0"
+  - export VERSION_COMMON="v0.6.0"
+  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/cloud-data-discoverer.git /src
+  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/huaweicloud/huaweicloud-common.git /src/huaweicloud-common
+  - mv /deckhouse/go_lib /src
+  - mv /deckhouse/pkg /src
+  - cd /src
+  - rm -rf .git vendor
+  - sed -i -e 's# ../huaweicloud-common# /src/huaweicloud-common#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+  - cd /src/huaweicloud-common
+  - rm -rf .git vendor
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+  - chown 64535:64535 /discoverer
+  - chmod 0755 /discoverer

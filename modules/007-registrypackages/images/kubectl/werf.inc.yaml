@@ -1,0 +1,40 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := $key | toString }}
+  {{- $patch := $value.patch | toString }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - kubectl
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "kubectl": "{{ printf "%s.%s" $version $patch }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/scratch
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /kubectl
+  before: setup
+{{- end }}

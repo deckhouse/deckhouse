@@ -1,0 +1,753 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.# Run validation script on every push to dev branches.
+#
+# Validation scripts require  PR title, PR description and diff.
+# Title and description are available when PR is already created.
+# Diff content is fetched using 'diff_url' field in payload when PR is available.
+# If PR is not created, 'compare' field is used to get diff between base branch and dev branch.
+#
+# See also scripts/validation_run.sh.
+#
+
+name: Validations
+on:
+  pull_request_target:
+     types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  close_dependabot_prs_for_forks:
+    name: Autoclose Dependabot PRs for forks
+    runs-on: ubuntu-24.04
+    if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
+    env:
+      ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
+    steps:
+      - name: Close PR
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            // Keep PR if explicitly enabled.
+            const {ENABLE_DEPENDABOT_IN_FORKS} = process.env;
+            const prNum = context.payload.pull_request.number;
+            const repo = context.payload.repository.full_name;
+            if (ENABLE_DEPENDABOT_IN_FORKS === 'true') {
+              core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is 'true', proceed with validation for PR#${prNUM} in repo ${repo}.`);
+              return
+            }
+            core.info(`Secret ENABLE_DEPENDABOT_IN_FORKS is not 'true', close PR#${prNum} in repo ${repo}.`);
+            return await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNum,
+              state: 'closed'
+            });
+
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
+      security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+      build_ce: ${{ steps.pr_props.outputs.build_ce }}
+      build_be: ${{ steps.pr_props.outputs.build_be }}
+      build_se: ${{ steps.pr_props.outputs.build_se }}
+      build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
+      build_ee: ${{ steps.pr_props.outputs.build_ee }}
+
+    permissions:
+        contents: read
+        pull-requests: read
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
+    steps:
+      - name: Get PR info for push trigger
+        id: push_info
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Get PR info for pull_request trigger
+        id: pr_info
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Check PR properties
+        id: pr_props
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
+
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
+
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
+              if (!okToTest) {
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
+              }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
+            }
+
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
+            // Set security rootless scan from labels.
+            const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.setOutput('security_rootless_scan', security_rootless_scan);
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
+            core.setCommandEcho(false);
+
+      # Checkhout the head commit of the PR branch.
+      - name: Checkout PR head commit
+        if: steps.pr_props.outputs.should_check == 'true'
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ steps.pr_props.outputs.ref }}
+
+      # Get info about other changes.
+      - name: Get info about PR changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # dangerous - detect if changes not allowed to test for external PRs
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+  # </template: pull_request_info>
+
+  # Get pull request info for validation scripts.
+  # Push event has no pull request information, so retrieve it with Rest API.
+  discover:
+    name: Prepare input for validation scripts
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-24.04
+    outputs:
+      run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
+      label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
+      run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
+      label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_doc_reference: "true"
+      run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
+      label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
+      run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
+      label_markdown: ${{ steps.check_labels.outputs.label_markdown }}
+      run_grafana_dashboard: ${{ steps.check_labels.outputs.run_grafana_dashboard }}
+      label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
+      run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
+      label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+      - id: check_labels
+        name: Check labels on push
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const labels = JSON.parse(process.env.PR_LABELS)
+
+            const ci = require('./.github/scripts/js/ci');
+            return ci.checkValidationLabels({ core, labels });
+
+      - name: Download diff for pull request
+        env:
+          DIFF_URL: ${{ needs.pull_request_info.outputs.diff_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./.github/scripts/validation_run.sh --download-only ./pr.diff
+
+      - name: Upload diff as artifact
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: pr_diff
+          path: pr.diff
+
+  no_cyrillic_validation:
+    name: No Cyrillic Validation
+    env:
+      VALIDATE_TITLE: ${{ needs.pull_request_info.outputs.pr_title }}
+      VALIDATE_DESCRIPTION: ${{ needs.pull_request_info.outputs.pr_description }}
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_no_cyrillic == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_no_cyrillic }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_no_cyrillic.sh
+
+  doc_validation:
+    name: Docs Validation (base)
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_doc_changes == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_changes }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
+
+  workflow_render:
+    name: Render workflow
+
+    # <template: workflow_render_template>
+    needs:
+      - discover
+      - pull_request_info
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Render GitHub workflow
+        run: |
+          cd .github
+          ./render-workflows.sh
+
+      - name: Check rendered files
+        run: |
+          git diff --exit-code
+    # </template: workflow_render_template>
+
+
+
+  doc_spell_check:
+    name: Docs Validation (spellcheck)
+    needs:
+      - discover
+      - pull_request_info
+    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
+      - name: Spell check
+        run: |
+          make lint-doc-spellcheck-pr
+       # </template: spellcheck_template>
+
+  doc_validation_reference:
+    name: Docs Validation (reference)
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_doc_reference == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_reference }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_doc_reference.sh
+
+  copyright_validation:
+    name: Copyright Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_copyright == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_copyright }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_copyright.sh
+
+  grafana_dashboard_validation:
+    name: Grafana Dashboard Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_grafana_dashboard == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_grafana_dashboard }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_grafana_dashboard.sh
+
+  markdown_linter:
+    name: Markdown Linter
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_markdown == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run linter
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_markdown }}
+        run: |
+          make lint-markdown
+
+  release_requirements_validation:
+    name: Release Requirements Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_release_requirements == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
+  pull_request_changes_validation:
+    name: Pull Request Changes validation
+    runs-on: ubuntu-latest
+    needs:
+      - discover
+      - pull_request_info
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3.5.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - run: npm install yaml marked
+      - uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const { findIn } = require('./.github/scripts/js/parsers/modules-parser.js');
+            const { parseMarkdown, findSectionInMarkdown } = require('./.github/scripts/js/parsers/md-parser.js');
+            const { validatePullRequestChangelog } = require('./.github/scripts/js/validators/pr-changes-validator.js');
+
+            const allowedModules = findIn('.');
+
+            /**
+            * @param {string} owner
+            * @param {string} repo
+            * @param {number} pullRequestID
+            */
+            async function getPR(owner, repo, pullRequestID) {
+              const { data } = await github.rest.pulls.get({
+                  owner: owner,
+                  repo: repo,
+                  pull_number: pullRequestID,
+              });
+
+              return data.body;
+            }
+
+            try {
+              const prBody = await getPR(context.repo.owner, context.repo.repo, context.issue.number);
+              const mdTokens = parseMarkdown(prBody);
+              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
+              validatePullRequestChangelog(changelogEntries, allowedModules);
+            } catch(error) {
+              core.info(`
+              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields.
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly.
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌
+              \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
+              `);
+              throw(error);
+            }
+
+
+
+
+
+

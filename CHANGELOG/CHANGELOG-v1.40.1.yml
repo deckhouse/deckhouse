@@ -1,0 +1,5 @@
+monitoring-kubernetes-control-plane:
+  fixes:
+    - summary: Port to listen changed to 8008 because it is already used by the ingress-nginx module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3019
+

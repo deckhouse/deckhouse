@@ -1,0 +1,90 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /{{ $.ModulePath }}go_lib/registry
+  to: /go_lib/registry
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /go_lib/registry
+  to: /go_lib/registry
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
+  - chown 64535:64535 bashible-apiserver
+  - chmod 0700 bashible-apiserver
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/bashible-apiserver
+  to: /bashible-apiserver
+  before: setup
+git:
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+- add: /{{ .ModulePath }}candi/bashible
+  to: /deckhouse/candi/bashible
+  stageDependencies:
+    beforeSetup:
+    - "*"
+  includePaths:
+  - bundles
+  - common-steps
+  - bootstrap
+  - bashible.sh.tpl
+  - bb_node_name.sh.tpl
+  {{- if eq .Env "CE" }}
+  - detect_bundle.sh
+  {{- end }}
+
+  excludePaths:
+  - "**/cluster-bootstrap"
+- add: /{{ .ModulePath }}candi/cloud-providers
+  to: /deckhouse/candi/cloud-providers
+  stageDependencies:
+    beforeSetup:
+    - "*"
+  includePaths:
+  - "*/bashible"
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bashible-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]

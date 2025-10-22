@@ -1,0 +1,11 @@
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-medium
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+value: 6000
+globalDefault: false
+description: >
+  The bulk of stateless workloads in production environment.
+  Those workloads are responsible for handling user requests.

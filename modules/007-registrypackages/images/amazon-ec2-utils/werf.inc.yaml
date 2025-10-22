@@ -1,0 +1,40 @@
+{{- $version := "2.2.0" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/amazonlinux/amazon-ec2-utils.git /src/amazon-ec2-utils
+  - rm -rf /src/amazon-ec2-utils/.git
+  - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/amazon-ec2-utils/ebsnvme-id
+  to: /ebsnvme-id
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/scripts
+  to: /
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]

@@ -1,0 +1,59 @@
+- name: coreos.kube-scheduler
+  rules:
+  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_e2e_scheduling_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.99"
+  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_e2e_scheduling_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.9"
+  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_e2e_scheduling_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.5"
+  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.99"
+  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.9"
+  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.5"
+  - record: cluster:scheduler_binding_latency_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_binding_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.99"
+  - record: cluster:scheduler_binding_latency_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_binding_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.9"
+  - record: cluster:scheduler_binding_latency_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_binding_latency_microseconds_bucket)
+      BY (le, cluster)) / 1e+06
+    labels:
+      quantile: "0.5"
+  - alert: K8SSchedulerTargetDown
+    expr: absent(up{job="kube-scheduler"} == 1)
+    for: 5m
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_protocol_version: "1"
+      summary: Scheduler is down.
+      description: |
+        The Kubernetes scheduler is not running.
+        As a result, new pods are not being assigned to nodes.
+      runbook: https://coreos.com/tectonic/docs/latest/troubleshooting/controller-recovery.html#recovering-a-scheduler

@@ -1,0 +1,87 @@
+{{- $hubbleUIVersion := "0.13.2" }}
+{{- $hubbleUIFrontVersion := "0.13.2" }}
+{{- $hubbleUIBackVersion := "0.13.2" }}
+---
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1698
+# and on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1732
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/Dockerfile
+# and on https://github.com/cilium/hubble-ui/blob/v0.13.2/backend/Dockerfile
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui.git /src/hubble-ui
+  - cd /src/hubble-ui
+  - git apply /patches/*.patch --verbose
+  - rm -r /src/hubble-ui/.git
+  # CSE
+  - find /src/hubble-ui -mindepth 1 -maxdepth 1 ! -name 'backend' -exec rm -rf {} +
+  # also, there is README.md in repo ;)
+  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
+  - rm -r /src/frontend_prebuilt/.git
+  - mkdir -p /src/server/public
+  - mv /src/frontend_prebuilt/static/* /src/server/public
+  - chown -R 64535:64535 /src/server/public
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/hubble-ui
+  to: /src/hubble-ui
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export "GOARCH=amd64"
+  - cd /src/hubble-ui/backend
+  - go mod download -x && go mod vendor && go mod verify
+  - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
+  - chown 64535:64535 /src/hubble-ui/backend/backend
+  - chmod 0700 /src/hubble-ui/backend/backend
+---
+############################################################################
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
+fromImage: base/nginx
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/server/public
+  to: /app
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
+  add: /src/hubble-ui/backend/backend
+  to: /usr/local/bin/hubble-ui-backend
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/hubble-ui-backend"]

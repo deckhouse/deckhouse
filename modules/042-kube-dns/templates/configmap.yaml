@@ -1,0 +1,64 @@
+{{- $transportProtocolModeDict := dict "PreferUDP" "prefer_udp" "ForceTCP" "force_tcp" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-kube-dns
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+data:
+  Corefile: |
+    . {
+        errors
+        health {
+          lameduck 15s
+        }
+        ready
+{{- if .Values.kubeDns.hosts }}
+        hosts {
+  {{- range .Values.kubeDns.hosts }}
+          {{ .ip | required "if kubeDns.hosts is specified, \"ip is required\"" }} {{ .domain | required "if kubeDns.hosts is specified, \"domain is required\"" }}
+  {{- end }}
+          fallthrough
+        }
+{{- end }}
+        kubernetes {{ .Values.global.discovery.clusterDomain | required ".Values.global.discovery.clusterDomain is required" }} {{ .Values.kubeDns.clusterDomainAliases | join " " }} in-addr.arpa ip6.arpa {
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+          ttl 30
+        }
+        prometheus 127.0.0.1:9153
+        forward . {{ .Values.kubeDns.upstreamNameservers | join " " | default "/etc/resolv.conf" }} {
+{{- if ne $.Values.kubeDns.transportProtocolMode "KeepOriginal" }}
+          {{ get $transportProtocolModeDict $.Values.kubeDns.transportProtocolMode }}
+{{- end }}
+        }
+{{- if not (.Values.global.enabledModules | has "node-local-dns") }}
+        cache 30
+{{- end }}
+        loop
+        reload
+        loadbalance
+{{- if .Values.kubeDns.enableLogs }}
+        log
+{{- end }}
+    }
+{{- if .Values.kubeDns.stubZones }}
+  {{- range $zone := .Values.kubeDns.stubZones }}
+    {{- if not (and $zone.zone $zone.upstreamNameservers) }}
+{{ fail "zone and upstreamNameservers parameters must be specified for a stub zone" }}
+    {{- end }}
+    {{ $zone.zone }} {
+        errors
+        cache {{ $zone.cacheTTLSeconds | default "30" }}
+        loop
+        reload
+        loadbalance
+        forward . {{ $zone.upstreamNameservers | join " " }} {
+    {{- if ne $zone.transportProtocolMode "KeepOriginal" }}
+          {{ get $transportProtocolModeDict $zone.transportProtocolMode }}
+    {{- end }}
+        }
+    }
+  {{- end }}
+{{- end }}

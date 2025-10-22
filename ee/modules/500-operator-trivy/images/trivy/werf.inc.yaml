@@ -1,0 +1,58 @@
+# Trivy version
+{{- $trivyVersion := "v0.55.2" }}
+
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /trivy
+  to: /usr/local/bin/trivy
+  before: setup
+imageSpec:
+  config:
+    entrypoint: [ "/usr/local/bin/trivy" ]
+git:
+{{- include "image mount points" . }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy-db.git /src/trivy-db
+  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
+  - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
+  - git clone --depth 1 --branch main git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
+  - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/{{ $trivyVersion }}/*.patch
+  - cd /src/trivy && git apply --verbose --whitespace=fix /src/trivy-patch/patches/{{ $trivyVersion }}/*.patch
+  - rm -rf /src/trivy/docs /src/trivy/integration
+  - find /src/trivy -type d -name testdata | xargs rm -rf
+  - rm -rf /src/trivy/.git /src/trivy-db/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src/trivy
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /trivy ./cmd/trivy/main.go`) | indent 6 }}
+  - chown 64535:64535 /trivy
+  - chmod 0700 /trivy

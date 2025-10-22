@@ -1,0 +1,1086 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "NATS Server Dashboard",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 79,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "OS Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_cpu{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_cpu",
+          "refId": "A",
+          "step": 4
+        }
+      ],
+      "title": "Server CPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_mem{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_mem",
+          "refId": "A",
+          "step": 4
+        }
+      ],
+      "title": "Server Memory",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 11,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_in_bytes{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_in_bytes",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "title": "Bytes In",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 9
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_in_msgs{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_in_msgs",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "title": "NATS Msgs In",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_out_bytes{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_out_bytes",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "title": "Bytes Out",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 9
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_out_msgs{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_out_msgs",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "title": "NATS Msgs Out",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 12,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Client Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "points",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 17
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_connections{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_connections",
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "title": "Connections",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "points",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 17
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_subscriptions{namespace=~\"$namespace\"}",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_subscriptions",
+          "refId": "A",
+          "step": 4
+        }
+      ],
+      "title": "Subscriptions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "points",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "gnatsd_varz_slow_consumers{namespace=~\"$namespace\"}",
+          "intervalFactor": 1,
+          "legendFormat": "{{namespace }}-{{pod}}",
+          "metric": "gnatsd_varz_slow_consumers",
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "title": "Slow Consumers",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(up{job=\"nats\"}, namespace)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Namespace",
+        "multi": true,
+        "name": "namespace",
+        "options": [],
+        "query": "label_values(up{job=\"nats\"}, namespace)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "NATS",
+  "uid": "GCcRkBIMz",
+  "version": 1,
+  "weekStart": ""
+}

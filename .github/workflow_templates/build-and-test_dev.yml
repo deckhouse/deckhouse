@@ -1,0 +1,249 @@
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
+
+# on every push to dev branches
+name: Build and test for dev branches
+on:
+  pull_request_target:
+     types:
+      - opened
+      - synchronize
+      - reopened
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
+{!{ tmpl.Exec "dmt_envs" | strings.Indent 2 }!}
+
+# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+{!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
+
+  build_fe:
+    name: Build FE
+    needs:
+      - git_info
+      - pull_request_info
+    env:
+      WERF_ENV: "FE"
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_ee:
+    name: Build EE
+    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "EE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_se:
+    name: Build SE
+    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "SE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_se_plus:
+    name: Build SE-plus
+    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "SE-plus"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_be:
+    name: Build BE
+    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "BE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  build_ce:
+    name: Build CE
+    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "CE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  analyze_deckhouse:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') }}
+    name: Deckhouse static analysis
+    runs-on: [self-hosted, regular]
+    needs:
+      - build_fe
+    steps:
+      - uses: deckhouse/modules-actions/svace_analyze@v4
+        with:
+          project_group: "DKP"
+          ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
+          ci_commit_hash: ${{ github.event.pull_request.head.sha }}
+          svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          svace_analyze_ssh_user: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          svacer_url: "${{ secrets.SVACER_URL }}"
+          svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
+          svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
+          svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+
+  doc_web_build:
+    name: Doc web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "dev") | strings.Indent 4 }!}
+
+  main_web_build:
+    name: Main web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
+
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
+    runs-on: [self-hosted, large]
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
+
+  tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
+
+  tests_python_webhooks:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests python webhooks
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
+
+  tests_dmt_lint:
+    name: Tests DMT lint
+    needs:
+    - git_info
+    - pull_request_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
+
+  dhctl_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Dhctl Tests
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
+
+  golangci_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+
+  openapi_test_cases:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
+
+  validators:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Validators
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
+
+  set_e2e_requirement_status:
+    # if previous jobs were failed we do not need set status, because checks will be failed
+    if: ${{ !failure() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Set 'waiting for e2e' commit status
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+      - build_ee
+      - build_se
+      - build_se_plus
+      - build_be
+      - build_ce
+      - validators
+      - openapi_test_cases
+      - golangci_lint
+      - dhctl_tests
+      - tests
+    runs-on: ubuntu-latest
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        env:
+          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+
+            await e2eStatus.setInitialStatus({github, context, core});

@@ -1,0 +1,11 @@
+{{- range $ipaddressPool := .Values.metallb.addressPools }}
+  {{- if eq $ipaddressPool.protocol "bgp" }}
+    {{- if index $ipaddressPool "bgp-advertisements" }}
+      {{- range $key, $bgpAdvertisement := (index $ipaddressPool "bgp-advertisements") }}
+        {{- include "bgpadvertisement_template" (list $ $ipaddressPool $key $bgpAdvertisement ) }}
+      {{- end }}
+    {{- else }}
+      {{- include "bgpadvertisement_template" (list $ $ipaddressPool "0" (dict)) }}
+    {{- end }}
+  {{- end }}
+{{- end }}

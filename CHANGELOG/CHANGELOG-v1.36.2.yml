@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Fix panic in a release tracking during the deckhouse update process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2465
+

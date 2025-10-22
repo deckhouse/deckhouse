@@ -1,0 +1,48 @@
+---
+{{- $PromxyVersion := "v0.0.93" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
+    - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -o promxy ./cmd/promxy`) | indent 6 }}
+  - chown -R 64535:64535 /src/promxy
+  - chmod 0700 /src/promxy
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/promxy
+    to: /app/promxy
+    after: setup
+git:    
+{{- include "image mount points" . }}    
+imageSpec:
+  config:
+    entrypoint: ["/app/promxy"]

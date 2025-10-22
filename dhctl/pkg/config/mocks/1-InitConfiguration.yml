@@ -1,0 +1,5 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce

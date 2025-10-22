@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-forbidden-sysctls-disallowed
+  namespace: testns
+  labels:
+    app: nginx-forbidden-sysctls
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+  securityContext:
+    sysctls:
+      - name: kernel.msgmax
+        value: "65536"
+      - name: net.core.somaxconn
+        value: "1024"

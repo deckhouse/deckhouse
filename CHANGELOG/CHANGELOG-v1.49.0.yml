@@ -1,0 +1,106 @@
+admission-policy-engine:
+  fixes:
+    - summary: >-
+        Fix `checkContainerDuplicates` policy. Allow env with the same name in the different
+        containers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5214
+candi:
+  features:
+    - summary: Checking the server hostname for compliance with Kubernetes and Deckhouse requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5259
+    - summary: Remove Docker CRI support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4960
+      impact: Docker CRI is no longer supported. The upgrade will not start if Docker CRI is used.
+  fixes:
+    - summary: Removed double sudo call for reboot command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5272
+    - summary: fixes install in air-gapped envs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5247
+cert-manager:
+  features:
+    - summary: Added max concurrent challenges parameter for `cert-manager-controller`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4821
+ci:
+  features:
+    - summary: Enable secondary repo only for main and release branches (werf).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5188
+control-plane-manager:
+  features:
+    - summary: Add feature-gate CustomResourceValidationExpressions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5293
+deckhouse:
+  features:
+    - summary: >-
+        Add release requirement to prevent release from approving if there are nodes with docker in
+        the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5329
+deckhouse-controller:
+  fixes:
+    - summary: Fix CA retaining after change-registry command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5307
+    - summary: Fix change-registry CA handling for connecting to registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5282
+dhctl:
+  features:
+    - summary: Checking the availability of the `localhost` domain.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5331
+    - summary: Checking availability of ports `6443`, `2379`, `2380` on the server before bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5195
+    - summary: Checking the availability of creating the SSH tunnel before bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5101
+external-module-manager:
+  features:
+    - summary: Cleanup `ExternalModuleReleases` for deleted external modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5260
+    - summary: Ability to specify module tags and weight in the `module.yaml` file.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5186
+ingress-nginx:
+  fixes:
+    - summary: Improved the description of the `defaultSSLCertificate` parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5239
+linstor:
+  fixes:
+    - summary: Update `piraeus-operator` CRDs to be compatible with the version `1.10.5`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5325
+    - summary: Update piraeus-operator and linstor-csi. Bump k8s api package versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5301
+log-shipper:
+  features:
+    - summary: >-
+        Render logs timestamps in the local timezone of a node.
+
+        For example, **2019-10-12T07:20:50.52Z** will become **2019-10-12T09:20:50.52+02:00** for
+        the Europe/Berlin timezone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4722
+  fixes:
+    - summary: Alert if replicas are not available.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5311
+monitoring-kubernetes:
+  fixes:
+    - summary: Select all controllers by default on the Namespace dashboard in Grafana.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5224
+multitenancy-manager:
+  features:
+    - summary: Add the new `multitenancy-manager` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4533
+node-manager:
+  features:
+    - summary: Provide a resource reservation options to NodeGroup configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4842
+      impact: >-
+        New NodeGroups will have a `systemReserved` field set to a value proportional to the Node
+        capacity. You can disable it via `.spec.kubelet.resourceReservation.mode` field set to
+        `Off`.
+runtime-audit-engine:
+  fixes:
+    - summary: Alert if replicas are not available.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5311
+secret-copier:
+  fixes:
+    - summary: Fix the creation of a secret in terminating or errored namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5295
+tools:
+  fixes:
+    - summary: Fixed `docker pull` under certain conditions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5309
+

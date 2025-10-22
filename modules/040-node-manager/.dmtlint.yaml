@@ -1,0 +1,138 @@
+linters-settings:
+  conversions:
+    exclude-rules:
+      description:
+        - /openapi/conversions/v2.yaml
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: caps-controller-manager
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: toolkit-validation
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+      resources:
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+      security-context:
+        - kind: Deployment
+          name: caps-controller-manager
+          container: caps-controller-manager
+        - kind: Deployment
+          name: standby-holder-name
+      controller-security-context:
+        - kind: Deployment
+          name: standby-holder-name
+      dns-policy:
+        - kind: Deployment
+          name: machine-controller-manager
+      liveness-probe:
+        - kind: Deployment
+          name: machine-controller-manager
+          container: controller
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-sidecar
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-sidecar
+        - kind: Deployment
+          name: node-feature-discovery-gc
+          container: gc
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
+      readiness-probe:
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
+        - kind: Deployment
+          name: machine-controller-manager
+          container: controller
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-ctr
+        - kind: DaemonSet
+          name: gpu-feature-discovery
+          container: gpu-feature-discovery-sidecar
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-sidecar
+        - kind: Deployment
+          name: node-feature-discovery-gc
+          container: gc
+        - kind: DaemonSet
+          name: nvidia-device-plugin
+          container: nvidia-device-plugin-ctr
+        - kind: DaemonSet
+          name: nvidia-mig-manager
+          container: nvidia-mig-manager
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: Deployment
+          name: machine-controller-manager
+        - kind: Deployment
+          name: standby-holder-name
+      vpa:
+        - kind: Deployment
+          name: standby-holder-name
+  rbac:
+    exclude-rules:
+      placement:
+        - kind: Role
+          name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: RoleBinding
+          name: d8:node-manager:caps-controller-manager-leader-election-role
+        - kind: ServiceAccount
+          name: nvidia-device-plugin
+        - kind: ServiceAccount
+          name: node-feature-discovery-worker
+        - kind: ServiceAccount
+          name: node-feature-discovery-gc
+        - kind: ServiceAccount
+          name: nvidia-gpu-feature-discovery
+        - kind: ServiceAccount
+          name: node-feature-discovery-master
+        - kind: ServiceAccount
+          name: nvidia-mig-manager
+        - kind: Role
+          name: node-manager:nvidia-gpu:node-feature-discovery-worker
+        - kind: RoleBinding
+          name: node-manager:nvidia-gpu:node-feature-discovery-worker
+  module:
+    conversions:
+      disable: true
+    exclude-rules:
+      license:
+        files:
+          - images/nvidia-dcgm/scripts/llvm.sh
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.bundles.items"

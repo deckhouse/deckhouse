@@ -1,0 +1,41 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для отображения алертов Prometheus.
+          properties:
+            metadata:
+              properties:
+                name:
+                  description: |
+                    Идентификатор алерта (fingerprint). Соответствует идентификатору алерта в Alertmanager.
+            alert:
+              description: |
+                Описание алерта.
+              properties:
+                name:
+                  description: |
+                    Название алерта.
+                severityLevel:
+                  description: |
+                    Уровень критичности.
+
+                    Необязательный параметр.
+                summary:
+                  description: |
+                    Краткое описание алерта.
+
+                    Необязательный параметр.
+                description:
+                  description: |
+                    Расширенное описание алерта.
+
+                    Необязательный параметр.
+                labels:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.

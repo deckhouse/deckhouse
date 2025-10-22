@@ -1,0 +1,8 @@
+name: dashboard
+stage: Deprecated
+subsystems:
+  - observability
+namespace: d8-dashboard
+requirements:
+  user-authz: ">= 0.0.0"
+  deckhouse: ">= 1.68"

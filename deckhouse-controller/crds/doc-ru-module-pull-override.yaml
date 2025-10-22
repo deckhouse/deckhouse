@@ -1,0 +1,69 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию ресурса для скачивания конкретных версий модулей Deckhouse.
+          required:
+            - spec
+          properties:
+            spec:
+              properties:
+                source:
+                  description: "Ссылка на объект ModuleSource модуля."
+                imageTag:
+                  description: "Тег образа контейнера модуля, который будет скачан и установлен."
+                scanInterval:
+                  description: "Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен."
+            status:
+              properties:
+                message:
+                  type: string
+                updatedAt:
+                  type: string
+                  description: "Когда модуль был обновлен в последний раз."
+                imageDigest:
+                  type: string
+                  description: Контрольная сумма образа контейнера.
+                weight:
+                  type: integer
+                  description: Вес (приоритет) модуля.
+    - name: v1alpha2
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Определяет конфигурацию ресурса для скачивания конкретных версий модулей Deckhouse.
+
+            > **Важно**. Ресурс предназначен только для использования в средах разработки и отладки.
+            > Его применение в production-кластерах не рекомендуется. Поддержка ресурса может быть исключена в следующих версиях Deckhouse Kubernetes Platform.
+          required:
+            - spec
+          properties:
+            spec:
+              properties:
+                imageTag:
+                  description: Тег образа контейнера модуля, который будет скачан и установлен.
+                scanInterval:
+                  description: Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен.
+                rollback:
+                  description: Определение необходимости восстановления модуля из релиза, если объект ModulePullOverride удалён.
+            status:
+              properties:
+                message:
+                  type: string
+                updatedAt:
+                  type: string
+                  description: Когда модуль был обновлен в последний раз.
+                imageDigest:
+                  type: string
+                  description: Контрольная сумма образа контейнера.
+                weight:
+                  type: integer
+                  description: Вес (приоритет) модуля.

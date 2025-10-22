@@ -1,0 +1,13 @@
+candi:
+  fixes:
+    - summary: Changed desired kernel version to 5.11.0-46-generic for ubuntu 20.04.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3043
+monitoring-applications:
+  fixes:
+    - summary: Fix the discovery hook for the `monitoring-applications` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3044
+monitoring-kubernetes:
+  fixes:
+    - summary: kube-state-metrics scrape timeout was extended.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3023
+

@@ -1,0 +1,97 @@
+chore:
+  fixes:
+    - description: Remove extra semver lib
+      pull_request: https://github.com/deckhouse/deckhouse/pull/664
+cloud-provider-aws:
+  fixes:
+    - description: Documentation fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/401
+deckhouse:
+  fixes:
+    - description: Update the description of the release process
+      pull_request: https://github.com/deckhouse/deckhouse/pull/660
+dhctl:
+  fixes:
+    - description: Do not print error about not existing bastion host key for abort command.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/655
+docs:
+  fixes:
+    - description: Getting started with Azure minor updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/698
+documentation:
+  fixes:
+    - description: Fix keepalived module examples in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/679
+    - description: Review and fix the 'How to configure' article.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/659
+general:
+  features:
+    - description: New bundle for Debian 9, 10, 11 and AstraLinux 2.12(Orel)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/546
+global:
+  features:
+    - description: >-
+        Add OpenAPI spec for global values. Validates configuration  section of a
+         ConfigMap.
+      note: >-
+        If Deckhouse upgrading on a new version was failed with the OpenAPI validation error, please
+        report us. Do not change/remove params from d8-system/deckhouse ConfigMap, and please wait
+        for an OpenAPI specification fix. And you have to restart Deckhouse manually to apply
+        updates because auto-updating begins work after global values validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/505
+ingress-nginx:
+  features:
+    - description: Add panels to Grafana dashboards with detailed nginx statistic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/689
+    - description: >-
+        Add documentation article "How to enable HorizontalPodAutoscaling for
+        IngressNginxController".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/648
+keepalived:
+  fixes:
+    - description: Change VPA update mode to initial.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/634
+monitoring:
+  fixes:
+    - description: Replace severity by severity_level
+      note: The severity annotation is deprecated, use severity_level [1-9] instead.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/599
+monitoring-kubernetes-control-plane:
+  features:
+    - description: Add sorted tables for kube-apiserver metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/626
+node-manager:
+  features:
+    - description: Update NodeUser resource to support NodeGroup selector and multiple ssh keys.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/595
+  fixes:
+    - description: FAQ bootstrap and adopt clarification.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/585
+    - description: >-
+        When calculating maximum instances for particular NodeGroup without zones defined — use
+        global zones count from CloudProvider configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/580
+prometheus:
+  features:
+    - description: Add supporting ServiceMonitors and PodMonitors from user-space
+      note: Prometheus will be restarted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/604
+testing:
+  features:
+    - description: Speed up matrix tests, reduce object allocations for helm renders
+      pull_request: https://github.com/deckhouse/deckhouse/pull/644
+    - description: Add monitoring trigger linter for modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/638
+  fixes:
+    - description: Fix export struct validator corner case
+      pull_request: https://github.com/deckhouse/deckhouse/pull/682
+user-authn:
+  features:
+    - description: >-
+        Add an OpenAPI spec to validate Deckhouse configuration parameters for the user-authn
+        module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/593
+  fixes:
+    - description: Fix values scheme.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/676
+

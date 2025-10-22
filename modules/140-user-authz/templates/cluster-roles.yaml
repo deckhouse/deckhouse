@@ -1,0 +1,392 @@
+{{- define "user_authz_verbs" }}
+  {{- $mode := . }}
+  {{- if eq $mode "r" }}
+  - get
+  - list
+  - watch
+  {{- else if eq $mode "rw" }}
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+  {{- else if eq $mode "w" }}
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+  {{- end }}
+{{- end -}}
+
+{{- define "user_authz_rules_for_not_recommended_objects" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - daemonsets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - replicationcontrollers
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- end -}}
+
+{{- define "user_authz_common_rules" }}
+  {{- $role := . -}}
+  {{- $mode := "" }}
+  {{- if or (eq $role "User") (eq $role "PrivilegedUser") }}
+    {{- $mode = "r" }}
+  {{- else if or (eq $role "Admin") (eq $role "ClusterAdmin") (eq $role "Editor") (eq $role "ClusterEditor") }}
+    {{- $mode = "rw" }}
+  {{- end }}
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - persistentvolumeclaims
+  - services
+  - serviceaccounts
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - limitranges
+  - resourcequotas
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - replicasets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - extensions
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+{{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  - nodes
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - persistentvolumes
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+  {{- include "user_authz_rules_for_not_recommended_objects" . }}
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+{{- end -}}
+
+{{- define "user_authz_user_rules" }}
+{{- end -}}
+
+{{- define "user_authz_privileged_user_rules" }}
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods/attach
+  - pods/exec
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- end -}}
+
+{{- define "user_authz_editor_rules" }}
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  {{- include "user_authz_verbs" "w" }}
+{{- end -}}
+
+{{- define "user_authz_admin_rules" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - replicasets
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - patch
+  - update
+{{- end -}}
+
+{{- define "user_authz_cluster_editor_rules" }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  verbs:
+{{- include "user_authz_verbs" "r" }}
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - daemonsets
+  verbs:
+{{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+{{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+{{- include "user_authz_verbs" "w" }}
+{{- end -}}
+
+{{- define "user_authz_cluster_admin_rules" }}
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterauthorizationrules
+  verbs:
+{{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+{{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - ""
+  resources:
+  - resourcequotas
+  - namespaces
+  - limitranges
+  verbs:
+  {{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+{{- include "user_authz_verbs" "w" }}
+{{- end }}
+
+{{- define "user_authz_super_admin_rules" }}
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+{{- end -}}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "User" }}
+{{- include "user_authz_user_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:privileged-user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "PrivilegedUser" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "Editor" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_editor_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "Admin" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_editor_rules" . }}
+{{- include "user_authz_admin_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:cluster-editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "ClusterAdmin" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_editor_rules" . }}
+{{- include "user_authz_cluster_editor_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_common_rules" "ClusterAdmin" }}
+{{- include "user_authz_user_rules" . }}
+{{- include "user_authz_privileged_user_rules" . }}
+{{- include "user_authz_editor_rules" . }}
+{{- include "user_authz_admin_rules" . }}
+{{- include "user_authz_cluster_editor_rules" . }}
+{{- include "user_authz_cluster_admin_rules" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:super-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+{{- include "user_authz_super_admin_rules" . }}

@@ -1,0 +1,33 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderDynamix.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-node-manager-cloud-provider
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+type: Opaque
+data:
+  type: {{ b64enc "dynamix" | quote }}
+  # Dynamix does not contain meaning regions and zones
+  # but out machinery use them. we use default as region and as one zone
+  region: {{ b64enc "default" | quote }}
+  zones: {{ .Values.cloudProviderDynamix.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
+  instanceClassKind: {{ b64enc "DynamixInstanceClass" | quote }}
+  machineClassKind: {{ b64enc "" | quote }}
+  capiClusterKind: {{ b64enc "DynamixCluster" | quote }}
+  capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  capiClusterName: {{ b64enc "dynamix" | quote }}
+  capiMachineTemplateKind: {{ b64enc "DynamixMachineTemplate" | quote }}
+  capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+  sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
+
+  {{- $dynamixValues := dict }}
+
+  {{- $_ := set $dynamixValues "appId" $providerClusterConfiguration.provider.appId }}
+  {{- $_ := set $dynamixValues "appSecret" $providerClusterConfiguration.provider.appSecret }}
+  {{- $_ := set $dynamixValues "oAuth2Url" $providerClusterConfiguration.provider.oAuth2Url }}
+  {{- $_ := set $dynamixValues "controllerUrl" $providerClusterConfiguration.provider.controllerUrl }}
+  {{- $_ := set $dynamixValues "insecure" $providerClusterConfiguration.provider.insecure }}
+
+  dynamix: {{ $dynamixValues | toJson | b64enc | quote }}

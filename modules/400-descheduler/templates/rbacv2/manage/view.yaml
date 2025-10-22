@@ -1,0 +1,31 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: descheduler
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-descheduler
+  name: d8:manage:permission:module:descheduler:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - deschedulers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - descheduler
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

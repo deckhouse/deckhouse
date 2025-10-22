@@ -1,0 +1,59 @@
+{%- if page.platform_type == "cloud" %}
+
+{% if page.ee_only == true and page.se_support == nil and page.platform_code != "dynamix" %}
+{%- if page.lang == "ru" %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% else %}
+{% alert level="warning" %}
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
+{% endif %}
+{% if page.ee_only == true and page.se_support == true %}
+{%- if page.lang == "ru" %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} в Community Edition недоступна. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% else %}
+{% alert level="warning" %}
+The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
+{% endif %}
+
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+Перед началом установки убедитесь в наличии квот облачного провайдера, необходимых для развертывания вашего кластера.{%- if page.platform_code == "aws" %} Проверьте наличие доступа к необходимым регионам.{%- endif %}{%- if page.platform_code == "gcp" %} Убедитесь, что у вас включен [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com).{%- endif %}
+{%- else %}
+Before starting the installation, ensure you have the cloud provider quotas required to deploy your cluster.{%- if page.platform_code == "aws" %} Make sure that you have access to the desired regions.{%- endif %}{%- if page.platform_code == "gcp" %} Ensure you have [Compute Engine API](https://console.cloud.google.com/marketplace/product/google/compute.googleapis.com) enabled.{%- endif %}
+{%- endif %}
+{% endalert %}
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+На виртуальных машинах должен быть установлен пакет `cloud-init`.
+После запуска виртуальной машины должны быть запущены следующие службы, связанные с этим пакетом :
+
+* `cloud-config.service`;
+* `cloud-final.service`;
+* `cloud-init.service`.
+{%- else %}
+The `cloud-init` package must be installed on the VMs.
+After the virtual machine is started, the following services associated with this package must be started:
+
+* `cloud-config.service`;
+* `cloud-final.service`;
+* `cloud-init.service`.
+{%- endif %}
+{% endalert %}
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{%- else %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{%- endif %}
+{% endalert %}
+{%- endif %}
+{%- if page.platform_type == 'existing' %}
+{%- endif %}

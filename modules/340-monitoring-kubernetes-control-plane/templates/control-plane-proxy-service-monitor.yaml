@@ -1,0 +1,71 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: control-plane-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: control-plane-proxy
+      heritage: deckhouse
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring
+  endpoints:
+  - scheme: https
+    port: https-metrics
+    path: /etcd/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-etcd3
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep
+  - scheme: https
+    port: https-metrics
+    path: /scheduler/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-scheduler
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep
+  - scheme: https
+    port: https-metrics
+    path: /controller-manager/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-controller-manager
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep

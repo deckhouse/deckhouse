@@ -1,0 +1,31 @@
+type: object
+properties:
+  ebpfExporterEnabled:
+    description: |
+      Флаг отключения ebpf_exporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
+  nodeSelector:
+    description: |
+      Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  tolerations:
+    type: array
+    description: |
+      Структура, аналогичная `spec.tolerations` пода Kubernetes.
+
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  vpa:
+    description: |
+      Настройки VPA для подов `kube-state-metrics`.
+    properties:
+      kubeStateMetricsMaxCPU:
+        description: |
+          Максимальное значение, которое может выставить VPA для запроса CPU (CPU requests).
+      kubeStateMetricsMaxMemory:
+        description: |
+          Максимальное значение, которое может выставить VPA для запроса к памяти (memory requests).

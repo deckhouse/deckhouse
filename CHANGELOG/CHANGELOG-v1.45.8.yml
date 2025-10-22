@@ -1,0 +1,21 @@
+candi:
+  fixes:
+    - summary: Refactor bootstrap scripts to fit 16kb limit of cloud-data.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4633
+containerized-data-importer:
+  fixes:
+    - summary: Enable `HonorWaitForFirstConsumer`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4618
+descheduler:
+  fixes:
+    - summary: Create a default Descheduler instance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4606
+loki:
+  fixes:
+    - summary: Fix `ClusterLogDestination` Loki endpoint.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4408
+node-manager:
+  fixes:
+    - summary: Fix the Ready condition for node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4582
+

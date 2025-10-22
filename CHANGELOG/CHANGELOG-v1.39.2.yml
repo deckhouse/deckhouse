@@ -1,0 +1,9 @@
+node-manager:
+  fixes:
+    - summary: Update the description of `minPerZone` and `maxPerZone` in the NodeGroup CR documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2928
+prometheus:
+  fixes:
+    - summary: Fixed calculation of PVC size and retention size.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2934
+

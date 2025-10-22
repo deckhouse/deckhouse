@@ -1,0 +1,20 @@
+{{- $context := . }}
+{{- range $localPathProvisioner := $context.Values.localPathProvisioner.internal.localPathProvisioners }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "local-path-provisioner")) | nindent 2 }}
+  name: {{ $localPathProvisioner.name }}
+provisioner: deckhouse.io/{{ $localPathProvisioner.name }}
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: {{ $localPathProvisioner.spec.reclaimPolicy }}
+  {{- if $localPathProvisioner.spec.nodeGroups }}
+allowedTopologies:
+- matchLabelExpressions:
+  - key: node.deckhouse.io/group
+    values:
+    {{- $localPathProvisioner.spec.nodeGroups | toYaml | nindent 4 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,56 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/caps-controller-manager"]
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /caps-controller-manager
+  to: /caps-controller-manager
+  before: setup
+- image: ssh-static
+  add: /ssh/bin
+  to: /bin
+  before: setup
+  includePaths:
+    - ssh
+git:
+{{- include "image mount points" . }}
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go
+  - chown 64535:64535 /caps-controller-manager
+  - chmod 0700 /caps-controller-manager

@@ -1,0 +1,111 @@
+positive:
+  values:
+  # all in
+  - internal:
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
+      customMetrics:
+        daemonset:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+
+        deployment:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        ingress:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        namespace:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        pod:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        service:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+        statefulset:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+  # empty metrics types
+  - internal:
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+negative:
+  values:
+  # incorrect metric type
+  - internal:
+      adapterCert:
+        ca: cert
+        crt: cert
+        key: key
+      customMetrics:
+        incorrect_metric_type:
+          name:
+            cluster: query
+            namespaced:
+              ns: query
+
+# next case don't work because deckhouse testes not support x-required-for-helm
+# need to fix it and uncomment cases after fix
+
+  # Cases with absent keys required for Helm.
+  helmValues:
+  # No required fields.
+  # TODO: empty adapterCert is added as a workaround. Remove after cleaning 'default:{}' in values.yaml.
+  - internal:
+      adapterCert: {}
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # No required adapterCert.Key.
+  - internal:
+      adapterCert:
+        ca: cert
+        crt: cert
+      customMetrics:
+        daemonset: { }
+        deployment: { }
+        ingress: { }
+        namespace: { }
+        pod: { }
+        service: { }
+        statefulset: { }
+
+  # Only one required field.
+  - internal:
+      adapterCert:
+        key: key

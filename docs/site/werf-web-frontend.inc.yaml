@@ -1,0 +1,215 @@
+{{- $_ := set . "Env" (.Env | default "EE") }}
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
+{{- end }}
+
+{{- $context := . }}
+{{- $_ := set $context "ModulePath" "../../" }}
+
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
+image: site-external-artifacts
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
+fromImage: builder/alpine-3.22
+final: false
+shell:
+  setup:
+  - mkdir -p /data
+  - echo "Getting data from the API server..."
+  - curl --retry-delay 5 --retry 5 {{ env "DOC_API_URL" }}?api-key={{- env "DOC_API_KEY" }} -o /tmp/menus.json
+  - |
+    jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
+  - |
+    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+  - |
+    jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
+  - |
+    jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
+import:
+- image: tools/curl
+  add: /usr/bin/curl-static
+  to: /usr/bin/curl
+  before: setup
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+{{- end }}
+---
+image: web-frontend-artifact
+from: {{ .Images.BASE_JEKYLL }}
+final: false
+shell:
+  install:
+  - |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
+  setup:
+  - |
+        cd /srv/jekyll-data/site/
+
+        # "Render OpenAPI schemas for DVP..."
+        export MODULES_RAW_DIR=/rawdata
+        export CRD_PATH=virtualization-platform/crds
+        export OPENAPI_PATH=virtualization-platform/openapi
+        bash _tools/prepare_resources.sh
+
+        # "Building static files"
+        export JEKYLL_ENV=production
+        mkdir -m 777 -p /app/_site/
+        jekyll build -d /app/_site/ --config  _config.yml
+git:
+# Common files used for building site and documentation (plugins, assets, etc.), plus unversionized products documentation
+- add: /docs/documentation
+  to: /srv/jekyll-data/site
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - _assets/js/search.js
+  - _data/rbac/
+  - _includes/rbac/
+  - _includes/related_links.liquid
+  - _plugins/jekyll_asset_pipeline.rb
+  - _plugins/custom_filters.rb
+  - _plugins/breadcrumbs_generator.rb
+  - _plugins/custom_sidebar.rb
+  - _plugins/related_links.rb
+  - _plugins/sidebar_custom.rb
+  - _plugins/utils.rb
+  - _plugins/offtopic.rb
+  - _plugins/navigation_helper.rb
+  stageDependencies:
+    setup: '**/*'
+- add: /docs/site
+  to: /srv/jekyll-data/site
+  owner: jekyll
+  group: jekyll
+  excludePaths:
+  - '*.md'
+  - werf*.yaml
+  - docker-compose*.yml
+  - .werf
+  - .helm
+  - backends
+  - Makefile
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    setup: '**/*'
+- add: /global-hooks/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+- add: /candi/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
+import:
+  - image: site-external-artifacts
+    add: /data/topnav.json
+    to: /srv/jekyll-data/site/_data/topnav.json
+    before: setup
+  - image: site-external-artifacts
+    add: /data/topnav-l2-products.json
+    to: /srv/jekyll-data/site/_data/topnav-l2-products.json
+    before: setup
+  - image: site-external-artifacts
+    add: /data/footer.json
+    to: /srv/jekyll-data/site/_data/footer.json
+    before: setup
+  - image: site-external-artifacts
+    add: /data/copyright.json
+    to: /srv/jekyll-data/site/_data/copyright.json
+    before: setup
+{{- end }}
+{{- if and (ne $.Env "development") (ne $.Env "local") }}
+---
+image: web-frontend-init
+fromImage: builder/alpine-3.22
+git:
+- add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
+  to: /scripts/channels-convert.sh
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+{{- end }}
+---
+image: web-frontend
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+fromImage: builder/alpine-3.22
+{{- else }}
+fromImage: base/nginx
+imageSpec:
+  config:
+    workingDir: "/app"
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+{{- end }}
+shell:
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+  beforeInstall:
+  - apk add --no-cache nginx
+git:
+- add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
+  to: /scripts/channels-convert.sh
+{{- end }}
+import:
+- image: web-frontend-artifact
+  add: /app/_site
+  to: /app
+  before: setup
+  excludePaths:
+  - en/includes/
+  - ru/includes/
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
+  add: /app/_site/
+  to: /app/embedded-modules
+  before: setup
+  includePaths:
+  - en
+  - ru
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site
+  to: /app/dkp-docs
+  before: setup
+---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
+{{- end }}

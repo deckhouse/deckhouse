@@ -1,0 +1,86 @@
+{{/* OpenKruise does not allow configuring of custom certificates and controls them internally */}}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kruise-mutating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+  annotations:
+    template: ""
+webhooks:
+  - clientConfig:
+      service:
+        name: kruise-webhook-service
+        namespace: d8-ingress-nginx
+        path: /mutate-apps-kruise-io-v1alpha1-daemonset
+    failurePolicy: Fail
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
+    timeoutSeconds: 28
+    name: mdaemonset.kb.io
+    rules:
+      - apiGroups:
+          - apps.kruise.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - daemonsets
+  - clientConfig:
+      service:
+        name: kruise-webhook-service
+        namespace: d8-ingress-nginx
+        path: /mutate-pod
+    failurePolicy: Ignore
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
+    timeoutSeconds: 28
+    name: mpod.kb.io
+    namespaceSelector:
+      matchExpressions:
+        - key: control-plane
+          operator: DoesNotExist
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+---
+# Source: kruise/templates/webhookconfiguration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: kruise-validating-webhook-configuration
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+  annotations:
+    template: ""
+webhooks:
+  - clientConfig:
+      service:
+        name: kruise-webhook-service
+        namespace: d8-ingress-nginx
+        path: /validate-apps-kruise-io-v1alpha1-daemonset
+    failurePolicy: Fail
+    admissionReviewVersions:
+      - v1
+    sideEffects: None
+    timeoutSeconds: 28
+    name: vdaemonset.kb.io
+    rules:
+      - apiGroups:
+          - apps.kruise.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - daemonsets

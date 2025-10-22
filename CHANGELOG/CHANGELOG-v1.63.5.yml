@@ -1,0 +1,7 @@
+user-authn:
+  fixes:
+    - summary: >-
+        Fix the problem when the user is not allowed to access web interfaces if the allowed groups
+        option is specified in Dex authenticator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9514
+

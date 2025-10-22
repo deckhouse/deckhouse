@@ -1,0 +1,29 @@
+{{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: image-availability-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    honorLabels: true
+    scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
+  selector:
+    matchLabels:
+      app: image-availability-exporter
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring
+  {{- end }}
+{{- end }}

@@ -1,0 +1,29 @@
+candi:
+  fixes:
+    - summary: Fixed containerd registry package build for CentOS 8.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1692
+    - summary: Fixed kubernetes-cni install script for CentOS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1682
+dhctl:
+  fixes:
+    - summary: Migration from werf ansible to werf shell image builds for terraform based images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1638
+docs:
+  fixes:
+    - summary: Add link to the FAQ of the kube-dns module in the sidebar menu of the site.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1660
+ingress-nginx:
+  features:
+    - summary: >-
+        Updated requirements for Ingress Nginx controller versions. If conditions are not met, then
+        further Deckhouse upgrade is blocked
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1676
+terraform-manager:
+  fixes:
+    - summary: Migration from werf ansible to werf shell image builds for terraform based images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1638
+user-authz:
+  fixes:
+    - summary: Fix gitlab-runner access rights doc
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1611
+

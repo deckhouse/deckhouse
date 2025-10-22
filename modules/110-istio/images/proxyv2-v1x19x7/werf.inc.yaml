@@ -1,0 +1,145 @@
+---
+{{- $istioVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+# Based on https://github.com/istio/istio/blob/1.19.7/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.19.7/pilot/docker/Dockerfile.proxyv2
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/alt-p11
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
+  add: /src/istio/out/pilot-agent
+  to: /usr/local/bin/pilot-agent
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /usr/local/bin/envoy
+  to: /usr/local/bin/envoy
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/librt.so.1
+  to: /usr/lib64/librt.so.1
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+  add: /usr/lib64/libpthread.so.0
+  to: /usr/lib64/libpthread.so.0
+  before: install
+git:
+{{- include "image mount points" . }}
+shell:
+  beforeInstall:
+  - |
+    apt-get update && \
+    apt-get install -y ca-certificates curl
+  - update-ca-trust
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  - update-alternatives --set iptables /usr/sbin/iptables-legacy
+  - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+  install:
+  - chmod 0644 /usr/lib64/librt.so.1
+  - chmod 0644 /usr/lib64/libpthread.so.0
+  - useradd -m --uid 1337 istio-proxy
+  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
+imageSpec:
+  config:
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:af5e0ef2c1473f0f4e61f78adf81c85ff6389f87",  "ISTIO_META_ISTIO_VERSION": "1.19.7" }
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/pilot-agent"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+from: istio/proxyv2:1.19.7@sha256:680eac0faff1835f994ba9047750d7cfe989e868324a933a38d6a6cb80779b33
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-agent-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src/istio/
+  - echo {{ $istioVersion }} > version
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent/
+  - strip /src/istio/out/pilot-agent
+  - chmod 0555 /src/istio/out/pilot-agent
+  - chown 1337:1337 /src/istio/out/pilot-agent
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  install:
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-library-artifact
+fromImage: common/alt-p11
+final: false
+shell:
+  beforeInstall:
+  - |
+    apt-get update && \
+    apt-get install -y glibc
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old

@@ -1,0 +1,19 @@
+{{- if (include "helm_lib_ha_enabled" .) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-affinitive
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  ports:
+  - name: https
+    port: 9090
+    targetPort: https
+  selector:
+    app.kubernetes.io/name: prometheus
+    prometheus: main
+{{- end }}

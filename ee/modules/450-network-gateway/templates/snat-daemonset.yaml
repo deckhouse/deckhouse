@@ -1,0 +1,127 @@
+{{- define "snat_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: snat
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: snat
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: snat
+      minAllowed:
+        {{- include "snat_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: snat
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: snat
+  template:
+    metadata:
+      labels:
+        app: snat
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      nodeSelector:
+        {{- .Values.networkGateway.nodeSelector | toYaml | nindent 8 }}
+{{- if (.Values.networkGateway.tolerations) }}
+      tolerations:
+        {{- .Values.networkGateway.tolerations | toYaml | nindent 8 }}
+{{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+    {{- end }}
+      containers:
+      - name: snat
+         # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_RAW
+            - NET_ADMIN
+        image: {{ include "helm_lib_module_image" (list . "snat") }}
+        command: ["/usr/bin/python3", "/iptables-loop.py"]
+        env:
+        - name: POD_SUBNET
+          value: {{ .Values.global.discovery.podSubnet }}
+        - name: SERVICE_SUBNET
+          value: {{ .Values.global.discovery.serviceSubnet }}
+        - name: CONFIG_HASH
+          value: {{ cat .Values.networkGateway.subnet .Values.networkGateway.publicAddress .Values.global.discovery.podSubnet .Values.global.discovery.serviceSubnet | sha256sum }}
+        volumeMounts:
+        - name: network-gateway-config
+          mountPath: /etc/network-gateway-config
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+          readOnly: false
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "snat_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: network-gateway-config
+        configMap:
+          name: network-gateway
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi

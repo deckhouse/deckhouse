@@ -1,0 +1,137 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: prometheusremotewrites.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: prometheus
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: prometheusremotewrites
+    singular: prometheusremotewrite
+    kind: PrometheusRemoteWrite
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Resource for including 'remote_write' data from the local Prometheus into a separate longterm storage (E.g: [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+
+            A cluster can have any number of such resources.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  description: The URL of the endpoint to send samples to.
+                  type: string
+                  x-doc-examples: ['https://victoriametrics-test.domain.com/api/v1/write']
+                basicAuth:
+                  description: BasicAuth for the URL.
+                  properties:
+                    password:
+                      description: Password for the authentication.
+                      type: string
+                    username:
+                      description: Username for the authentication.
+                      type: string
+                  required:
+                  - password
+                  - username
+                  type: object
+                bearerToken:
+                  type: string
+                  description: Bearer token.
+                customAuthToken:
+                  type: string
+                  description: Custom token sent as a value of the X-Auth-Token header.
+                headers:
+                  description: |
+                    HTTP headers to include in the request.
+                  type: object
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        The `X-Scope-OrgID` header specifying the tenant ID.
+                      type: string
+                  required: ["X-Scope-OrgID"]
+                writeRelabelConfigs:
+                  description: |
+                    The list of remote write relabel configurations.
+
+                    For example, if you need to remove unnecessary metrics or perform [data relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      action:
+                        description: Action to perform based on regex matching.
+                        type: string
+                        x-doc-default: replace
+                      modulus:
+                        description: Modulus to take of the hash of the source label values.
+                        format: int64
+                        type: integer
+                      regex:
+                        description: Regular expression against which the extracted value is matched. Default is '(.*)'
+                        type: string
+                        x-doc-default: '(.*)'
+                      replacement:
+                        description: |
+                          Replacement value against which a regex replace is performed if the regular expression matches.
+
+                          Regex capture groups are available.
+                        type: string
+                        x-doc-default: '$1'
+                      separator:
+                        description: Separator placed between concatenated source label values.
+                        type: string
+                        x-doc-default: ';'
+                      sourceLabels:
+                        type: array
+                        description: |
+                          The source labels select values from existing labels.
+
+                          Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+                        items:
+                          type: string
+                      targetLabel:
+                        description: |
+                          Label to which the resulting value is written in a replace action. It is mandatory for replace actions.
+
+                          Regex capture groups are available.
+                        type: string
+                tlsConfig:
+                  type: object
+                  description: TLS Config to use for remote write.
+                  properties:
+                    insecureSkipVerify:
+                      description: Disable target certificate validation.
+                      type: boolean
+                      x-doc-default: false
+                    ca:
+                      description: The CA certificate used when verifying the API server certificate.
+                      type: string
+                      x-doc-default: ""
+      additionalPrinterColumns: &additionalPrinterColumns
+        - name: URL
+          type: string
+          jsonPath: .spec.url
+          description: 'Prometheus Remote write URL.'
+    - name: v1
+      served: true
+      storage: true
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

@@ -1,0 +1,36 @@
+{{- $options := dict -}}
+{{- $_ := set $options "platformID" .nodeGroup.instanceClass.platformID -}}
+{{- $_ := set $options "cores" .nodeGroup.instanceClass.cores -}}
+{{- if hasKey .nodeGroup.instanceClass "coreFraction" -}}
+  {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.coreFraction -}}
+{{- end -}}
+{{- $_ := set $options "memory" .nodeGroup.instanceClass.memory -}}
+{{- if hasKey .nodeGroup.instanceClass "gpus" -}}
+  {{- $_ := set $options "gpus" .nodeGroup.instanceClass.gpus -}}
+{{- end -}}
+{{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
+{{- if hasKey .nodeGroup.instanceClass "diskSizeGB" -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGB 50.0 -}}
+    {{- $_ := set $options "diskSizeGB" .nodeGroup.instanceClass.diskSizeGB -}}
+  {{- end }}
+{{- end -}}
+{{- $_ := set $options "imageID" .nodeGroup.instanceClass.imageID -}}
+{{- if hasKey .nodeGroup.instanceClass "mainSubnet" }}
+  {{- $_ := set $options "mainSubnet" .nodeGroup.instanceClass.mainSubnet -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" -}}
+  {{- $_ := set $options "assignPublicIPAddress" .nodeGroup.instanceClass.assignPublicIPAddress -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalSubnets" -}}
+  {{- $_ := set $options "additionalSubnets" .nodeGroup.instanceClass.additionalSubnets -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "preemptible" -}}
+  {{- $_ := set $options "preemptible" .nodeGroup.instanceClass.preemptible -}}
+{{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" -}}
+  {{- $_ := set $options "additionalLabels" .nodeGroup.instanceClass.additionalLabels -}}
+{{- end -}}
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

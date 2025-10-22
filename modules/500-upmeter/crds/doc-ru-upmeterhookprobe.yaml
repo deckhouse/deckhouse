@@ -1,0 +1,13 @@
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: Ресурс для пробы работоспособности декхауса.
+          properties:
+            spec:
+              properties:
+                inited:
+                  description: Начальное значение, которое устанавливает upmeter-агент.
+                mirror:
+                  description: Значение, которое должно стать равным `initial` в результате работы хука.

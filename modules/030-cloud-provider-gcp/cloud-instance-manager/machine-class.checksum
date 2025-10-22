@@ -1,0 +1,33 @@
+{{- $options := dict -}}
+
+{{- $_ := set $options "machineType" .nodeGroup.instanceClass.machineType -}}
+
+{{- if hasKey .nodeGroup.instanceClass "diskSizeGb" -}}
+  {{- if ne .nodeGroup.instanceClass.diskSizeGb 50.0 -}}
+    {{- $_ := set $options "diskSizeGb" .nodeGroup.instanceClass.diskSizeGb -}}
+  {{- end }}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "diskType" -}}
+  {{- $_ := set $options "diskType" .nodeGroup.instanceClass.diskType -}}
+{{- end -}}
+
+{{- $_ := set $options "image" .nodeGroup.instanceClass.image -}}
+
+{{- if hasKey .nodeGroup.instanceClass "preemptible" -}}
+  {{- $_ := set $options "preemptible" .nodeGroup.instanceClass.preemptible -}}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "additionalNetworkTags" -}}
+  {{- $_ := set $options "additionalNetworkTags" .nodeGroup.instanceClass.additionalNetworkTags -}}
+{{- end -}}
+
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" -}}
+  {{- $_ := set $options "additionalLabels" .nodeGroup.instanceClass.additionalLabels -}}
+{{- end -}}
+
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

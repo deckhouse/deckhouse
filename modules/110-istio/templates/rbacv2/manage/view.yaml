@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: istio
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-istio
+  name: d8:manage:permission:module:istio:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ingressistiocontrollers
+  - istiofederations
+  - istiomulticlusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - istio
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

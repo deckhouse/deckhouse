@@ -1,0 +1,6 @@
+version: 2
+conversions:
+  - del(.auth.password) | if .auth == {} then del(.auth) end
+description:
+  ru: "Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его."
+  en: "Remove the `.auth.password` field. If the `.auth` object becomes empty after this change, delete it."

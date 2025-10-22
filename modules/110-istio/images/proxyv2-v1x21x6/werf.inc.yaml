@@ -1,0 +1,370 @@
+---
+{{- $istioVersion := "1.21.6" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
+{{- $istioProxyCacheRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
+{{- $istioProxyDepsRev := "v1.21.6-5c3dc559371181d5baa4a7533c36f2370fc97581-alt-v1" }}
+{{- $llvmRev := "llvmorg-14.0.6" }}
+{{- $goVersion := "1.23.1" }}
+{{- $protocVersion := "22.3" }}
+{{- $bazelVersions := "6.3.2" }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+{{- $source := "https://github.com" }}
+{{- $sourceraw := "https://raw.githubusercontent.com" }}
+{{- if $.DistroPackagesProxy }}
+  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
+  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
+{{- end }}
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/envoy_bootstrap.json
+  to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/tools/packaging/common/gcp_envoy_bootstrap.json
+  to: /var/lib/istio/envoy/gcp_envoy_bootstrap_tmpl.json
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+  add: /src/istio/out/pilot-agent
+  to: /usr/local/bin/pilot-agent
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+  add: /src/proxy/bin/envoy
+  to: /usr/local/bin/envoy
+  owner: 1337
+  group: 1337
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    user: "1337:1337"
+    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    workingDir: "/"
+    entrypoint: ["/usr/local/bin/pilot-agent"]
+---
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src/istio/
+  - echo {{ $istioVersion }} > version
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
+  #
+  - strip /src/istio/out/pilot-agent
+  #
+  - chmod 0555 /src/istio/out/pilot-agent
+  - chown 1337:1337 /src/istio/out/pilot-agent
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/proxy
+  to: /src/proxy
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
+  add: /opt/libcxx
+  to: /opt/libcxx
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
+- from: tmp_dir
+  to: /tmp/bazel-cache
+- from: tmp_dir
+  to: /tmp/bazel-deps
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
+  #
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
+  - cd /src/proxy
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-L/opt/libcxx/lib'          envoy.bazelrc
+  - sed -i '/^build --enable_platform_specific_config/a build --linkopt=-Wl,-rpath,/opt/libcxx/lib' envoy.bazelrc
+  - sed -i 's|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-pthread|build:libc++ --action_env=BAZEL_LINKOPTS=-lm:-lpthread|' envoy.bazelrc
+  - sed -i 's|ENVOY_SHA = "94aa5f7f82fb543e7fbc011ea398ac12cc396817"|ENVOY_SHA = "5c3dc559371181d5baa4a7533c36f2370fc97581"|' WORKSPACE
+  - sed -i 's|ENVOY_SHA256 = "092784be59d19e99343afc095c1a65eca916b0b3f218d48545a6f0d43cdd5885"|ENVOY_SHA256 = "17f36c4267570e64123e3f08cdf8fc9442634572c5dc87f3f4192d953a4d29bf"|' WORKSPACE
+  #
+  - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
+  - mkdir -p ${BAZEL_OUTPUT_BASE}/external
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  #
+  - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
+  - mkdir /src/proxy/bin
+  - mv /src/proxy/bazel-bin/envoy /src/proxy/bin/
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
+fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/llvm
+  to: /src/llvm
+  before: install
+shell:
+  install:
+  - export CCACHE_DIR="/tmp/ccache-dir"
+  - mkdir -p /opt/libcxx
+  - cd /tmp/
+  - ccache --zero-stats || true
+  - ccache --show-stats -v || true
+  - |
+    cmake \
+    -GNinja \
+    -DLLVM_ENABLE_PROJECTS="libcxxabi;libcxx" \
+    -DLLVM_USE_LINKER=lld \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_CCACHE_BUILD="ON" \
+    -DLLVM_CCACHE_DIR="/tmp/ccache-dir" \
+    -DLLVM_CCACHE_MAXSIZE="0" \
+    -DCMAKE_INSTALL_PREFIX="/opt/libcxx" /src/llvm/llvm
+  setup:
+  - export CCACHE_DIR="/tmp/ccache-dir"
+  - cd /tmp/
+  - ccache --show-stats -v || true
+  - ninja install-cxx install-cxxabi
+  - ccache --show-stats -v || true
+  #
+  - rm -rf /src/llvm
+  - rm -rf /opt/libcxx/include
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+  - apt-get update && apt-get install -y ca-certificates
+  - update-ca-trust
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  install:
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done
+---
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/golang-artifact
+fromImage: builder/golang-alpine
+final: false
+---
+image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+fromImage: builder/alt
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+- from: tmp_dir
+  to: /root/.cache/bazel
+import:
+- image: {{ .ModuleName }}/golang-artifact
+  add: /usr/local/go
+  to: /usr/local/go
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  - |
+    apt-get install -y \
+    apt-https curl jq tzdata \
+    ca-certificates bash-completion iproute2 arpd ipset kmod \
+    iptables iptables-ipv6 iptables-nft \
+    coreutils binutils git zip unzip wget mount patch patchelf \
+    make automake autoconf cmake ccache bison flex ninja-build pkg-config \
+    gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
+    glibc glibc-devel glibc-devel-static \
+    python python3 python3-module-pip python3-module-virtualenv \
+    build-essential libtool \
+    libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel java-1.8.0-openjdk golangci-lint
+  # for debug
+  - apt-get install -y strace vim-console
+  - |
+    apt-get install -y \
+    sudo \
+    libcap-devel libpcap-devel \
+    clang14.0 clang14.0-tools lld14.0 llvm14.0-devel \
+    libcxxabi-devel \
+    libcxx libcxx-static libcxxabi-static lld14.0
+  # apt clean
+  - apt-get autoclean && apt-get clean
+  install:
+  - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+  - ln -s -f /usr/lib/llvm-14.0/bin/clang /usr/bin/clang
+  - ln -s -f /usr/lib/llvm-14.0/bin/clang++ /usr/bin/clang++
+  - ln -s -f /usr/lib/llvm-14.0/bin/ld.lld /usr/bin/ld.lld
+  # Install Go
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - go version
+  # Install protoc and plugins
+  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
+  - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
+  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
+  - git clone --depth 1 --branch v1.30.0 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
+  - git clone --depth 1 --branch v1.1.0 $(cat /run/secrets/SOURCE_REPO)/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
+  - git clone --depth 1 --branch v1.5.1 $(cat /run/secrets/SOURCE_REPO)/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
+  - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
+  - cd /src/protobuf-go/cmd/protoc-gen-go && go install
+  - cd /src/protoc-gen-go-json && go install
+  - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
+  - cd /src
+  - rm -rf /src/grpc-go
+  - rm -rf /src/protobuf-go
+  - rm -rf /src/protoc-gen-go-json
+  - rm -rf /src/protoc-gen-doc
+  # Install multiversion bazel
+  - bazel_versions=({{ $bazelVersions }})
+  # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
+  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/refs/tags/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
+  - chmod +x /usr/local/bin/bazel
+  - |
+    for bazel_version in ${bazel_versions[@]} ; do
+      # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
+      # so for multiple versions to be usable files will need to moved around, which would be more tedious
+      long_binary_name="bazel-${bazel_version}-linux-x86_64"
+      curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      chmod +x "/usr/local/bin/${long_binary_name}"
+      USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
+    done
+imageSpec:
+  config:
+    env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:/usr/local/go/bin:/go/bin", "GOOS": "linux", "GOARCH": "amd64"}
+---
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
+  - cd /src/proxy/
+  - git apply --verbose /patches/*.patch
+  - git clone --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
+  - rm -rf /src/llvm/.git
+
+  # getting rid of unused vulnerable code
+  - rm -rf /src/llvm/llvm/utils/git
+  - rm -rf /src/llvm/mlir/utils/vscode
+  - rm -rf /src/llvm/third-party/benchmark && mkdir /src/llvm/third-party/benchmark
+  - touch /src/llvm/third-party/benchmark/placeholder.txt
+---

@@ -1,0 +1,137 @@
+{{- define "metrics-exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if .Values.istio.multicluster.enabled }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: metrics-exporter
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: metrics-exporter
+      minAllowed:
+        {{- include "metrics-exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-exporter
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-exporter")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: metrics-exporter
+  template:
+    metadata:
+      labels:
+        app: metrics-exporter
+    spec:
+      {{- if $.Values.istio.controlPlane.nodeSelector }}
+      nodeSelector:
+        {{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+      {{- else }}
+        {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- end }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "metrics-exporter")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: multicluster-metrics-exporter
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: metrics-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "metricsExporter") }}
+        imagePullPolicy: IfNotPresent
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 4224
+            scheme: HTTPS
+          initialDelaySeconds: 1
+          periodSeconds: 30
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4224
+            scheme: HTTPS
+          initialDelaySeconds: 1
+          periodSeconds: 30
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "metrics-exporter_resources" . | nindent 12 }}
+  {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /healthz
+              - /readyz
+              upstreams:
+              - upstream: http://127.0.0.1:8080/
+                path: /
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ $.Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: metrics-exporter
+        ports:
+          - containerPort: 4224
+            name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}

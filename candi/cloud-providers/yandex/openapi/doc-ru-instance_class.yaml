@@ -1,0 +1,127 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс [ссылается](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) ресурс `NodeGroup` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                cores:
+                  description: |
+                    Количество ядер у создаваемых виртуальных машин.
+                coreFraction:
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых виртуальных машин. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
+                gpus:
+                  description: |
+                    Количество графических адаптеров у создаваемых виртуальных машин.
+                memory:
+                  description: |
+                    Количество оперативной памяти (в мегабайтах) у создаваемых виртуальных машин.
+                imageID:
+                  description: |
+                    Идентификатор образа, который будет установлен в заказанные виртуальные машины.
+
+                    По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid).
+                platformID:
+                  description: |
+                    ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
+                preemptible:
+                  description: |
+                    Необходимость заказа прерываемых виртуальных машин (preemptible-инстансов).
+
+                    Подробнее о прерываемых виртуальных машинах можно узнать в [документации провайдера](https://cloud.yandex.ru/docs/compute/concepts/preemptible-vm).
+                diskType:
+                  description: |
+                    Тип диска у виртуальных машин.
+
+                    Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
+
+                    Подробнее о возможных типах дисков можно узнать в [документации провайдера](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
+                diskSizeGB:
+                  description: |
+                    Размер диска у виртуальных машин. Значение указывается в `ГиБ`.
+                assignPublicIPAddress:
+                  description: |
+                    Необходимость присвоения публичных IP-адресов виртуальным машинам.
+                mainSubnet:
+                  description: |
+                    Имя основной сети (ID), к которой будет подключен основной сетевой интерфейс виртуальной машины.
+
+                    Если параметр не задан, то основная сеть определяется автоматически согласно следующей логике: если задан список сетей в параметре [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), то сеть определяется из указанного списка, иначе используется созданная Deckhouse сеть.
+                additionalSubnets:
+                  description: |
+                    Список дополнительных подсетей, которые будут подключены к виртуальной машине.
+                additionalLabels:
+                  description: |
+                    Дополнительные лейблы, которые будут присвоены созданным виртуальным машинам.
+                networkType:
+                  description: |
+                    Тип сети: STANDARD или SOFTWARE_ACCELERATED.
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы Yandex Instance'ов (виртуальных машин), которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс [ссылается](../node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) ресурс `NodeGroup` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                cores:
+                  description: |
+                    Количество ядер у создаваемых виртуальных машин.
+                coreFraction:
+                  description: |
+                    Базовый уровень производительности каждого ядра CPU у создаваемых виртуальных машин. [Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels).
+                gpus:
+                  description: |
+                    Количество графических адаптеров у создаваемых виртуальных машин.
+                memory:
+                  description: |
+                    Количество оперативной памяти (в мегабайтах) у создаваемых виртуальных машин.
+                imageID:
+                  description: |
+                    Идентификатор образа, который будет установлен в заказанные виртуальные машины.
+
+                    По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid).
+                platformID:
+                  description: |
+                    ID платформы. [Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms).
+                preemptible:
+                  description: |
+                    Необходимость заказа прерываемых виртуальных машин (preemptible-инстансов).
+
+                    Подробнее о прерываемых виртуальных машинах можно узнать в [документации провайдера](https://cloud.yandex.ru/docs/compute/concepts/preemptible-vm).
+                diskType:
+                  description: |
+                    Тип диска у виртуальных машин.
+
+                    Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
+
+                    Подробнее о возможных типах дисков можно узнать в [документации провайдера](https://cloud.yandex.com/docs/compute/concepts/disk#disks_types).
+                diskSizeGB:
+                  description: |
+                    Размер диска у виртуальных машин. Значение указывается в `ГиБ`.
+                assignPublicIPAddress:
+                  description: |
+                    Необходимость присвоения публичных IP-адресов виртуальным машинам.
+                mainSubnet:
+                  description: |
+                    Имя основной сети (ID), к которой будет подключен основной сетевой интерфейс виртуальной машины.
+
+                    Если параметр не задан, то основная сеть определяется автоматически согласно следующей логике: если задан список сетей в параметре [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), то сеть определяется из указанного списка, иначе используется созданная Deckhouse сеть.
+                additionalSubnets:
+                  description: |
+                    Список дополнительных подсетей, которые будут подключены к виртуальной машине.
+                additionalLabels:
+                  description: |
+                    Дополнительные лейблы, которые будут присвоены созданным виртуальным машинам.
+                networkType:
+                  description: |
+                    Тип сети: обычная или [программно-ускоренная](https://cloud.yandex.ru/docs/vpc/concepts/software-accelerated-network).
+

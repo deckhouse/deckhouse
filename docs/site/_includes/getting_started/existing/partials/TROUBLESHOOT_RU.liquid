@@ -1,0 +1,127 @@
+Кластеры некоторых провайдеров могут требовать дополнительных действий до или после установки Deckhouse.
+
+Ниже приведены частые проблемы и способы их решения. Если вы столкнулись с другими особенностями установки Deckhouse в существующем кластере, пожалуйста, опишите ваш опыт в [issue](https://github.com/deckhouse/deckhouse/issues).
+
+{% offtopic title="Ошибки установки на этапе 'Waiting for Deckhouse to become Ready'" %}
+- Ошибка вида:
+  ```
+  │ │ ┌ Waiting for Deckhouse to become Ready
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
+  ```
+
+  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/control-plane: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
+
+  Варианты решения:
+  - Отредактировать deployment `deckhouse` и указать нужный `nodeSelector`:
+    ```shell
+    kubectl -n d8-system edit deployment/deckhouse
+    ```
+  - Удалить nodeSelector у deployment `deckhouse`:
+    ```shell
+    kubectl patch -n d8-system deployment deckhouse --type json -p '[{"op": "remove", "path": "/spec/template/spec/nodeSelector"}]'
+    ```
+
+
+- Ошибка вида:
+  ```
+  Waiting for Deckhouse to become Ready
+  │ │ Deckhouse pod found: deckhouse-7cc8b6f4bd-9l99t (Running)
+  │ │ Running pod found! Checking logs...
+  │ │ Request failed. Probably pod was restarted during installation.
+  │ │ No Deckhouse pod found.
+  ```
+  А так же в модуле deckhouse появляется ошибка со статусом:
+  ```
+  Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
+  ```
+
+  Скорее всего в статичном манифесте `kube-apiserver.yaml` не указан `runtime-config`.
+
+  Добавьте в `/etc/kubernetes/manifests/kube-apiserver.yaml` в параметр `spec.containers.command` значение `- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
+
+  **Внимание.** `kube-apiserver` может некоторое время не отвечать на запросы.
+
+{% endofftopic %}
+
+{% offtopic title="Ошибка в случае установки Deckhouse после прерывания" %}
+В случае, если установка Deckhouse была прервана по неизвестным причинам, при повторной установке может быть выведена следующая ошибка:
+```
+  ┌ ⛵ ~ Bootstrap: Install Deckhouse
+  └ ⛵ ~ Bootstrap: Install Deckhouse (43.50 seconds) FAILED
+
+  Timeout while "Check prevent break another bootstrapped": last error: Cluster UUID's not equal in the cluster                              ↵
+  (7489d07a-5fbb-4269-ba0d-e0340ce4f118) and in the cache ().
+  Probably you are trying bootstrap cluster on node with previous created cluster.
+  Please check hostname.
+```
+
+Чтобы заново установить Deckhouse на кластер, необходимо удалить следующие ConfigMap-ы в namespace `kube-system`:
+```
+  d8-cluster-is-bootstraped
+  d8-cluster-uuid
+```
+и далее начать установку заново.
+{% endofftopic %}
+
+{% offtopic title="В кластере нет Ingress-контроллера..." %}
+Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/modules/ingress-nginx/) следующим способом:
+
+- Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:
+
+  ```shell
+  kubectl create -f - <<EOF
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: ingress-nginx
+  spec:
+    enabled: true
+  EOF
+  ```
+
+- Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
+  ```yaml
+  {% include_file "{{ includePath }}" syntax="yaml" %}
+  ```
+
+- Примените его, после установки Deckhouse, выполнив следующую команду:
+
+  ```shell
+  kubectl create -f ingress-nginx-controller.yml
+  ```
+{% endofftopic %}
+
+
+{% offtopic title="Кластер в VK Cloud Solutions (MailRu Cloud Solutions)" %}
+- В конфигурации инсталляции Deckhouse в массиве <code>customTolerationKeys</code> укажите taint <code>CriticalAddonsOnly</code>. Пример:
+
+  ```yaml
+  deckhouse:
+    releaseChannel: Stable
+    bundle: Minimal
+    configOverrides:
+      global:
+        modules:
+          placement:
+            customTolerationKeys:
+            - CriticalAddonsOnly
+          publicDomainTemplate: "%s.example.com"
+  ```
+
+- В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits Pod'ам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.
+
+  При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:
+
+  ```text
+  admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...
+  ```
+
+  Чтобы Deckhouse смог запуститься, необходимо перед установкой Deckhouse в таких кластерах добавить исключение GateKeeper (OPA) для namespace'ов компонентов Deckhouse (<code>d8*-</code>). Выполните в кластере:
+
+  ```shell
+  kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
+  ```
+{% endofftopic %}
+

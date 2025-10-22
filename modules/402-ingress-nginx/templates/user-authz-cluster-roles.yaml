@@ -1,0 +1,36 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+  name: d8:user-authz:ingress-nginx:editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ingressnginxcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterEditor
+  name: d8:user-authz:ingress-nginx:cluster-editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ingressnginxcontrollers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

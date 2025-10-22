@@ -1,0 +1,313 @@
+{!{ define "checkout_step" }!}
+# <template: checkout_step>
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  {!{ if coll.Has . "pullRequestRefField" -}!}
+  with:
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
+# </template: checkout_step>
+{!{- end -}!}
+
+{!{ define "checkout_full_step" }!}
+# <template: checkout_full_step>
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    fetch-depth: 0
+  {!{- if coll.Has . "pullRequestRefField" }!}
+    ref: ${{ {!{ .pullRequestRefField }!} }}
+  {!{- end }!}
+# </template: checkout_full_step>
+{!{- end -}!}
+
+{!{ define "checkout_from_event_ref_step" }!}
+# <template: checkout_from_event_ref_step>
+- name: Checkout sources
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+    fetch-depth: 0
+# </template: checkout_from_event_ref_step>
+{!{- end }!}
+
+{!{/* if: ${{secrets.NNN}} not supported, additional step is required.  */}!}
+{!{ define "login_dev_registry_step" }!}
+# <template: login_dev_registry_step>
+- name: Check dev registry credentials
+  id: check_dev_registry
+  env:
+    HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to dev registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+    username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+    password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_dev_registry_step>
+{!{- end -}!}
+
+{!{ define "login_dev_cse_registry_step" }!}
+# <template: login_dev_cse_registry_step>
+- name: Check dev cse registry credentials
+  id: check_dev_cse_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to dev cse registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_dev_cse_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_dev_cse_registry_step>
+{!{- end -}!}
+
+{!{ define "login_readonly_registry_step" }!}
+# <template: login_readonly_registry_step>
+- name: Check readonly registry credentials
+  id: check_readonly_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to readonly registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+    username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+    password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+    logout: false
+# </template: login_readonly_registry_step>
+{!{- end -}!}
+
+{!{ define "login_rw_cse_registry_step" }!}
+# <template: login_rw_registry_step>
+- name: Check rw cse registry credentials
+  id: check_rw_cse_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to rw cse registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_cse_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_CSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_CSE_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD }}
+    logout: false
+- name: Login to Github Container Registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+  with:
+    registry: ghcr.io
+    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_rw_registry_step>
+{!{- end -}!}
+
+{!{ define "login_rw_registry_step" }!}
+# <template: login_rw_registry_step>
+- name: Check rw registry credentials
+  id: check_rw_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to rw registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+    logout: false
+- name: Login to Github Container Registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+  with:
+    registry: ghcr.io
+    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_rw_registry_step>
+{!{- end -}!}
+
+{!{ define "login_flant_registry_step" }!}
+# <template: login_flant_registry_step>
+- name: Check flant registry credentials
+  id: check_flant_registry
+  env:
+    HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+    else
+      echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+    fi
+- name: Login to flant registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+    username: ${{ secrets.FLANT_REGISTRY_USER }}
+    password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+    logout: false
+- name: Login to Github Container Registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+  with:
+    registry: ghcr.io
+    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_flant_registry_step>
+{!{- end -}!}
+
+{!{ define "werf_install_step" }!}
+# <template: werf_install_step>
+- name: Install werf CLI
+  uses: {!{ index (ds "actions") "werf/actions/install" }!}
+  with:
+    version: ${{env.WERF_VERSION}}
+# </template: werf_install_step>
+{!{- end -}!}
+
+{!{ define "started_at_output" }!}
+# <template: started_at_output>
+- name: Job started timestamp
+  id: started_at
+  run: |
+    unixTimestamp=$(date +%s)
+    echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+# </template: started_at_output>
+{!{- end -}!}
+
+{!{ define "link_bin_step" }!}
+# <template: link_bin_step>
+- name: Link binary cache
+  id: link_bin_step
+  run: |
+    ln -s ~/deckhouse-bin-cache bin
+# </template: link_bin_step>
+{!{- end -}!}
+
+{!{ define "unlink_bin_step" }!}
+# <template: unlink_bin_step>
+- name: Unlink binary cache
+  id: unlink_bin_step
+  if: always()
+  run: |
+    rm bin
+# </template: unlink_bin_step>
+{!{- end -}!}
+
+{!{ define "add_ssh_keys" }!}
+# <template: add_ssh_keys>
+- name: Start ssh-agent
+  uses: {!{ index (ds "actions") "ssh-agent" }!}
+  with:
+    ssh-private-key: |
+      ${{secrets.SOURCE_REPO_SSH_KEY}}
+      ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+- name: Add ssh_known_hosts
+  run: |
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+    echo "::add-mask::$HOST"
+    IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+    for IP in $IPS; do
+      echo "::add-mask::$IP"
+    done
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+      CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+      if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+      fi
+    done <<< "$HOST_KEYS"
+- name: Add svace analyze server to ssh_known_hosts
+  continue-on-error: true
+  run: |
+    host=${{ secrets.SVACE_ANALYZE_HOST }}
+    host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+    echo "::add-mask::$host_ip"
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+        CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+        if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+            ssh-keygen -R $host
+            ssh-keygen -R $host_ip
+        fi
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+    done <<< "$HOST_KEYS"
+# </template: add_ssh_keys>
+{!{- end -}!}
+
+
+{!{ define "send_fail_report" }!}
+# <template: send_fail_report>
+- name: Send fail report
+  if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+  env:
+    LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+    JOB_NAME: ${{ github.job }}
+    WORKFLOW_NAME: ${{ github.workflow }}
+    WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+  run: |
+    bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+# </template: send_fail_report>
+{!{- end -}!}
+
+
+{!{ define "import_secrets" }!}
+# <template: import_secrets>
+- name: Split repository name
+  id: split
+  env:
+    REPO: ${{ github.repository }}
+  run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+- name: Import secrets
+  id: secrets
+  uses: hashicorp/vault-action@v2
+  with:
+    url: https://seguro.flant.com
+    path: github
+    role: "${{ steps.split.outputs.name }}"
+    method: jwt
+    jwtGithubAudience: github-access-aud
+    secrets: |
+      {!{ range . }!}
+      {!{- index . 0 }!} {!{ index . 1 }!} | {!{ index . 2 }!} ;
+      {!{ end }!}
+# </template: import_secrets>
+{!{- end -}!}

@@ -1,0 +1,137 @@
+<div id="request_callback_intro" data-header-form>
+  <h3 class="text text_h3 text__form-h3">{{ site.data.modal['request-callback']['header'][page.lang]['title']}}</h3>
+  <p class="text text__form">{{ site.data.modal['request-callback']['header'][page.lang]['text']}}</p>
+  <form class="form form__request" action="https://submit-form.com/T1D8NgqF" id="request_callback_form" data-form>
+    <input class="form__h0n3y" autocomplete="off" type="text" name="_hp" placeholder="Comment">
+    {%- if page.lang == "ru" %}
+    <input type="hidden" id="language_ru" name="language" value="ru">
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="text" name="name"
+        placeholder="Имя *" aria-label="Имя *"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="email" name="email"
+        placeholder="Email *" aria-label="Email *"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="tel" name="phone"
+        placeholder="Телефон *" aria-label="Телефон *"
+        autocomplete="off" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="text" name="company"
+        placeholder="Компания" aria-label="Компания"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="text" name="position"
+        placeholder="Должность" aria-label="Должность"
+        autocomplete="off" required="required" />
+    </div>
+    <p  class="сommunication-method">{{ site.data.modal['request-callback']['communication-method'][page.lang]['title'] }}</p>
+    <div class="preferred-contact">
+      <div class="checkboxes">
+        <input type="checkbox" id="pcEmail" value="email" checked>
+        <label for="pcEmail">Email</label>
+        <input type="checkbox" id="pcPhone" value="phone" checked>
+        <label for="pcPhone">Телефон</label>
+        <input type="checkbox" id="pcTelegram" value="telegram">
+        <label for="pcTelegram">Telegram</label>
+      </div>
+      <input type="hidden" name="preferred_contact" value="">
+      <div class="form__row form__row-request">
+        <input class="textfield textfield-request" type="text" name="telegram_id" placeholder="Telegram ID">
+      </div>
+    </div>
+    <div class="form__row-request">
+      <button class="button button_alt button-request" type="submit">
+        Отправить
+      </button>
+    </div>
+    {%- else %}
+    <input type="hidden" id="language_en" name="language" value="en">
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="text" name="name"
+        placeholder="Name *" aria-label="Name *"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="email" name="email"
+        placeholder="Email *" aria-label="Email *"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="tel" name="phone"
+        placeholder="Phone *" aria-label="Phone *"
+        autocomplete="off" />
+    </div>
+    <div class="form__row form__row-request">
+      <input
+        class="textfield textfield-request"
+        type="text" name="company"
+        placeholder="Company" aria-label="Company"
+        autocomplete="off" required="required" />
+    </div>
+    <div class="form__row form__row-forequestrm">
+      <input
+        class="textfield textfield-request"
+        type="text" name="position"
+        placeholder="Position" aria-label="Position"
+        autocomplete="off" required="required" />
+    </div>
+    <p class="сommunication-method">{{ site.data.modal['request-callback']['communication-method'][page.lang]['title'] }}</p>
+    <div class="preferred-contact">
+      <div class="checkboxes">
+        <input type="checkbox" id="pcEmail" value="email" checked>
+        <label for="pcEmail">Email</label>
+        <input type="checkbox" id="pcPhone" value="phone" checked>
+        <label for="pcPhone">Phone</label>
+        <input type="checkbox" id="pcTelegram" value="telegram">
+        <label for="pcTelegram">Telegram</label>
+      </div>
+      <input type="hidden" name="preferred_contact" value="">
+      <div class="form__row form__row-request">
+        <input class="textfield textfield-request" type="text" name="telegram_id" placeholder="Telegram ID">
+      </div>
+    </div>
+    <div class="form__row-request">
+      <button class="button button_alt button-request" type="submit">
+        Send
+      </button>
+    </div>
+    {%- endif %}
+  </form>
+  <div class="policy-text">
+    {%- if page.lang == "ru" %}
+    <p class="form__approval">Отправляя форму вы&nbsp;соглашаетесь&nbsp;с <a class="form__approval-link" href="/security-policy/" target="_blank">политикой обработки персональных данных</a> и&nbsp;даёте <a class="form__approval-link" href="/user-data-processing/?fqp=WyJuYW1lIiwiZW1haWwiLCJwaG9uZSIsImNvbXBhbnkiLCJwb3NpdGlvbiJd" target="_blank">согласие на&nbsp;обработку персональных данных</a></p>
+    {%- else %}
+    <p class="form__approval">By&nbsp;submitting form, you agree to&nbsp;the <a class="form__approval-link" href="/privacy-policy/" target="_blank">Privacy Policy</a></p>
+    {%- endif %}
+  </div>
+</div>
+<div id="request_callback_success" data-success-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['success-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-callback']['success-message'][page.lang]['text']}}</p>
+</div>
+<div id="request_callback_error" data-error-message style="display: none;">
+  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['error-message'][page.lang]['title']}}</h3>
+  <p class="text">{{ site.data.modal['request-callback']['error-message'][page.lang]['text']}}</p>
+</div>

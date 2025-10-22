@@ -1,0 +1,31 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-ingress-nginx
+  name: d8:manage:permission:module:ingress-nginx:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ingressnginxcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - ingress-nginx
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

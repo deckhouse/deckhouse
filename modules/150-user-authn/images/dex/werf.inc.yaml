@@ -1,0 +1,68 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-artifact
+    add: /src/dex
+    to: /usr/local/bin/dex
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+    add: /web
+    to: /web
+    before: setup
+git:    
+{{- include "image mount points" . }}    
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
+fromImage: common/src-artifact
+fromCacheVersion: "2025-02-18.01"
+final: false
+git:
+  - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
+    to: /src
+    tag: v2.44.0
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/web
+    to: /web
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf examples
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -ldflags "-extldflags -static" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
+    - chown 64535:64535 dex
+    - chmod 0700 dex

@@ -1,0 +1,19 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8imagepullpolicy
+tests:
+  - name: d8imagepullpolicy
+    template: ../../templates/operation/image-pull-policy.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        object: allowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        object: disallowed.yaml
+        assertions:
+          - violations: yes
+            message: "Container <nginx> in your Pod <disallowed> has invalid pull policy: <IfNotPresent>"
+

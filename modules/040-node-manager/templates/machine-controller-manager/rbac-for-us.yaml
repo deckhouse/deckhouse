@@ -1,0 +1,197 @@
+{{- if include "machine_controller_manager_enabled" . }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+rules:
+-  apiGroups:
+   - machine.sapcloud.io
+   resources:
+   - awsmachineclasses
+   - azuremachineclasses
+   - gcpmachineclasses
+   - openstackmachineclasses
+   - alicloudmachineclasses
+   - packetmachineclasses
+   - vspheremachineclasses
+   - yandexmachineclasses
+   - machinedeployments
+   - machines
+   - machinesets
+   - awsmachineclasses/status
+   - azuremachineclasses/status
+   - gcpmachineclasses/status
+   - openstackmachineclasses/status
+   - alicloudmachineclasses/status
+   - packetmachineclasses/status
+   - vspheremachineclasses/status
+   - yandexmachineclasses/status
+   - machinedeployments/status
+   - machines/status
+   - machinesets/status
+   verbs:
+   - create
+   - delete
+   - deletecollection
+   - get
+   - list
+   - patch
+   - update
+   - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - patch
+  - update
+  - list
+  - get
+  - watch
+-  apiGroups:
+   - ""
+   resources:
+   - events
+   verbs:
+   - create
+   - delete
+   - deletecollection
+   - get
+   - list
+   - patch
+   - update
+   - watch
+# leader election
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  resourceNames:
+  - machine-controller-manager
+  verbs:
+  - get
+  - update
+  - patch
+  - delete
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: machine-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:machine-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+rules:
+-  apiGroups:
+   - ""
+   resources:
+   - nodes
+   - endpoints
+   - replicationcontrollers
+   - pods
+   - persistentvolumes
+   - persistentvolumeclaims
+   - events
+   verbs:
+   - get
+   - list
+   - watch
+-  apiGroups:
+   - ""
+   resources:
+   - nodes
+   - nodes/status
+   verbs:
+   - delete
+   - deletecollection
+   - patch
+   - update
+   - watch
+-  apiGroups:
+   - ""
+   resources:
+   - pods/eviction
+   verbs:
+   - create
+-  apiGroups:
+   - ""
+   resources:
+   - pods
+   verbs:
+   - delete
+   - deletecollection
+-  apiGroups:
+   - extensions
+   - apps
+   resources:
+   - replicasets
+   - statefulsets
+   - daemonsets
+   - deployments
+   verbs:
+   - get
+   - list
+   - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:machine-controller-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:machine-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:machine-controller-manager:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "machine-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- end }}
+{{- end }}

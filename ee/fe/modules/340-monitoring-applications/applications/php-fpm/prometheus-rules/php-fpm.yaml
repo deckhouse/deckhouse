@@ -1,0 +1,20 @@
+- name: applications.php-fpm
+  rules:
+  - alert: PhpFpmIdleProccessesBelowThreshold
+    expr: (sum(phpfpm_processes_total{state="idle"} ) by (namespace, pod))/((sum(phpfpm_processes_total) by (namespace, pod))/100) < 10
+    for: 5m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      description: |-
+        Number of php-fpm idle processes is below 10% in Pod {{$labels.namespace}}/{{$labels.pod}}
+        Consider the following:
+
+        1. Raise `pm.max_children` in php-fpm config file.
+        2. Scale up your deployment.
+
+        More info: https://www.php.net/manual/en/install.fpm.configuration.php
+      summary: >
+        Number of php-fpm idle processes is below 10% in Pod {{$labels.namespace}}/{{$labels.pod}}

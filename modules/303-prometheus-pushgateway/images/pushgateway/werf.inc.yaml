@@ -1,0 +1,65 @@
+{{- $version := "1.6.2" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus/pushgateway.git /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -r .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src/pushgateway
+    before: install
+  - image: prometheus/prometheus-promu-artifact
+    add: /src/promu
+    to: /bin/promu
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src/pushgateway
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - /bin/promu build --prefix /src/pushgateway
+    - mkdir /empty
+    - chown -R 64535:64535 /empty
+    - chown -R 64535:64535 /src/
+    - chmod 0700 /src/pushgateway/pushgateway
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/pushgateway/pushgateway
+  to: /bin/pushgateway
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /empty
+  to: /pushgateway
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/pushgateway"]
+    expose: ["9091"]
+    workingDir: "/pushgateway"
+

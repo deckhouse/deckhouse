@@ -1,0 +1,93 @@
+{{- $version := "6.11" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src/vxlan-offloading-fixer
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src
+  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl ./libmnl
+  - rm -r libmnl/.git
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ethtool/ethtool.git ./ethtool
+  - rm -r ethtool/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
+fromImage: builder/alpine-3.20
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+  includePaths:
+  - libmnl
+  - ethtool
+mount:
+{{ include "mount points for golang builds" . }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
+  setup:
+  - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+  - cd /src/libmnl
+  - ./autogen.sh
+  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+  - make && make install
+  - cd /src/ethtool
+  - ./autogen.sh
+  - ./configure LDFLAGS=-static --libdir=/opt/deckhouse/bin/.libs
+  - make
+  - ls -la
+  - strip ./ethtool
+  - chown 64535:64535 ./ethtool
+  - chmod 0755 ./ethtool
+  - cp ./ethtool /ethtool
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/vxlan-offloading-fixer
+  to: /src
+  before: install
+shell:
+  install:
+  - export "CGO_ENABLED=0"
+  - export "GOOS=linux"
+  - export "GOARCH=amd64"
+  - cd /src
+  - go build -o /tmp/vxlan-offloading-fixer main.go
+  - chown 64535:64535 /tmp/vxlan-offloading-fixer
+  - chmod 0755 /tmp/vxlan-offloading-fixer
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
+  add: /ethtool
+  to: /ethtool
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /tmp/vxlan-offloading-fixer
+  to: /vxlan-offloading-fixer
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/vxlan-offloading-fixer"]

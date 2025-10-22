@@ -1,0 +1,19 @@
+candi:
+  fixes:
+    - summary: Fix incorrect condition for hostname discovery.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8458
+deckhouse-controller:
+  fixes:
+    - summary: Start addon-operator after controllers' preflight checks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8485
+docs:
+  fixes:
+    - summary: Update the example of creating password hash for static user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8456
+    - summary: Add a guide for full etcd recovery in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8405
+monitoring-ping:
+  fixes:
+    - summary: Skip nodes without IP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8440
+

@@ -1,0 +1,248 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+default: {}
+additionalProperties: false
+properties:
+  internal:
+    additionalProperties: false
+    type: object
+    default: {}
+    properties:
+      modules:
+        default: {}
+        additionalProperties: false
+        type: object
+        properties:
+          kubeRBACProxyCA:
+            type: object
+            default: {}
+            properties:
+              cert:
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+                type: string
+              key:
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+                type: string
+          resourcesRequests:
+            type: object
+            default: {}
+            additionalProperties: false
+            properties:
+              milliCpuControlPlane:
+                type: integer
+                format: int64
+                minimum: 0
+                x-examples: [ 1024 ]
+                default: 0
+              memoryControlPlane:
+                type: integer
+                format: int64
+                minimum: 0
+                x-examples: [ 536870912 ]
+                default: 0
+  clusterConfiguration:
+    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
+  clusterIsBootstrapped:
+    type: boolean
+    description: |
+      It indicates the cluster is bootstraped.
+      The cluster is considered bootstrapped if configmap d8-system/d8-cluster-is-bootstraped exists or
+      cluster has at least one non-master node
+    x-examples: [ true ]
+  deckhouseVersion:
+    type: string
+    x-examples: [ dev ]
+  deckhouseEdition:
+    type: string
+    enum: [ Unknown, CE, FE, EE, CSE, BE, SE, SE-plus ]
+    x-examples: [ FE ]
+  enabledModules:
+    type: array
+    items:
+      type: string
+    x-examples:
+    # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
+    - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
+    - [ "cert-manager", "prometheus" ]
+  discovery:
+    additionalProperties: true
+    type: object
+    default: {}
+    properties:
+      clusterControlPlaneIsHighlyAvailable:
+        type: boolean
+        default: false
+        x-examples: [ true, false ]
+      clusterMasterCount:
+        type: integer
+        minimum: 0
+        x-examples: [ 1, 3 ]
+      podSubnet:
+        type: string
+        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        description: |
+          Network subnet for pods
+        x-examples: [ "10.222.0.0/24" ]
+      serviceSubnet:
+        type: string
+        pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+        description: |
+          Network subnet for k8s services
+        x-examples: [ "10.222.0.0/24" ]
+      defaultStorageClass:
+        type: string
+        # it is name of resource in kubernetes
+        pattern: '[a-z0-9]([\-a-z0-9\.]*[a-z0-9])?'
+        description: |
+          Default storage class for cluster
+          It gets form storage class annotated as "storageclass.beta.kubernetes.io/is-default-class" or "storageclass.kubernetes.io/is-default-class"
+        x-examples: [ "default" ]
+      clusterDNSAddress:
+        type: string
+        pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'
+        description: |
+          DNS server in-cluster address
+          It gets form service in kube-system namespace labeled as "kube-dns" or "coredns"
+        x-examples: [ "10.222.0.1" ]
+      kubernetesCA:
+        type: string
+        description: |
+          Kubernetes apiserver CA certificate.
+          It gets from /var/run/secrets/kubernetes.io/serviceaccount/ca.crt file
+        x-examples:
+        - "K8S\nCA\nMultilne"
+      prometheusScrapeInterval:
+        type: integer
+        default: 30
+        minimum: 1
+        description: |
+          Scrape interval for prometheus. In seconds
+        x-examples: [ 1 ]
+      clusterUUID:
+        type: string
+        description: |
+          Unique cluster identifier
+        x-examples: [ "f76f54dc-7ea0-11ec-899e-c70701aef75e" ]
+      clusterDomain:
+        type: string
+        pattern: '^[0-9a-zA-Z._-]+$'
+        x-examples: [ "cluster.local" ]
+      d8SpecificNodeCountByRole:
+        # it is map node_role => count
+        # we can have multiple roles, for example every module has our own role
+        additionalProperties: true
+        type: object
+        default: {}
+        description: |
+          Map node-role => count.
+          Node will have role 'some-role' if it has label with prefix node-role.deckhouse.io/
+          Do not use label with prefix node-role.deckhouse.io/ on workers nodes!
+        x-examples:
+        - system: 2
+      kubernetesVersions:
+        type: array
+        items:
+          type: string
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          pattern: ^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        description: |
+          K8s versions for each control-plane node
+        x-examples:
+        - [ "1.29.2", "1.29.3", "1.29.2" ]
+      kubernetesVersion:
+        type: string
+        # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+        pattern: ^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+        description: |
+          Effective (minimal from each control plane node) k8s version
+        x-examples: [ "1.29.2" ]
+      extensionAPIServerAuthenticationRequestheaderClientCA:
+        type: string
+        description: |
+          The CA for verification requests to our custom modules from clients inside cluster.
+          It gets from kube-system/extension-apiserver-authentication config map
+        x-examples:
+        - "extention\nCA\nMultiline"
+      apiVersions:
+        type: array
+        items:
+          type: string
+        description: |
+          List of GVKs installed from the modules' crds directories.
+        x-examples:
+        - [ "deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule" ]
+      dvpNestingLevel:
+        type: integer
+        default: 0
+        minimum: 0
+        description: |
+          Nested level of virtualization.
+        x-examples: [ 1 ]
+  modulesImages:
+    additionalProperties: true
+    type: object
+    default: {}
+    properties:
+      registry:
+        type: object
+        default: {}
+        properties:
+          path:
+            type: string
+            description: |
+              Path of deckhouse repo
+            x-examples: [ "/deckhouse/fe" ]
+          address:
+            type: string
+            description: |
+              Domain of deckhouse repo
+            x-examples: [ "registry.deckhouse.io" ]
+          CA:
+            type: string
+            description: |
+              Registry CA certificate
+            x-examples: [ "registry\nCA\nMultiline" ]
+          scheme:
+            type: string
+            enum: [ "http", "https" ]
+            description: |
+              Scheme for registry
+            x-examples: [ "https" ]
+          dockercfg:
+            type: string
+            # source https://regex101.com/r/Pj4Ako/1
+            pattern: ^(?:([a-z0-9A-Z+\/]){4})*([a-z0-9A-Z+\/])(?:([a-z0-9A-Z+\/])==|([a-z0-9A-Z+\/]){2}=|([a-z0-9A-Z+\/]){3})$
+            description: |
+              Docker config for registry from secret from d8-system/deckhouse-registry
+          base:
+            type: string
+            # source https://regex101.com/r/7oJe0k/1
+            # based on https://regex101.com/library/a98UqN
+            pattern: ^([\w.\-_]+((:\d+|)(/[a-z0-9._-]+/[a-z0-9._-]+))|)(/|)([a-z0-9.\-_]+(/[a-z0-9.\-_]+|))
+            description: |
+              Deckhouse base for images repo, consist of address and path.
+              It is used in the helm templates to generate the address of the container image.
+              Almost always, concatinateds with tag from modulesImages.tag
+            x-examples: [ "registry.example.com/deckhouse" ]
+          hash:
+            type: string
+            default: ""
+            description: |
+              SHA256 hash of registry configuration (address, path, scheme, CA, dockerConfig).
+              Used to verify that Deckhouse has applied the new registry configuration
+              by comparing with the hash in the pod annotation.
+      tags:
+        type: object
+        default: {}
+        # tags map module_name => map<image_name, tag>
+        additionalProperties: true
+        description: |
+          Map module_name => map(image_name => tag)
+          The map loads from /deckhouse/modules/images_digests.json file.
+          That file generated on build stage.
+          Values from this map uses in helm teplates for generating container image address in deployments sts...
+        x-examples:
+        - tags:
+            module:
+              image: hash

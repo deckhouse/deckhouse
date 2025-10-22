@@ -1,0 +1,21 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: Deployment
+          name: dex-authenticator-dex-authenticator
+          container: redis
+        - kind: Deployment
+          name: test-dex-authenticator
+          container: redis
+      liveness-probe:
+        - kind: Deployment
+          name: dex-authenticator-dex-authenticator
+          container: redis
+        - kind: Deployment
+          name: test-dex-authenticator
+          container: redis
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField"

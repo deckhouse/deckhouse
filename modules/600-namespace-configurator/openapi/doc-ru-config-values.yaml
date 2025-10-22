@@ -1,0 +1,48 @@
+type: object
+properties:
+  configurations:
+    type: array
+    items:
+      type: object
+      required:
+        - includeNames
+      properties:
+        annotations:
+          type: object
+          description: |
+            Список аннотаций в формате `ключ: "значение"`.
+          x-examples:
+            example: "true"
+          additionalProperties:
+            type: string
+            nullable: true
+          default: {}
+        labels:
+          type: object
+          description: |
+            Список лейблов в формате `ключ: "значение"`.
+          x-examples:
+            istio-injection: "true"
+          additionalProperties:
+            type: string
+            nullable: true
+          default: {}
+        includeNames:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          x-examples:
+          - ["prod-.*", "infra-.*"]
+          description: |
+            Список шаблонов для включения пространств имен.
+          default: []
+        excludeNames:
+          type: array
+          items:
+            type: string
+          x-examples:
+          - ["infra-test"]
+          description: |
+            Список шаблонов для исключения пространств имен.
+          default: []

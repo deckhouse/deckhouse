@@ -1,0 +1,13 @@
+diff --git a/provisioner.go b/provisioner.go
+index b226a21..162c7c0 100644
+--- a/provisioner.go
++++ b/provisioner.go
+@@ -720,7 +720,7 @@ func createPersistentVolumeSource(volumeType string, path string) (pvs v1.Persis
+ 			},
+ 		}
+ 	case "hostpath":
+-		hostPathType := v1.HostPathDirectoryOrCreate
++		hostPathType := v1.HostPathDirectory
+ 		pvs = v1.PersistentVolumeSource{
+ 			HostPath: &v1.HostPathVolumeSource{
+ 				Path: path,

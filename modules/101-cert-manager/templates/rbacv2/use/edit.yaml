@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cert-manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:cert-manager:edit
+rules:
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificaterequests
+  - certificates
+  - issuers
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

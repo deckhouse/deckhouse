@@ -1,0 +1,221 @@
+{{- define "vector_reloader_resources" }}
+cpu: 10m
+memory: 15Mi
+{{- end }}
+
+{{- if .Values.logShipper.internal.activated }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: log-shipper-agent
+  namespace: d8-{{ $.Chart.Name }}
+    {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+    {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "log-shipper-agent" "vector" .Values.logShipper.resourcesRequests ) | nindent 2}}
+    {{- if eq (.Values.logShipper.resourcesRequests.mode) "VPA" }}
+    - containerName: "vector-reloader"
+      minAllowed:
+        {{- include "vector_reloader_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 15Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: log-shipper-agent
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: log-shipper-agent
+  minReadySeconds: 1
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: log-shipper-agent
+      annotations:
+        # TODO(nabokihms): why do we need this if we have dynamic config reloading feature?
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: {{ $.Chart.Name }}
+      automountServiceAccountToken: true
+      shareProcessNamespace: true
+      {{- with .Values.logShipper.nodeSelector }}
+      nodeSelector:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if .Values.logShipper.tolerations }}
+      tolerations:
+        {{- .Values.logShipper.tolerations | toYaml | nindent 8 }}
+      {{- else }}
+        {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- end }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      containers:
+        - name: vector
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "vector") }}
+          env:
+          - name: VECTOR_CONFIG
+            value: "/etc/vector/**/*.json"
+          {{- include "vectorEnv" . | nindent 10 }}
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/health
+              port: 9254
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 9254
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.logShipper.resourcesRequests "1024Mi") | nindent 12 }}
+          volumeMounts:
+          - name: var-log
+            mountPath: /var/log/
+            readOnly: true
+          - name: var-lib
+            mountPath: /var/lib
+            readOnly: true
+            {{- include "vectorMounts" . | nindent 10 }}
+        - name: vector-reloader
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "vector") }}
+          command: ["reloader"]
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "vector_reloader_resources" . | nindent 14 }}
+ {{- end }}
+          env:
+          {{- include "vectorEnv" . | nindent 10 }}
+          volumeMounts:
+          - name: vector-dynamic-config
+            mountPath: /opt/vector/
+          - name: reloader-tmp
+            mountPath: /tmp
+          - name: reloader-run
+            mountPath: /var/run
+            {{- include "vectorMounts" . | nindent 10 }}
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9254"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              excludePaths:
+              - /api/health
+              upstreams:
+              - upstream: http://127.0.0.1:9090/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ $.Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: prometheus-metrics
+                    name: log-shipper-agent
+              - upstream: http://127.0.0.1:8686/
+                path: /api/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ $.Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: daemonsets
+                    subresource: http
+                    name: log-shipper-agent
+          ports:
+          - containerPort: 9254
+            name: https-metrics
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /api/health
+              port: 9254
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 15
+            httpGet:
+              path: /api/health
+              port: 9254
+              scheme: HTTPS
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+  {{- end }}
+      terminationGracePeriodSeconds: 120
+      volumes:
+      - name: var-log
+        hostPath:
+          path: /var/log/
+      - name: var-lib
+        hostPath:
+          path: /var/lib/
+      - name: vector-data-dir
+        hostPath:
+          path: /mnt/vector-data
+      - name: vector-dynamic-config
+        projected:
+          sources:
+          - secret:
+              name: d8-log-shipper-config
+      - name: vector-sample-config-dir
+        projected:
+          sources:
+          - configMap:
+              name: log-shipper-config
+      - name: vector-config-dir
+        emptyDir: {}
+      - name: reloader-tmp
+        emptyDir: {}
+      - name: reloader-run
+        emptyDir: {}
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+{{- end }}

@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-apiserver
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      component: apiserver
+  namespaceSelector:
+    matchNames:
+    - default
+  endpoints:
+  - scheme: https
+    port: https
+    path: /metrics
+    tlsConfig:
+      caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - regex: endpoint|namespace|pod|container
+      action: labeldrop
+    - targetLabel: job
+      replacement: kube-apiserver
+    - targetLabel: tier
+      replacement: cluster
+    - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
+      regex: "true"
+      action: keep
+    metricRelabelings:
+    # Drop some buckets to reduce cardinality, default precision is too high
+    - sourceLabels: [__name__, le]
+      regex: 'apiserver_request_duration_seconds_bucket;(0.15|0.25|0.3|0.35|0.4|0.45|0.6|0.7|0.8|0.9|1.25|1.5|1.75|2.5|3|3.5|4.5|6|7|8|9|15|25|30|50)'
+      action: drop

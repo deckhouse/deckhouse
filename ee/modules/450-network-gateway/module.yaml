@@ -1,0 +1,9 @@
+name: network-gateway
+stage: "General Availability"
+critical: true
+weight: 450
+subsystems:
+  - networking
+namespace: d8-network-gateway
+requirements:
+  deckhouse: ">= 1.68"

@@ -1,0 +1,109 @@
+#!/bin/bash -e
+
+function sigterm() {
+  exit $?
+}
+trap sigterm SIGTERM
+
+function ensure_pod_network_route() {
+  if ! ip -json ro show | jq -e --arg dst_subnet "$1" --arg gw "$2" 'any(.[]; .dst == $dst_subnet and .gateway == $gw)' >/dev/null; then
+    ip route replace "$1" via "$2"
+  fi
+}
+
+while true; do
+  node_object="$(curl --max-time 5 -s -S -f --resolve "kubernetes.default:443:$KUBERNETES_SERVICE_HOST" -s "https://kubernetes.default/api/v1/nodes/$NODE_NAME" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")"
+
+  first_internal_ip=$(jq -re '[.status.addresses[] | select(.type == "InternalIP")][0] | .address' <<< "$node_object")
+  if [ -z "$first_internal_ip" ]; then
+    >&2 echo "ERROR: Node $(hostname) doesn't have InternalIP in .status.addresses"
+    exit 1
+  fi
+
+  if ! echo "$node_object" | jq -e '[.status.conditions[] | select(.type == "NetworkUnavailable")][0] | .status == "False"' >/dev/null 2>&1; then
+    echo '"NetworkUnavailable" status is not "False" yet, retrying...'
+    sleep 5
+    continue
+  fi
+
+  internal_cidr="$(ip -j a show | jq -er --arg first_internal_ip "$first_internal_ip" \
+      'map(select(.addr_info[] | .local == $first_internal_ip))[0] | .addr_info[] | select(.family == "inet") | "\(.local)/\(.prefixlen)"')"
+  if [[ -z "$internal_cidr" ]]; then
+    echo "Cannot determine CIDR of an internal network"
+    exit 1
+  fi
+
+  podcidr="$(echo "$node_object" | jq .spec.podCIDR -r)"
+
+  default_iface="$(ip r get 1.1.1.1 | awk '/ dev /{print $5}')"
+  mtu="$(ip link show "$default_iface" | awk '/ mtu /{print $5}')"
+
+  if (( $mtu >= 1500 )); then
+    mtu="1500"
+  fi
+
+  if echo "$podcidr" | grep -P '^\d+.\d+.\d+.\d+/\d+$' > /dev/null ; then
+    echo "$podcidr is assigned to $NODE_NAME"
+
+    if ! iptables -w 600 -t nat -C POSTROUTING -s $podcidr ! -d $POD_SUBNET -j MASQUERADE 2> /dev/null ; then
+      iptables -w 600 -t nat -A POSTROUTING -s $podcidr ! -d $POD_SUBNET -j MASQUERADE
+    fi
+
+    if ! iptables -w 600 -C FORWARD -s $POD_SUBNET -j ACCEPT 2> /dev/null ; then
+      iptables -w 600 -A FORWARD -s $POD_SUBNET -j ACCEPT
+    fi
+    if ! iptables -w 600 -C FORWARD -d $POD_SUBNET -j ACCEPT 2> /dev/null ; then
+      iptables -w 600 -A FORWARD -d $POD_SUBNET -j ACCEPT
+    fi
+
+    if ! iptables -w 600 -C INPUT -m conntrack --ctstate INVALID -j DROP 2> /dev/null ; then
+      iptables -w 600 -I INPUT 1 -m conntrack --ctstate INVALID -j DROP
+    fi
+
+    rm -f /etc/cni/net.d/simple-bridge.conf
+    tee /etc/cni/net.d/simple-bridge.conflist <<END
+{
+  "name": "cni0",
+  "cniVersion": "0.3.1",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "cni0",
+      "isDefaultGateway": true,
+      "mtu": $mtu,
+      "hairpinMode": true,
+      "forceAddress": false,
+      "ipam": {
+        "type": "host-local",
+        "subnet": "$podcidr"
+      }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {
+        "portMappings": true
+      }
+    }
+  ]
+}
+END
+
+    if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
+      SECONDS=0
+      gw=$(python3 -c 'import ipaddress, sys; net = ipaddress.IPv4Network(sys.argv[1], strict=False); print(next(net.hosts()))' "$internal_cidr")
+      while true; do
+        ensure_pod_network_route "$POD_SUBNET" "$gw"
+        sleep 30
+
+        if (( SECONDS >= 3600 )); then
+          break
+        fi
+      done
+    else
+      sleep 3600
+    fi
+  else
+    echo "Waiting for .spec.podCIDR to be assigned to $NODE_NAME"
+    sleep 10
+  fi
+done

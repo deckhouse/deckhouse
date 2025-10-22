@@ -1,0 +1,56 @@
+{{- $binaries := "/usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+  - apt-get install -y dnsmasq libsqlite3
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+fromImage: base/python
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+    - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
+shell:
+  install:
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
+  to: /prepare-config.py
+{{- include "image mount points" $ }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - etc/dnsmasq.conf
+  - etc/dnsmasq.conf.d
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

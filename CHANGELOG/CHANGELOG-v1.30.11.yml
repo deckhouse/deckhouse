@@ -1,0 +1,24 @@
+candi:
+  features:
+    - summary: Support Astra Linux 1.7
+      pull_request: https://github.com/deckhouse/deckhouse/pull/847
+  fixes:
+    - summary: Proper work with astra bundle in EE/FE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/868
+    - summary: Fix centos distro version detection
+      pull_request: https://github.com/deckhouse/deckhouse/pull/857
+control-plane-manager:
+  fixes:
+    - summary: LoadBalancer annotations are able to be set
+      pull_request: https://github.com/deckhouse/deckhouse/pull/567
+ingress-nginx:
+  fixes:
+    - summary: Fix handled request query on a dashboard.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/871
+node-manager:
+  fixes:
+    - summary: Sort node users for persistance
+      pull_request: https://github.com/deckhouse/deckhouse/pull/888
+    - summary: Fix constant OOM on small-sized nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/876
+

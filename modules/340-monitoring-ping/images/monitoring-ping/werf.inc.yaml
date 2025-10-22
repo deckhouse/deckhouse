@@ -1,0 +1,66 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: base/distroless
+final: true
+fromCacheVersion: "2025-05-26"
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+    add: /src/monitoring-ping
+    to: /monitoring-ping
+    before: setup
+  - image: tools/libcap
+    add: /usr/sbin/setcap
+    to: /tools/setcap
+    before: setup
+git:
+{{- include "image mount points" . }}
+shell:
+  setup:
+  - /tools/setcap cap_net_raw=+eip /monitoring-ping # Need for run icmp ping from non root user
+imageSpec:
+  config:
+    workingDir: /tools
+    clearWorkingDir: true # a hack to delete the setcap binary from final image
+    entrypoint: ["/monitoring-ping"]
+    
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /src/monitoring-ping
+  - chmod 0755 /src/monitoring-ping # change to 0500 after removed init container
+  - chown 64535:64535 /src/monitoring-ping
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+fromCacheVersion: "2025-05-26"
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+        - "**/*"
+shell:
+  install:
+    - cd /src

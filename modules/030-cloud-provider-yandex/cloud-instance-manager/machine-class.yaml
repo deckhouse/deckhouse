@@ -1,0 +1,66 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: YandexMachineClass
+metadata:
+  name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  regionID: {{ .Values.nodeManager.internal.cloudProvider.yandex.region }}
+  zoneID: {{ .zoneName }}
+  platformID: {{ .nodeGroup.instanceClass.platformID | default "standard-v3" }}
+  resourcesSpec:
+    cores: {{ .nodeGroup.instanceClass.cores }}
+    coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}
+    memory: {{ mul .nodeGroup.instanceClass.memory 1024 1024 }}
+    gpus: {{ .nodeGroup.instanceClass.gpus | default 0 }}
+  bootDiskSpec:
+    autoDelete: true
+    typeID: {{ .nodeGroup.instanceClass.diskType | default "network-hdd" }}
+    size: {{ mul (.nodeGroup.instanceClass.diskSizeGB | default 50) 1024 1024 1024 }}
+    imageID: {{ .nodeGroup.instanceClass.imageID | default .Values.nodeManager.internal.cloudProvider.yandex.instanceClassDefaults.imageID }}
+  networkInterfaceSpecs:
+{{- if .nodeGroup.instanceClass.mainSubnet }}
+  - subnetID: {{ .nodeGroup.instanceClass.mainSubnet }}
+{{- else}}
+  - subnetID: {{ index .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" }}
+    assignPublicIPAddress: {{ .nodeGroup.instanceClass.assignPublicIPAddress }}
+{{- else }}
+    assignPublicIPAddress: {{ .Values.nodeManager.internal.cloudProvider.yandex.shouldAssignPublicIPAddress }}
+{{- end }}
+{{- range .nodeGroup.instanceClass.additionalSubnets }}
+  - subnetID: {{ . | quote }}
+{{- end }}
+{{- if .nodeGroup.instanceClass.preemptible }}
+  schedulingPolicy:
+    preemptible: true
+{{- end }}
+  labels:
+  # These tags are mandatory as the safety controller uses them to identify VMs created by this controller.
+    kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}: "1"
+{{- if le (len .nodeGroup.name) 19 }}
+    kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
+{{- else }}
+    kubernetes-io-role-deckhouse-{{ .nodeGroup.name | sha256sum | trunc 19 }}-{{ .zoneName }}: "1"
+{{- end }}
+{{- $effectiveLabels := dict  }}
+{{- if .Values.nodeManager.internal.cloudProvider.yandex.labels }}
+  {{- $effectiveLabels = merge $effectiveLabels .Values.nodeManager.internal.cloudProvider.yandex.labels }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
+  {{- $effectiveLabels = mergeOverwrite $effectiveLabels .nodeGroup.instanceClass.additionalLabels  }}
+{{- end }}
+{{- range $k, $v := $effectiveLabels }}
+    {{ $k | trunc 63 }}: {{ $v | trunc 63 }}
+{{- end }}
+  metadata:
+    ssh-keys: 'user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}'
+    node-network-cidr: "{{ .Values.nodeManager.internal.cloudProvider.yandex.nodeNetworkCIDR }}"
+  secretRef:
+    namespace: d8-cloud-instance-manager
+    name: {{ .nodeGroup.name }}-{{ printf "%v%v" .Values.global.discovery.clusterUUID .zoneName | sha256sum | trunc 8 }}
+{{- if hasKey .nodeGroup.instanceClass "networkType" }}
+  {{- $networkDict := dict "Standard" "STANDARD" "SoftwareAccelerated" "SOFTWARE_ACCELERATED" }}
+  networkType: {{ get $networkDict .nodeGroup.instanceClass.networkType }}
+{{- end }}

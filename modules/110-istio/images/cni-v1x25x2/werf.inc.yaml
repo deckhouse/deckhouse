@@ -1,0 +1,96 @@
+---
+{{- $istioVersion := "1.25.2" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+# Based on https://github.com/istio/istio/blob/1.25.2/cni/deployments/kubernetes/Dockerfile.install-cni
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/istio/out/istio-cni
+  to: /opt/cni/bin/istio-cni
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/istio/out/install-cni
+  to: /usr/local/bin/install-cni
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}
+    workingDir: "/opt/cni/bin"
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/install-cni"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src/istio/
+  - echo {{ $istioVersion }} > version
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - go mod download
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/install-cni/
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/cni/cmd/istio-cni/
+  - strip /src/istio/out/install-cni
+  - strip /src/istio/out/istio-cni
+  - chmod 0700 /src/istio/out/install-cni /src/istio/out/istio-cni
+  - chown 1337:1337 /src/istio/out/istio-cni
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  install:
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done

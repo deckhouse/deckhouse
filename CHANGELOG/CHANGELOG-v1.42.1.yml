@@ -1,0 +1,19 @@
+ceph-csi:
+  fixes:
+    - summary: Restoring the previous secret name with ceph cluster credentials.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3387
+    - summary: Delete storage classes after changing immutable fields.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3380
+deckhouse:
+  fixes:
+    - summary: Fixed unrendered backquotes in the DeckhouseRelease resource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3367
+flant-integration:
+  fixes:
+    - summary: The 'D8PrometheusMadisonErrorSendingAlertsToBackend many-to-many' fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3371
+ingress-nginx:
+  fixes:
+    - summary: Fix client certificate update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3368
+

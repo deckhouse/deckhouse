@@ -1,0 +1,369 @@
+recommended:
+  en: recommended
+  ru: рекомендованная
+copied_to_clipboard:
+  en: Has been copied to clipboard
+  ru: Скопировано в буфер обмена
+copy_filename:
+  en: Copy filename
+  ru: Скопировать имя файла
+copy_content:
+  en: Copy content
+  ru: Скопировать содержимое
+soon:
+  en: "soon..."
+  ru: "скоро..."
+ce: Community Edition
+be: Basic Edition
+se: Standard Edition
+se-plus: Standard Edition+
+ee: Enterprise Edition
+kubernetes-platform: Deckhouse Kubernetes Platform
+virtualization-platform: Deckhouse Virtualization Platform
+stronghold: Deckhouse Stronghold
+
+common:
+  of:
+    en: of
+    ru: ""
+  array:
+    en: array
+    ru: массив
+  of_array:
+    en: arrays
+    ru: массивов
+  object:
+    en: object
+    ru: объект
+  of_object:
+    en: objects
+    ru: объектов
+  number:
+    en: number
+    ru: число
+  of_number:
+    en: number
+    ru: чисел
+  integer:
+    en: integer
+    ru: целочисленный
+  of_integer:
+    en: integers
+    ru: целых чисел
+  string:
+    en: string
+    ru: строка
+  of_string:
+    en: strings
+    ru: строк
+  boolean:
+    en: boolean
+    ru: булевый
+  of_boolean:
+    en: booleans
+    ru: булевых значений
+  allowed_values:
+    en: Allowed values
+    ru: допустимые значения
+  allowed_values_of_array:
+    en: of the array
+    ru: элемента массива
+  default_value:
+    en: default
+    ru: по умолчанию
+  default_version:
+    en: default version
+    ru: версия по умолчанию
+  deprecated:
+    en: deprecated
+    ru: устарел
+  deprecated_parameter:
+    en: Deprecated
+    ru: Параметр устарел
+  deprecated_resource:
+    en: Deprecated resource. Support for the resource might be removed in a later release.
+    ru: Устаревший ресурс. Поддержка ресурса может быть исключена в следующих версиях.
+  deprecated_parameter_hint:
+    en: Support for the parameter might be removed in a later release.
+    ru: Поддержка параметра может быть исключена в следующих версиях.
+  documentation:
+    en: Documentation
+    ru: Документация
+  contact_us_button:
+    en: Contact us
+    ru: Свяжитесь с нами
+  features:
+    en: "Features"
+    ru: "Возможности"
+  coming_soon:
+    en: "coming soon..."
+    ru: "скоро..."
+  tech_support_stronghold_notice_ce:
+    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Kubernetes Platform, with a valid Deckhouse Kubernetes Platform Technical Support certificate and compliance with the Terms."
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Kubernetes Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Kubernetes Platform и выполнения Условий, опубликованных на legal.flant.ru"
+  tech_support_stronghold_notice_commercial:
+    en: "Purchased separately"
+    ru: "Приобретается отдельно"
+  for_example:
+    en: for example
+    ru: например
+  example:
+    en: example
+    ru: пример
+  examples:
+    en: examples
+    ru: примеры
+  element_of_array:
+    en: element of the array
+    ru: элемент массива
+  x-kubernetes-int-or-string:
+    en: integer or string
+    ru: строка или число
+  of_x-kubernetes-int-or-string:
+    en: of integers or strings
+    ru: строк или чисел
+  pattern:
+    en: pattern
+    ru: шаблон
+  port:
+    en: port
+    ru: порт
+  protocol:
+    en: protocol
+    ru: протокол
+  purpose:
+    en: purpose
+    ru: назначение
+  length:
+    en: length
+    ru: длина
+  min_length:
+    en: minimal length
+    ru: минимальная длина
+  max_length:
+    en: maximum length
+    ru: максимальная длина
+  required_value_sentence:
+    en: Required value
+    ru: Обязательный параметр
+  not_required_value_sentence:
+    en: Not required value.
+    ru: Необязательный параметр.
+  documents_found:
+    en: Documents found
+    ru: Найдено документов
+  parameters:
+    en: Parameters
+    ru: Параметры
+  parameters_found:
+    en: Parameters found
+    ru: Найдено параметров
+  parameters_and_resources_found:
+    en: Parameters and resources found
+    ru: Найдено параметров и ресурсов
+  empty_search_documents_result:
+    en: Documents not found.
+    ru: Документов не найдено.
+  empty_search_parameters_resources_result:
+    en: Parameters and resources not found.
+    ru: Параметров и ресурсов не найдено.
+  no_description:
+    en: There is no description...
+    ru: Нет описания...
+  search_placeholder_text:
+    en: Search...
+    ru: Поиск...
+  search_placeholder_text_guides:
+    en: Search for guides...
+    ru: Поиск гайдов...
+  search_context_dkpdocs_and_modules:
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
+  search_context_modules:
+    en: The search is performed throughout modules, excluding the DKP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+  search_context_only_product_docs:
+    en: The search is performed throughout the product documentation, excluding modules.
+    ru: Поиск выполняется по всей документации продукта, не включая модули.
+  warning_ee_version:
+    en: Available only in
+    ru: Доступно только в
+  version:
+    en: version
+    ru: версия
+  modules_of_a_scope:
+    en: The modules within the scope
+    ru: Модули, входящие в область
+  namespaces_used_by_modules:
+    en: Namespaces in which modules of a scope operate
+    ru: Пространства имен используемых модулями области
+  all_modules:
+    en: All modules
+    ru: Все модули
+  all_namespaces:
+    en: All namespaces
+    ru: Все пространства имен
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
+  versions:
+    en: versions
+    ru: версии
+  version_of_schema:
+    en: Schema version
+    ru: Версия схемы
+  versions_supported:
+    en: Supported versions
+    ru: Поддерживаемые версии
+  status:
+    en: status
+    ru: статус
+  products:
+    en: Products
+    ru: Продукты
+  or:
+    en: or
+    ru: или
+  scope:
+    en: Scope
+    ru: Область (scope)
+  notice-latest:
+    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+  os_supported_phrase:
+    en: The following Linux distributions are currently supported for nodes
+    ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
+  k8s_supported_phrase:
+    en: The following Kubernetes versions are currently supported
+    ru: В настоящий момент поддерживаются следующие версии Kubernetes
+  linux_distro:
+    en: Linux Distribution
+    ru: Дистрибутив Linux
+  for_domain_template:
+    en: for the domain template
+    ru: для шаблона доменов
+  module_web_ifaces:
+    en: Web interfaces associated with the module
+    ru: Веб-интерфейсы, связанные с модулем
+  role:
+    en: role
+    ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module `XXXX` parameters
+    ru: Параметры модуля `XXXX`
+  module_x_crds:
+    en: Module `XXXX` custom resources
+    ru: Кастомные ресурсы модуля `XXXX`
+  module_x_documentation:
+    en: Module `XXXX` documentation
+    ru: Документация модуля `XXXX`
+  module_x_cluster_configuration:
+    en: Module `XXXX` provider configuration
+    ru: Настройки провайдера модуля `XXXX`
+  includes_rules_from:
+    en: includes all rules from the role
+    ru: включает все правила из роли
+  gs_description:
+    en: Getting Started. <TITLE>. <STEP>
+    ru: Быстрый старт. <TITLE>. <STEP>
+  documentation_develop:
+    en: The documentation is under development and may contain incomplete information.
+    ru: Документация находится в разработке, может содержать неполную информацию.
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
+  show_more:
+    en: Show more
+    ru: Показать ещё
+  guides_description:
+    en: Helping you achieve a goal or solve a problem with Deckhouse.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
+  breadcrumbs_link_guides:
+    en: All Guides
+    ru: Все руководства
+comparison:
+  except_parameters:
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+
+feedback:
+  thanks:
+    en: Thanks for the review!
+    ru: Спасибо за&nbsp;оценку!
+  useful:
+    en: Was the page useful?
+    ru: Была&nbsp;ли страница полезна?
+  response_processed:
+    en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
+    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+  error_happened:
+    en: An error has occurred
+    ru: Произошла ошибка
+  try_later:
+    en: Please try again later
+    ru: Пожалуйста, попробуйте позже
+  tell_us_what_you_didnt_like:
+    en: Tell&nbsp;us what you didn&rsquo;t like.
+    ru: Расскажите, что не&nbsp;понравилось
+  not_useful:
+    en: Little useful
+    ru: Мало полезного
+  there_are_errors:
+    en: There are errors
+    ru: Есть ошибки
+  written_incomprehensibly:
+    en: It&rsquo;s written incomprehensibly
+    ru: Непонятно написано
+  outdated_information:
+    en: Outdated information
+    ru: Устаревшая информация
+  other:
+    en: Other
+    ru: Другое
+  share_the_details:
+    en: Share the details
+    ru: Поделитесь деталями
+  send:
+    en: Send
+    ru: Отправить
+
+features:
+  experimental:
+    en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
+    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+  preview:
+    en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
+    ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+  deprecated:
+    en: The module is deprecated.
+    ru: Модуль устарел.
+  temporaryDeprecated:
+    en: The current version of the module is deprecated, a new version will be published soon.
+    ru: Текущая версия модуля устарела, скоро будет опубликована новая версия.
+  proprietaryOkmeter:
+    en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
+    ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
+  ee:
+    en: This feature is available in Enterprise Edition only.
+    ru: Доступно только в Enterprise Edition.
+  requiresSeparateLicense:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+  requiresSeparateLicenseObservability:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

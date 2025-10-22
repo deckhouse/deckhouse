@@ -1,0 +1,6 @@
+metallb:
+  fixes:
+    - summary: fix error in speaker leader-election
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5572
+      impact: metallb pods should restart
+

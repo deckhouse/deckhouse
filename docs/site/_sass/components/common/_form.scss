@@ -1,0 +1,259 @@
+@use "sass:color";
+@use "components/common/_variables.scss";
+
+.form {
+  &__request {
+    font-size: 17px;
+  }
+
+  &__row {
+    margin-bottom: variables.$spacing-l;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &--wrap {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+
+      & label {
+        margin-bottom: 0 !important;
+        order: 2;
+      }
+
+      & input {
+        order: 1;
+        margin-right: 10px;
+      }
+    }
+
+    &-request {
+      margin: 0;
+      margin-bottom: 16px;
+    }
+
+    &-approval {
+      margin: 0;
+      margin-top: 16px;
+    }
+  }
+
+  .preferred-contact {
+    .checkboxes {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: .5em 1.5em;
+
+      label {
+        display: inline-flex;
+        gap: 10px;
+        align-items: center;
+        text-align: left;
+        user-select: none;
+        font-size: 14.7px;
+        cursor: pointer;
+      }
+
+      > input[type="checkbox"] {
+        position: absolute;
+        display: none;
+        opacity: 0;
+        z-index: -1;
+
+        + label::before {
+          content: "";
+          height: 14px;
+          width: 14px;
+          display: inline-block;
+          flex-grow: 0;
+          flex-shrink: 0;
+          border: 1px solid #969dc4;
+          border-radius: .25em;
+          background-position: 50%;
+          background-repeat: no-repeat;
+          background-size: 12px 10px;
+        }
+
+        &:checked + label::before {
+          background-color: #0064ff;
+          background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%20fill%3D%22none%22%3E%3Cpath%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%20d%3D%22M9.342%201.099a.54.54%200%200%201%200%20.763l-5.04%205.04a.54.54%200%200%201-.764%200l-2.88-2.88a.54.54%200%200%201%20.764-.763L3.92%205.757l4.658-4.658a.54.54%200%200%201%20.764%200Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
+          border-color: #0064ff;
+        }
+
+        &:checked + label:hover::before {
+          border-color: #002cca;
+          background-color: #002cca;
+        }
+
+        &:not(:disabled):not(:checked) + label:hover::before {
+          border-color: #222a5e;
+          background-color: #f5f5fb;
+        }
+      }
+    }
+  }
+
+  .сommunication-method {
+    margin-top: 32px;
+    margin-bottom: 16px;
+    letter-spacing: -.5px;
+  }
+
+  &__approval {
+    margin: 0;
+    color: #afb4d1;
+    font-size: 14.7px;
+    letter-spacing: -.3px;
+
+    &-link {
+      color: #408bff;
+
+      :hover {
+        text-decoration: none;
+      }
+    }
+  }
+
+  &__h0n3y {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 0;
+    width: 0;
+    z-index: -1;
+  }
+
+  .textfield {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.75em 1.5em;
+    border: 2px solid variables.$color-smooth;
+    outline: none;
+    font-size: variables.$font-size-base;
+    color: variables.$color-main;
+    letter-spacing: 0.5px;
+    transition: color 300ms ease, border-color 300ms ease;
+    appearance: none;
+
+    &::placeholder {
+      opacity: 1;
+      color: color.adjust(variables.$color-main, $alpha: -0.4);
+    }
+
+    &:hover {
+      border-color: color.adjust(variables.$color-alt, $alpha: -0.5);
+    }
+
+    &:focus {
+      border-color: variables.$color-alt;
+      transition-duration: 0ms;
+
+      &::placeholder {
+        color: color.adjust(variables.$color-main, $alpha: -0.15);
+      }
+    }
+
+    &--no-border {
+      border-color: transparent;
+    }
+
+    &.invalid {
+      border-color: red;
+    }
+
+    &-request {
+      padding: 13px 20px;
+      border: 2px solid #cdd1e6;
+      font-size: 15.7px;
+
+      &:focus {
+        border-color: #408bff;
+
+        &::placeholder {
+          color: color.adjust(variables.$color-main, $alpha: -0.4);
+        }
+      }
+
+      &[name="telegram_id"] {
+        margin-top: 16px;
+      }
+    }
+  }
+
+  .form__row-approval {
+    .license-checkbox {
+      display: inline-flex;
+      gap: 10px;
+      text-align: left;
+      user-select: none;
+      font-size: 14.7px;
+      cursor: pointer;
+    }
+
+    .fake-checkbox {
+      margin-top: 2px;
+    }
+
+    .checkbox {
+      position: absolute;
+      display: none;
+      opacity: 0;
+      z-index: -1;
+    }
+
+    .fake-checkbox::before {
+      content: "";
+      height: 14px;
+      width: 14px;
+      display: inline-block;
+      flex-grow: 0;
+      flex-shrink: 0;
+      border: 1px solid #969dc4;
+      border-radius: .25em;
+    }
+
+    .checkbox:checked + .fake-checkbox::before {
+      background-color: #0064ff;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%20fill%3D%22none%22%3E%3Cpath%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%20d%3D%22M9.342%201.099a.54.54%200%200%201%200%20.763l-5.04%205.04a.54.54%200%200%201-.764%200l-2.88-2.88a.54.54%200%200%201%20.764-.763L3.92%205.757l4.658-4.658a.54.54%200%200%201%20.764%200Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
+      border-color: #0064ff;
+      background-position: 50%;
+      background-repeat: no-repeat;
+      background-size: 12px 10px;
+    }
+
+    .checkbox:checked + .fake-checkbox::before {
+      opacity: 1;
+    }
+  }
+
+  .license-link {
+    color: #2A5EFF;
+  }
+
+  .label {
+    font-size: variables.$font-size-small;
+    margin-bottom: variables.$spacing-s;
+    display: block;
+  }
+
+  .info {
+    font-size: variables.$font-size-small;
+    margin-top: variables.$spacing-s;
+    color: color.adjust(variables.$color-main, $alpha: -0.5);
+    display: block;
+  }
+
+  .invalid-message {
+    color: red;
+    display: none;
+  }
+
+  .active {
+    display: block;
+  }
+}

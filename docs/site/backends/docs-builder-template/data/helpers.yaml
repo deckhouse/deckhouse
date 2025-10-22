@@ -1,0 +1,16 @@
+knownPageNames:
+  - ADVANCED_USAGE
+  - CONFIGURATION
+  - CRD
+  - CR
+  - EXAMPLES
+  - FAQ
+  - README
+  - SETUP
+  - USAGE
+
+moduleStageBageMap:
+  experimental: Exp
+  preview: Pre
+  general_availability: GA
+  deprecated: Dep

@@ -1,0 +1,39 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8imagepullpolicy
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Image Pull Policy"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required image pull policy for containers."
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8ImagePullPolicy
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            policy:
+              type: string
+              description: "A list of available image pull policies."
+              enum:
+                - Always
+                - IfNotPresent
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          required := input.parameters.policy
+          container := input.review.object.spec.containers[_]
+          provided := container.imagePullPolicy
+          required != provided
+          msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, input.review.kind.kind, input.review.object.metadata.name, provided])
+        }

@@ -1,0 +1,145 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-modules-watcher
+  annotations:
+    "werf.io/replicas-on-creation": "1"
+  labels:
+    app: registry-modules-watcher
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: registry-modules-watcher
+  template:
+    metadata:
+      labels:
+        app: registry-modules-watcher
+        app.kubernetes.io/part-of: deckhouse-docs
+      annotations:
+        checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      serviceAccountName: modules-watcher
+      containers:
+        - name: registry-modules-watcher
+          command:
+            - /app/registry-modules-watcher
+            - --watch-registries={{ (pluck .Values.werf.env .Values.moduleWatcher.registries | first | default .Values.moduleWatcher.registries._default) | join "," }}
+            - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default }}
+          image: {{ index .Values.werf.image "registry-modules-watcher" }}
+          {{- include "resources" . | nindent 10 }}
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: http-metrics
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 60 # 5 minutes
+          env:
+            - name: LOG_LEVEL
+              value: {{ pluck .Values.werf.env .Values.moduleWatcher.logLevel | first | default .Values.moduleWatcher.logLevel._default }}
+            - name: REGISTRY_AUTHS
+              valueFrom:
+                secretKeyRef:
+                  key: .dockerconfigjson
+                  name: watch-registry-auths
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+---
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-modules-watcher-http
+  labels:
+    # need to prometheus scrape "podMonitor/d8-monitoring/custom-pod"
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher
+    app.kubernetes.io/part-of: deckhouse-docs
+  annotations:
+    prometheus.deckhouse.io/sample-limit: "10000"
+spec:
+  clusterIP: None
+  selector:
+    app: registry-modules-watcher
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: watch-registry-auths
+  labels:
+    app: registry-modules-watcher
+data:
+  .dockerconfigjson: {{ .Values.global.moduleWatcherAuths }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-modules-watcher
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: registry-modules-watcher
+  updatePolicy:
+    updateMode: "Auto"
+---
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  labels:
+    prometheus.deckhouse.io/grafana-dashboard: ""
+{{- if eq $.Values.web.env "web-production" }}
+  name: registry-modules-watcher
+{{- else }}
+  name: registry-modules-watcher-{{ .Release.Namespace }} 
+{{- end }}
+spec:
+  folder: Custom
+  definition: |
+{{ tpl (.Files.Get "dashboards/registry-modules-watcher-stats.yaml") . | indent 4 }}
+{{- end }}
+---
+{{- if eq $.Values.web.env "web-production" }}
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: deckhouse.io/v1
+kind: GrafanaDashboardDefinition
+metadata:
+  labels:
+    prometheus.deckhouse.io/grafana-dashboard: ""
+  name: modules-validation
+spec:
+  folder: Custom
+  definition: |
+{{ tpl (.Files.Get "dashboards/modules-validation.yaml") . | indent 4 }}
+{{- end }}
+{{- end }} 

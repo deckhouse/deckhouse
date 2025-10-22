@@ -1,0 +1,74 @@
+- name: d8.migrate-to-tofu
+  rules:
+  - alert: D8NeedMigrateStateToOpenTofu
+    expr: |
+      d8_need_migrate_to_tofu == 1
+    for: 10m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: terraform-manager
+      d8_component: terraform-state-exporter
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Terraform state must be migrated to OpenTofu.
+      description: |
+        This likely means the automatic migration to OpenTofu was canceled due to destructive changes detected in the cluster state.
+
+        Verify the following:
+
+        - Current Terraform version:
+
+          ```shell
+          d8 k -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
+          ```
+
+        - Version in the Terraform state:
+
+          ```shell
+          d8 k -n d8-system get secret d8-cluster-terraform-state -o json | jq -r '.data["cluster-tf-state.json"] | @base64d | fromjson | .terraform_version'
+          ```
+
+        - Check for destructive changes:
+
+          ```shell
+          d8 k exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
+          ```
+
+        To resolve the issue and migrate to OpenTofu manually, follow these steps:
+
+        1. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run:
+
+           ```shell
+           dhctl converge
+           ```
+
+           This should resolve all destructive changes in the cluster.
+
+        2. After that, the `terraform-auto-converger` Pod should complete the migration automatically.
+
+        If the automatic migration doesn't happen, use the `install` container with the current Deckhouse release and run the following command to enforce migration of the Terraform state to OpenTofu:
+
+        ```shell
+        dhctl converge-migration
+        ```
+
+        If this alert appears in a cluster created by Deckhouse Commander, it means the cluster has been updated to a new Deckhouse version without approving state changes (for example, destructive changes).
+
+        To resolve this, follow these steps:
+
+        1. In Deckhouse Commander, click **Delete manually** to temporarily remove the cluster from control.
+        2. In the cluster, remove the `commander-agent` module using the following command:
+
+           ```shell
+           d8 k delete mc commander-agent
+           ```
+
+        3. Using the `install` container with the previous major Deckhouse release (for example, `1.69.X`, while the cluster is now on `1.70.X`), run the following command to resolve all destructive changes in the cluster:
+
+           ```shell
+           dhctl converge
+           ```
+
+        4. In Deckhouse Commander, click **Attach** to reattach the cluster.

@@ -1,0 +1,208 @@
+{{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if ($ng).gpu -}}
+
+    {{ $devicePluginName := printf "nvidia-device-plugin-%s" ( $ng.name | sha256sum | trunc 7 ) }}
+    {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ $devicePluginName }}
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName "node-group" $ng.name )) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: {{ $devicePluginName }}
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: nvidia-device-plugin-sidecar
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+    - containerName: nvidia-device-plugin-ctr
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $devicePluginName }}
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "nvidia-gpu" "component" $devicePluginName "node-group" $ng.name )) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      component: {{ $devicePluginName }}
+  template:
+    metadata:
+      labels:
+        component: {{ $devicePluginName }}
+        app: nvidia-device-plugin
+      annotations:
+        checksum/ng: {{ ($ng).gpu | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum }}
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "nvidia_node_selector" (tuple $ "gfd" $ng.name) | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      serviceAccountName: nvidia-device-plugin
+      shareProcessNamespace: true
+      initContainers:
+      - name: nvidia-device-plugin-init
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
+        env:
+        - name: ONESHOT
+          value: "true"
+        - name: KUBECONFIG
+          value: ""
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "spec.nodeName"
+        - name: NODE_LABEL
+          value: "node.deckhouse.io/device-gpu.config"
+        - name: CONFIG_FILE_SRCDIR
+          value: "/available-configs"
+        - name: CONFIG_FILE_DST
+          value: "/config/config.yaml"
+        - name: DEFAULT_CONFIG
+          value: ""
+        - name: FALLBACK_STRATEGIES
+          value: "named, single"
+        - name: SEND_SIGNAL
+          value: "false"
+        - name: SIGNAL
+          value: ""
+        - name: PROCESS_TO_SIGNAL
+          value: ""
+        volumeMounts:
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
+      containers:
+      - name: nvidia-device-plugin-sidecar
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
+        command: ["/config-manager"]
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" $ | nindent 8 }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
+        env:
+        - name: ONESHOT
+          value: "false"
+        - name: KUBECONFIG
+          value: ""
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: "spec.nodeName"
+        - name: NODE_LABEL
+          value: "node.deckhouse.io/device-gpu.config"
+        - name: CONFIG_FILE_SRCDIR
+          value: "/available-configs"
+        - name: CONFIG_FILE_DST
+          value: "/config/config.yaml"
+        - name: DEFAULT_CONFIG
+          value: ""
+        - name: FALLBACK_STRATEGIES
+          value: "named, single"
+        - name: SEND_SIGNAL
+          value: "true"
+        - name: SIGNAL
+          value: "1" # SIGHUP
+        - name: PROCESS_TO_SIGNAL
+          value: "nvidia-device-plugin"
+        volumeMounts:
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
+      - name: nvidia-device-plugin-ctr
+        image: {{ include "helm_lib_module_image" (list $ "nvidiaDevicePlugin") }}
+        command: ["/nvidia-device-plugin"]
+        env:
+          - name: FAIL_ON_INIT_ERROR
+            value: "true"
+          - name: PASS_DEVICE_SPECS
+            value: "true"
+          - name: DEVICE_LIST_STRATEGY
+            value: envvar
+          - name: DEVICE_ID_STRATEGY
+            value: uuid
+          - name: CONFIG_FILE
+            value: /config/config.yaml
+          - name: NVIDIA_VISIBLE_DEVICES
+            value: all
+          - name: NVIDIA_DRIVER_CAPABILITIES
+            value: all
+          - name: NVIDIA_MIG_MONITOR_DEVICES
+            value: all
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: device-plugin
+            mountPath: /var/lib/kubelet/device-plugins
+          # We always mount the driver root at /driver-root in the container.
+          # This is required for CDI detection to work correctly.
+          - name: driver-root
+            mountPath: /driver-root
+            readOnly: true
+          - name: cdi-root
+            mountPath: /var/run/cdi
+          - name: available-configs
+            mountPath: /available-configs
+          - name: config
+            mountPath: /config
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 50m
+            memory: 64Mi
+        {{- end }}
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: driver-root
+          hostPath:
+            path: "/run/nvidia/driver"
+        - name: cdi-root
+          hostPath:
+            path: /var/run/cdi
+            type: DirectoryOrCreate
+        - name: available-configs
+          configMap:
+            name: {{ $devicePluginName }}
+        - name: config
+          emptyDir: {}
+  {{- end }}
+{{- end }}

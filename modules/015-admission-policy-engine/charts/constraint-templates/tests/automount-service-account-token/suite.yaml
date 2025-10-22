@@ -1,0 +1,27 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-automount-service-account-token-pod
+tests:
+  - name: security-policy
+    template: ../../templates/security/automount-service-account-token.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: example-allowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/allowed.yaml
+        assertions:
+          - violations: yes
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/disallowed.yaml
+        assertions:
+          - violations: no
+      - name: example-disallowed
+        inventory:
+          - ../common/test_samples/ns.yaml
+        object: test_samples/disallowed2.yaml
+        assertions:
+          - violations: no

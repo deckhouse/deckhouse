@@ -1,0 +1,66 @@
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  create-release:
+    permissions: write-all
+    runs-on: ubuntu-latest
+
+    steps:
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Collect Changelog
+        id: changelog
+        uses: deckhouse/changelog-action@v2
+        with:
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
+          repo: ${{ github.repository }}
+          milestone: ${{ github.event.inputs.tag_name }}
+          # section:forced_impact_level
+          allowed_sections: |
+            ${{ steps.sections.outputs.result }}
+            ci:low
+            dependabot:low
+            testing:low
+            tools:low
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install requests semver
+      - name: Run Python release script
+        env:
+          GITHUB_API_URL: https://api.github.com
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.inputs.tag_name }}
+          RELEASE_BODY: ${{ steps.changelog.outputs.release_markdown }}
+          MILESTONE_TITLE: ${{ github.event.inputs.tag_name }}
+        shell: bash
+        run: |
+          python .github/scripts/python/create_release.py
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+

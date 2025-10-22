@@ -1,0 +1,19 @@
+docs:
+  fixes:
+    - summary: Fix URL in meta tags on site pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2058
+node-manager:
+  features:
+    - summary: >-
+        Yandex.Cloud's Preemptible instances will start being gracefully deleted when crossing 20
+        hours since creation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1744
+prometheus:
+  fixes:
+    - summary: Update Grafana to 8.5.9 to fix various CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2039
+upmeter:
+  fixes:
+    - summary: Add RBAC to watch nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2051
+

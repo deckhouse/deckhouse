@@ -1,0 +1,35 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: metrics-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: metrics-exporter
+  namespaceSelector:
+    matchNames:
+      - d8-{{ $.Chart.Name }}
+  podMetricsEndpoints:
+    - port: https-metrics
+      scheme: https
+      bearerTokenSecret:
+        name: prometheus-token
+        key: token
+      tlsConfig:
+        insecureSkipVerify: true
+      relabelings:
+        - regex: endpoint|namespace|pod|service|container|instance
+          action: labeldrop
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+        - targetLabel: tier
+          replacement: cluster
+        - sourceLabels: [__meta_kubernetes_pod_ready]
+          regex: "true"
+          action: keep
+  {{- end }}

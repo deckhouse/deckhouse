@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: solid
+  name: controller-solid-failover
+  namespace: d8-ingress-nginx
+spec:
+  ports:
+  - name: http-proxy
+    port: 80
+    protocol: TCP
+  - name: https-proxy
+    port: 443
+    protocol: TCP
+  selector:
+    app: controller
+    name: solid-failover

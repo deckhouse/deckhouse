@@ -1,0 +1,903 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 73,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 14,
+      "panels": [],
+      "repeat": "pod",
+      "title": "$pod",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
+      "id": 10,
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "expr": "sum(increase(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__range]))",
+          "format": "time_series",
+          "instant": true,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "title": "Requests accepted",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "Percent of active processes",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "active"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ef843c",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "idle"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#e0f9d7",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 3,
+        "y": 1
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"active\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{state}}",
+          "refId": "B",
+          "step": 2
+        },
+        {
+          "expr": "phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"idle\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{state}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Workers utilization",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "Number of connections that have been initiated but not yet accepted",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max queued since fpm start"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ef843c",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Queued"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#56A64B",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max queue length"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E02F44",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 8,
+        "y": 1
+      },
+      "id": 95,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "phpfpm_listen_queue_max_connections{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Max queued since fpm start",
+          "range": true,
+          "refId": "A",
+          "step": 2
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "phpfpm_listen_queue_connections{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Queued",
+          "range": true,
+          "refId": "B",
+          "step": 2
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "phpfpm_listen_queue_length_connections{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Max queue length",
+          "range": true,
+          "refId": "C",
+          "step": 2
+        }
+      ],
+      "title": "Queue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Slow requests"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#E55400",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 13,
+        "y": 1
+      },
+      "id": 462,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(phpfpm_slow_requests_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[1m])/ rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[1m])",
+          "format": "time_series",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "Slow requests",
+          "range": true,
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "title": "Slow requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "The number of request accepted by the pool",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "expr": "rate(phpfpm_accepted_connections_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}[$__rate_interval])",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": " ",
+          "refId": "A",
+          "step": 4
+        }
+      ],
+      "title": "Requests accepted",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "N/A"
+                }
+              },
+              "type": "special"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#ef843c",
+                "value": null
+              },
+              {
+                "color": "#629e51",
+                "value": 40
+              },
+              {
+                "color": "#e24d42",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 4
+      },
+      "id": 12,
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "expr": "avg(sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\", state=\"active\"}) without(state) / sum(phpfpm_processes_total{job=\"php-fpm\", namespace=\"$namespace\", service=\"$service\", pod=\"$pod\"}) without(state)) * 100",
+          "format": "time_series",
+          "instant": false,
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "title": "Avg Utilization",
+      "type": "stat"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "flant-site-stage",
+          "value": "flant-site-stage"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"php-fpm\"}, namespace)",
+          "refId": "main-namespace-Variable-Query"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": false,
+          "text": "flant-site",
+          "value": "flant-site"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Service",
+        "multi": false,
+        "name": "service",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\"}, service)",
+          "refId": "main-service-Variable-Query"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "",
+        "hide": 2,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "query": "label_values(up{job=\"php-fpm\",namespace=\"$namespace\", service=\"$service\"}, pod)",
+          "refId": "main-pod-Variable-Query"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "PHP-FPM",
+  "uid": "YFjpuvzik",
+  "version": 1,
+  "weekStart": ""
+}

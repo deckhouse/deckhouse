@@ -1,0 +1,109 @@
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not .spec.applications }}
+    {{- continue }}
+  {{- end }}
+  {{- range $idx, $app := $crd.spec.applications }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $nameSuffix := "" }}
+  {{- if ne $idx 0 }}
+    {{- $nameSuffix = printf "-%s" $hashedDomain }}
+  {{- end }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $svcName := $info.name }}
+  {{- $ingInfo := (index $info.ingressNames (printf "%d" $idx)) }}
+  {{- $ingName := (default (printf "%s%s-dex-authenticator" $crd.name $nameSuffix) (index $ingInfo "name")) }}
+  {{- $ingTruncated := (index $ingInfo "truncated") }}
+  {{- $ingHash := (index $ingInfo "hash") }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+  {{- if $crd.spec.sendAuthorizationHeader }}
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+  {{- end }}
+  {{- if $app.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
+  {{- end }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+  name: {{ $ingName }}
+  namespace: {{ $crd.namespace }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $ingTruncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $ingHash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
+spec:
+  ingressClassName: {{ $app.ingressClassName }}
+  rules:
+  - host: {{ $app.domain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ $svcName }}
+            port:
+              number: 443
+        path: /dex-authenticator
+        pathType: ImplementationSpecific
+  {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
+    {{- if $app.ingressSecretName }}
+  tls:
+  - hosts:
+    - {{ $app.domain }}
+    secretName: {{ $app.ingressSecretName }}
+    {{- end }}
+  {{- end }}
+
+  {{- if $app.signOutURL }}
+    {{- $signOutIngInfo := (index $info.signOutIngressNames (printf "%d" $idx)) }}
+    {{- $signOutIngressName := (default (printf "%s%s-dex-authenticator-sign-out" $crd.name $nameSuffix) (index $signOutIngInfo "name")) }}
+    {{- $signOutIngTruncated := (index $signOutIngInfo "truncated") }}
+    {{- $signOutIngHash := (index $signOutIngInfo "hash") }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+  name: {{ $signOutIngressName }}
+  namespace: {{ $crd.namespace }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $signOutIngTruncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $signOutIngHash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
+spec:
+  ingressClassName: {{ $app.ingressClassName }}
+  rules:
+  - host: {{ $app.domain }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ $svcName }}
+            port:
+              number: 443
+        path: {{ $app.signOutURL }}
+        pathType: ImplementationSpecific
+    {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
+      {{- if $app.ingressSecretName }}
+  tls:
+  - hosts:
+    - {{ $app.domain }}
+    secretName: {{ $app.ingressSecretName }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

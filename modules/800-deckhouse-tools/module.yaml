@@ -1,0 +1,5 @@
+name: deckhouse-tools
+namespace: d8-system
+stage: General Availability
+requirements:
+  deckhouse: ">= 1.68"

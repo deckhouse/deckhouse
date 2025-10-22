@@ -1,0 +1,81 @@
+{{- $version := "1.4.1"}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/bin/cloud-director-named-disk-csi-driver
+  to: /cloud-director-named-disk-csi-driver
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev/scsi_id
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/cloud-director-named-disk-csi-driver"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/cloud-director-named-disk-csi-driver.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version={{ $version }}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
+  - chown 64535:64535 bin/cloud-director-named-disk-csi-driver
+  - chmod 0755 bin/cloud-director-named-disk-csi-driver
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  beforeInstall:
+  - apt-get update -y
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  install:
+  - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

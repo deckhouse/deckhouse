@@ -1,0 +1,13 @@
+diff --git a/frontend/package.json b/frontend/package.json
+index ceaab2cbe..c47841a17 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -141,7 +141,7 @@
+     "postcss": "^8.4.12"
+   },
+   "engines": {
+-    "node": "^14.17.0",
++    "node": ">=14.17.0",
+     "npm": ">=6.0.0 ",
+     "yarn": ">=1.0.0 "
+   },

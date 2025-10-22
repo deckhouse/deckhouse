@@ -1,0 +1,411 @@
+kind: AzureClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Describes the configuration of a cloud cluster in Azure.
+
+      Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+      Run the following command to change the configuration in a running cluster:
+
+      ```shell
+      d8 p edit provider-cluster-configuration
+      ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+    x-doc-search: |
+      ProviderClusterConfiguration
+    x-unsafe-rules: [deleteZones]
+    x-examples:
+      - apiVersion: deckhouse.io/v1
+        kind: AzureClusterConfiguration
+        layout: Standard
+        sshPublicKey: "<SSH_PUBLIC_KEY>"
+        vNetCIDR: 10.0.0.0/16
+        nameservers:
+          addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+        subnetCIDR: 10.0.0.0/24
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            machineSize: Standard_D4ds_v4
+            urn: Canonical:UbuntuServer:18.04-LTS:18.04.202207120
+            enableExternalIP: false
+        provider:
+          subscriptionId: "<SUBSCRIPTION_ID>"
+          location: "westeurope"
+          clientId: "<CLIENT_ID>"
+          clientSecret: "<CLIENT_SECRET>"
+          tenantId: "<TENANT_ID>"
+    additionalProperties: false
+    required: [apiVersion, kind, layout, provider, vNetCIDR, subnetCIDR, masterNodeGroup, sshPublicKey]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [AzureClusterConfiguration]
+      layout:
+        description: |
+          The way resources are located in the cloud.
+
+          Read [more](https://deckhouse.io/modules/cloud-provider-azure/layouts.html) about possible provider layouts.
+        type: string
+        enum: [Standard]
+        x-unsafe: true
+      standard:
+        description: |
+          Settings for the [`Standard`](https://deckhouse.io/modules/cloud-provider-azure/layouts.html#standard) layout.
+        type: object
+        properties:
+          natGatewayPublicIpCount:
+            description: |
+              The number of IP addresses for the [NAT Gateway](https://docs.microsoft.com/en-us/azure/virtual-network/nat-overview) ([pricing](https://azure.microsoft.com/en-us/pricing/details/virtual-network/)).
+              `NAT Gateway` is not used if the value is `0`.
+            type: integer
+            x-doc-default: 0
+      sshPublicKey:
+        description: |
+          Public key to access nodes as `azureuser`.
+        type: string
+      sshAllowList:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of CIDR's allowed to connect to nodes via SSH.
+
+          By default, `*`.
+      vNetCIDR:
+        description: |
+          An address space of the [virtual network](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#virtual-networks) in the [CIDR](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) format.
+
+          A virtual network is a virtual, isolated portion of the Azure public network. Each virtual network is dedicated to your subscription.
+
+          **Warning.** If you are setting up peering, using vpn or linking networks of other clusters, network address spaces should not overlap.
+        type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        example: 10.0.0.0/16
+        x-unsafe: true
+      nameservers:
+        type: object
+        description: |
+          DNS server configuration for the Azure virtual network used by the cluster nodes.
+        properties:
+          addresses:
+            type: array
+            description: A list of DNS servers.
+            x-examples:
+              - - 8.8.8.8
+                - 8.8.4.4
+            items:
+              type: string
+              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+      subnetCIDR:
+        description: |
+          A [subnet](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) from the `vNetCIDR` address space for cluster nodes.
+
+          A virtual network can be segmented into one or more subnets up to the limits.
+        type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+        example: 10.1.2.0/24
+        x-unsafe: true
+      peeredVNets:
+        description: |
+          An array of `VNets` to merge with the cluster network.
+
+          The service account must have access to all the `VNets` listed above. You have to configure the peering connection [manually ](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-peering-overview) if no access is available.
+        type: array
+        items:
+          type: object
+          required: [resourceGroupName, vnetName]
+          properties:
+            resourceGroupName:
+              description: |
+                The name of the resource group with the VNet.
+              type: string
+            vnetName:
+              description: |
+                The name of the VNet.
+              type: string
+      serviceEndpoints:
+        description: |
+          The list of Service endpoints to associate with the subnet.
+
+          Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network.
+          Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet.
+
+          More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
+        type: array
+        items:
+          type: string
+          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.CognitiveServices, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
+      masterNodeGroup:
+        description: |
+          The definition of the master's NodeGroup.
+
+          > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+        required: [replicas, instanceClass]
+        properties:
+          replicas:
+            description: |
+              The number of master nodes to create.
+
+              It is important to have an odd number of masters to ensure a quorum.
+            type: integer
+            minimum: 1
+          zones:
+            description: |
+              A list of zones where master nodes can be created.
+
+              You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+              ```shell
+              az vm list-skus -l westeurope -o table
+              ```
+            x-doc-default: [1,2,3]
+            type: array
+            items:
+              type: string
+            minItems: 1
+            uniqueItems: true
+          instanceClass:
+            description: |
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/modules/cloud-provider-azure/cr.html#azureinstanceclass) fields.
+            type: object
+            required: [machineSize, urn]
+            properties:
+              machineSize: &instanceClassMachineSize
+                description: |
+                  The type of instances to provision.
+
+                  Getting a list of available types for the specific region using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                  ```shell
+                  az vm list-sizes --location westeurope -o table
+                  ```
+                type: string
+                example: Standard_F4
+              urn: &instanceClassUrn
+                description: |
+                  The VM image to use for an instance.
+
+                  More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                  Getting the urn with [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (column #4):
+                  ```shell
+                  az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
+                  az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
+                  ```
+
+                  By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
+
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                type: string
+              enableExternalIP: &instanceClassEnableExternalIP
+                description: |
+                  Defines whether to enable external IP for an instance or not.
+
+                  Only available for the `Standard` layout.
+                type: boolean
+                enum: [true, false]
+                x-doc-default: false
+              diskSizeGb: &instanceClassDiskSizeGb
+                description: |
+                  Instance root disk size in gibibytes.
+                example: 40
+                type: integer
+              diskType: &instanceClassDiskType
+                description: |
+                  The type of the volumes to create.
+
+                  You can view a list of available volume types using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                  ```shell
+                  az vm list-skus -l westeurope --zone
+                  ```
+                example: StandardSSD_LRS
+                type: string
+              etcdDiskSizeGb:
+                description: |
+                  Etcd disk size in gibibytes.
+                example: 20
+                default: 20
+                type: integer
+              additionalTags: &instanceClassAdditionalTags
+                description: |
+                  The additional tags to attach to the instances created (in addition to those specified in the cloud provider configuration).
+                x-doc-example: |
+                  ```yaml
+                  project: cms-production
+                  severity: critical
+                  ```
+                type: object
+                additionalProperties:
+                  type: string
+              acceleratedNetworking: &instanceClassAcceleratedNetworking
+                type: boolean
+                default: false
+                description: |
+                  Accelerated Networking provides up to 30Gbps in networking throughput.
+      nodeGroups:
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+        type: array
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              description: |
+                The name of the NodeGroup to use for generating node names.
+              type: string
+            replicas:
+              description: |
+                The number of nodes to create.
+              type: integer
+            zones:
+              description: |
+                A list of zones where static nodes can be created;
+
+                You can browse a list of zones available for the selected instance type using the [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+
+                ```shell
+                az vm list-skus -l westeurope -o table
+                ```
+              x-doc-default: [1,2,3]
+              type: array
+              items:
+                type: string
+              minItems: 1
+              uniqueItems: true
+            nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
+              properties:
+                labels:
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                    Note that you have to re-create all the machines to add new tags if tags were modified in the running cluster.
+
+                    Format — `key: value`.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                  type: object
+                  additionalProperties:
+                    type: string
+                annotations:
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                  type: object
+                  additionalProperties:
+                    type: string
+                taints:
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                    > Available fields: `effect`, `key`, and `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              description: |
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+              required: [machineSize, urn]
+              type: object
+              properties:
+                machineSize: *instanceClassMachineSize
+                urn: *instanceClassUrn
+                enableExternalIP: *instanceClassEnableExternalIP
+                diskSizeGb: *instanceClassDiskSizeGb
+                diskType: *instanceClassDiskType
+                additionalTags: *instanceClassAdditionalTags
+                acceleratedNetworking: *instanceClassAcceleratedNetworking
+      tags:
+        description: |
+          A list of tags in the `key: value` format to attach to all cluster resources.
+
+          You have to re-create all the machines to add new tags if tags were modified in the running cluster.
+        type: object
+        additionalProperties:
+          type: string
+      provider:
+        description: |
+          [Parameters](https://deckhouse.io/modules/cloud-provider-azure/environment.html) for connecting to the Azure API.
+        type: object
+        additionalProperties: false
+        required: [subscriptionId, clientId, clientSecret, tenantId, location]
+        properties:
+          location:
+            description: |
+              The name of the geo location to create all the resources. Getting available locations from [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+              ```shell
+              az account list-locations -o table
+              ```
+            type: string
+            x-unsafe: true
+          subscriptionId:
+            description: |
+              The ID of the subscription.
+            type: string
+            x-unsafe: true
+          clientId:
+            description: |
+              The client ID.
+            type: string
+          clientSecret:
+            description: |
+              The client's secret.
+
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
+            type: string
+          tenantId:
+            description: |
+              The ID of the tenant.
+            type: string
+            x-unsafe: true
+      zones:
+        description: |
+          The globally restricted set of zones that this Cloud Provider works with.
+        type: array
+        items:
+          type: string
+        minItems: 1
+        uniqueItems: true
+    oneOf:
+    - required: [layout]
+      properties:
+        layout:
+          enum: [Standard]

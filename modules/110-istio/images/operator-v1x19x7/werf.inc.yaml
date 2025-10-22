@@ -1,0 +1,51 @@
+---
+{{- $istioVersion := "1.19.7" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.19.7 -> v1x19x7 */}}
+---
+# Based on https://github.com/istio/istio/blob/1.19.7/operator/docker/Dockerfile.operator
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/istio/out/operator
+  to: /usr/local/bin/operator
+  owner: 1337
+  group: 1337
+  after: setup
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio/manifests
+  to: /var/lib/istio/manifests
+  owner: 1337
+  group: 1337
+  after: setup
+imageSpec:
+  config:
+    user: "1337:1337"
+    entrypoint: ["/usr/local/bin/operator"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/istio
+  to: /src/istio
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  install:
+  - cd /src/istio/
+  - echo {{ $istioVersion }} > version
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-extldflags -static -s -w'
+  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/operator/cmd/operator/
+  - strip /src/istio/out/operator
+  - chmod 0700 /src/istio/out/operator
+  - chown 1337:1337 /src/istio/out/operator

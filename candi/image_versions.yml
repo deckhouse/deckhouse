@@ -1,0 +1,13 @@
+# To copy images, please use regcopy. You can find all the information in the tools/regcopy/README.md file.
+
+# REGISTRY_PATH is a special key which is concatenated with other base images
+REGISTRY_PATH: "registry.deckhouse.io/base_images/"
+
+BASE_ALPINE: "alpine:3.20.3@sha256:41628df7c9b935d248f64542634e7a843f9bc7f2252d7f878e77f7b79a947466"
+BASE_JEKYLL: "jekyll:4.3.4-alpine@sha256:bc24cdaea4fa9ea14068440d53dcab6881018d77526e7b9a0574f6ff03f0945f"
+BASE_NODE_14_ALPINE: "node:14.21.1-alpine3.15@sha256:931c71420abf7c3e0e04b8669e3e105d65bcd68703cb129a6a16ce68876964ae"
+BASE_NODE_16_ALPINE: "node:16.13.0-alpine3.14@sha256:5277c7d171e02ee76417bb290ef488aa80e4e64572119eec0cb9fffbcffb8f6a"
+BASE_NODE_20_ALPINE: "node:20.11.0-alpine3.18@sha256:bd2eb17dcdc3541d4986bebcfc997a24c499358827899b1029af3601d4c4569d"
+
+# Only needed for ingress-nginx controller 1.9. Should be removed soon
+BASE_ALT_DEV: "dev-alt:p10@sha256:76e6e163fa982f03468166203488b569e6d9fc10855d6a259c662706436cdcad"

@@ -1,0 +1,25 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/kube-rbac-proxy
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+  add: /relocate/bin/true
+  to: /bin/true
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/kube-rbac-proxy", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
+    expose: ["8080"]
+---
+{{- $binaries := "/bin/true" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+ setup:
+   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

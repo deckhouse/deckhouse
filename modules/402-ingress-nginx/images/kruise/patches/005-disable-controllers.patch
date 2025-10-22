@@ -1,0 +1,303 @@
+diff --git a/pkg/controller/advancedcronjob/advancedcronjob_controller.go b/pkg/controller/advancedcronjob/advancedcronjob_controller.go
+index d648a4d8..e798e8c0 100644
+--- a/pkg/controller/advancedcronjob/advancedcronjob_controller.go
++++ b/pkg/controller/advancedcronjob/advancedcronjob_controller.go
+@@ -57,6 +57,10 @@ var (
+ // Add creates a new AdvancedCronJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/broadcastjob/broadcastjob_controller.go b/pkg/controller/broadcastjob/broadcastjob_controller.go
+index d88fd93b..d7000cda 100644
+--- a/pkg/controller/broadcastjob/broadcastjob_controller.go
++++ b/pkg/controller/broadcastjob/broadcastjob_controller.go
+@@ -81,6 +81,10 @@ var (
+ // Add creates a new BroadcastJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/cloneset/cloneset_controller.go b/pkg/controller/cloneset/cloneset_controller.go
+index 046c1ce4..952547de 100644
+--- a/pkg/controller/cloneset/cloneset_controller.go
++++ b/pkg/controller/cloneset/cloneset_controller.go
+@@ -78,6 +78,10 @@ var (
+ // Add creates a new CloneSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(clonesetutils.ControllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/containerrecreaterequest/crr_controller.go b/pkg/controller/containerrecreaterequest/crr_controller.go
+index 87f84858..9ddc77c9 100644
+--- a/pkg/controller/containerrecreaterequest/crr_controller.go
++++ b/pkg/controller/containerrecreaterequest/crr_controller.go
+@@ -65,6 +65,10 @@ var (
+ // Add creates a new ContainerRecreateRequest Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
+index f24db0a7..cfc7da59 100644
+--- a/pkg/controller/daemonset/daemonset_controller.go
++++ b/pkg/controller/daemonset/daemonset_controller.go
+@@ -66,13 +66,10 @@ import (
+ 	kruiseclientset "github.com/openkruise/kruise/pkg/client/clientset/versioned"
+ 	"github.com/openkruise/kruise/pkg/client/clientset/versioned/scheme"
+ 	kruiseappslisters "github.com/openkruise/kruise/pkg/client/listers/apps/v1alpha1"
+-	"github.com/openkruise/kruise/pkg/features"
+ 	kruiseutil "github.com/openkruise/kruise/pkg/util"
+ 	utilclient "github.com/openkruise/kruise/pkg/util/client"
+ 	utildiscovery "github.com/openkruise/kruise/pkg/util/discovery"
+ 	kruiseExpectations "github.com/openkruise/kruise/pkg/util/expectations"
+-	utilfeature "github.com/openkruise/kruise/pkg/util/feature"
+-	imagejobutilfunc "github.com/openkruise/kruise/pkg/util/imagejob/utilfunction"
+ 	"github.com/openkruise/kruise/pkg/util/inplaceupdate"
+ 	"github.com/openkruise/kruise/pkg/util/lifecycle"
+ 	"github.com/openkruise/kruise/pkg/util/ratelimiter"
+@@ -130,14 +127,14 @@ const (
+ // Add creates a new DaemonSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
+-	if !utildiscovery.DiscoverGVK(controllerKind) {
++	if concurrentReconciles == 0 {
+ 		return nil
+ 	}
+-	if !utildiscovery.DiscoverGVK(appsv1alpha1.SchemeGroupVersion.WithKind("ImagePullJob")) ||
+-		!utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) ||
+-		!utilfeature.DefaultFeatureGate.Enabled(features.PreDownloadImageForDaemonSetUpdate) {
+-		isPreDownloadDisabled = true
++
++	if !utildiscovery.DiscoverGVK(controllerKind) {
++		return nil
+ 	}
++
+ 	r, err := newReconciler(mgr)
+ 	if err != nil {
+ 		return err
+@@ -423,11 +420,6 @@ func (dsc *ReconcileDaemonSet) syncDaemonSet(ctx context.Context, request reconc
+ 			if err := dsc.createImagePullJobsForInPlaceUpdate(ds, old, cur); err != nil {
+ 				klog.ErrorS(err, "Failed to create ImagePullJobs for DaemonSet", "daemonSet", request)
+ 			}
+-		} else {
+-			// delete ImagePullJobs if revisions have been consistent
+-			if err := imagejobutilfunc.DeleteJobsForWorkload(dsc.Client, ds); err != nil {
+-				klog.ErrorS(err, "Failed to delete ImagePullJobs for DaemonSet", "daemonSet", request)
+-			}
+ 		}
+ 	}
+ 
+diff --git a/pkg/controller/ephemeraljob/ephemeraljob_controller.go b/pkg/controller/ephemeraljob/ephemeraljob_controller.go
+index fab0aba8..64a2c35c 100644
+--- a/pkg/controller/ephemeraljob/ephemeraljob_controller.go
++++ b/pkg/controller/ephemeraljob/ephemeraljob_controller.go
+@@ -57,6 +57,8 @@ const EphemeralContainerFinalizer = "apps.kruise.io/ephemeralcontainers-cleanup"
+ // Add creates a new ImagePullJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	return nil
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/imagepulljob/imagepulljob_controller.go b/pkg/controller/imagepulljob/imagepulljob_controller.go
+index 3a1138f6..0a6ce95b 100644
+--- a/pkg/controller/imagepulljob/imagepulljob_controller.go
++++ b/pkg/controller/imagepulljob/imagepulljob_controller.go
+@@ -81,6 +81,10 @@ const (
+ // Add creates a new ImagePullJob Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) ||
+ 		!utilfeature.DefaultFeatureGate.Enabled(features.ImagePullJobGate) {
+ 		return nil
+diff --git a/pkg/controller/nodeimage/nodeimage_controller.go b/pkg/controller/nodeimage/nodeimage_controller.go
+index 21c72d9b..3cdecaba 100644
+--- a/pkg/controller/nodeimage/nodeimage_controller.go
++++ b/pkg/controller/nodeimage/nodeimage_controller.go
+@@ -79,6 +79,10 @@ const (
+ // Add creates a new NodeImage Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/nodepodprobe/node_pod_probe_controller.go b/pkg/controller/nodepodprobe/node_pod_probe_controller.go
+index df197fdf..5abeae52 100644
+--- a/pkg/controller/nodepodprobe/node_pod_probe_controller.go
++++ b/pkg/controller/nodepodprobe/node_pod_probe_controller.go
+@@ -64,6 +64,10 @@ var (
+ // Add creates a new NodePodProbe Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) ||
+ 		!utilfeature.DefaultFeatureGate.Enabled(features.PodProbeMarkerGate) ||
+ 		!utilfeature.DefaultFeatureGate.Enabled(features.KruiseDaemon) {
+diff --git a/pkg/controller/persistentpodstate/persistent_pod_state_controller.go b/pkg/controller/persistentpodstate/persistent_pod_state_controller.go
+index 46d1c665..2a120af5 100644
+--- a/pkg/controller/persistentpodstate/persistent_pod_state_controller.go
++++ b/pkg/controller/persistentpodstate/persistent_pod_state_controller.go
+@@ -78,6 +78,10 @@ var (
+ // Add creates a new PersistentPodState Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !discovery.DiscoverGVK(KruiseKindPps) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/podprobemarker/pod_probe_marker_controller.go b/pkg/controller/podprobemarker/pod_probe_marker_controller.go
+index 89295b87..f5bc81a1 100644
+--- a/pkg/controller/podprobemarker/pod_probe_marker_controller.go
++++ b/pkg/controller/podprobemarker/pod_probe_marker_controller.go
+@@ -70,6 +70,10 @@ const (
+ // Add creates a new PodProbeMarker Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.PodProbeMarkerGate) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/podunavailablebudget/podunavailablebudget_controller.go b/pkg/controller/podunavailablebudget/podunavailablebudget_controller.go
+index f0599af9..229f8994 100644
+--- a/pkg/controller/podunavailablebudget/podunavailablebudget_controller.go
++++ b/pkg/controller/podunavailablebudget/podunavailablebudget_controller.go
+@@ -88,6 +88,10 @@ var ConflictRetry = wait.Backoff{
+ // Add creates a new PodUnavailableBudget Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/resourcedistribution/resourcedistribution_controller.go b/pkg/controller/resourcedistribution/resourcedistribution_controller.go
+index 29f22ebe..707ee68a 100644
+--- a/pkg/controller/resourcedistribution/resourcedistribution_controller.go
++++ b/pkg/controller/resourcedistribution/resourcedistribution_controller.go
+@@ -62,6 +62,10 @@ var (
+ // Add creates a new ResourceDistribution Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) || !utilfeature.DefaultFeatureGate.Enabled(features.ResourceDistributionGate) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/sidecarset/sidecarset_controller.go b/pkg/controller/sidecarset/sidecarset_controller.go
+index 7d7640d4..b17a105a 100644
+--- a/pkg/controller/sidecarset/sidecarset_controller.go
++++ b/pkg/controller/sidecarset/sidecarset_controller.go
+@@ -57,6 +57,10 @@ var (
+ // Add creates a new SidecarSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/sidecarterminator/sidecar_terminator_controller.go b/pkg/controller/sidecarterminator/sidecar_terminator_controller.go
+index 9f872aa5..c9b6e341 100644
+--- a/pkg/controller/sidecarterminator/sidecar_terminator_controller.go
++++ b/pkg/controller/sidecarterminator/sidecar_terminator_controller.go
+@@ -63,6 +63,10 @@ var (
+ // Add creates a new SidecarTerminator Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utilfeature.DefaultFeatureGate.Enabled(features.SidecarTerminator) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/statefulset/statefulset_controller.go b/pkg/controller/statefulset/statefulset_controller.go
+index 079ba489..69c2328f 100644
+--- a/pkg/controller/statefulset/statefulset_controller.go
++++ b/pkg/controller/statefulset/statefulset_controller.go
+@@ -91,6 +91,10 @@ var (
+ // Add creates a new StatefulSet Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/uniteddeployment/uniteddeployment_controller.go b/pkg/controller/uniteddeployment/uniteddeployment_controller.go
+index a14f5269..307cc6ec 100644
+--- a/pkg/controller/uniteddeployment/uniteddeployment_controller.go
++++ b/pkg/controller/uniteddeployment/uniteddeployment_controller.go
+@@ -77,6 +77,10 @@ const (
+ // Add creates a new UnitedDeployment Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKind) {
+ 		return nil
+ 	}
+diff --git a/pkg/controller/workloadspread/workloadspread_controller.go b/pkg/controller/workloadspread/workloadspread_controller.go
+index 4662e09b..b1aaa4d9 100644
+--- a/pkg/controller/workloadspread/workloadspread_controller.go
++++ b/pkg/controller/workloadspread/workloadspread_controller.go
+@@ -105,6 +105,10 @@ var durationStore = requeueduration.DurationStore{}
+ // Add creates a new WorkloadSpread Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+ // and Start it when the Manager is Started.
+ func Add(mgr manager.Manager) error {
++	if concurrentReconciles == 0 {
++		return nil
++	}
++
+ 	if !utildiscovery.DiscoverGVK(controllerKruiseKindWS) || !utilfeature.DefaultFeatureGate.Enabled(features.WorkloadSpread) {
+ 		return nil
+ 	}

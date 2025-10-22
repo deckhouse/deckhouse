@@ -1,0 +1,20 @@
+deckhouse-controller:
+  fixes:
+    - summary: Restore exponential backoff for delays between failed hooks restarts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1790
+dhctl:
+  features:
+    - summary: Prevent to break already bootstrapped cluster when bootstrap new cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1811
+  fixes:
+    - summary: Detect events from latest addon-operator log messages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1813
+istio:
+  fixes:
+    - summary: Istio `globalVersion` detection fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1769
+linstor:
+  fixes:
+    - summary: Fix monitoring of the `piraeus-operator`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/1818
+

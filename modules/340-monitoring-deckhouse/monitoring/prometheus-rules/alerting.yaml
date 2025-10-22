@@ -1,0 +1,442 @@
+- name: d8.deckhouse.image
+  rules:
+  - alert: D8DeckhouseIsNotOnReleaseChannel
+    expr: max by (release_channel) (deckhouse_release_channel{release_channel=""} == 1) > 0
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Deckhouse isn't subscribed to any regular release channels.
+      description: |
+        Deckhouse in this cluster isn't subscribed to any of the regular release channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, or `RockSolid`.
+
+        To resolve this issue, follow these steps:
+
+        1. Check the current release channel used in the cluster:
+
+           ```bash
+           d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
+           ```
+
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
+
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="2"})
+    labels:
+      severity_level: "6"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
+  - alert: DeckhouseReleaseIsWaitingManualApproval
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="3"})
+    labels:
+      severity_level: "3"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        A new Deckhouse release is awaiting manual approval.
+      description: |
+        A new Deckhouse release is available but requires manual approval before it can be applied.
+
+        To approve the release, run the following command:
+
+        ```bash
+        d8 k patch DeckhouseRelease {{ $labels.name }} --type=merge -p='{"approved": true}'
+        ```
+
+  - alert: DeckhouseReleaseIsBlocked
+    expr: sum by (name) (d8_release_info{requirementsNotMet="true"})
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Deckhouse release requirements haven't been met.
+      description: |
+        The requirements for the Deckhouse release haven't been met.
+
+        To check the details, run the following command:
+
+        ```bash
+        d8 k describe DeckhouseRelease {{ $labels.name }}
+        ```
+
+  - alert: DeckhouseReleaseDisruptionApprovalRequired
+    expr: sum by (name) (d8_release_info{disruptionApproval="true"})
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Deckhouse release disruption approval required.
+      description: |
+        The new Deckhouse release includes a disruptive update that requires manual approval.
+
+        To check the details, run the following command:
+
+        ```bash
+        d8 k describe DeckhouseRelease {{ $labels.name }}
+        ```
+
+        To approve the disruptive update, run the following command:
+
+        ```bash
+        d8 k annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true
+        ```
+
+  - alert: ModuleReleaseIsWaitingManualApproval
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        A new release for module `{{ $labels.moduleName }}` is awaiting manual approval.
+      description: |
+        A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
+
+        To approve the module release, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="1"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is 1 minor version behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running 1 minor version behind the latest available release.
+        Consider updating to maintain compatibility and security.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="2"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "7"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is 2 minor versions behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running 2 minor versions behind the latest available release.
+        Updating is recommended to maintain compatibility and access to latest features.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="nil"})
+      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"})
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is {{ $labels.versionLag }} or more minor versions behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        This module is significantly outdated and may have compatibility issues.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleIsInMaintenanceMode
+    expr: sum(deckhouse_mm_module_maintenance{state="NoResourceReconciliation"}) by (moduleName) > 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode.
+      description: |
+        Module `{{ $labels.moduleName }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
+
+        To switch the module back to normal mode, edit the corresponding ModuleConfig resource with the following command:
+
+        ```bash
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
+        ```
+
+  - alert: DeckhouseReleaseNotificationNotSent
+    expr: sum by (name) (d8_release_info{notificationNotSent="true"})
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Deckhouse release notification webhook hasn't been sent.
+      description: |
+        The Deckhouse release notification webhook failed to send.
+
+        To check the notification webhook address, run the following command:
+
+        ```bash
+        d8 k get mc deckhouse -o yaml
+        ```
+
+  - alert: ModuleReleaseIsBlockedByRequirements
+    expr: sum by (name, moduleName) (d8_module_release_info{requirementsNotMet="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        A new release for module `{{ $labels.moduleName }}` has been blocked due to unmet requirements.
+      description: |
+        A new release for module `{{ $labels.moduleName }}` has been blocked because it doesn't meet the required conditions.
+
+        To check the requirements, run the following command:
+
+        ```bash
+        d8 k  get mr {{ $labels.name }} -o json | jq .spec.requirements
+        ```
+
+  - alert: D8HasModuleConfigAllowedToDisable
+    expr: max by (module) (d8_moduleconfig_allowed_to_disable) >= 1
+    for: 3m
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        The ModuleConfig annotation for allowing module disabling is set.
+      description: |
+        The ModuleConfig is pending module disabling.
+
+        It is recommended that you keep your module configurations clean by removing unnecessary approval annotations.
+
+        If you ignore this alert and do not clear the annotation, the module may be accidentally removed from the cluster, potentially leading to irreversible consequences.
+
+        To resolve this issue and stop the alert, run the following command:
+
+        ```bash
+        d8 k annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
+        ```
+
+  - alert: ModuleAtConflict
+    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+      description: |
+        Deckhouse has detected conflicting sources for the {{ $labels.moduleName }} module.
+
+        To resolve this issue, specify the correct source in the module configuration.
+
+  - alert: ModuleConfigObsoleteVersion
+    expr: max by (name) (d8_module_config_obsolete_version) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        ModuleConfig `{{ $labels.name }}` is outdated.
+      description: |
+        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
+
+        To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
+
+  - alert: ModuleHasDeprecatedUpdatePolicy
+    expr: max by (moduleName, updatePolicy) (d8_deprecated_update_policy) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Module `{{ $labels.moduleName }}` is matched by the deprecated update policy `{{ $labels.updatePolicy }}`.
+      description: |-
+        Deckhouse has detected that the module `{{ $labels.moduleName }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
+
+        To specify the update policy in the module configuration, run the following command:
+
+        ```bash
+        d8 k patch moduleconfig {{ $labels.moduleName }} --type='json' -p='[{"op": "add", "path": "/spec/updatePolicy", "value": "{{ $labels.updatePolicy }}"}]'
+        ```
+
+        After resolving all alerts related to the update policy `{{ $labels.updatePolicy }}`, clear the selector by running the following command:
+
+        ```bash
+        d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io {{ $labels.updatePolicy }} --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+        ```
+
+  - alert: DeckhouseHighMemoryUsage
+    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.85)
+    for: 30s
+    labels:
+      severity_level: "3"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
+
+        Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
+
+        ```bash
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/heap" -o /tmp/heap.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/goroutine" -o /tmp/goroutine.pprof
+        curl -s "http://$(d8 k -n d8-system get pod {{ $labels.pod }} -o jsonpath='{.status.hostIP}'):4222/debug/pprof/profile?seconds=30" -o /tmp/cpu.pprof
+        ```
+
+        and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
+      summary: |
+        Deckhouse memory usage is too high.
+
+  - alert: D8ModuleOutdatedByMajorVersion
+    expr: sum by (name, moduleName, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name,majorReleaseName,fromToName"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind.
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To check the module releases status, run the following command:
+
+        ```bash
+        kubectl get mr -l module={{ $labels.moduleName }}
+        ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
+
+        To approve the module major release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```{{ end }}
+
+  - alert: ModuleIsDeprecated
+    expr: d8_telemetry_is_deprecated_module_enabled >= 1
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Module `{{ $labels.module }}` is deprecated.
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.

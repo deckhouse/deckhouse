@@ -1,0 +1,34 @@
+{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+  beforeInstall:
+    - apt-get install conntrack-tools -y
+  install:
+    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+
+  {{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+  {{- $v := semver $version }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kube-proxy
+  to: /usr/local/bin/kube-proxy
+  before: setup
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/kube-proxy"]
+  {{- end }}

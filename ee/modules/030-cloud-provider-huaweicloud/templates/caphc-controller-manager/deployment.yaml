@@ -1,0 +1,134 @@
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
+{{- define "huaweicloud_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: caphc-controller-manager
+  namespace: d8-cloud-provider-huaweicloud
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caphc-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: caphc-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "caphc-controller-manager"
+      minAllowed:
+        {{- include "huaweicloud_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: caphc-controller-manager
+  namespace: d8-cloud-provider-huaweicloud
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caphc-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: caphc-controller-manager
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caphc-controller-manager
+  namespace: d8-cloud-provider-huaweicloud
+  {{- include "helm_lib_module_labels" (list . (dict "app" "caphc-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: caphc-controller-manager
+      cluster.x-k8s.io/provider: infrastructure-huaweicloud
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        app: caphc-controller-manager
+        cluster.x-k8s.io/provider: infrastructure-huaweicloud
+        control-plane: controller-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "caphc-controller-manager")) | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: caphc-controller-manager
+      imagePullSecrets:
+        - name: deckhouse-registry
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: caphc-controller-manager
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "caphcControllerManager") }}
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--leader-elect"
+        env:
+          - name: HUAWEICLOUD_CLOUD
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: cloud
+          - name: HUAWEICLOUD_REGION
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: region
+          - name: HUAWEICLOUD_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: access-key
+          - name: HUAWEICLOUD_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: secret-key
+          - name: HUAWEICLOUD_PROJECT_ID
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: project-id
+          {{- if $providerClusterConfiguration.provider.enterpriseProjectID }}
+          - name: HUAWEICLOUD_ENTERPRISE_PROJECT_ID
+            valueFrom:
+              secretKeyRef:
+                name: huaweicloud-credentials
+                key: enterprise-project-id
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "huaweicloud_controller_manager_resources" . | nindent 12 }}
+{{- end }}

@@ -1,0 +1,167 @@
+{%- include getting_started/global/partials/NOTICES.liquid %}
+
+## Укажите параметры кластера
+
+<div class="form">
+{%- if page.platform_type == 'baremetal' %}
+  <div class="form__row">
+    <label class="label" title="Укажите шаблон DNS, который будет использовать кластер">
+      Шаблон для DNS-имен кластера
+    </label>
+    <input class="textfield"
+      type="text" id="clusterdomain"
+      name="domain" placeholder="%s.domain.my"
+      autocomplete="off" />
+    <span class="info invalid-message invalid-message-main">Введите шаблон доменного имени, содержащий <code>%s</code>, например <code>%s.domain.my</code> или <code>%s-kube.domain.my</code>. Пожалуйста, не используйте домен <code>example.com</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>example.com</code> в шаблоне.</span>
+    <span class="info">
+      Используется для формирования доменов системных приложений в кластере. Например, Grafana для шаблона <code>%s.domain.my</code> будет доступна как <code>grafana.domain.my</code>.<br />
+      В данном руководстве предполагается использование публичного домена, направленного на публичный адрес кластера.
+      Это необходимо для получения сертификатов <a href="https://letsencrypt.org/">Let's Encrypt</a> сервисам Deckhouse.
+      В случае использования уже имеющихся сертификатов (в том числе самоподписанных) необходимо изменить параметры <a href="/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https">секции <code>modules.https</code></a> в глобальных настройках.<br />
+      Если у вас нет возможности завести wildcard-записи DNS, для тестирования вы можете воспользоваться, например, сервисом <a href="https://sslip.io/">sslip.io</a> или аналогами.
+    </span>
+  </div>
+{%- endif %}
+
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' %}
+  <div class="form__row">
+    <label class="label" title="Укажите публичную часть SSH-ключа доступа к узлам кластера">
+      Публичная часть SSH-ключа доступа к узлам кластера
+    </label>
+    <input
+      class="textfield"
+      type="text" id="sshkey"
+      name="sshkey" placeholder="ssh-rsa ..."
+      autocomplete="off" />
+    <span class="info">
+       Этот ключ передается cloud-провайдеру в процессе создания виртуальной машины.
+    </span>
+  </div>
+{%- endunless %}
+{%- if page.platform_code == 'bm-private' %}
+
+<!-- proxy block -->
+  <div class="form__row">
+    <label class="label" title="Укажите адрес proxy-сервера для HTTP-трафика">
+      Адрес proxy-сервера для HTTP-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpURI"
+      name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
+    <span class="info">
+         Оставьте пустым, если proxy-сервер для HTTP-трафика не используется.
+      </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Укажите адрес proxy-сервера для HTTPS-трафика">
+      Адрес proxy-сервера для HTTPS-трафика (примеры: <code>http://proxy.company.my</code>, <code>https://user1:p@ssword@proxy.company.my:8443</code>)
+    </label>
+    <input
+      class="textfield"
+      type="text" id="proxyHttpsURI"
+      name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адрес прокси-сервера должен совпадать с шаблоном <code>http://proxy.company.my</code> или <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>proxy.company.my</code>.</span>
+    <span class="info">
+        Оставьте пустым, если proxy-сервер для HTTPS-трафика не используется.
+      </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Список IP-адресов и доменных имен для которых проксирование не применяется">
+      Список IP-адресов и доменных имен для которых проксирование не применяется (через запятую).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="noProxyAddressList"
+      name="noProxyAddressList" placeholder=""
+      autocomplete="off"/>
+    <span class="info invalid-message invalid-message-main">Адреса должны совпадать с шаблоном <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>.</span>
+    <span class="info invalid-message invalid-message-example-com">Пожалуйста, не используйте домен <code>example.com</code>.</span>
+    <span class="info">
+         Укажите список IP-адресов, сетей и доменных имен, к которым есть доступ напрямую, без использования proxy-сервера. В том числе укажите все подсети узлов кластера, если кластере предполагается взаимодействие подов с сервисами, расположенными в сети узлов. Для настройки wildcard-доменов используйте написание вида ".example.com" (пример: <code>127.0.0.1, 192.168.0.0/24, example.com, ".example.com"</code>). Оставьте пустым, если таких исключений нет.
+      </span>
+  </div>
+
+  <!-- registry block -->
+<div markdown="1">
+### Параметры доступа к хранилищу образов контейнеров (или проксирующему registry)
+
+> При необходимости ознакомьтесь с [особенностями настройки стороннего container registry](/products/kubernetes-platform/documentation/v1/installing/#установка-deckhouse-kubernetes-platform-из-стороннего-registry).
+</div>
+
+  <div class="form__row">
+    <label class="label" title="Укажите префикс имени образов контейнеров Deckhouse">
+      Префикс имени образов контейнеров Deckhouse (например, для публичных образов Deckhouse EE — <code>registry.deckhouse.ru/deckhouse/ee</code>).
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryImagesRepo"
+      name="registryImagesRepo" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+       По указанному адресу и пути должны быть доступны образы Deckhouse.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <label class="label" title="Права доступа к хранилищу образов контейнеров в Base64">
+      Права доступа к хранилищу образов контейнеров <strong>в Base64</strong>.
+    </label>
+    <input
+      class="textfield"
+      type="text" id="registryDockerCfg"
+      name="registryDockerCfg" placeholder=""
+      autocomplete="off" />
+    <span class="info">
+      Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это <code>$HOME/.docker/config.json</code>), закодированная в Base64.<br />Подробнее про этот параметр читайте в <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">документации ресурса InitConfiguration</a>.
+    </span>
+    <span class="info">
+      В случае использования анонимного доступа к хранилищу образов контейнеров не заполняйте это поле.
+    </span>
+  </div>
+
+  <div class="form__row">
+    <div class="form__row--wrap">
+      <label for="registryScheme" class="label" title="Отметьте, если хранилище образов контейнеров использует протокол HTTP, а не HTTPS">
+        Хранилище образов контейнеров использует протокол <code>HTTP</code>.
+      </label>
+      <input
+        type="checkbox" id="registryScheme"
+        name="registryScheme" />
+    </div>
+    <span class="info">
+       Отметьте, если указанное хранилище образов контейнеров работает по протоколу HTTP, а не HTTPS.
+    </span>
+  </div>
+
+  <div class="form__row registryca-block" >
+    <label class="label" title="Корневой сертификат, которым можно проверить сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат)">
+      Корневой SSL-сертификат, которым можно проверить SSL-сертификат хранилища образов контейнеров (например, если хранилище использует самоподписанный сертификат).
+    </label>
+    <textarea
+      id="registryCA"
+      class="textfield"
+      name="registryCA" placeholder="" rows="10" cols="80" placeholder="-----BEGIN CERTIFICATE-----
+.....
+.....
+.....
+-----END CERTIFICATE-----" autocomplete="off"></textarea>
+    <span class="info">
+       Оставьте пустым, если хранилище образов контейнеров использует SSL-сертификат публичных центров сертификации.
+    </span>
+  </div>
+
+{% endif %}
+</div>
+
+<script type="text/javascript">
+{% include getting_started/global/partials/getting-started-setup.js.liquid %}
+</script>

@@ -1,0 +1,146 @@
+{{- define "simple_bridge_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: simple-bridge
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "simple-bridge")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: simple-bridge
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "simple-bridge"
+      minAllowed:
+        {{- include "simple_bridge_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: simple-bridge
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "simple-bridge")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: simple-bridge
+  template:
+    metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+      labels:
+        app: simple-bridge
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      automountServiceAccountToken: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: {{ .Chart.Name }}
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+    {{- end }}
+      containers:
+      - name: simple-bridge
+        image: {{ include "helm_lib_module_image" (list . "simpleBridge") }}
+        {{- /*
+          UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
+        */}}
+        securityContext:
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_RAW
+            - NET_ADMIN
+            drop:
+            - ALL
+        command:
+        - /bin/simple-bridge
+        env:
+        {{- if hasKey .Values.global "clusterConfiguration" }}
+          {{- if .Values.global.clusterConfiguration.cloud }}
+        - name: ROUTE_POD_NETWORK_TO_GW
+          value: "{{ if eq .Values.global.clusterConfiguration.cloud.provider "Yandex" }}true{{ else }}false{{ end }}"
+          {{- end }}
+        {{- end }}
+        - name: POD_SUBNET
+          value: {{ .Values.global.discovery.podSubnet | quote }}
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: run
+          mountPath: /run
+        - name: cni
+          mountPath: /etc/cni/net.d
+        - name: tmp
+          mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "simple_bridge_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: run
+        hostPath:
+          path: /run
+      - name: cni
+        hostPath:
+          path: /etc/cni/net.d
+      - name: tmp
+        emptyDir: {}
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi

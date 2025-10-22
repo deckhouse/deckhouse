@@ -1,0 +1,24 @@
+- name: d8.monitoring-application.warnings
+  rules:
+  - alert: D8OldPrometheusTargetFormat
+    expr: |
+      max(d8_monitoring_applications_old_prometheus_target_total{job="deckhouse"} > 0)
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deprecated_prometheus_functionality_in_used: "D8DeprecatedPrometheusFunctionalityIsUsed,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: |-
+        Services with the `prometheus-target` label are being used for metric collection.
+      description: |-
+        Deckhouse has detected that services with the `prometheus-target` label are being used to collect metrics in the cluster.
+
+        The label format has been changed. To resolve the issue, replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
+
+        To list all services labeled with `prometheus-target`, run the following command:
+        
+        ```bash
+        d8 k get service --all-namespaces --show-labels | grep prometheus-target
+        ```

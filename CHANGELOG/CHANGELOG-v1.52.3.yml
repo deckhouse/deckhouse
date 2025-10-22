@@ -1,0 +1,14 @@
+linstor:
+  fixes:
+    - summary: Fixed error in LINSTOR controller liveness probe logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6083
+      impact: Linstor controller will be restarted.
+prometheus:
+  fixes:
+    - summary: fix fix-permissions init-container to run under kesl security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6082
+user-authz:
+  fixes:
+    - summary: Add matchAny parameter to namespaceSelector for granting access to all namespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6014
+

@@ -1,0 +1,100 @@
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=1100">
+
+<!-- title/descriptions -->
+{%- assign page_url_parts = page.url | split: '/' -%}
+{%- assign max_ind = page_url_parts.size | minus: 1 -%}
+{%- assign title_parts = "" | split: "" -%}
+{%- assign is_directory = page.url | endswith: "/" %}
+
+{%- if max_ind == 1 and include.mode=='documentation' %}{%- assign max_ind = 2 -%}{% endif %}
+
+{%- for i in (2..max_ind) %}
+
+{%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+{%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
+{%- capture page_url_without_lang %}{{ page_url_without_lang }}/{{ page_url_parts[i] }}{% endcapture -%}
+
+{%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
+{%- if breadcrumb %}
+    {%- if breadcrumb.title[page.lang] %}
+        {%- assign title = breadcrumb.title[page.lang] %}
+    {%- else %}
+        {%- assign title = breadcrumb.title %}
+    {%- endif -%}
+    {%- assign title_parts = title_parts | push: title -%}
+{%- endif -%}
+{%- endfor %}
+
+{%- assign title_parts = title_parts | push: page.title -%}
+
+{%- if page_url_without_lang.size > 1 and is_directory %}
+{%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
+{%- endif %}
+
+{%- if page.title_gen -%}
+  {%- assign generated_title = page.title_gen -%}
+{%- else -%}
+  {%- assign generated_title = title_parts | reverse | join: "" -%}
+{%- endif -%}
+
+{%- assign words = page.product_code | replace: '-', ' ' | split: ' ' -%}
+{%- assign additional_title = "" -%}
+{%- for word in words -%}
+  {%- assign capitalized_word = word | capitalize -%}
+  {%- if additional_title == "" -%}
+    {%- assign additional_title = capitalized_word -%}
+  {%- else -%}
+    {%- assign additional_title = additional_title | append: " " | append: capitalized_word -%}
+  {%- endif -%}
+{%- endfor -%}
+<title>{{ generated_title }} | {{ site.site_title }} {{ additional_title }}</title>
+
+{%- if page.description %}
+    {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
+{%- else %}
+    {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
+    {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
+        {%- assign i18nKey = 'description_' | append: pageCommonName %}
+        {%- assign description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
+    {%- elsif page.platform_type %}
+        {%- assign description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
+    {%- else %}
+        {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
+    {%- endif %}
+{%- endif %}
+
+{%- if include.mode=='documentation' %}
+  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
+{%- elsif page.sidebar == 'embedded-modules' %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+{%- else %}
+  {%- if page.product_code == 'kubernetes-platform' %}
+    {%- assign page_url_without_lang = page_url_without_lang | relative_url | prepend: page.product_code | prepend: '/' %}
+  {% endif %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
+{% endif %}
+<!-- multilang -->
+{%- if page.multilang %}
+    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.urls['ru'] }}{{ page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ page_meta_url }}" />
+{%- endif %}
+
+<!-- Primary Meta Tags -->
+<link rel="canonical" href="{{ site.urls[page.lang] }}{{ page_meta_url }}" />
+<meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta name="description" content="{{ description }}">
+<meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
+<meta property="og:title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta property="og:description" content="{{ description }}">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
+<meta property="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta property="twitter:description" content="{{ description }}">

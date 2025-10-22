@@ -1,0 +1,479 @@
+{{- define "chrony_exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- define "chrony_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{ $ntpServers := list }}
+{{- range $value := .Values.chrony.ntpServers }}
+  {{- if regexMatch "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$" $value }}
+    {{ $ntpServers = append $ntpServers $value }}
+  {{ else }}
+    {{ $ntpServers = append $ntpServers (printf "%s." ($value | trimSuffix ".")) }}
+  {{- end }}
+{{ end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: chrony
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "chrony"
+      minAllowed:
+        {{- include "chrony_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 20Mi
+    - containerName: "chrony-exporter"
+      minAllowed:
+        {{- include "chrony_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: chrony-master
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "chrony"
+      minAllowed:
+        {{- include "chrony_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+    - containerName: "chrony-exporter"
+      minAllowed:
+        {{- include "chrony_exporter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: chrony
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: chrony
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: NotIn
+                values:
+                - master
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: chrony-exporter
+      automountServiceAccountToken: true
+      hostNetwork: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+      - name: chrony
+        securityContext:
+          capabilities:
+            add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
+            - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
+            - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
+            - DAC_OVERRIDE
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
+            - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
+            - SETUID
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        image: {{ include "helm_lib_module_image" (list . "chrony") }}
+        env:
+        - name: PATH
+          value: /opt/chrony-static/bin
+        - name: NTP_ROLE
+          value: sink
+        - name: NTP_SERVERS
+          value: {{ join " " $ntpServers | quote }}
+        - name: CHRONY_MASTERS_SERVICE
+          value: {{ printf "chrony-masters.d8-%s.svc.%s" .Chart.Name .Values.global.discovery.clusterDomain | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        ports:
+        - name: ntp
+          containerPort: 4234
+          protocol: UDP
+        livenessProbe:
+          exec:
+            command:
+            - /opt/chrony-static/bin/chronyc
+            - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 15
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: tzdata-config
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: etc-chrony
+          mountPath: /etc/chrony
+        - name: config
+          mountPath: /etc/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_resources" . | nindent 12 }}
+  {{- end }}
+      - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
+        name: chrony-exporter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        args:
+        - '--web.listen-address=127.0.0.1:4245'
+        - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
+        - '--collector.tracking'
+        - '--collector.serverstats'
+        - '--log.level=info'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4245
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4245
+        volumeMounts:
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_exporter_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:4245/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-chrony
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: chrony
+        ports:
+        - containerPort: 4245
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4245
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4245
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: tz-config
+        hostPath:
+          path: /etc/localtime
+          type: FileOrCreate
+      - name: tzdata-config
+        hostPath:
+          path: /etc/timezone
+          type: FileOrCreate
+      - name: etc-chrony
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: chrony
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chrony-master
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: chrony-master
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: chrony-master
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.deckhouse.io/group
+                operator: In
+                values:
+                - master
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: chrony-exporter-master
+      automountServiceAccountToken: true
+      hostNetwork: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      containers:
+      - name: chrony
+        securityContext:
+          capabilities:
+            add:
+            # SYS_TIME: Allows a process to modify the system time.
+            # Chrony is designed to adjust system time.
+            - SYS_TIME
+            # CHOWN: Allows changing the ownership of files and directories.
+            # Chrony can create /var/run/chrony folfer and change its owner.
+            - CHOWN
+            # DAC_OVERRIDE: Allows access to files and directories, even if the process isn't the owner.
+            # /entrypoint can remove /var/run/chrony/chronyd.pid file (UID/GID 64535:64535).
+            - DAC_OVERRIDE
+            # SETGID: Make arbitrary manipulations of process GIDs.
+            # Chrony can change its own process GID on the fly.
+            - SETGID
+            # SETUID: Make arbitrary manipulations of process UIDs.
+            # Chrony can change its own process UID on the fly.
+            - SETUID
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        image: {{ include "helm_lib_module_image" (list . "chrony") }}
+        env:
+        - name: PATH
+          value: /opt/chrony-static/bin
+        - name: NTP_ROLE
+          value: source
+        - name: NTP_SERVERS
+          value: {{ join " " $ntpServers | quote }}
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        ports:
+        - name: ntp
+          containerPort: 4234
+          protocol: UDP
+        livenessProbe:
+          exec:
+            command:
+            - /opt/chrony-static/bin/chronyc
+            - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 15
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: tzdata-config
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: etc-chrony
+          mountPath: /etc/chrony
+        - name: config
+          mountPath: /etc/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_resources" . | nindent 12 }}
+  {{- end }}
+      - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
+        name: chrony-exporter
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        args:
+        - '--web.listen-address=127.0.0.1:4245'
+        - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
+        - '--collector.tracking'
+        - '--collector.serverstats'
+        - '--log.level=info'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4245
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 4245
+        volumeMounts:
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_exporter_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:4245/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-chrony
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: chrony-master
+        ports:
+        - containerPort: 4245
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4245
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4245
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: tz-config
+        hostPath:
+          path: /etc/localtime
+          type: FileOrCreate
+      - name: tzdata-config
+        hostPath:
+          path: /etc/timezone
+          type: FileOrCreate
+      - name: etc-chrony
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: chrony

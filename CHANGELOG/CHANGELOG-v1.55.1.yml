@@ -1,0 +1,5 @@
+cni-cilium:
+  fixes:
+    - summary: Restore removed API versions in CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/6690
+

@@ -1,0 +1,475 @@
+{{- define "openvpn_tcp_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+{{- define "openvpn_udp_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+{{- define "openvpn_admin_resources" }}
+cpu: 50m
+memory: 50Mi
+{{- end }}
+{{- define "openvpn_migration_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+{{- define "openvpn_pmacct_resources" }}
+cpu: 10m
+memory: 70Mi
+{{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: {{ .Chart.Name }}
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+  {{- if .Values.openvpn.udpEnabled }}
+    - containerName: openvpn-udp
+      minAllowed:
+        {{- include "openvpn_udp_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+  {{- end }}
+  {{- if .Values.openvpn.tcpEnabled }}
+    - containerName: openvpn-tcp
+      minAllowed:
+        {{- include "openvpn_tcp_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+  {{- end }}
+  {{- if .Values.openvpn.pmacctEnabled }}
+    {{- if .Values.openvpn.tcpEnabled }}
+    - containerName: pmacct-tcp
+      minAllowed:
+        {{- include "openvpn_pmacct_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+    {{- end }}
+    {{- if .Values.openvpn.udpEnabled }}
+    - containerName: pmacct-udp
+      minAllowed:
+        {{- include "openvpn_pmacct_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 350m
+        memory: 300Mi
+    {{- end }}
+  {{- end }}
+    - containerName: ovpn-admin
+      minAllowed:
+        {{- include "openvpn_admin_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 100Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: d8-{{ .Chart.Name }}
+  {{- if .Values.openvpn.internal.migrated }}
+  annotations:
+    easyrsa-migrated: "true"
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  serviceName: openvpn
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/openvpn/configmap.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      terminationGracePeriodSeconds: 5
+      automountServiceAccountToken: true
+      serviceAccountName: openvpn
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      initContainers:
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+    {{- end }}
+{{- if or (not .Values.openvpn.internal.migrated) (.Values.global.enabledModules | has "cni-cilium") }}
+  {{- if (.Values.global.enabledModules | has "cni-cilium") }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
+  {{- end }}
+  {{- if not .Values.openvpn.internal.migrated }}
+      - name: migration
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "easyrsaMigrator") }}
+        command: [ '/app/easyrsa-migrator' ]
+        volumeMounts:
+          - mountPath: /mnt/easyrsa
+            name: certs
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+    {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_migration_resources" . | nindent 12 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+      containers:
+{{- if .Values.openvpn.tcpEnabled }}
+# openvpn-tcp
+      - name: openvpn-tcp
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "openvpn") }}
+        command: [ '/entrypoint' ]
+        ports:
+        - name: ovpn-tcp
+          containerPort: 1194
+          protocol: TCP
+          {{- if hasKey .Values.openvpn "inlet" }}
+            {{- if eq .Values.openvpn.inlet "HostPort" }}
+          hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
+            {{- end }}
+          {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: tcp
+        volumeMounts:
+          - name: certs
+            mountPath: /etc/openvpn/certs
+          - name: ccd
+            mountPath: /etc/openvpn/ccd
+          - name: config
+            mountPath: /etc/openvpn/openvpn.conf
+            subPath: openvpn.conf
+            readOnly: true
+          - mountPath: /sbin
+            name: sbin
+            readOnly: true
+          - name: openvpn-tcp-tmp
+            mountPath: /tmp
+          - name: xtables-lock
+            mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_tcp_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+{{- if .Values.openvpn.udpEnabled }}
+# openvpn-udp
+      - name: openvpn-udp
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "openvpn") }}
+        command: [ '/entrypoint' ]
+        ports:
+        - name: ovpn-udp
+          containerPort: 1194
+          protocol: UDP
+          {{- if hasKey .Values.openvpn "inlet" }}
+            {{- if eq .Values.openvpn.inlet "HostPort" }}
+          hostPort: {{ .Values.openvpn.hostPort | default 5416 }}
+            {{- end }}
+          {{- end }}
+        env:
+        - name: TUNNEL_NETWORK
+          value: {{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}
+        - name: OPENVPN_PROTO
+          value: udp
+        volumeMounts:
+          - name: certs
+            mountPath: /etc/openvpn/certs
+          - name: ccd
+            mountPath: /etc/openvpn/ccd
+          - name: config
+            mountPath: /etc/openvpn/openvpn.conf
+            subPath: openvpn.conf
+            readOnly: true
+          - mountPath: /sbin
+            name: sbin
+            readOnly: true
+          - name: openvpn-udp-tmp
+            mountPath: /tmp
+          - name: xtables-lock
+            mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_udp_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.openvpn.tcpEnabled .Values.openvpn.pmacctEnabled }}
+# pmacct-tcp
+      - name: pmacct-tcp
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "pmacct") }}
+        command: [ "/usr/sbin/pmacctd" ]
+        args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,proto", "-i", "tun-tcp", "-w", "-r", "60", "-S", "user"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_pmacct_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+{{- if and .Values.openvpn.udpEnabled .Values.openvpn.pmacctEnabled }}
+# pmacct-udp
+      - name: pmacct-udp
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "pmacct") }}
+        command: [ "/usr/sbin/pmacctd" ]
+        args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,proto", "-i", "tun-udp", "-w", "-r", "60", "-S", "user"]
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_pmacct_resources" . | nindent 12 }}
+  {{- end }}
+{{- end }}
+# ovpn-admin
+      - name: ovpn-admin
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "ovpnAdmin") }}
+        command: ["/app/ovpn-admin"]
+        args:
+        - --storage.backend
+        - kubernetes.secrets
+        - --log.level
+        - trace
+        - --listen.host
+        - 127.0.0.1
+        - --listen.port
+        - "8000"
+        - --role
+        - master
+        - --metrics.path
+        - "/metrics"
+        - --ovpn.network
+        - "{{ include "get_network_with_bitmask" (list . .Values.openvpn.tunnelNetwork) }}"
+        {{- if hasKey .Values.openvpn "inlet" }}
+          {{- if eq .Values.openvpn.inlet "LoadBalancer" }}
+        - --ovpn.server.behindLB
+            {{- if .Values.openvpn.udpEnabled }}
+        - --ovpn.service
+        - openvpn-external-udp
+            {{- end }}
+            {{- if .Values.openvpn.tcpEnabled }}
+        - --ovpn.service
+        - openvpn-external
+            {{- end }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.openvpn.udpEnabled }}
+        - --mgmt
+        - udp=127.0.0.1:9090
+        {{- end }}
+        {{- if .Values.openvpn.tcpEnabled }}
+        - --mgmt
+        - tcp=127.0.0.1:8989
+        {{- end }}
+        - --ccd
+        - --ccd.path
+        - /mnt/ccd
+        {{- $externalHost := "" }}
+        {{- if hasKey .Values.openvpn "inlet" }}
+          {{- if eq .Values.openvpn.inlet "ExternalIP" }}
+            {{- $externalHost = .Values.openvpn.externalIP }}
+          {{- end }}
+        {{- end }}
+        {{- if hasKey .Values.openvpn "externalHost" }}
+          {{- $externalHost = .Values.openvpn.externalHost }}
+        {{- end }}
+        {{- if ne $externalHost "" }}
+          {{- if .Values.openvpn.udpEnabled }}
+        - --ovpn.server
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:udp
+          {{- end }}
+          {{- if .Values.openvpn.tcpEnabled }}
+        - --ovpn.server
+        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:tcp
+          {{- end }}
+        {{- end }}
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: EASYRSA_PATH
+          value: /mnt/easyrsa
+        - name: CLIENT_CERT_EXPIRATION_DAYS
+          value: "{{ .Values.openvpn.clientCertExpirationDays }}"
+        volumeMounts:
+          - mountPath: /mnt/easyrsa
+            name: certs
+            readOnly: false
+          - name: ccd
+            mountPath: /mnt/ccd
+          - name: ovpn-admin-tmp
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "openvpn_admin_resources" . | nindent 12 }}
+  {{- end }}
+# kube-rbac-proxy
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
+        - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        ports:
+        - containerPort: 8443
+          name: https
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:8000/metrics
+              path: /metrics
+            - upstream: http://127.0.0.1:8000/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: http
+                  name: {{ .Chart.Name }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+  {{- end }}
+        volumeMounts:
+        - name: kube-rbac-proxy-ca
+          mountPath: /etc/kube-rbac-proxy
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - openvpn
+            topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: kube-rbac-proxy-ca
+        configMap:
+          defaultMode: 420
+          name: kube-rbac-proxy-ca.crt
+      - name: config
+        configMap:
+          name: openvpn
+          defaultMode: 0644
+      - name: ovpn-admin-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: openvpn-tcp-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+      - name: openvpn-udp-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+      - name: ccd
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: xtables-lock
+        hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+{{- if .Values.openvpn.internal.migrated }}
+      - name: certs
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+{{- else }}
+{{- $storageClass := .Values.openvpn.internal.effectiveStorageClass }}
+{{- if $storageClass }}
+  volumeClaimTemplates:
+  - metadata:
+      name: certs
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: {{ $storageClass }}
+      resources:
+        requests:
+          storage: 256Mi
+{{- else }}
+      - name: certs
+        emptyDir: {}
+{{- end }}
+{{- end }}

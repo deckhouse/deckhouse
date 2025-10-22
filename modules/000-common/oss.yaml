@@ -1,0 +1,25 @@
+# NOTE this file is not linted
+
+- name: Alpine Linux
+  description: A Linux distribution built around musl libc and BusyBox.
+  link: https://alpinelinux.org/
+  logo: https://alpinelinux.org/alpinelinux-logo-icon.svg
+  license: Apache License 2.0
+
+- name: Kubernetes CSI
+  description: Kubernetes specific Container-Storage-Interface (CSI) components.
+  link: https://kubernetes-csi.github.io/
+  license: Apache License 2.0
+  logo: https://avatars.githubusercontent.com/u/33050221?s=200&v=4
+
+- name: kube-rbac-proxy
+  description: A small HTTP proxy for a single upstream, that can perform RBAC authorization against the Kubernetes API using SubjectAccessReview.
+  link: https://github.com/brancz/kube-rbac-proxy
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+
+- name: Nginx
+  description: A HTTP and reverse proxy server, a mail proxy server, and a generic TCP/UDP proxy server and load balancer.
+  link: https://nginx.org
+  logo: /images/logos/nginx.svg
+  license: 2-clause BSD-like license (https://nginx.org/LICENSE)

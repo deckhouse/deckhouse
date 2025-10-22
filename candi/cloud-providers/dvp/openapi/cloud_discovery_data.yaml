@@ -1,0 +1,44 @@
+kind: DVPCloudDiscoveryData
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      type: object
+      x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: DVPCloudDiscoveryData
+          zones: ["zone-a", "zone-b"]
+      additionalProperties: false
+      required: [apiVersion, kind, zones]
+      properties:
+        apiVersion:
+          type: string
+          enum: [deckhouse.io/v1]
+        kind:
+          type: string
+          enum: [DVPCloudDiscoveryData]
+        zones:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+          uniqueItems: true
+        storageClasses:
+          type: array
+          description: |
+            A list of storage classes in the cloud.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              volumeBindingMode:
+                type: string
+              reclaimPolicy:
+                type: string
+              allowVolumeExpansion:
+                type: boolean
+              isEnabled:
+                type: boolean
+              isDefault:
+                type: boolean

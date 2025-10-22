@@ -1,0 +1,193 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: documentation-nginx-config
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
+data:
+  nginx.conf: |-
+    worker_processes 1;
+
+    error_log /dev/stderr warn;
+    pid       /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+      multi_accept on;
+    }
+
+    http {
+      include       /opt/nginx-static/conf/mime.types;
+      default_type  application/octet-stream;
+
+      client_body_temp_path /tmp/client_temp;
+      proxy_temp_path       /tmp/proxy_temp;
+      fastcgi_temp_path     /tmp/fastcgi_temp;
+      uwsgi_temp_path       /tmp/uwsgi_temp;
+      scgi_temp_path        /tmp/scgi_temp;
+
+      access_log off;
+
+      log_format json_combined escape=json '{ "time_local": "$time_local", '
+        '"host": "$host", '
+        '"remote_addr": "$remote_addr", '
+        '"remote_user": "$remote_user", '
+        '"request": "$request", '
+        '"status": "$status", '
+        '"body_bytes_sent": "$body_bytes_sent", '
+        '"request_time": "$request_time", '
+        '"http_referrer": "$http_referer", '
+        '"http_user_agent": "$http_user_agent" }';
+
+      keepalive_timeout  65;
+
+      ssi on;
+      gzip off;
+      port_in_redirect off;
+      absolute_redirect off;
+
+     # Validation map for lang from cookie - only accept "ru" or "en"
+     map $cookie_lang $valid_cookie_lang {
+         "~^(ru|en)$" $cookie_lang;  # Only accept exact "ru" or "en"
+         default "";                 # Treat any other value as invalid/empty
+     }
+
+     # Extract the language from URI
+      map $uri $uri_lang {
+        "~^/ru/"      "ru";
+        "~^/en/"      "en";
+        default       "en";
+      }
+
+      # Parse Accept-Language header to get browser preference
+      map $http_accept_language $preferred_browser_lang {
+        default       "en";
+        "~*ru"        "ru";
+      }
+
+      # Lang map 3 (final decision): Determine the final language priority: Cookie > URI > Browser > Default
+      map $valid_cookie_lang $redirection_lang {
+          # Priority 1: Use valid cookie if available
+          "ru" "ru";
+          "en" "en";
+
+          # If cookie is not set, use browser language
+          default $preferred_browser_lang;
+      }
+
+      # Handle case where lang still is not acceptable
+      #map $actual_lang $lang {
+      #    "ru" "ru";
+      #    "en" "en";
+      #    default "en";  # Fallback to "en" if still empty or invalid
+      #}
+
+      # Set cookie only if not present
+      map $cookie_lang $set_lang_cookie {
+          "" "lang=$uri_lang; Path=/; Max-Age=31536000";
+          default "";
+      }
+
+      server {
+        listen   127.0.0.1:8080;
+        server_name _;
+
+        root   /app;
+        index  index.html readme.html;
+        error_page 403 404 /$lang/404.html;
+
+        charset utf-8;
+        access_log     /dev/stdout json_combined;
+
+        add_header Set-Cookie $set_lang_cookie;
+
+        rewrite ^/$ /$redirection_lang/$is_args$args redirect;
+        rewrite ^/?!(ru/|en/|assets/|css/|js/|images/|presentations/|includes/|[a-z0-9]+\.[a-z0-9]+).*$ /$redirection_lang/$uri$is_args$args redirect;
+        rewrite ^/modules/.+$ /$redirection_lang$uri$is_args$args redirect;
+        rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
+        rewrite ^/(ru/|en/)?(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
+        rewrite ^/(ru/|en/)?platform/(?<path>.+)$ /$redirection_lang/$path$is_args$args redirect;
+
+        location /link_test_report.txt {
+            deny all;
+        }
+
+        location = /healthz {
+            access_log  off;
+            add_header Content-Type text/plain;
+            return 200;
+        }
+
+        location /config {
+            try_files $uri $uri/ =404;
+        }
+
+        # Common assets
+        location ~* ^(/ru|/en)?/((assets|css|js|images|presentations)/.+)$ {
+            set $doc_path $2;
+            try_files /docs-dkp/$doc_path /embedded-modules/$doc_path =404;
+        }
+
+        # Includes
+        location ~* ^/(ru|en)/includes/.+$ {
+            try_files /docs-dkp/$uri =404;
+        }
+        location ~* ^/includes/.+$ {
+            try_files /docs-dkp/$redirection_lang/$uri =404;
+        }
+
+        # Search index for modules from sources
+        location ~* ^/(?<lang>ru|en)/modules/search-external-modules-index.json$  {
+            try_files /search-external-modules-index/$lang/search.json =404;
+        }
+
+        # Search index for embedder modules
+        location ~* ^/(?<lang>ru|en)/modules/search-embedded-modules-index.json$  {
+            try_files /embedded-modules/$lang/search-embedded-modules-index.json =404;
+        }
+
+        # Modules from source index page
+        location ~* ^/(ru|en)/modules/$ {
+            try_files /modules/$1/index.html =404;
+        }
+
+        location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>.*)$ {
+            set $embedded_module_path "embedded-modules/$lang/modules/$module";
+            set $embedded_module_url "/embedded-modules/$lang/modules/$module/$doc_path";
+            set $external_module_path "modules/$lang/$module";
+            set $external_module_url "/external-modules/$lang/$module/$doc_path";
+
+            # Redirect to stable version for module from source TODO
+            #location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>(?!v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest).*)$ {
+            #rewrite ^ /$lang/modules/$module/stable/$doc_path redirect;
+            #}
+
+            if (-d $document_root/$external_module_path) {
+               # Use internal redirect to serve modules from source
+               rewrite ^ $external_module_url last;
+            }
+
+            if (-d $document_root/$embedded_module_path) {
+               # Use internal redirect to serve embedded modules
+               rewrite ^ $embedded_module_url last;
+            }
+        }
+
+        # Internal location for modules from source
+        location ~* ^/external-modules/(?<doc_path>.*) {
+            internal;
+            try_files /modules/$doc_path /modules/$doc_path/readme.html /modules/$doc_path/ =404;
+        }
+
+        # Internal location for embedded modules
+        location ~* ^/embedded-modules/(ru|en)/modules/.*$ {
+            internal;
+            try_files $uri $uri/index.html $uri/ =404;
+        }
+
+        location / {
+            try_files /docs-dkp${uri}index.html /docs-dkp$uri /docs-dkp$uri/ =404;
+        }
+      }
+    }

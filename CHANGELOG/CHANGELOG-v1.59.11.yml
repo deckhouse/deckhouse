@@ -1,0 +1,16 @@
+dhctl:
+  fixes:
+    - summary: Backport fix for pulling of additional modules images from d8-cli into `dhctl mirror`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8364
+global-hooks:
+  fixes:
+    - summary: Trigger `k8s_upgrade` migration when K8s version changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8260
+istio:
+  features:
+    - summary: The `trafficRedirectionSetupMode` module parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8353
+  fixes:
+    - summary: Optimize matrix tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8363
+

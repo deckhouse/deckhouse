@@ -1,0 +1,84 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Ресурс для включения `remote_write` данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)).
+
+            Таких ресурсов в кластере может быть любое количество.
+          properties:
+            spec:
+              properties:
+                url:
+                  description: |
+                    Адрес, по которому Prometheus будет отправлять данные.
+                basicAuth:
+                  description: Параметры базовой авторизации для отправки данных.
+                  properties:
+                    password:
+                      description: Пароль для аутентификации.
+                    username:
+                      description: Имя пользователя для аутентификации.
+                bearerToken:
+                  description: Bearer-токен.
+                customAuthToken:
+                  description: Пользовательский токен, передаваемый в качестве заголовка `X-Auth-Token`.
+                headers:
+                  description: |
+                    HTTP-заголовки, добавляемые к запросу.
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        Заголовок `X-Scope-OrgID`, указывающий ID тенанта.
+                writeRelabelConfigs:
+                  description: |
+                    Параметры для relabel'инга данных для отправки.
+
+                    Например, если необходимо удалить лишние метрики или произвести [релейбл данных](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs).
+                  items:
+                    properties:
+                      action:
+                        description: |
+                          Действие, выполняемое при соответствии регулярному выражению.
+                      modulus:
+                        description: |
+                          Модуль для хэширования значений исходного лейбла.
+                      regex:
+                        description: |
+                          Регулярное выражение для применения к извлеченному значению.
+                      replacement:
+                        description: |
+                          На что заменять в случае соответствия шаблону регулярного выражения.
+
+                          Доступны regexp-группы.
+                      separator:
+                        description: |
+                          Символ, разделяющий исходные лейблы.
+                      sourceLabels:
+                        description: |
+                          Исходные лейблы для выбора значений.
+
+                          Исходные лейблы объединяются с учетом разделителя (`separator`), и к ним применяется фильтр регулярного выражения, по результатам чего содержимое заменяется, принимается или удаляется.
+                      targetLabel:
+                        description: |
+                          Лейбл, в который записывается результирующее значение при замене.
+
+                          Поле является обязательным при `action: replace`.
+                tlsConfig:
+                  description: Параметры TLS.
+                  properties:
+                    insecureSkipVerify:
+                      description: Отключить проверку сертификата.
+                    ca:
+                      description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
+      additionalPrinterColumns: &additionalPrinterColumns
+        - name: URL
+          type: string
+          jsonPath: .spec.url
+          description: 'Prometheus Remote write URL.'
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns

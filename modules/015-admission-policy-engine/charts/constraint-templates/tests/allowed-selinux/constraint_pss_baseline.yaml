@@ -1,0 +1,24 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8SeLinux
+metadata:
+  name: test
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values:
+          - baseline
+          - restricted
+  parameters:
+    allowedSELinuxOptions:
+    - type: ""
+    - type: container_t
+    - type: container_init_t
+    - type: container_kvm_t
+    - type: container_engine_t

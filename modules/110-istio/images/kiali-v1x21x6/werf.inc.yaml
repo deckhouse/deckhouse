@@ -1,0 +1,51 @@
+---
+{{- $istioVersion := "1.21.6" }}
+{{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.21.6 -> v1x21x6 */}}
+{{- $kialiVersion := "v1.81.0" }}
+---
+# Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
+  add: /src/kiali/out/kiali
+  to: /opt/kiali/kiali
+  before: install
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kial-frontend-assets/static
+  to: /opt/kiali/console
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    user: "1000"
+    workingDir: "/opt/kiali"
+    entrypoint: ["/opt/kiali/kiali"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+  add: /src/kiali
+  to: /src/kiali
+  before: setup
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
+  setup:
+  - cd /src/kiali/
+  - echo {{ $kialiVersion }} > version
+  - export GOOS=linux GOARCH=amd64
+  - export LDFLAGS='-X main.version=${kialiVersion}'
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go build -o /src/kiali/out/kiali /src/kiali/
+  - strip /src/kiali/out/kiali
+  - chmod 0755 /src/kiali/out/kiali

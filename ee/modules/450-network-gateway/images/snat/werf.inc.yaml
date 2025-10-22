@@ -1,0 +1,29 @@
+{{- $binaries := "/bin/grep /bin/sed /bin/sh" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+shell:
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+git:
+- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
+  to: /iptables-loop.py
+{{- include "image mount points" $ }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
+- image: base/python
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so

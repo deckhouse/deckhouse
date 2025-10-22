@@ -1,0 +1,53 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  # Forces a rebuild when source files are modified.
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o safe-agent-updater .`) | indent 4 }}
+  - chown 64535:64535 /src/safe-agent-updater
+  - chmod 0700 /src/safe-agent-updater
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/safe-agent-updater
+  to: /safe-agent-updater
+  before: install
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/safe-agent-updater"]

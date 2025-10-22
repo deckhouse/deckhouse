@@ -1,0 +1,32 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: disable-ntp-on-node.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 100
+  nodeGroups: ["*"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2021 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    # Chrony module synchronizes the time on all nodes, so systemd-timesyncd system unit isn't used and must be disabled.
+
+    for ntp_service in systemd-timesyncd.service ntp.service ntpd.service openntpd.service chronyd.service chrony.service time-sync.target; do
+      if systemctl --no-legend --plain --no-pager | awk '{print $1}' | grep -q "^${ntp_service}$"; then
+        systemctl stop $ntp_service
+        systemctl disable $ntp_service
+      fi
+    done

@@ -1,0 +1,12 @@
+- name: Kubernetes
+  link: https://github.com/kubernetes/kubernetes
+  description: An open source system for managing containerized applications across multiple hosts.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+
+- name: Etcd
+  link: https://github.com/etcd-io/etcd
+  description: A distributed reliable key-value store for the most critical data of a distributed system.
+  logo: /images/logos/etcd-icon-color.svg
+  license: Apache License 2.0
+

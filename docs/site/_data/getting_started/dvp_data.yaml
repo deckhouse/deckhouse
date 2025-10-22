@@ -1,0 +1,89 @@
+global:
+  revisions:
+    - ce
+    - ee
+  layout: page-nosidebar-notitle
+  step:
+    header: getting_started/global/HEADER.md
+    footer: getting_started/global/FOOTER.md
+    output_dir_template: '<LANG>/virtualization-platform/gs/<INSTALL_CODE>/'
+
+presets:
+  minimal:
+    name:
+      en: Minimal
+      ru: Минимальный
+    recommended: true
+    description:
+      en: |
+        - The cluster consists of one master node and one worker node.
+        - Kubernetes Control Plane and Deckhouse controller run on the master node.
+        - Deckhouse deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Your applications should run on the worker node.
+      ru: |
+        - Кластер состоит из одного master-узла и одного worker-узла.
+        - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
+        - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
+        - Ваши приложения должны работать на worker-узле.
+
+installTypes:
+  bm:
+    iconPath: images/icons/platforms/bare_metal.png
+    pages_title:
+      en: "Deckhouse Virtualization Platform for bare metal"
+      ru: "Deckhouse Virtualization Platform на bare metal"
+    type: baremetal
+    name:
+      en: Bare metal
+      ru: Bare metal
+    steps:
+      step1:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/dvp/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step2:
+        name:
+          en: Setting up cluster
+          ru: Настройка кластера
+        template: getting_started/dvp/global/step_cluster_setup.html
+      step3:
+        name:
+          en: Platform installation
+          ru: Установка платформы
+        template: getting_started/dvp/global/STEP_INSTALL.md
+      step4:
+        name:
+          en: Adding nodes
+          ru: Добавление узлов
+        template: getting_started/dvp/global/STEP_NODES.md
+      step5:
+        name:
+          en: Storage configuration
+          ru: Настройка хранилища
+        template: getting_started/dvp/global/STEP_STORAGE.md
+      step6:
+        name:
+          en: Virtualization configuration
+          ru: Настройка виртуализации
+        template: getting_started/dvp/global/STEP_VIRTUALIZATION.md
+      step7:
+        name:
+          en: Ingress and DNS configuration
+          ru: Настройка Ingress и DNS
+        template: getting_started/dvp/global/STEP_INGRESS.md
+      step8:
+        name:
+          en: User creation
+          ru: Создание пользователя
+        template: getting_started/dvp/global/STEP_USER.md
+      step9:
+        name:
+          en: Creating a project and a virtual machine
+          ru: Создание проекта и виртуальной машины
+        template: getting_started/dvp/global/STEP_PROJECT.md
+      step10:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/dvp/global/STEP_FINISH.md

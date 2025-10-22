@@ -1,0 +1,65 @@
+{{- $version := "2.40.2" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - lsblk
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "lsblk": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
+  - rm -rf /src/util-linux/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+fromImage: builder/golang-alpine
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: setup
+shell:
+  install:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make automake gettext-dev autoconf libtool flex bison clang binutils g++ linux-headers
+  setup:
+  - cd /src/util-linux
+  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+  - ./autogen.sh
+  - ./configure --enable-static --enable-static-programs=lsblk --disable-pylibmount --without-python --disable-liblastlog2
+  - make LDFLAGS="--static" lsblk && strip ./lsblk
+  - ldd ./lsblk || true
+  - mv ./lsblk /lsblk
+  - mv /src/scripts/* /
+  - chmod +x /lsblk /install /uninstall

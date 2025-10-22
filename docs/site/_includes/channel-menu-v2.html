@@ -1,0 +1,32 @@
+{%- raw %}
+{{- $prevVersion := "" }}
+{{- $CurrentPageURL := .CurrentPageURL }}
+{{- $CurrentPageURLRelative := .CurrentPageURLRelative }}
+{{- $CurrentLang := .CurrentLang }}
+{{- $current := index .VersionItems 0 }}
+{{- if eq $current.Version "rock-solid" }}{{ $prevVersion = "rock-solid" }}{{- end }}
+<a data-proofer-ignore href="#" class="highlight">
+  {{- if eq $current.Version "v1" }}stable{{- else }}{{ $current.Version }}{{- end }}</a>
+</a>
+<div class="submenu-container">
+    <ul class="submenu">
+    {{- range (slice .VersionItems 1) }}
+      {{- $majMinVersion := regexReplaceAll "(v[0-9]+\\.[0-9]+)\\..+" .Version "$1" }}
+      {{- if not (and (eq .Version "latest") (eq $majMinVersion $prevVersion)) }}
+            <li class="submenu-item">
+                <a data-proofer-ignore class="submenu-item-link" href="/products/kubernetes-platform/documentation/{{ .VersionURL }}/{{ $CurrentPageURLRelative }}">
+            {{- if eq .Version "latest" }}
+                    <span class="submenu-item-channel">latest</span>
+            {{- else }}
+                    <span class="submenu-item-channel">{{ .Channel | replace "ea" "Early Access" | replace "-" " " | title }}</span>
+                    <span class="submenu-item-dot{{ if eq $prevVersion $majMinVersion }} submenu-item-dot_special{{ end }}"></span>
+                    <span class="submenu-item-release">{{ $majMinVersion }}</span>
+            {{- end }}
+                </a>
+            </li>
+       {{- $prevVersion = $majMinVersion }}
+       {{- end }}
+    {{- end }}
+    </ul>
+</div>
+{% endraw %}

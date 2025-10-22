@@ -1,0 +1,225 @@
+- name: kubernetes.extended-monitoring.application-controllers
+  rules:
+  - alert: KubernetesDeploymentReplicasUnavailable
+    expr: |
+      kube_deployment_status_replicas_unavailable
+      > on (namespace, deployment)
+      (
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+        + on (namespace, deployment)
+        kube_deployment_spec_strategy_rollingupdate_max_unavailable
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        The number of unavailable replicas in deployment `{{$labels.namespace}}/{{$labels.deployment}}` exceeds `spec.strategy.rollingupdate.maxunavailable`.
+      description: |-
+        Deckhouse has detected that the number of unavailable replicas in deployment `{{$labels.namespace}}/{{$labels.deployment}}` exceeds the value set in `spec.strategy.rollingupdate.maxunavailable`.
+
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }}` unavailable replica(s).
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert: KubernetesDeploymentReplicasUnavailable
+    expr: |
+      (
+        (kube_deployment_status_replicas_available == 0) * (kube_deployment_spec_replicas != 0)
+      )
+      * on (namespace, deployment)
+      (
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        No available replicas remaining in deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
+      description: |-
+        Deckhouse has detected that there are no available replicas remaining in deployment `{{$labels.namespace}}/{{$labels.deployment}}`.
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert:  KubernetesDaemonSetReplicasUnavailable
+    expr: |
+      kube_daemonset_status_number_unavailable
+      > on (namespace, daemonset)
+      (
+        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        The number of unavailable replicas in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` exceeds the threshold.
+      description: |-
+        Deckhouse has detected that the number of unavailable replicas in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` exceeds the threshold.
+
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }}` unavailable replica(s).
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
+
+  - alert: KubernetesDaemonSetReplicasUnavailable
+    expr: |
+      (
+        (kube_daemonset_status_number_available == 0) * (kube_daemonset_status_desired_number_scheduled != 0)
+      )
+      * on (namespace, daemonset)
+      (
+        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        No available replicas remaining in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
+      description: |-
+        Deckhouse has detected that there are no available replicas remaining in DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
+
+  - alert: KubernetesDaemonSetNotUpToDate
+    expr: |
+      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_updated_number_scheduled) > 0
+    for: 15m
+    labels:
+      severity_level: "9"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        There were {{ .Value }} outdated pods in DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 15 minutes.
+      description: |-
+        Deckhouse has detected {{ .Value }} outdated pods in DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 15 minutes.
+
+        Steps to resolve:
+
+        1. Check the DaemonSet's status:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}
+           ```
+
+        2. Analyze the DaemonSet's description:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}
+           ```
+
+        3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match `Current Number of Nodes Scheduled`, check the DaemonSet's `updateStrategy`:
+
+           ```bash
+           d8 k -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'
+           ```
+
+           If `updateStrategy` is set to `OnDelete`, the DaemonSet is updated only when pods are deleted.
+  - alert: KubernetesStatefulSetReplicasUnavailable
+    expr: |
+      (
+        kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
+      )
+      > on (namespace, statefulset)
+      (
+        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        The number of unavailable replicas in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}` exceeds the threshold.
+      description: |-
+        Deckhouse has detected that the number of unavailable replicas in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}` exceeds the threshold.
+
+        - Current number: `{{ .Value }}` unavailable replica(s).
+        - Threshold number: `{{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }}` unavailable replica(s).
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert: KubernetesStatefulSetReplicasUnavailable
+    expr: |
+      (
+        kube_statefulset_status_replicas_ready == 0
+      )
+      * on (namespace, statefulset)
+      (
+        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        No ready replicas remaining in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}`.
+      description: |-
+        Deckhouse has detected that there are no ready replicas remaining in StatefulSet `{{$labels.namespace}}/{{$labels.statefulset}}`.
+
+        List of unavailable pods:
+
+        ```text
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```

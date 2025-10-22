@@ -1,0 +1,539 @@
+{{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: d8-{{ $.Chart.Name }}
+  name: operator-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:operator-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+rules:
+  {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+  - apiGroups:
+    - multicluster.x-k8s.io
+    resources:
+    - serviceexports
+    - serviceimports
+    verbs:
+    - get
+    - watch
+    - list
+    - create
+    - delete
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - ingresses
+    - ingressclasses
+    - ingresses/status
+    verbs:
+    - get
+    - watch
+    - list
+    - update
+    - patch
+    - create
+  - apiGroups:
+    - ""
+    resources:
+    - replicationcontrollers
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - networking.x-k8s.io
+    resources:
+    - gateways
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - coordination.k8s.io
+    resources:
+    - leases
+    verbs:
+    - patch
+  - apiGroups: 
+    - rbac.istio.io
+    resources:
+    - rbacconfigs
+    - serviceroles
+    - servicerolebindings
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - authentication.istio.io
+    resources:
+    - policies
+    - meshpolicies
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - config.istio.io
+    resources:
+    - rules
+    - adapters
+    - templates
+    - handlers
+    - instances
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - telemetry.istio.io
+    resources:
+    - telemetries
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - extensions.istio.io
+    resources:
+    - wasmplugins
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    - nodes
+    - services
+    - namespaces
+    - endpoints
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - discovery.k8s.io
+    resources:
+    - endpointslices
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - authentication.k8s.io
+    resources:
+    - tokenreviews
+    verbs:
+    - create
+  - apiGroups:
+    - authorization.k8s.io
+    resources:
+    - subjectaccessreviews
+    verbs:
+    - create
+  - apiGroups:
+    - gateway.networking.k8s.io
+    resources:
+    - gateways
+    - httproutes
+    - referencegrants
+    verbs:
+    - get
+    - watch
+    - list
+  - apiGroups:
+    - gateway.networking.k8s.io
+    resources:
+    - backendtlspolicies/status
+    - gatewayclasses/status
+    - gateways/status
+    - grpcroutes/status
+    - httproutes/status
+    - referencegrants/status
+    - tcproutes/status
+    - tlsroutes/status
+    - udproutes/status
+    verbs:
+    - update
+    - patch
+  - apiGroups:
+    - gateway.networking.k8s.io
+    resources:
+    - gatewayclasses
+    verbs:
+    - create
+    - update
+    - patch
+    - delete
+  {{- end }}
+  # istio groups
+  - apiGroups:
+      - install.istio.io
+    resources:
+      - istiooperators
+      - istiooperators/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+  - apiGroups: 
+      - sailoperator.io
+    resources: 
+      - istiocnis
+      - ztunnels
+      - istiorevisions
+      - istiorevisiontags
+      - istios
+    verbs: 
+      - list
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiorevisiontags/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istiocnis/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/finalizers
+    verbs:
+     - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - istios/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - sailoperator.io
+    resources:
+      - remoteistios/status
+    verbs:
+      - get
+      - patch
+      - update
+  {{- end }}
+  - apiGroups:
+      - networking.istio.io
+    resources:
+      - destinationrules
+      - destinationrules/status
+      - envoyfilters
+      - envoyfilters/status
+      - gateways
+      - gateways/status
+      - proxyconfigs
+      - proxyconfigs/status
+      - serviceentries
+      - serviceentries/status
+      - sidecars
+      - sidecars/status
+      - virtualservices
+      - virtualservices/status
+      - workloadentries
+      - workloadentries/status
+      - workloadgroups
+      - workloadgroups/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - security.istio.io
+    resources:
+      - authorizationpolicies
+      - authorizationpolicies/status
+      - peerauthentications
+      - peerauthentications/status
+      - requestauthentications
+      - requestauthentications/status
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  # k8s groups
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions.apiextensions.k8s.io
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - apps
+      - extensions
+    resources:
+      - daemonsets
+      - deployments
+      - deployments/finalizers
+      - ingresses
+      - replicasets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings
+      - clusterroles
+      - roles
+      - rolebindings
+    verbs:
+    {{- if (hasPrefix "1.25" $fullVersion) }}
+      - create
+      - update
+      - patch
+    {{- end }}
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - create
+      - update
+  {{- if (hasPrefix "1.25" $fullVersion) }}
+  - apiGroups:
+      - ""
+    resources:
+      - resourcequotas
+    verbs:
+      - list
+      - watch
+  {{- end }}
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - events
+      - namespaces
+      - pods
+      - pods/proxy
+      - pods/portforward
+      - persistentvolumeclaims
+      - secrets
+      - services
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:istio:operator-{{ $revision }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "operator" "revision" $revision)) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: operator-{{ $revision }}
+    namespace: d8-{{ $.Chart.Name }}
+roleRef:
+  kind: ClusterRole
+  name: d8:istio:operator-{{ $revision }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

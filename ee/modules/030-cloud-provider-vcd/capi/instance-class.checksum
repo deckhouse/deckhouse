@@ -1,0 +1,41 @@
+{{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.vcd | required "cloudProvider.vcd is required" -}}
+{{- $metadata := dict -}}
+{{- if $cloudProviderValues.metadata -}}
+  {{- $metadata = merge (deepCopy $cloudProviderValues.metadata) $metadata }}
+{{- end -}}
+{{- if .nodeGroup.instanceClass.additionalMetadata -}}
+  {{- $metadata = merge (deepCopy .nodeGroup.instanceClass.additionalMetadata) $metadata -}}
+{{- end -}}
+
+{{- $options := dict -}}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSizeGb }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSizeGb }}
+{{- end }}
+
+{{- $sizingPolicy := .nil }}
+{{- if .nodeGroup.instanceClass.sizingPolicy }}
+  {{- $sizingPolicy = .nodeGroup.instanceClass.sizingPolicy }}
+{{- end }}
+
+{{- $placementPolicy := .nil }}
+{{- if .nodeGroup.instanceClass.placementPolicy }}
+  {{- $placementPolicy = .nodeGroup.instanceClass.placementPolicy }}
+{{- end }}
+
+{{- $_ := set $options "storageProfile" .nodeGroup.instanceClass.storageProfile -}}
+{{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
+{{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
+{{- $_ := set $options "sizingPolicy" $sizingPolicy -}}
+{{- $_ := set $options "placementPolicy" $placementPolicy -}}
+
+{{- if gt (len $metadata) 0 -}}
+  {{- $_ := set $options "metadata" $metadata -}}
+{{- end -}}
+
+{{- if (index .nodeGroup "manualRolloutID") -}}
+  {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
+{{- end -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}

@@ -1,0 +1,228 @@
+{{- define "exporter_resources" }}
+cpu: 10m
+memory: 32Mi
+{{- end }}
+
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: gatekeeper-audit
+  namespace: d8-admission-policy-engine
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: gatekeeper-audit
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: manager
+      minAllowed:
+        {{- include "manager_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+    - containerName: constraint-exporter
+      minAllowed:
+        {{- include "exporter_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 300m
+        memory: 256Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+  name: gatekeeper-audit
+  namespace: d8-admission-policy-engine
+spec:
+  revisionHistoryLimit: 2
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 'gatekeeper'
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit
+  template:
+    metadata:
+      labels:
+        app: 'gatekeeper'
+        control-plane: audit-controller
+        gatekeeper.sh/operation: audit
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      containers:
+      - image: {{ include "helm_lib_module_image" (list . "gatekeeper") }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        args:
+        - --audit-interval=60
+        - --log-level=INFO
+        - --constraint-violations-limit=200
+        - --audit-from-cache=false
+        - --audit-chunk-size=500
+        - --audit-match-kind-only=true
+        - --emit-audit-events=false
+        - --operation=audit
+        - --operation=status
+        - --operation=mutation-status
+        - --logtostderr
+        - --health-addr=:9090
+        - --prometheus-port=8888
+        - --enable-external-data=true
+        - --metrics-backend=prometheus
+        - --disable-cert-rotation=true
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: CONTAINER_NAME
+          value: manager
+        imagePullPolicy: 'IfNotPresent'
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9090
+        name: manager
+        ports:
+        - containerPort: 8888
+          name: metrics
+          protocol: TCP
+        - containerPort: 9090
+          name: healthz
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9090
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "manager_resources" . | nindent 12 }}
+            {{- end }}
+        volumeMounts:
+        - mountPath: /certs
+          name: cert
+          readOnly: true
+        - mountPath: /tmp/audit
+          name: tmp-volume
+      - name: constraint-exporter
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "constraintExporter") }}
+        imagePullPolicy: 'IfNotPresent'
+        env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "exporter_resources" . | nindent 12 }}
+            {{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10354"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:8888/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ .Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: gatekeeper-audit
+              - upstream: http://127.0.0.1:15060/metrics
+                path: /exporter-metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-{{ .Chart.Name }}
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: gatekeeper-audit
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 10354
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 10354
+            scheme: HTTPS
+        ports:
+          - containerPort: 10354
+            name: https-metrics
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+          {{- end }}
+      dnsPolicy: ClusterFirst
+      hostNetwork: false
+      imagePullSecrets:
+        - name: deckhouse-registry
+      serviceAccountName: admission-policy-engine
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: gatekeeper-webhook-server-cert
+      - emptyDir: {}
+        name: tmp-volume
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gatekeeper-controller-audit
+  namespace: d8-admission-policy-engine
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "audit-controller" "gatekeeper.sh/operation" "audit" "gatekeeper.sh/system" "yes")) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: 'gatekeeper'
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit

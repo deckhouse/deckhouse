@@ -1,0 +1,14 @@
+diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
+index 8851f323f..d5f78df92 100644
+--- a/internal/ingress/controller/util.go
++++ b/internal/ingress/controller/util.go
+@@ -142,7 +142,7 @@ func (nc NginxCommand) ExecCommand(args ...string) *exec.Cmd {
+ // Test checks if config file is a syntax valid nginx configuration
+ func (nc NginxCommand) Test(cfg string) ([]byte, error) {
+ 	//nolint:gosec // Ignore G204 error
+-	return exec.Command(nc.Binary, "-c", cfg, "-t").CombinedOutput()
++	return exec.Command(nc.Binary, "-c", cfg, "-t", "-e", "/dev/null").CombinedOutput()
+ }
+ 
+ // getSysctl returns the value for the specified sysctl setting
+ 

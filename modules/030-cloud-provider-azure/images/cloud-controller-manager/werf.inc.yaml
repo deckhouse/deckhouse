@@ -1,0 +1,71 @@
+# https://github.com/kubernetes-sigs/cloud-provider-azure/releases
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- if $value.ccm.azure }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
+    {{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /src/bin/azure-cloud-controller-manager
+  to: /usr/local/bin/azure-cloud-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/azure-cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+{{- if $patch }}
+git:
+- add: {{ $patches }}/patches/{{ $version }}
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+{{- end }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.ccm.azure }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-azure.git /src
+  - cd /src
+  {{- if $patch}}
+  - git apply /patches/*.patch --verbose
+  {{- end}}
+  - rm -rf vendor .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ $.GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
+  - chown 64535:64535 /src/bin/azure-cloud-controller-manager
+  - chmod 0755 /src/bin/azure-cloud-controller-manager
+  {{- end }}
+{{- end }}

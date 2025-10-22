@@ -1,0 +1,118 @@
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:prometheus-metrics-adapter:auth-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:prometheus-metrics-adapter
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  - daemonsets
+  - statefulsets
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - pods
+  - services
+  - nodes
+  - nodes/stats
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:prometheus-metrics-adapter
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:prometheus-metrics-adapter
+subjects:
+- kind: ServiceAccount
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:prometheus-metrics-adapter:auth-delegator
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - external.metrics.k8s.io
+  resources:
+  - '*' # In this case "resource" is the arbitrary metric name, so we have to use a wildcard
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics
+subjects:
+- kind: ServiceAccount
+  name: horizontal-pod-autoscaler
+  namespace: kube-system

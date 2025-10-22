@@ -1,0 +1,31 @@
+# Schema with default values in required fields.
+type: object
+properties:
+  paramStr:
+    type: string
+  loadBalancer:
+    type: object
+  tcpEnabled:
+    type: boolean
+    default: true
+    x-examples: [true, false]
+  udpEnabled:
+    type: boolean
+    default: false
+    x-examples: [true, false]
+oneOf:
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [true]
+  - properties:
+      tcpEnabled:
+        enum: [true]
+      udpEnabled:
+        enum: [false]
+  - properties:
+      tcpEnabled:
+        enum: [false]
+      udpEnabled:
+        enum: [true]

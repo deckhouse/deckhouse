@@ -1,0 +1,55 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /dvp-cloud-controller-manager
+    to: /dvp-cloud-controller-manager
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/dvp-cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to:  /src
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/dvp-common
+  to:  /src/dvp-common
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# ../../dvp-common# /src/dvp-common#g' go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - go mod download
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dvp-cloud-controller-manager cmd/dvp-cloud-controller-manager/main.go
+    - chown 64535:64535 /dvp-cloud-controller-manager
+    - chmod 0755 /dvp-cloud-controller-manager
+

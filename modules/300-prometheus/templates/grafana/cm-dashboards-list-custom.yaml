@@ -1,0 +1,23 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-definitions
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
+data:
+  grafana-dashboard-definitions.yaml: |+
+    apiVersion: 1
+    providers:
+    - name: GrafanaDashboardDefinition
+      orgid: 1
+      folder: ''
+      type: file
+      disableDelete: false
+      allowUiUpdates: false
+      updateIntervalSeconds: 15
+      options:
+        path: /etc/grafana/dashboards
+        foldersFromFilesStructure: true
+{{- end }}

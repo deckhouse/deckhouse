@@ -1,0 +1,5 @@
+- name: Cilium Hubble
+  link: https://github.com/cilium/hubble
+  description: Hubble is a fully distributed networking and security observability platform for cloud native workloads. It is built on top of Cilium and eBPF to enable deep visibility into the communication and behavior of services as well as the networking infrastructure in a completely transparent manner.
+  logo: https://raw.githubusercontent.com/cilium/hubble/9429bbf4b5b504a9b0f6752ccfbb16a2878bb51e/Documentation/images/hubble_logo.png
+  license: Apache License 2.0

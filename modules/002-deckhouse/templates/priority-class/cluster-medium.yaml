@@ -1,0 +1,11 @@
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: cluster-medium
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+value: 7000
+globalDefault: false
+description: >
+  Cluster monitoring and autoscalingcomponents. Without components in this PriorityClass
+  we would be unable to perform autoscaling, root cause analysis nor get any alerts.

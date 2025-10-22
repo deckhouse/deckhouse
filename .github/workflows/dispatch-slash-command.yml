@@ -1,0 +1,154 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2022 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Dispatch slash command
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  conditions:
+    name: Check conditions
+    runs-on: ubuntu-latest
+    outputs:
+      trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
+      trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
+      trigger_for_pull_request: ${{steps.check.outputs.trigger_for_pull_request}}
+    steps:
+      - name: Check conditions for release issue
+        id: check
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            if (!context.payload.comment.body.startsWith('/')) {
+              core.notice(`Ignore regular comment.`);
+              return;
+            }
+
+            // Check for release issue.
+            const isReleaseIssue = context.payload.issue.labels.some((l) => l.name === 'issue/release');
+            const isPrivate = context.payload.repository.private;
+            const authorAssociation = context.payload.comment.author_association;
+            // Check for changelog PR.
+            const isPR = !!context.payload.issue.pull_request;
+            const isMilestoned = !!context.payload.issue.milestone;
+            const milestoneState = isMilestoned && context.payload.issue.milestone.state;
+            const hasChangelogLabel = context.payload.issue.labels.some((l) => l.name === 'changelog');
+            const hasAutoLabel = context.payload.issue.labels.some((l) => l.name === 'auto');
+            core.info(`Is release issue?       ${isReleaseIssue}`)
+            core.info(`Private repo?           ${isPrivate}`)
+            core.info(`Author association:     ${authorAssociation}`)
+            core.info(`Is PR?                  ${isPR}`)
+            core.info(`Is milestoned?          ${isMilestoned}`)
+            core.info(`Milestone state:        ${milestoneState}`)
+            core.info(`Has 'changelog' label?  ${hasChangelogLabel}`)
+            core.info(`Has 'auto' label?       ${hasAutoLabel}`)
+
+            if (isReleaseIssue && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
+              core.notice(`Comment on release issue with possible slash command.`);
+              return core.setOutput('trigger_for_release_issue', 'true');
+            }
+
+            if (isPR && hasChangelogLabel && hasAutoLabel) {
+              core.notice(`Comment on changelog pull request.`);
+              return core.setOutput('trigger_for_changelog', 'true');
+            }
+
+            // For slash commands on pull requests, e.g. 'e2e abort' command.
+            // The right way is to give slash commands to the collaborator instead of the contributor. Why?
+            // During the experiments it turned out that:
+            // Member is a member of the github organization and the organization is public (here https://github.com/orgs/deckhouse/people)
+            // Collaborator is a member of github and the organization is private (here https://github.com/orgs/deckhouse/people)
+            // Contributor is a person who is not a member of github, but has contributed to the repository.
+            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'COLLABORATOR')) {
+              core.notice(`Comment on pull request.`);
+              return core.setOutput('trigger_for_pull_request', 'true');
+            }
+
+  trigger_for_release_issue:
+    name: Trigger workflow by comment
+    runs-on: ubuntu-latest
+    needs:
+      - conditions
+    if: ${{needs.conditions.outputs.trigger_for_release_issue == 'true'}}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      - name: Run workflow
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/ci');
+            return await ci.runSlashCommandForReleaseIssue({github, context, core});
+
+  trigger_for_pull_request:
+    name: Trigger workflow by comment from pull-request
+    runs-on: ubuntu-latest
+    needs:
+    - conditions
+    if: ${{needs.conditions.outputs.trigger_for_pull_request == 'true'}}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      - name: Run workflow
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/pr-command-dispatcher');
+            return await ci.runSlashCommandForPullRequest({github, context, core});
+
+  trigger_for_changelog:
+    name: Dispatch Changelog Event
+    runs-on: ubuntu-latest
+    needs:
+      - conditions
+    if: ${{needs.conditions.outputs.trigger_for_changelog == 'true'}}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      - name: Find milestone
+        id: milestone
+        uses: actions/github-script@v6.4.1
+        with:
+          result-encoding: json
+          script: |
+            const validate = require('./.github/scripts/js/changelog-command-validate.js')
+            return await validate({ github, core, context })
+
+      - name: Slash Command Dispatch
+        if: steps.milestone.outputs.result
+        uses: peter-evans/slash-command-dispatch@v2
+        with:
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
+          commands: changelog
+          dispatch-type: repository
+          issue-type: pull-request

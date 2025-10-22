@@ -1,0 +1,10 @@
+properties:
+  externalTargets:
+    description: |
+      Список дополнительных хостов для мониторинга.
+    items:
+      properties:
+        host:
+          description: IP-адрес или host для мониторинга.
+        name:
+          description: Название записи мониторинга.

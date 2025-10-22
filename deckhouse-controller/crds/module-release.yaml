@@ -1,0 +1,140 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modulereleases.deckhouse.io
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modulereleases
+    singular: modulerelease
+    kind: ModuleRelease
+    shortNames:
+      - mr
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration for a Deckhouse release.
+
+            **ModuleRelease resources are created by Deckhouse.**
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - moduleName
+                - version
+              properties:
+                moduleName:
+                  type: string
+                  description: Module name.
+                version:
+                  type: string
+                  description: Module version.
+                  x-doc-examples: ['v1.0.0']
+                weight:
+                  type: integer
+                  description: Module _weight_ (priority).
+                applyAfter:
+                  type: string
+                  description: Time until which the release will be delayed.
+                requirements:
+                  type: object
+                  description: Release dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform to run the module release.
+                  properties:
+                    deckhouse:
+                      type: string
+                      description: Required Deckhouse version.
+                    kubernetes:
+                      type: string
+                      description: Required Kubernetes version.
+                    modules:
+                      type: object
+                      description: A list of other modules required for the module release. Ensure the modules are enabled.
+                      additionalProperties:
+                        type: string
+                update:
+                  type: object
+                  description: Optional transition rules.
+                  properties:
+                    versions:
+                      description: |
+                        List of `from`→`to` transition rules that allow skipping step-by-step updates.
+                        If the current installed module version (status `Deployed`) is not lower than `from`, and the cluster has a release whose version matches `to`, the controller will skip intermediate releases and update the module to the version from `to`.
+                        The `to` value can specify a minor line (`X.Y` — the latest available `X.Y.Z` will be selected).
+                        The rule is specified in the constrained release — the one whose version matches `to`. 
+                      type: array
+                      items:
+                        type: object
+                        required: [from, to]
+                        properties:
+                          from:
+                            type: string
+                            description: The minimum version from which the transition is allowed (format `X.Y`).
+                          to:
+                            type: string
+                            description: The end version of the range — a minor line (`X.Y`).
+                changelog:
+                  type: object
+                  description: Release's changelog for the module.
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Deployed
+                    - Superseded
+                    - Suspended
+                    - Skipped
+                    - Terminating
+                  description: Current status of the release.
+                message:
+                  type: string
+                  description: Detailed status or error message.
+                transitionTime:
+                  type: string
+                  description: Time of release status change.
+                approved:
+                  type: boolean
+                  description: |
+                    Status indicating that the release is ready for deployment. For the Manual update mode only (`update.mode: Manual`).
+                size:
+                  type: integer
+                  description: Size of the module image.
+                pullDuration:
+                  type: string
+                  description: Module loading duration.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: phase
+          jsonPath: .status.phase
+          type: string
+          description: 'Current release status.'
+        - name: update policy
+          jsonPath: .metadata.labels.modules\.deckhouse\.io/update-policy
+          type: string
+          description: 'Associated update policy.'
+        - name: transitionTime
+          jsonPath: .status.transitionTime
+          type: date
+          format: date-time
+          description: 'When the release status was changed.'
+        - name: message
+          jsonPath: .status.message
+          type: string
+          description: 'Release status details.'

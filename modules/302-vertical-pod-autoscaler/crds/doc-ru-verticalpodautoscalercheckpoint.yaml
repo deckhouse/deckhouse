@@ -1,0 +1,68 @@
+spec:
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema: &schema
+        description: Чекпоинт внутреннего состояния VPA, используемый для восстановления после перезапуска механизма рекомендаций.
+        properties:
+          apiVersion:
+            description: |-
+              Определяет версионированную схему представления этого объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения.
+
+              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+          kind:
+            description: |-
+              Значение, представляющее REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
+
+              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+          metadata:
+          spec:
+            description: |-
+              Спецификация чекпоинта.
+
+              Больше информации [в документации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
+            properties:
+              containerName:
+                description: |-
+                  Название контейнера, для которого был создан чекпоинт.
+              vpaObjectName:
+                description: |-
+                  Название объекта VPA, в котором хранится объект VerticalPodAutoscalerCheckpoint.
+            status:
+              description: Данные чекпоинта.
+              properties:
+                cpuHistogram:
+                  description: |-
+                    Чекпоинт гистограммы для потребления CPU.
+                  properties:
+                    bucketWeights:
+                      description: Сопоставление индекса бакета с его весом.
+                    referenceTimestamp:
+                      description: Чекпоинт для сэмплов, собранных в этой гистограмме.
+                    totalWeight:
+                      description: Сумма сэмплов, которая будет использоваться как делитель для весов из BucketWeights.
+                firstSampleStart:
+                  description: Отметка времени первого сэмпла из гистограмм.
+                lastSampleStart:
+                  description: Отметка времени последнего сэмпла из гистограмм.
+                lastUpdateTime:
+                  description: Отметка времени последнего обновления статуса.
+                memoryHistogram:
+                  description: Чекпоинт гистограммы для анализа потребления памяти.
+                  properties:
+                    bucketWeights:
+                      description: Сопоставление индекса бакета с его весом.
+                    referenceTimestamp:
+                      description: Чекпоинт для сэмплов, собранных в этой гистограмме.
+                    totalWeight:
+                      description: Сумма сэмплов, которая будет использоваться как делитель для весов из BucketWeights.
+                totalSamplesCount:
+                  description: Общее количество сэмплов в гистограммах.
+                version:
+                  description: Версия формата сохраненных данных.
+  - name: v1beta2
+    schema:
+      openAPIV3Schema: *schema
+    served: true
+    storage: false
+    deprecated: true

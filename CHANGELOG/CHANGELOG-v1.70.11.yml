@@ -1,0 +1,5 @@
+docs:
+  fixes:
+    - summary: remove Yandex Cloud's api-gateway.editor and connection-manager.editor roles
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14219
+

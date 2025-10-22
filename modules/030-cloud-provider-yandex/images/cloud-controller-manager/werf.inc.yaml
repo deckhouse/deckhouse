@@ -1,0 +1,47 @@
+{{- $version := "v0.33.0" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/yandex-cloud-controller-manager
+  to: /usr/local/bin/cloud-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/yandex-cloud-controller-manager.git /src
+    - cd /src
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
+    - chown 64535:64535 /src/yandex-cloud-controller-manager
+    - chmod 0755 /src/yandex-cloud-controller-manager

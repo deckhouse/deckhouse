@@ -1,0 +1,516 @@
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  chaosMonkey: false
+  disableHTTP2: false
+  hsts: false
+  ingressClass: nginx
+  inlet: LoadBalancer
+  maxReplicas: 1
+  minReplicas: 1
+  nodeSelector:
+    node-role.deckhouse.io/system: ""
+  tolerations:
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: system
+  underscoresInHeaders: false
+  validationEnabled: true
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+    - kind: User
+      name: admin@example.com
+  accessLevel: SuperAdmin
+  portForwarding: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: test-a
+data:
+  key: value
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: system
+spec:
+  cores: 4
+  memory: 8192
+  diskSizeGb: 30
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: system
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+      - zones
+  disruptions:
+    approvalMode: Automatic
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        value: system
+  nodeType: CloudEphemeral
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.wardle.example.com
+spec:
+  insecureSkipTLSVerify: true
+  group: wardle.example.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: api
+    namespace: wardle
+  version: v1alpha1
+---
+apiVersion: v1
+data:
+  key: value
+kind: ConfigMap
+metadata:
+  name: some-cm
+  namespace: test-ns
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: another-ns
+
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: example
+spec:
+  privileged: false  # Don't allow privileged pods!
+  # The rest fills in some required fields.
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+    - '*'
+---
+apiVersion: "v1"
+kind: "LimitRange"
+metadata:
+  name: "resource-limits"
+spec:
+  limits:
+    -
+      type: "Pod"
+      max:
+        cpu: "2"
+        memory: "1Gi"
+      min:
+        cpu: "200m"
+        memory: "6Mi"
+    -
+      type: "Container"
+      max:
+        cpu: "2"
+        memory: "1Gi"
+      min:
+        cpu: "100m"
+        memory: "4Mi"
+      default:
+        cpu: "300m"
+        memory: "200Mi"
+      defaultRequest:
+        cpu: "200m"
+        memory: "100Mi"
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+mountOptions:
+  - debug
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-static
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: vol-0928650905a2491e2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: test-a
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-static
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: pv-static
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  # name must match the spec fields below, and be in the form: <plural>.<group>
+  name: crontabs.stable.example.com
+spec:
+  # group name to use for REST API: /apis/<group>/<version>
+  group: stable.example.com
+  # list of versions supported by this CustomResourceDefinition
+  versions:
+    - name: v1
+      # Each version can be enabled/disabled by Served flag.
+      served: true
+      # One and only one version must be marked as the storage version.
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                cronSpec:
+                  type: string
+                image:
+                  type: string
+                replicas:
+                  type: integer
+  # either Namespaced or Cluster
+  scope: Namespaced
+  names:
+    # plural name to be used in the URL: /apis/<group>/<version>/<plural>
+    plural: crontabs
+    # singular name to be used as an alias on the CLI and for display
+    singular: crontab
+    # kind is normally the CamelCased singular type. Your resource manifests use this.
+    kind: CronTab
+    # shortNames allow shorter string to match your resource on the CLI
+    shortNames:
+      - ct
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: test-a
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: test-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: role
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: test-b
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: test-b
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: role
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: test-b
+  name: test-b
+spec:
+  ports:
+    - name: 80-80
+      port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: test-b
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.14.2
+      ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    app: nginx
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: guestbook
+    tier: frontend
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+        - name: php-redis
+          image: gcr.io/google_samples/gb-frontend:v3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  serviceName: "nginx"
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: registry.k8s.io/nginx-slim:0.8
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: www
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  creationTimestamp: null
+  name: test
+spec: {}
+status: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: hello
+              image: busybox
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minimal-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx-example
+  rules:
+    - http:
+        paths:
+          - path: /testpath
+            pathType: Prefix
+            backend:
+              service:
+                name: test
+                port:
+                  number: 80
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+        - name: pi
+          image: perl
+          command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+  backoffLimit: 4
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-elasticsearch
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+spec:
+  selector:
+    matchLabels:
+      name: fluentd-elasticsearch
+  template:
+    metadata:
+      labels:
+        name: fluentd-elasticsearch
+    spec:
+      tolerations:
+        # this toleration is to have the daemonset runnable on master nodes
+        # remove it if your masters can't run pods
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: fluentd-elasticsearch
+          image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers

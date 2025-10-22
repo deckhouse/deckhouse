@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix migration of cluster from one edition to another.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/5746
+

@@ -1,0 +1,57 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /zvirt-cloud-controller-manager
+    to: /zvirt-cloud-controller-manager
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/zvirt-cloud-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to:  /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+secrets:
+- id: CLOUD_PROVIDERS_SOURCE_REPO
+  value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
+shell:
+  install:
+    - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+    - cd /src
+    - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /src
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /zvirt-cloud-controller-manager cmd/zvirt-cloud-controller-manager/main.go
+    - chown 64535:64535 /zvirt-cloud-controller-manager
+    - chmod 0755 /zvirt-cloud-controller-manager

@@ -1,0 +1,113 @@
+{{- define "nginx_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: kube-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: nginx
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: nginx
+      minAllowed:
+        {{- include "nginx_resources" . | nindent 8}}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: kube-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" .Chart.Name)) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: nginx
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "nginx") }}
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/opt/nginx-static/sbin/nginx", "-s", "quit" ]
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /opt/nginx-static/conf/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        - name: htpasswd
+          mountPath: /opt/nginx-static/htpasswd
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "nginx_resources" . | nindent 12}}
+{{- end }}
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: htpasswd
+        secret:
+          secretName: htpasswd
+          items:
+{{- range $location := .Values.basicAuth.internal.locations }}
+  {{- if eq $location.location "/" }}
+          - key: htpasswd
+            path: htpasswd
+  {{- else }}
+          - key: {{ $location.location | trimPrefix "/" | quote }}
+            path: {{ $location.location | trimPrefix "/" | quote }}
+  {{- end }}
+{{- end }}
+      - name: tmp
+        emptyDir: {}

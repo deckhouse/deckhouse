@@ -1,0 +1,52 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: builder/src
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    includePaths:
+      - '**/*.go'
+      - '**/*.mod'
+      - '**/*.sum'
+    stageDependencies:
+      install:
+        - '**/*'
+---
+image: {{ .ModuleName }}/controller-probe-artifact
+fromImage: builder/golang-alpine-1.24
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  install:
+    - cd /src
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - go build -o /controller-probe controller-probe.go
+    - chown 64535:64535 /controller-probe
+    - chmod 0755 /controller-probe
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: base/distroless
+import:
+- image: common/kube-rbac-proxy-artifact
+  add: /kube-rbac-proxy
+  to: /kube-rbac-proxy
+  before: setup
+- image: {{ .ModuleName }}/controller-probe-artifact
+  add: /controller-probe
+  to: /controller-probe
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/kube-rbac-proxy", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
+    expose: ["8080"]

@@ -1,0 +1,42 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix wildcard apparmor profile.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12333
+deckhouse-controller:
+  fixes:
+    - summary: fix deckhouse-release check loop
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12186
+deckhouse-tools:
+  fixes:
+    - summary: Fix tools links pointing to wrong path
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12346
+metallb:
+  fixes:
+    - summary: Fixed alerts for EE edition.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12330
+monitoring-applications:
+  fixes:
+    - summary: >-
+        Fix module dependencies. The `monitoring-applications` module was affected and disabled by
+        the enabled script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12428
+node-local-dns:
+  fixes:
+    - summary: >-
+        Fix module dependencies. The `monitoring-applications` module was affected and disabled by
+        the enabled script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12428
+prometheus:
+  fixes:
+    - summary: Changes the links in alert's template about alerts from url to relative links
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12028
+      impact: The links in the alerts will be correct when the documentation module is enabled.
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed several issues.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12272
+upmeter:
+  fixes:
+    - summary: Fixed metallb module probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12231
+

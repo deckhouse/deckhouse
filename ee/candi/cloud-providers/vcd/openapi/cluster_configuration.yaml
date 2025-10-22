@@ -1,0 +1,608 @@
+kind: VCDClusterConfiguration
+apiVersions:
+  - apiVersion: deckhouse.io/v1
+    openAPISpec:
+      type: object
+      additionalProperties: false
+      description: |
+        Describes the configuration of a cloud cluster in VCD.
+
+        Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+
+        Run the following command to change the configuration in a running cluster:
+
+        ```shell
+        d8 p edit provider-cluster-configuration
+        ```
+
+        > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+      x-doc-search: |
+        ProviderClusterConfiguration
+      x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: VCDClusterConfiguration
+          sshPublicKey: "<SSH_PUBLIC_KEY>"
+          organization: My_Org
+          virtualDataCenter: My_Org
+          virtualApplicationName: Cloud
+          mainNetwork: internal
+          layout: Standard
+          internalNetworkCIDR: 172.16.2.0/24
+          masterNodeGroup:
+            replicas: 1
+            instanceClass:
+              template: Templates/ubuntu-focal-20.04
+              sizingPolicy: 4cpu8ram
+              rootDiskSizeGb: 20
+              etcdDiskSizeGb: 20
+              storageProfile: nvme
+          nodeGroups:
+            - name: worker
+              replicas: 1
+              instanceClass:
+                template: Org/Templates/ubuntu-focal-20.04
+                sizingPolicy: 16cpu32ram
+                storageProfile: ssd
+          provider:
+            server: '<SERVER>'
+            username: '<USERNAME>'
+            password: '<PASSWORD>'
+            insecure: true
+      x-unsafe-rules: [deleteZones]
+      required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork]
+      properties:
+        apiVersion:
+          type: string
+          enum: [deckhouse.io/v1]
+        kind:
+          type: string
+          enum: [VCDClusterConfiguration]
+        masterNodeGroup:
+          type: object
+          additionalProperties: false
+          required: [replicas, instanceClass]
+          description: |
+            The definition of the master's NodeGroup.
+
+            > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
+          properties:
+            replicas:
+              type: integer
+              minimum: 1
+              description: |
+                The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+            instanceClass:
+              type: object
+              additionalProperties: false
+              required: [template, storageProfile, sizingPolicy]
+              description: |
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Root disk size in gigabytes.
+                  example: 50
+                  default: 50
+                  type: integer
+                etcdDiskSizeGb:
+                  description: |
+                    Etcd disk size in gigabytes.
+                  example: 10
+                  default: 10
+                  type: integer
+                placementPolicy:
+                  description: |
+                    PlacementPolicy is the placement policy to be used on this machine.
+
+                    If no placement policy is specified, default placement policy will be used to create the nodes.
+                  type: string
+                  example: Hypervisor1
+                sizingPolicy:
+                  description: |
+                    SizingPolicy is the sizing policy to be used on this machine.
+
+                    If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                  type: string
+                  example: 4Cpu8Memory
+                storageProfile:
+                  description: |
+                    StorageProfile is the storage profile to be used on this machine.
+                  type: string
+                  example: ssd
+                template:
+                  description: |
+                    Path of the template OVA that is to be used.
+
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
+
+                    If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+
+                    You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                  type: string
+                  x-examples:
+                    - Linux/ubuntu2204-cloud-ova
+                    - MyOrg/Linux/ubuntu2204-cloud-ova
+                    - Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                    - MyOrg/Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                mainNetworkIPAddresses:
+                  type: array
+                  description: |
+                    A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                    By default, the DHCP client is enabled.
+                  x-examples:
+                    - ["10.1.14.20", "10.1.4.21"]
+                  items:
+                    type: string
+                    description: An IP address with a CIDR prefix.
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every master node VM, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                  additionalProperties:
+                    type: string
+                affinityRule:
+                  type: object
+                  additionalProperties: false
+                  description: |
+                    Specifies the affinity rule applied to virtual machines of the master nodes within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
+                  properties:
+                    polarity:
+                      type: string
+                      description: |
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
+                      enum: [Affinity, AntiAffinity]
+                    required:
+                      type: boolean
+                      description: |
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                      x-doc-default: false
+        nodeGroups:
+          type: array
+          description: |
+            An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+          items:
+            type: object
+            required: [name, replicas, instanceClass]
+            properties:
+              name:
+                type: string
+                description: |
+                  The name of the NodeGroup to use for generating node names.
+              replicas:
+                type: integer
+                description: |
+                  The number of nodes to create.
+              nodeTemplate:
+                description: |
+                  Parameters of Node objects in Kubernetes to add after registering the node.
+                properties:
+                  labels:
+                    type: object
+                    description: |
+                      A list of labels to attach to cluster resources.
+
+                      The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                    x-examples:
+                      - environment: production
+                        app: warp-drive-ai
+                    additionalProperties:
+                      type: string
+                  annotations:
+                    type: object
+                    description: |
+                      The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                    x-examples:
+                      - ai.fleet.com/discombobulate: "true"
+                    additionalProperties:
+                      type: string
+                  taints:
+                    type: array
+                    description: |
+                      The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                      > Available fields: `effect`, `key`, and `values`.
+                    x-examples:
+                      - - effect: NoExecute
+                          key: ship-class
+                          value: frigate
+                    items:
+                      type: object
+                      properties:
+                        effect:
+                          type: string
+                          enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                        key:
+                          type: string
+                        value:
+                          type: string
+              instanceClass:
+                type: object
+                additionalProperties: false
+                required: [template, storageProfile, sizingPolicy]
+                description: |
+                  Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+                properties:
+                  rootDiskSizeGb:
+                    description: |
+                      Root disk size in gigabytes.
+                    example: 50
+                    default: 50
+                    type: integer
+                  placementPolicy:
+                    description: |
+                      PlacementPolicy is the placement policy to be used on this machine.
+
+                      If no placement policy is specified, default placement policy will be used to create the nodes.
+                    type: string
+                    example: Hypervisor1
+                  sizingPolicy:
+                    description: |
+                      SizingPolicy is the sizing policy to be used on this machine.
+
+                      If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                    type: string
+                    example: 4Cpu8Memory
+                  storageProfile:
+                    description: |
+                      StorageProfile is the storage profile to be used on this machine.
+                    type: string
+                    example: ssd
+                  template:
+                    description: |
+                      Path of the template OVA that is to be used.
+
+                      Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
+
+                      If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+
+                      You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                    type: string
+                    x-examples:
+                      - Linux/ubuntu2204-cloud-ova
+                      - MyOrg/Linux/ubuntu2204-cloud-ova
+                      - Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                      - MyOrg/Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                  mainNetworkIPAddresses:
+                    type: array
+                    description: |
+                      A list of static IP addresses (with a CIDR prefix) sequentially allocated to nodes in the `mainNetwork`.
+
+                      By default, the DHCP client is enabled.
+                    x-examples:
+                      - ["10.1.14.20", "10.1.4.21"]
+                    items:
+                      type: string
+                      description: An IP address with a CIDR prefix.
+                      pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                  additionalMetadata:
+                    type: object
+                    description: |
+                      Custom string key-value pairs to be stored in the Metadata of every node VM, useful for organizing and categorizing your virtualization inventory.
+
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                    additionalProperties:
+                      type: string
+                  affinityRule:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Specifies the affinity rule applied to virtual machines of nodes of the NodeGroup within the cluster.
+                      Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                      which can help improve fault tolerance, and control the distribution of workloads.
+                      If not specified, no affinity rule will be applied by default.
+                    required: [polarity]
+                    properties:
+                      polarity:
+                        type: string
+                        description: |
+                          The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                          `Affinity` means that nodes should be placed on the same host,
+                          while `AntiAffinity` means they should be placed on different hosts.
+                        enum: [Affinity, AntiAffinity]
+                      required:
+                        type: boolean
+                        description: |
+                          Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                          If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                        x-doc-default: false
+        bastion:
+          type: object
+          additionalProperties: false
+          description: |
+            Parameters for the bastion host, which is used to access the cluster's nodes.
+          required: [instanceClass]
+          properties:
+            instanceClass:
+              type: object
+              additionalProperties: false
+              description: |
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
+              required: [template, storageProfile, sizingPolicy]
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Root disk size in gigabytes.
+                  example: 50
+                  default: 50
+                  type: integer
+                  minimum: 0
+                placementPolicy:
+                  description: |
+                    Placement policy to be used on this machine.
+
+                    If no placement policy is specified, the default placement policy will be used to create the bastion host.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                sizingPolicy:
+                  description: |
+                    Sizing policy to be used on this machine.
+
+                    If no sizing policy is specified, the default sizing policy will be used to create the bastion host.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                storageProfile:
+                  description: |
+                    Storage profile to be used on this machine.
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                template:
+                  description: |
+                    Path of the template OVA that is to be used.
+
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
+
+                    If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+
+                    You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                  minLength: 1
+                  maxLength: 128
+                mainNetworkIPAddress:
+                  type: string
+                  description: |
+                    The IP address of the bastion host in the `mainNetwork`.
+                    If not set, the DHCP client will be enabled.
+                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                additionalMetadata:
+                  type: object
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of the bastion, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                  additionalProperties:
+                    type: string
+        sshPublicKey:
+          type: string
+          description: |
+            A public key for accessing nodes.
+        organization:
+          type: string
+          description: |
+            VMware Cloud Director Organization name.
+        virtualDataCenter:
+          type: string
+          description: |
+            VMware Cloud Director Virtual Data Center name (belongs to Organization).
+        virtualApplicationName:
+          type: string
+          # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
+          # base on this answer https://stackoverflow.com/a/67387967
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+          description: |
+            VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
+        edgeGateway:
+          type: object
+          required: [name, type, externalIP]
+          additionalProperties: false
+          description: |
+            VMware Cloud Director Edge Gateway parameters (belongs to Virtual Data Center).
+          properties:
+            name:
+              type: string
+              description: |
+                VMware Cloud Director Edge Gateway name.
+              minLength: 1
+              maxLength: 128
+            type:
+              type: string
+              description: |
+                Network virtualization platform type providing the VMware Cloud Director Edge Gateway (one of "NSX-V" or "NSX-T").
+                The type can be obtained from your administrator.
+              enum: ["NSX-V", "NSX-T"]
+            externalIP:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+              description: |
+                The IP address accessible from external networks through which
+                incoming SSH connections are forwarded to the master node using DNAT.
+            externalPort:
+              type: integer
+              description: |
+                The external port mapped by the DNAT rule to forward incoming SSH
+                connections to the master node.
+              minimum: 1
+              maximum: 65535
+              example: 22
+              default: 22
+            NSX-V:
+              type: object
+              additionalProperties: false
+              description: |
+                Additional parameters required if `type` is NSX-V.
+              properties:
+                externalNetworkName:
+                  type: string
+                  description: |
+                    External network name for build DNAT rule for master node.
+                    The external network is the one connected to the Edge Gateway in `Gateway Interface` and has an external IP address.
+                  minLength: 1
+                  maxLength: 128
+                externalNetworkType:
+                  type: string
+                  description: |
+                    External network type for build DNAT rule for master node (one of "org" or "ext").
+                  enum: [org, ext]
+        createDefaultFirewallRules:
+          type: boolean
+          description: |
+            If enabled, configures the following default firewall rules for the cluster's main network (mainNetwork):
+              - Allows all outgoing connections from mainNetwork.
+              - Allows all incoming ICMP packets to mainNetwork.
+              - Allows all incoming TCP connections to mainNetwork on port 22 (SSH).
+              - Allows all incoming TCP and UDP connections to mainNetwork for NodePorts in the range 30000–32767.
+
+            **Attention!** Using this option together with an Edge Gateway of type NSX-T implies that only one cluster should be deployed per Edge Gateway, because in this case all existing firewall rules will be overwritten.
+          x-doc-default: false
+        mainNetwork:
+          description: |
+            Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+          example: internal
+          type: string
+        internalNetworkCIDR:
+          type: string
+          description: |
+            Subnet for master nodes in the internal network.
+          pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+          x-unsafe: true
+        internalNetworkDNSServers:
+          description: |
+            A list of addresses of the recursive DNSs servers.
+          type: array
+          minItems: 0
+          maxItems: 2
+          items:
+            type: string
+            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+        internalNetworkDHCPPoolStartAddress:
+          type: integer
+          minimum: 2
+          description: |
+            Specifies the starting address number in the internal network from which the DHCP address pool will begin.
+            Addresses below this number will not be assigned automatically by DHCP and are available for manual allocation.
+            If not set, the default start address is 30.
+
+            For example, in a network 192.168.100.128/27, a value of 10 means the DHCP pool will start with the IP address 192.168.100.138.
+            The pool will end at the address immediately before the broadcast address (192.168.100.159), i.e., the last assignable host address.
+        layout:
+          type: string
+          description: |
+            The way resources are located in the cloud.
+
+            Read [more](https://deckhouse.io/modules/cloud-provider-vcd/layouts.html) about possible provider layouts.
+        provider:
+          type: object
+          additionalProperties: false
+          description: Parameters for connecting to the VCD.
+          properties:
+            server:
+              type: string
+              description: The host or the IP address of the VCD server.
+            username:
+              type: string
+              description: The login ID.
+            password:
+              type: string
+              description: The user's password.
+            apiToken:
+              type: string
+              description: |
+                The token for authentication.
+
+                > **Caution!** When using `apiToken`, leave `username` and `password` empty.
+            insecure:
+              type: boolean
+              description: Set to `true` if VCD has a self-signed certificate.
+              x-doc-default: false
+          required:
+            - server
+        legacyMode:
+          type: boolean
+          description: |
+            Support for outdated versions of the VCD API.
+
+            If set to `true`, the API version below` 37.2` will be used.
+
+            The parameter has an effect only when installing a cluster. In the working cluster, the need to enable the support for outdated versions of the VCD API is determined automatically.
+          x-doc-default: false
+        metadata:
+          type: object
+          description: |
+            Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
+
+            Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the CloudEphemeral type.
+            This means that if you need to remove metadata entirely, you will have to do it manually.
+
+            > **Warning.** Changing the metadata will cause the recreation of CloudEphemeral nodes.
+          additionalProperties:
+            type: string
+      allOf:
+      - oneOf:
+        - required: [layout]
+          properties:
+            layout:
+              enum: [Standard]
+              type: string
+            internalNetworkDNSServers:
+              not: {}
+            internalNetworkDHCPPoolStartAddress:
+              not: {}
+            edgeGateway:
+              not: {}
+            createDefaultFirewallRules:
+              not: {}
+        - required: [layout, internalNetworkDNSServers, internalNetworkCIDR, edgeGateway, bastion]
+          properties:
+            layout:
+              enum: [WithNAT]
+              type: string
+            edgeGateway:
+              type: object
+              oneOf:
+              - properties:
+                  type:
+                    type: string
+                    enum: [NSX-V]
+                required: [type, name, externalIP, NSX-V]
+              - properties:
+                  type:
+                    type: string
+                    enum: [NSX-T]
+                  NSXV:
+                    not: {}
+                required: [type, name, externalIP]
+      - oneOf:
+        - properties:
+            provider:
+              required: [apiToken]
+              type: object
+              properties:
+                username:
+                  not: {}
+                password:
+                  not: {}
+                apiToken:
+                  type: string
+        - properties:
+            provider:
+              required: [username, password]
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                apiToken:
+                  not: {}

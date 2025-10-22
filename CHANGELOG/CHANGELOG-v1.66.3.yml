@@ -1,0 +1,15 @@
+deckhouse:
+  fixes:
+    - summary: Fix deckhouse version parsing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11153
+dhctl:
+  fixes:
+    - summary: Fix panic during commander masters converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11053
+    - summary: Fix converge through bastion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10278
+multitenancy-manager:
+  fixes:
+    - summary: Fix the 'secure' and 'secure_with_dedicated_nodes' project templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11168
+

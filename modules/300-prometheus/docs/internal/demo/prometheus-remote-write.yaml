@@ -1,0 +1,7 @@
+---
+apiVersion: deckhouse.io/v1
+kind: PrometheusRemoteWrite
+metadata:
+  name: victoria-metrics
+spec:
+  url: http://victoria-metrics-victoria-metrics-single-server.victoria-metrics-test.svc.cluster.local:8428/api/v1/write

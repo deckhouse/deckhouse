@@ -1,0 +1,75 @@
+positive:
+  values:
+    - auth:
+        webui:
+          password: "dworpass"
+        status:
+          externalAuthentication:
+            authURL: "https://api.example.com/auth"
+            authSignInURL: "https://www.example.com/login"
+      smokeMini:
+        auth: {}
+      disabledProbes: ["monitoring-and-autoscaling"]
+      statusPageAuthDisabled: false
+      smokeMiniDisabled: false
+    - auth:
+        status: {}
+        webui: {}
+      disabledProbes: []
+      internal:
+        disabledProbes:
+          - load-balancing/metallb
+        effectiveStorageClass: default
+        smokeMini:
+          sts:
+            a:
+              effectiveStorageClass: default
+              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
+              node: dev2-worker-small-391f2ede-79fcd-qpn7j
+              zone: nova
+            b:
+              effectiveStorageClass: default
+              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
+              node: dev2-master-0
+              zone: nova
+            c:
+              effectiveStorageClass: default
+              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
+              node: dev2-worker-medium-391f2ede-78c84-sql6k
+              zone: nova
+            d:
+              effectiveStorageClass: default
+              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
+              node: "12345" # number, intentionally
+              zone: nova
+            e:
+              effectiveStorageClass: default
+              image: dev-registry.deckhouse.io/sys/deckhouse-oss:7ae695a87e999c762df8011581f23b2fa7f8ed980476913eea00d121-1630074529969
+              node: dev2-worker-small-391f2ede-79fcd-f64bd
+              zone: nova
+        upmeter:
+          certificate: |
+            -----BEGIN CERTIFICATE-----
+            MIICRzCCAS+gAwIBAgIQQ3PmROfmH4iRc9AS+/aCbDANBgkqhkiG9w0BAQsFADAV
+            MRMwEQYDVQQDEwprdWJlcm5ldGVzMB4XDTIxMDkxNjA5NTg0NVoXDTIyMDkxNjA5
+            NTg0NVowHTEbMBkGA1UEAxMSZDgtdXBtZXRlcjp1cG1ldGVyMFkwEwYHKoZIzj0C
+            AQYIKoZIzj0DAQcDQgAEUtCDaAbiuwOvalpUTCBBgG0vyu81gqDb1dn0trI4c0fu
+            LVjFdooK2eHNDLoh6Jo1EdXhBpbsIQctTA5oHs0l1qNWMFQwDgYDVR0PAQH/BAQD
+            AgWgMBMGA1UdJQQMMAoGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgw
+            FoAUOPTw8U2JjZUaCYHNVBlowIJBl4QwDQYJKoZIhvcNAQELBQADggEBAGiZgBsH
+            WT+81TlN1jgsaFED4a+AzkxdDIUARo98IhH/lloc26BrZ0Qaa66Ex9m/EbN2nBmd
+            mIVDWXumQEzEvZCFtPM+Y7uIO80CALluG2MdyU80zE4IxANxSPvvUmOm/HGFMgOE
+            p8oqJ0wYz2J14r+qXt0frOQX5OeKA1ls/8WhYeCoQY0Ib39ILqgYfPMo89YmGL1D
+            cnjw4lg2/mLlUE0Tm9cxrYMzUtnqhur8b5EOnpHx8CuBSAUBMv4A5Ib+ejzCvL26
+            qRUZ4yLM+OQ9SuKTWlZ7IrpkW/plnjX0btz0IBi39P2EPUb/rZD0R91w2nuMRdL9
+            dNaZCDbQgdpNdyM=
+            -----END CERTIFICATE-----
+          certificate_updated: true
+          key: |
+            -----BEGIN EC PRIVATE KEY-----
+            MHcCAQEEIHvwz39DCEepuYQfS/GZv+h+M2lJ0K+130cq+G0TiF76oAoGCCqGSM49
+            AwEHoUQDQgAEUtCDaAbiuwOvalpUTCBBgG0vyu81gqDb1dn0trI4c0fuLVjFdooK
+            2eHNDLoh6Jo1EdXhBpbsIQctTA5oHs0l1g==
+            -----END EC PRIVATE KEY-----
+      smokeMiniDisabled: false
+      statusPageAuthDisabled: false

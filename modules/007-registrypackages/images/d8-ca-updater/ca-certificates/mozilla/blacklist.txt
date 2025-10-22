@@ -1,0 +1,6 @@
+# One blacklist entry per line, corresponding to the label in certdata.txt.
+
+# Blacklist explicitly distrusted certificates to explicitly ignore them and prevent build errors
+"Explicitly Distrust DigiNotar Root CA"
+
+# Expired CAs

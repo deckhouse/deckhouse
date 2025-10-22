@@ -1,0 +1,116 @@
+version: "2"
+run:
+  timeout: 10m
+
+linters:
+  default: none
+  enable:
+    - copyloopvar
+    - dogsled
+    - errcheck
+    - gocritic
+    - govet
+    - ineffassign
+    - misspell
+    - musttag
+    - nonamedreturns
+    - prealloc
+    - revive
+    - sloglint
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+    - unused
+    - usestdlibvars
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt:.*[rR]ead|[wW]rite|[cC]lose
+        - io:Copy
+    nonamedreturns:
+      report-error-in-defer: false
+    sloglint:
+      no-mixed-args: true
+      # Enforce using key-value pairs only (overrides no-mixed-args, incompatible with attr-only).
+      kv-only: false
+      # Enforce using attributes only (overrides no-mixed-args, incompatible with kv-only).
+      attr-only: false
+      # Enforce not using global loggers.
+      no-global: ""
+      # Enforce using methods that accept a context.
+      context: ""
+      # Enforce using static values for log messages.
+      static-msg: false
+      # Enforce using constants instead of raw keys.
+      no-raw-keys: false
+      # Enforce a single key naming convention.
+#      key-naming-case: ""
+      # Enforce not using specific keys.
+      forbidden-keys:
+        - level
+        - msg
+        - logger
+        - source
+        - stacktrace
+        - time
+      # Enforce putting arguments on separate lines.
+      args-on-sep-lines: false
+    staticcheck:
+      checks:
+        - all
+        - '-ST1003' # waiting for package name will be fixed (underscores)
+        - '-QF1008' # not need to fix; we understand how to call nested structs
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: ST1005.*
+      - path: (.+)\.go$
+        text: should not use dot imports
+      - path: (.+)\.go$
+        text: don't use an underscore in package name
+      - path: (.+)\.go$
+        text: 'exported: .*'
+      - linters:
+          - staticcheck
+        path: hooks/purge_orphan_resources.go
+        text: 'is deprecated: use Warn instead'
+      - linters:
+          - staticcheck
+        path: hooks/purge_orphan_resources.go
+        text: 'is deprecated: use Info instead'
+    paths:
+      - go_lib/dependency/k8s/drain
+      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/deckhouse/)
+        - localmodule
+    goimports:
+      local-prefixes:
+        - github.com/deckhouse/
+  exclusions:
+    generated: lax
+    paths:
+      - go_lib/dependency/k8s/drain
+      - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
+      - third_party$
+      - builtin$
+      - examples$

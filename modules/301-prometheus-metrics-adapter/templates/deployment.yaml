@@ -1,0 +1,143 @@
+{{- define "prometheus_metrics_adapter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+{{- define "prometheus_reverse_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: prometheus-metrics-adapter
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "prometheus-metrics-adapter"
+      minAllowed:
+        {{- include "prometheus_metrics_adapter_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    - containerName: "prometheus-reverse-proxy"
+      minAllowed:
+        {{- include "prometheus_reverse_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-metrics-adapter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: prometheus-metrics-adapter
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ index (include (print $.Template.BasePath "/config-map.yaml") . | fromYaml) "data" "config.yaml" | sha256sum}}
+        checksum/cert: {{ include (print $.Template.BasePath "/prometheus-metrics-adapter-server-cert.yaml") . | sha256sum}}
+        checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
+      labels:
+        app: prometheus-metrics-adapter
+      name: prometheus-metrics-adapter
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "prometheus-metrics-adapter")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: prometheus-metrics-adapter
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: prometheus-metrics-adapter
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "k8sPrometheusAdapter") }}
+        args:
+        - --secure-port=6443
+        - --tls-cert-file=/var/run/adapter-cert/tls.crt
+        - --tls-private-key-file=/var/run/adapter-cert/tls.key
+        - --prometheus-url=http://127.0.0.1:8000
+        - --metrics-relist-interval={{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
+        - --config=/etc/adapter/config.yaml
+        - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
+        ports:
+        - name: https-metrics
+          containerPort: 6443
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 6443
+            scheme: HTTPS
+        volumeMounts:
+        - mountPath: /etc/adapter
+          name: prometheus-metrics-adapter-config
+        - mountPath: /var/run/adapter-cert
+          name: adapter-cert
+          readOnly: true
+        - mountPath: /var/run/apiserver-proxy-client/
+          name: apiserver-proxy-client-ca
+        - mountPath: /tmp
+          name: tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "prometheus_metrics_adapter_resources" . | nindent 12 }}
+{{- end }}
+      - name: prometheus-reverse-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
+        env:
+        - name: PROMETHEUS_URL
+          value: "https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+        volumeMounts:
+        - mountPath: /etc/prometheus-reverse-proxy/
+          name: prometheus-metrics-adapter-config
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "prometheus_reverse_proxy_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: adapter-cert
+        secret:
+          secretName: prometheus-metrics-adapter-server-cert
+      - name: prometheus-metrics-adapter-config
+        configMap:
+          name: prometheus-metrics-adapter-config
+      - name: apiserver-proxy-client-ca
+        configMap:
+          name: prometheus-metrics-adapter-apiserver-proxy-client-ca
+      - name: tmp
+        emptyDir: {}

@@ -1,0 +1,163 @@
+type: object
+description: The module does not have any mandatory parameters.
+properties:
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    x-examples:
+    - { "has-gpu": "true" }
+
+  tolerations:
+    description: |
+      The same as in the pods' `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    type: array
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          format: int64
+          type: integer
+        value:
+          type: string
+    x-examples:
+    - [{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}]
+
+  cloudflareAPIToken:
+    type: string
+    x-examples: ["token"]
+    description: |
+      [API Tokens](https://cert-manager.io/docs/configuration/acme/dns01/cloudflare/#api-tokens) allow application-scoped keys bound to specific DNS zones.
+
+      API Tokens are recommended for higher security, since they have more restrictive permissions and are more easily revocable.
+
+      It allows you to verify that domains specified
+      in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
+      Verification is performed by adding special TXT records for
+      the [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/) domain.
+
+  cloudflareGlobalAPIKey:
+    type: string
+    description: |
+      The Cloudflare Global API key for managing DNS records
+
+      It allows you to verify that domains specified
+      in the Certificate resource are managed by `cert-manager` and kept by the Cloudflare DNS provider.
+
+      Verification is performed by adding special TXT records for
+      the [ACME DNS01 Challenge Provider](https://cert-manager.io/docs/configuration/acme/dns01/) domain.
+    x-examples: ["key"]
+
+  cloudflareEmail:
+    type: string
+    format: email
+    description: |
+      The email used for accessing the Cloudflare platform.
+    x-examples: ["example@example.com"]
+
+  route53AccessKeyID:
+    type: string
+    description: |
+      The Access Key ID of the user with the attached
+      [Amazon Route53 IAM Policy](https://cert-manager.io/docs/configuration/acme/dns01/route53/)
+      for managing domain records.
+    x-examples: ["key_id"]
+
+  route53SecretAccessKey:
+    type: string
+    description: |
+      The Secret Access Key of the user with privileges to manage domain records.
+    x-examples: ["secret"]
+
+  digitalOceanCredentials:
+    type: string
+    description: |
+      The Access Token for the Digital Ocean API (you can create it in the  `API` section).
+    x-examples: ["creds"]
+
+  cloudDNSServiceAccount:
+    type: string
+    format: byte
+    description: |
+      The Service Account for [Google Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-google)
+      for the same project that has the DNS Administrator role.
+    x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
+
+  email:
+    type: string
+    format: email
+    description: |
+      The email used for sending notifications by LetsEncrypt.
+    x-examples: ["example@example.com"]
+
+  cleanupOrphanSecrets:
+    type: boolean
+    default: false
+    description: |
+      Delete a secret with a certificate automatically if the corresponding Certificate resource was deleted from the cluster.
+    x-examples: [true, false]
+
+  disableLetsencrypt:
+    type: boolean
+    description: |
+      Disable `letsencrypt` and `letsencrypt-staging` ClusterIssuer objects (if set to `true`).
+    x-examples: [true, false]
+
+  maxConcurrentChallenges:
+    type: integer
+    format: int32
+    minimum: 0
+    description: |
+      The maximum number of challenges that can be scheduled as 'processing' at once. (default 60)
+    x-examples: [25]
+
+  enableCAInjector:
+    type: boolean
+    default: false
+    x-examples: [true, false]
+    description: |
+      Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
+      Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
+
+  ingressClassHttp01:
+    type: string
+    x-examples: ["nginx"]
+    description: |
+      The name of the `ingressClass` used to confirm ownership of domain using the [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenges method.
+      If the parameter is omitted, the default `ingressClass` is used.
+
+  recursiveSettings:
+    type: object
+    description: |
+      Parameters for using recursive DNS servers, which are used to check the existence of a DNS record, before initiating the domain ownership verification process using the [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/) method.
+    x-examples:
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
+        useOnlyRecursive: true
+    x-kubernetes-validations:
+      - rule: "self.useOnlyRecursive == false || size(self.nameservers) >= 1"
+        message: "At least one nameserver must be specified when useOnlyRecursive is true"
+    properties:
+      nameservers:
+        type: array
+        description: |
+          List of recursive DNS servers (IP:port or HTTPS URLs).
+        items:
+          type: string
+          pattern: "^(?:[0-9]{1,3}(?:\\.[0-9]{1,3}){3}:\\d{1,5}|https?://[^\\s]+)$"
+      useOnlyRecursive:
+        type: boolean
+        description: |
+          When set to true, only the specified recursive DNS servers will be used to check for the existence of a record in the DNS before starting the domain ownership verification process.
+        default: false

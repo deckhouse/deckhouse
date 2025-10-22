@@ -1,0 +1,25 @@
+---
+title: One month trial
+description: One month trial
+permalink: en/license_request_success.html
+layout: page-nosidebar
+toc: false
+searchable: false
+sitemap_include: false
+---
+
+<p>Thank you for your interest in the Deckhouse Kubernetes platform!</p>
+<p>Below is your token for accessing the EE edition of the platform (we also sent it to your email):</p>
+<p id="license-token" style="font-size: 21px; font-weight: 600; letter-spacing: -0.4px; color: #0066FF;"></p>
+<p>Note that the license is valid for one month. Please, contact the Deckhouse team (<a href="mailto:sales@deckhouse.io">sales@deckhouse.io</a>) to renew it.</p>
+<p>Dive into Deckhouse with our easy-to-follow <a href="https://deckhouse.io/products/kubernetes-platform/gs/">Getting started guide</a>.</p>
+<p>Please feel free to contact us on <a href="{{ site.social_links[page.lang]['telegram'] }}">Telegram</a>!</p>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const licenseTokenContent = document.getElementById('license-token');
+    const token = window.location.search.split('=');
+
+    licenseTokenContent.innerText = token[1];
+  });
+</script>

@@ -1,0 +1,14 @@
+{{- range $instance := .Values.prometheusPushgateway.instances }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $instance }}
+  namespace: kube-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $instance)) | nindent 2 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      app: {{ $instance }}
+{{- end }}

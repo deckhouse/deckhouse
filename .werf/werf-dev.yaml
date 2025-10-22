@@ -1,0 +1,40 @@
+---
+image: dev-prebuild
+fromImage: common-base
+git:
+- add: /
+  to: /deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
+  includePaths:
+    {{ include "dev_prebuild_git_imports_include_paths" . | nindent 4}}
+  excludePaths:
+{{- include "exclude_modules_dir_from_images" .  | nindent 2}}
+{{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
+{{ include "dev_prebuild_git_shell_operator" . }}
+{{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+import:
+{{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
+shell:
+  setup:
+  - |
+{{- range $key := list "default" "managed" "minimal" }}
+    # Add bundle {{ $key }}
+    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+      {{- range $_, $edition := $.Editions }}
+    {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
+        {{- if eq $.Env $edition.name }}
+           {{- break -}}
+        {{- end }}
+     {{- end }}
+    EOD
+{{- end }}
+    {{ include "dev_prebuild_setup_script_general_part" (dict "Env" .Env "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 4}}
+
+{{ include "dev_prebuild_docker_properties" . }}
+---
+{{ include "dev_image" . }}
+{{ include "controller_and_install_image_labels" . }}
+---

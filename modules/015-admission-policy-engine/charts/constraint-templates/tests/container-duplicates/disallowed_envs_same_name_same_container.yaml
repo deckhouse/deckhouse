@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed
+  namespace: default
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      env:
+        - name: key1
+          value: val1
+        - name: key1
+          value: val2

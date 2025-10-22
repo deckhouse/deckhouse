@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply min-h-[100%] flex flex-col min-w-[800px] text-slate-800;
+  }
+  body {
+    @apply grow bg-[#0b3576] bg-cover bg-center;
+  }
+}
+
+@layer components {
+  .layout {
+    @apply min-h-[100vh] flex flex-col items-center justify-center;
+  }
+  .layout-header {
+    @apply h-[100px] mb-auto shrink-0;
+  }
+  .layout-footer {
+    @apply h-[100px] mt-auto shrink-0 flex flex-col items-center justify-center;
+  }
+  .layout-content {
+    @apply bg-white w-[500px] px-[60px] py-[70px] rounded-md relative;
+  }
+  .layout-deckhouse-logo {
+    @apply absolute left-1/2 top-0 -translate-y-1/2 -translate-x-1/2;
+  }
+  .layout-deckhouse-title {
+    @apply block mx-auto mb-12;
+  }
+
+  .content-title {
+    @apply text-3xl text-slate-800 mb-3 text-center;
+  }
+  .content-text {
+    @apply block text-gray-500 text-center mb-3;
+  }
+
+  .grid {
+    @apply flex flex-col gap-y-6 mt-8;
+  }
+
+  .form-help {
+    @apply block text-slate-400 text-sm font-medium text-center;
+  }
+  .form-extra {
+    @apply mt-6 text-center;
+  }
+  .form-link {
+    @apply text-blue-500 underline hover:no-underline
+  }
+  .form-error {
+    @apply text-red-500;
+  }
+
+  .btn-login {
+    @apply rounded-md border transition-shadow w-full flex items-stretch h-16 border-gray-300 hover:shadow-md pr-5;
+  }
+  .btn-login-icon {
+    @apply flex flex-col justify-center items-center rounded-md px-3 bg-blue-50 w-[80px] my-[-1px] border border-l-0 border-gray-300;
+  }
+  .btn-login-title {
+    @apply flex flex-col justify-center text-gray-500 ml-5;
+  }
+  .btn-login-arrow {
+    @apply flex flex-col justify-center ml-auto;
+  }
+
+  .btn {
+    @apply py-3 px-4 flex justify-center items-center gap-x-3 w-full rounded-md uppercase transition-shadow hover:shadow-md;
+  }
+  .btn-primary {
+    @apply bg-blue-500 text-white hover:bg-blue-400;
+  }
+  .btn-primary-outline {
+    @apply border border-blue-500 text-blue-500 bg-white;
+  }
+
+  .input {
+    @apply py-3 px-4 block w-full border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-blue-500;
+  }
+  .input-label {
+    @apply block text-slate-800 font-normal mb-3;
+  }
+
+  .card {
+    @apply flex flex-col bg-white border shadow-sm rounded-xl p-6 mb-12;
+  }
+  .card-title {
+    @apply font-medium mb-6 text-blue-500;
+  }
+
+  .list-checked {
+    @apply space-y-3;
+  }
+  .list-checked li {
+    @apply flex space-x-3;
+  }
+  .list-checked svg {
+    @apply flex-shrink-0 h-6 w-6 text-blue-600;
+  }
+}

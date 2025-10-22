@@ -1,0 +1,28 @@
+spec:
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс для обозначения удалённого кластера как доверенного.
+          properties:
+            spec:
+              properties:
+                enableIngressGateway:
+                  description: |
+                    Использование IngressGateway для доступа к удалённым подам.
+
+                    Если поды между кластерами могут быть напрямую связаны друг с другом (например, при использовании «плоской» сети — flat network), тогда использование дополнительного маршрута может быть неэффективным, и лучше избежать лишних переходов.
+                  default: true
+                metadataEndpoint:
+                  description: |
+                    HTTPS-эндпоинт c метаданными удалённого кластера.
+                metadata:
+                  properties:
+                    ca:
+                      description: |
+                        HTTPS-сертификат удостоверяющего центра для чтения метаданных удалённого кластера.
+                    insecureSkipVerify:
+                      description: |
+                        Включение или выключение проверки сертификата удостоверяющего центра для чтения метаданных удалённого кластера.

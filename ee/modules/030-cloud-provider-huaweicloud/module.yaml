@@ -1,0 +1,9 @@
+name: cloud-provider-huaweicloud
+critical: true
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-huaweicloud
+stage: Experimental
+requirements:
+  deckhouse: ">= 1.68"

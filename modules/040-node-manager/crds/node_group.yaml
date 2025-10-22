@@ -1,0 +1,2289 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodegroups.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  preserveUnknownFields: false
+  names:
+    plural: nodegroups
+    singular: nodegroup
+    kind: NodeGroup
+    shortNames:
+      - ng
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          description: Type of nodes in group
+          jsonPath: .spec.nodeType
+        - name: Ready
+          type: integer
+          description: Number of ready Kubernetes nodes in the group.
+          jsonPath: .status.ready
+        - name: Nodes
+          type: integer
+          description: Number of Kubernetes nodes (in any state) in the group.
+          jsonPath: .status.nodes
+        - name: UpToDate
+          type: integer
+          description: Number of up-to-date nodes in the group.
+          jsonPath: .status.upToDate
+        - name: Instances
+          type: integer
+          description: Number of instances (in any state) in the group.
+          jsonPath: .status.instances
+        - name: Desired
+          type: integer
+          description: Number of desired instances in the group.
+          jsonPath: .status.desired
+        - name: Min
+          type: integer
+          description: Minimal amount of instances in the group.
+          jsonPath: .status.min
+        - name: Max
+          type: integer
+          description: Maximum amount of instances in the group.
+          jsonPath: .status.max
+        - name: Standby
+          type: integer
+          description: Number of overprovisioned instances in the group.
+          jsonPath: .status.standby
+        - name: Status
+          type: string
+          description: Status message about group handling.
+          jsonPath: .status.conditionSummary.statusMessage
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the runtime parameters of a node group.
+          required:
+            - spec
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
+                  maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
+            status:
+              type: object
+              required: []
+              properties:
+                ready:
+                  type: integer
+                  description: Number of ready Kubernetes nodes in the group.
+                nodes:
+                  type: integer
+                  description: Number of Kubernetes nodes (in any state) in the group.
+                instances:
+                  type: integer
+                  description: Number of instances (in any state) in the group.
+                desired:
+                  type: integer
+                  description: Number of desired machines in the group.
+                min:
+                  type: integer
+                  description: Minimal amount of instances in the group.
+                max:
+                  type: integer
+                  description: Maximum amount of instances in the group.
+                upToDate:
+                  type: integer
+                  description: Number of up-to-date nodes in the group.
+                standby:
+                  type: integer
+                  description: Number of overprovisioned instances in the group.
+                error:
+                  type: string
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
+                lastMachineFailures:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Machine's name.
+                      providerID:
+                        type: string
+                        description: Machine's ProviderID.
+                      ownerRef:
+                        type: string
+                        description: Machine owner's name.
+                      lastOperation:
+                        type: object
+                        properties:
+                          description:
+                            type: string
+                            description: Last operation's description.
+                          lastUpdateTime:
+                            type: string
+                            description: Timestamp of last status update for operation.
+                          state:
+                            type: string
+                            description: Machine's operation state.
+                          type:
+                            type: string
+                            description: Type of operation.
+                conditionSummary:
+                  type: object
+                  properties:
+                    statusMessage:
+                      description: Status message about group handling.
+                      type: string
+                    ready:
+                      description: Status of the condition summary.
+                      enum:
+                        - "True"
+                        - "False"
+                      type: string
+            spec:
+              type: object
+              required:
+                - nodeType
+              properties:
+
+                nodeType:
+                  description: |
+                    The type of nodes this group provides.
+                    - `Cloud` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
+                    - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
+                      node even of one of the cloud providers is enabled;
+                    - `Hybrid` — a static node (created manually or using any external tools) hosted in the cloud integrated with
+                      one of the cloud provider. This node has the CSI running, and it is managed by the
+                      cloud-controller-manager: the Node object automatically gets the information about the zone and region
+                      based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
+                      will be deleted in Kubernetes.
+                  type: string
+                  enum:
+                    - Cloud
+                    - Static
+                    - Hybrid
+                kubernetesVersion:
+                  description: |
+                    The desired minor version of Kubernetes.
+
+                    By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
+                  type: string
+                  x-doc-examples: ["1.30"]
+                  enum:
+                    - "1.29"
+                    - "1.30"
+                    - "1.31"
+                    - "1.32"
+                    - "1.33"
+                cri:
+                  type: object
+                  description: |
+                    Container runtime parameters.
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Container runtime type.
+
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
+
+                        > **Note.** Docker support is deprecated.
+                      enum:
+                        - Docker
+                        - Containerd
+                        - NotManaged
+                    containerd:
+                      type: object
+                      description: |
+                        Containerd runtime parameters.
+
+                        If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                cloudInstances:
+                  description: |
+                    Parameter for provisioning the cloud-based VMs.
+
+                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                  type: object
+                  required:
+                    - classReference
+                    - minPerZone
+                    - maxPerZone
+                  properties:
+                    zones:
+                      description: |
+                        List of availability zones to create instances in.
+
+                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
+                      type: array
+                      items:
+                        type: string
+                    minPerZone:
+                      description: |
+                        The minimum number of instances for the group in each zone.
+
+                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
+                      type: integer
+                      minimum: 0
+                    maxPerZone:
+                      description: |
+                        The maximum number of instances for the group in each zone.
+
+                        This value is used as the upper bound in cluster-autoscaler.
+
+                        With a value of 0, you need to set capacity for some `InstanceClass`. Get more details in the description of the necessary `InstanceClass`.
+                      type: integer
+                      minimum: 0
+                    maxUnavailablePerZone:
+                      description: |
+                        The maximum number of unavailable instances (during rollout) in the group in each zone.
+                      type: integer
+                      x-doc-default: 0
+                      minimum: 0
+                    maxSurgePerZone:
+                      description: |
+                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                      type: integer
+                      x-doc-default: 1
+                      minimum: 0
+                    standby:
+                      description: |
+                        The summary number of overprovisioned nodes for this `NodeGroup` all zones.
+
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
+                      pattern: "^[0-9]+%?$"
+                      x-kubernetes-int-or-string: true
+                    standbyHolder:
+                      description: |
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha1-spec-cloudinstances-standby).
+                      type: object
+                      properties:
+                        notHeldResources:
+                          description: |
+                            Describes the resources that will not be held (consumed) by the standby holder.
+                          type: object
+                          properties:
+                            cpu:
+                              description: |
+                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                              pattern: "^[0-9]+m?$"
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              description: |
+                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              x-kubernetes-int-or-string: true
+                    classReference:
+                      description: |
+                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                      type: object
+                      properties:
+                        kind:
+                          description: |
+                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                          type: string
+                          enum:
+                            - OpenStackInstanceClass
+                            - GCPInstanceClass
+                            - VsphereInstanceClass
+                            - AWSInstanceClass
+                            - YandexInstanceClass
+                            - AzureInstanceClass
+                            - VCDInstanceClass
+                            - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
+                        name:
+                          description: |
+                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
+                          type: string
+                nodeTemplate:
+                  description: |
+                    Specification of some of the fields that will be maintained in all nodes of the group.
+                  x-doc-examples:
+                  - labels:
+                      environment: production
+                      app: warp-drive-ai
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                  type: object
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                        - environment: production
+                          app: warp-drive-ai
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
+                    taints:
+                      type: array
+                      description: |
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+
+                        > Available fields: `effect`, `key`, and `values`.
+                      x-doc-examples:
+                      - - effect: NoExecute
+                          key: ship-class
+                          value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                          key:
+                            type: string
+                          value:
+                            type: string
+                static:
+                  description: |
+                    Static node parameters
+                  type: object
+                  properties:
+                    internalNetworkCIDRs:
+                      description: Subnet CIDR
+                      type: array
+                      items:
+                        type: string
+                chaos:
+                  description: |
+                    Chaos monkey settings.
+                  x-doc-examples:
+                  - mode: DrainAndDelete
+                    period: 24h
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        The chaos monkey mode:
+                        - `DrainAndDelete` — drains and deletes a node when triggered;
+                        - `Disabled` — leaves this NodeGroup intact.
+                      x-doc-default: Disabled
+                      enum:
+                        - Disabled
+                        - DrainAndDelete
+                    period:
+                      type: string
+                      description: |
+                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
+                      pattern: "^[0-9]+[mh]{1}$"
+                      x-doc-default: 6h
+                operatingSystem:
+                  type: object
+                  x-doc-deprecated: true
+                  description: |
+                    Operating System settings for nodes.
+                  properties:
+                    manageKernel:
+                      type: boolean
+                      x-doc-deprecated: true
+                      description: |
+                        Enable kernel maintenance from bashible.
+                      x-doc-default: true
+                disruptions:
+                  type: object
+                  description: |
+                    Disruptions settings for nodes.
+                  x-doc-examples:
+                    - approvalMode: Automatic
+                      automatic:
+                        drainBeforeApproval: false
+                        windows:
+                          - from: "06:00"
+                            to: "08:00"
+                            days:
+                              - Tue
+                              - Sun
+                  properties:
+                    approvalMode:
+                      type: string
+                      description: |
+                        The approval mode for disruptive updates:
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+
+                        If the `RollingUpdate` mode is not used, when updating, the node is first drained and then updated (rebooted) and put back into operation (uncordoned). Note that in this case, the cluster must have sufficient resources to accommodate the load while the node being updated is unavailable. In the `RollingUpdate` mode, the node is **replaced** by the updated node, i.e., an extra node appears in the cluster for the duration of the update. In cloud infrastructures, the `RollingUpdate` mode is convenient, for example, if there are no resources in the cluster to temporarily host the load from the node being updated.
+                      x-doc-default: Automatic
+                      enum:
+                        - Manual
+                        - Automatic
+                        - RollingUpdate
+                    automatic:
+                      type: object
+                      description: |
+                        Additional parameters for the `Automatic` mode.
+                      properties:
+                        drainBeforeApproval:
+                          type: boolean
+                          x-doc-default: true
+                          description: |
+                            Drain Pods from the nodes before approving disruption.
+
+                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            - for the nodeGroup `master` with a single node;
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                  oneOf:
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Automatic]
+                        automatic: {}
+                      not:
+                        required: [rollingUpdate]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [RollingUpdate]
+                        rollingUpdate: {}
+                      not:
+                        required: [automatic]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Manual]
+                      not:
+                        anyOf:
+                          - required: [rollingUpdate]
+                          - required: [automatic]
+                docker:
+                  description: |
+                    Docker settings for nodes.
+
+                    If used, `cri.type` must be set to `Docker`.
+
+                    > **Note!** the `Docker` is deprecated.
+                  type: object
+                  properties:
+                    maxConcurrentDownloads:
+                      type: integer
+                      description: |
+                        Set the max concurrent downloads for each pull.
+                      x-doc-default: 3
+                    manage:
+                      type: boolean
+                      x-doc-default: true
+                      description: |
+                        Enable Docker maintenance from bashible.
+                kubelet:
+                  type: object
+                  description: |
+                    Kubelet settings for nodes.
+                  properties:
+                    maxPods:
+                      type: integer
+                      description: |
+                        Set the max count of pods per node.
+                      x-doc-default: 110
+                    rootDir:
+                      type: string
+                      x-doc-default: /var/lib/kubelet
+                      description: |
+                        Directory path for managing kubelet files (volume mounts,etc).
+                    containerLogMaxSize:
+                      type: string
+                      default: 50Mi
+                      pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                      description: |
+                        Maximum log file size before it is rotated.
+
+                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                    containerLogMaxFiles:
+                      type: integer
+                      minimum: 1
+                      maximum: 20
+                      default: 4
+                      description: |
+                        How many rotated log files to store before deleting them.
+
+                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+    - name: v1alpha2
+      served: true
+      storage: false
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          description: Type of nodes in group
+          jsonPath: .spec.nodeType
+        - name: Ready
+          type: integer
+          description: Number of ready Kubernetes nodes in the group.
+          jsonPath: .status.ready
+        - name: Nodes
+          type: integer
+          description: Number of Kubernetes nodes (in any state) in the group.
+          jsonPath: .status.nodes
+        - name: UpToDate
+          type: integer
+          description: Number of up-to-date nodes in the group.
+          jsonPath: .status.upToDate
+        - name: Instances
+          type: integer
+          description: Number of instances (in any state) in the group.
+          jsonPath: .status.instances
+        - name: Desired
+          type: integer
+          description: Number of desired instances in the group.
+          jsonPath: .status.desired
+        - name: Min
+          type: integer
+          description: Minimal amount of instances in the group.
+          jsonPath: .status.min
+        - name: Max
+          type: integer
+          description: Maximum amount of instances in the group.
+          jsonPath: .status.max
+        - name: Standby
+          type: integer
+          description: Number of overprovisioned instances in the group.
+          jsonPath: .status.standby
+        - name: Status
+          type: string
+          description: Status message about group handling.
+          jsonPath: .status.conditionSummary.statusMessage
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes the runtime parameters of the node group.
+          required:
+            - spec
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
+                  maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
+            status:
+              type: object
+              required: []
+              properties:
+                ready:
+                  type: integer
+                  description: Number of ready Kubernetes nodes in the group.
+                nodes:
+                  type: integer
+                  description: Number of Kubernetes nodes (in any state) in the group.
+                instances:
+                  type: integer
+                  description: Number of instances (in any state) in the group.
+                desired:
+                  type: integer
+                  description: Number of desired machines in the group.
+                min:
+                  type: integer
+                  description: Minimal amount of instances in the group.
+                max:
+                  type: integer
+                  description: Maximum amount of instances in the group.
+                upToDate:
+                  type: integer
+                  description: Number of up-to-date nodes in the group.
+                standby:
+                  type: integer
+                  description: Number of overprovisioned instances in the group.
+                error:
+                  type: string
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
+                lastMachineFailures:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Machine's name.
+                      providerID:
+                        type: string
+                        description: Machine's ProviderID.
+                      ownerRef:
+                        type: string
+                        description: Machine owner's name.
+                      lastOperation:
+                        type: object
+                        properties:
+                          description:
+                            type: string
+                            description: Last operation's description.
+                          lastUpdateTime:
+                            type: string
+                            description: Timestamp of last status update for operation.
+                          state:
+                            type: string
+                            description: Machine's operation state.
+                          type:
+                            type: string
+                            description: Type of operation.
+                conditionSummary:
+                  type: object
+                  properties:
+                    statusMessage:
+                      description: Status message about group handling.
+                      type: string
+                    ready:
+                      description: Status of the condition summary.
+                      enum:
+                        - "True"
+                        - "False"
+                      type: string
+            spec:
+              type: object
+              required:
+                - nodeType
+              properties:
+                nodeType:
+                  description: |
+                    The type of nodes this group provides.
+                    - `Cloud` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
+                    - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
+                      node even of one of the cloud providers is enabled;
+                    - `Hybrid` — a static node (created manually or using any external tools) hosted in the cloud integrated with
+                      one of the cloud provider. This node has the CSI running, and it is managed by the
+                      cloud-controller-manager: the Node object automatically gets the information about the zone and region
+                      based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
+                      will be deleted in Kubernetes.
+                  type: string
+                  enum:
+                    - Cloud
+                    - Static
+                    - Hybrid
+                cri:
+                  type: object
+                  description: |
+                    Container runtime parameters.
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Container runtime type.
+
+                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+
+                        > **Note.** Docker support is deprecated.
+                      enum:
+                        - Docker
+                        - Containerd
+                        - NotManaged
+                    containerd:
+                      type: object
+                      description: |
+                        Containerd runtime parameters.
+
+                        If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    docker:
+                      type: object
+                      description: |
+                        Docker settings for nodes.
+
+                        > **Note!** the `Docker` is deprecated.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                        manage:
+                          type: boolean
+                          x-doc-default: true
+                          description: |
+                            Enable Docker maintenance from bashible.
+                    notManaged:
+                      type: object
+                      description: |
+                        Settings for not managed CRI for nodes.
+                      properties:
+                        criSocketPath:
+                          type: string
+                          description: |
+                            Path to CRI socket.
+                  oneOf:
+                    - properties:
+                        type:
+                          enum: [Docker]
+                        docker: {}
+                    - properties:
+                        type:
+                          enum: [Containerd]
+                        containerd: {}
+                    - properties:
+                        type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
+                    - properties:
+                        type:
+                          enum: [NotManaged]
+                cloudInstances:
+                  description: |
+                    Parameter for provisioning the cloud-based VMs.
+
+                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                  type: object
+                  required:
+                    - classReference
+                    - minPerZone
+                    - maxPerZone
+                  properties:
+                    zones:
+                      description: |
+                        List of availability zones to create instances in.
+
+                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
+                      type: array
+                      items:
+                        type: string
+                    minPerZone:
+                      description: |
+                        The minimum number of instances for the group in each zone.
+
+                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
+                      type: integer
+                      minimum: 0
+                    maxPerZone:
+                      description: |
+                        The maximum number of instances for the group in each zone.
+
+                        This value is used as the upper bound in cluster-autoscaler.
+                      type: integer
+                      minimum: 0
+                    maxUnavailablePerZone:
+                      description: |
+                        The maximum number of unavailable instances (during rollout) in the group in each zone.
+                      type: integer
+                      x-doc-default: 0
+                      minimum: 0
+                    maxSurgePerZone:
+                      description: |
+                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                      type: integer
+                      x-doc-default: 1
+                      minimum: 0
+                    standby:
+                      description: |
+                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1alpha2-spec-cloudinstances-zones).
+
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1alpha2-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
+                      pattern: "^[0-9]+%?$"
+                      x-kubernetes-int-or-string: true
+                    standbyHolder:
+                      description: |
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1alpha2-spec-cloudinstances-standby).
+                      type: object
+                      properties:
+                        notHeldResources:
+                          description: |
+                            Describes the resources that will not be held (consumed) by the standby holder.
+                          type: object
+                          properties:
+                            cpu:
+                              description: |
+                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                              pattern: "^[0-9]+m?$"
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              description: |
+                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              x-kubernetes-int-or-string: true
+                    classReference:
+                      description: |
+                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                      type: object
+                      properties:
+                        kind:
+                          description: |
+                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                          type: string
+                          enum:
+                            - OpenStackInstanceClass
+                            - GCPInstanceClass
+                            - VsphereInstanceClass
+                            - AWSInstanceClass
+                            - YandexInstanceClass
+                            - AzureInstanceClass
+                            - VCDInstanceClass
+                            - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
+                        name:
+                          description: |
+                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
+                          type: string
+                nodeTemplate:
+                  description: |
+                    Specification of some of the fields that will be maintained in all nodes of the group.
+                  x-doc-examples:
+                  - labels:
+                      environment: production
+                      app: warp-drive-ai
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                  type: object
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                        - environment: production
+                          app: warp-drive-ai
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                        - ai.fleet.com/discombobulate: "true"
+                    taints:
+                      type: array
+                      description: |
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+
+                        > Available fields: `effect`, `key`, and `values`.
+                      x-doc-examples:
+                      - - effect: NoExecute
+                          key: ship-class
+                          value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                          key:
+                            type: string
+                          value:
+                            type: string
+                chaos:
+                  description: |
+                    Chaos monkey settings.
+                  x-doc-examples:
+                  - mode: DrainAndDelete
+                    period: 24h
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        The chaos monkey mode:
+                        - `DrainAndDelete` — drains and deletes a node when triggered;
+                        - `Disabled` — leaves this NodeGroup intact.
+                      x-doc-default: Disabled
+                      enum:
+                        - Disabled
+                        - DrainAndDelete
+                    period:
+                      type: string
+                      description: |
+                        The time interval to use for the chaos monkey (can be specified in the [Go format](https://golang.org/pkg/time/#ParseDuration)).
+                      pattern: "^[0-9]+[mh]{1}$"
+                      x-doc-default: 6h
+                operatingSystem:
+                  type: object
+                  description: |
+                    Operating System settings for nodes.
+                  properties:
+                    manageKernel:
+                      type: boolean
+                      description: |
+                        Enable kernel maintenance from bashible.
+                      x-doc-default: true
+                disruptions:
+                  type: object
+                  description: |
+                    Disruptions settings for nodes.
+                  x-doc-examples:
+                    - approvalMode: Automatic
+                      automatic:
+                        drainBeforeApproval: false
+                        windows:
+                          - from: "06:00"
+                            to: "08:00"
+                            days:
+                              - Tue
+                              - Sun
+                  properties:
+                    approvalMode:
+                      type: string
+                      description: |
+                        The approval mode for disruptive updates:
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+
+                        If the `RollingUpdate` mode is not used, when updating, the node is first drained and then updated (rebooted) and put back into operation (uncordoned). Note that in this case, the cluster must have sufficient resources to accommodate the load while the node being updated is unavailable. In the `RollingUpdate` mode, the node is **replaced** by the updated node, i.e., an extra node appears in the cluster for the duration of the update. In cloud infrastructures, the `RollingUpdate` mode is convenient, for example, if there are no resources in the cluster to temporarily host the load from the node being updated.
+                      x-doc-default: Automatic
+                      enum:
+                        - Manual
+                        - Automatic
+                        - RollingUpdate
+                    automatic:
+                      type: object
+                      description: |
+                        Additional parameters for the `Automatic` mode.
+                      properties:
+                        drainBeforeApproval:
+                          type: boolean
+                          x-doc-default: true
+                          description: |
+                            Drain Pods from the nodes before approving disruption.
+
+                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            - for the nodeGroup `master` with a single node;
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                  oneOf:
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Automatic]
+                        automatic: {}
+                      not:
+                        required: [rollingUpdate]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [RollingUpdate]
+                        rollingUpdate: {}
+                      not:
+                        required: [automatic]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Manual]
+                      not:
+                        anyOf:
+                          - required: [rollingUpdate]
+                          - required: [automatic]
+                kubelet:
+                  type: object
+                  description: |
+                    Kubelet settings for nodes.
+                  properties:
+                    maxPods:
+                      type: integer
+                      description: |
+                        Set the max count of pods per node.
+                      x-doc-default: 110
+                    rootDir:
+                      type: string
+                      x-doc-default: /var/lib/kubelet
+                      description: |
+                        Directory path for managing kubelet files (volume mounts,etc).
+                    containerLogMaxSize:
+                      type: string
+                      default: 50Mi
+                      pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                      description: |
+                        Maximum log file size before it is rotated.
+
+                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                    containerLogMaxFiles:
+                      type: integer
+                      minimum: 1
+                      maximum: 20
+                      default: 4
+                      description: |
+                        How many rotated log files to store before deleting them.
+
+                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          description: Type of nodes in group
+          jsonPath: .spec.nodeType
+        - name: Ready
+          type: integer
+          description: Number of ready Kubernetes nodes in the group.
+          jsonPath: .status.ready
+        - name: Nodes
+          type: integer
+          description: Number of Kubernetes nodes (in any state) in the group.
+          jsonPath: .status.nodes
+        - name: UpToDate
+          type: integer
+          description: Number of up-to-date nodes in the group.
+          jsonPath: .status.upToDate
+        - name: Instances
+          type: integer
+          description: Number of instances (in any state) in the group.
+          jsonPath: .status.instances
+        - name: Desired
+          type: integer
+          description: Number of desired instances in the group.
+          jsonPath: .status.desired
+        - name: Min
+          type: integer
+          description: Minimal amount of instances in the group.
+          jsonPath: .status.min
+        - name: Max
+          type: integer
+          description: Maximum amount of instances in the group.
+          jsonPath: .status.max
+        - name: Standby
+          type: integer
+          description: Number of overprovisioned instances in the group.
+          jsonPath: .status.standby
+        - name: Status
+          type: string
+          description: Status message about group handling.
+          jsonPath: .status.conditionSummary.statusMessage
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+        - name: Synced
+          jsonPath: .status.deckhouse.synced
+          type: string
+          description: Status message if current version of the node group was processed by the operator.
+        - name: Observed
+          jsonPath: .status.deckhouse.observed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was observed by the operator last time.
+          priority: 1
+        - name: Processed
+          jsonPath: .status.deckhouse.processed.lastTimestamp
+          type: string
+          description: Timestamp when the resource was processed by the operator last time.
+          priority: 1
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes the runtime parameters of the node group.
+          x-doc-examples:
+          - |
+              ```yaml
+              # NodeGroup for cloud nodes in AWS.
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: test
+              spec:
+                nodeType: CloudEphemeral
+                cloudInstances:
+                  zones:
+                    - eu-west-1a
+                    - eu-west-1b
+                  minPerZone: 1
+                  maxPerZone: 2
+                  classReference:
+                    kind: AWSInstanceClass
+                    name: test
+                nodeTemplate:
+                  labels:
+                    tier: test
+              ---
+              # NodeGroup for static nodes on bare metal servers (or VMs).
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: worker
+              spec:
+                nodeType: Static
+              ```
+          required:
+            - spec
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
+                  maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
+            status:
+              type: object
+              required: []
+              properties:
+                ready:
+                  type: integer
+                  description: Number of ready Kubernetes nodes in the group.
+                nodes:
+                  type: integer
+                  description: Number of Kubernetes nodes (in any state) in the group.
+                instances:
+                  type: integer
+                  description: Number of instances (in any state) in the group.
+                desired:
+                  type: integer
+                  description: Number of desired machines in the group.
+                min:
+                  type: integer
+                  description: Minimal amount of instances in the group.
+                max:
+                  type: integer
+                  description: Maximum amount of instances in the group.
+                upToDate:
+                  type: integer
+                  description: Number of up-to-date nodes in the group.
+                standby:
+                  type: integer
+                  description: Number of overprovisioned instances in the group.
+                error:
+                  type: string
+                  description: "Error message about possible problems with the group handling."
+                kubernetesVersion:
+                  type: string
+                  description: "The current version of kubernetes on the nodes, or the version to which the nodes will be upgraded."
+                lastMachineFailures:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: Machine's name.
+                      providerID:
+                        type: string
+                        description: Machine's ProviderID.
+                      ownerRef:
+                        type: string
+                        description: Machine owner's name.
+                      lastOperation:
+                        type: object
+                        properties:
+                          description:
+                            type: string
+                            description: Last operation's description.
+                          lastUpdateTime:
+                            type: string
+                            description: Timestamp of last status update for operation.
+                          state:
+                            type: string
+                            description: Machine's operation state.
+                          type:
+                            type: string
+                            description: Type of operation.
+                conditionSummary:
+                  type: object
+                  properties:
+                    statusMessage:
+                      description: Status message about group handling.
+                      type: string
+                    ready:
+                      description: Status of the condition summary.
+                      enum:
+                        - "True"
+                        - "False"
+                      type: string
+                conditions:
+                  type: array
+                  x-kubernetes-patch-merge-key: "type"
+                  x-kubernetes-patch-strategy: "merge"
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Last time the condition transit from one status to another.
+                      message:
+                        description: Human readable message indicating details about last transition.
+                        type: string
+                      status:
+                        description: Status of the condition, one of True, False.
+                        type: string
+                      type:
+                        description: Type of node group condition.
+                        type: string
+                deckhouse:
+                  type: object
+                  properties:
+                    synced:
+                      type: string
+                      description: True if last observed version of the resource was successfully applied in the cluster.
+                    observed:
+                      type: object
+                      description: Contains last timestamp when the resource change was noted by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when a change of the resource was noted by the operator.
+                        checkSum:
+                          type: string
+                          description: The checksum of the last observed resource.
+                    processed:
+                      type: object
+                      description: Contains last timestamp when the resource was applied in the cluster by the operator and its checksum.
+                      properties:
+                        lastTimestamp:
+                          type: string
+                          description: Last timestamp when the resource was applied in the cluster.
+                        checkSum:
+                          type: string
+                          description: The checksum of the last applied resource.
+            spec:
+              type: object
+              required:
+                - nodeType
+              properties:
+                nodeType:
+                  description: |
+                    The type of nodes this group provides:
+                    - `CloudEphemeral` — nodes for this group will be automatically created (and deleted) in the cloud of the specified cloud provider;
+                    - `CloudPermanent` — nodes from ProviderClusterConfiguration will be created via dhctl;
+                    - `CloudStatic` — a static node (created manually or using any external tools) hosted in the cloud integrated with
+                      one of the cloud providers. This node has the CSI running, and it is managed by the
+                      cloud-controller-manager: the `Node` object automatically gets the information about the zone and region
+                      based on the cloud data; if a node gets deleted from the cloud, its corresponding Node object
+                      will be deleted in Kubernetes;
+                    - `Static` — a static node hosted on a bare metal or virtual machine. The cloud-controller-manager does not manage the
+                      node even if one of the cloud providers is enabled.
+                  type: string
+                  enum:
+                    - CloudEphemeral
+                    - CloudPermanent
+                    - CloudStatic
+                    - Static
+                nodeDrainTimeoutSecond:
+                  type: integer
+                  description: |
+                    Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  x-doc-d8Editions:
+                    - ee
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy:
+                        - `Exclusive` — no sharing (each GPU is fully allocated to a single Pod).
+                        - `TimeSlicing` — time-sliced sharing (multiple Pods can share one GPU concurrently by splitting GPU time).
+                        - `MIG` — use NVIDIA Multi-Instance GPU (MIG) to split each GPU into multiple instances (if supported by hardware).
+                      enum:
+                        - TimeSlicing
+                        - MIG
+                        - Exclusive
+                    mig:
+                      type: object
+                      description: |
+                        `MIG` sharing strategy parameters.
+                      properties:
+                        partedConfig:
+                          type: string
+                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          description: |
+                            MIG configuration name.
+                          x-doc-default: all-1g.5gb
+                    timeSlicing:
+                      description: |
+                        `TimeSlicing` sharing strategy parameters.
+                      type: object
+                      properties:
+                        partitionCount:
+                          type: number
+                          description: |
+                            Count of partition per GPU.
+                          x-doc-default: 4
+                          minimum: 1
+                          maximum: 100
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
+                  oneOf:
+                    - properties:
+                        sharing:
+                          enum: [TimeSlicing]
+                        timeSlicing: {}
+                    - properties:
+                        sharing:
+                          enum: [MIG]
+                        mig: {}
+                    - properties:
+                        sharing:
+                          enum: [Exclusive]
+                        exclusive: {}
+                cri:
+                  type: object
+                  description: |
+                    Container runtime parameters.
+                  properties:
+                    type:
+                      type: string
+                      description: |
+                        Container runtime type.
+
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
+
+                        > **Note.** Docker support is deprecated.
+                      enum:
+                        - Docker
+                        - Containerd
+                        - ContainerdV2
+                        - NotManaged
+                    containerd:
+                      type: object
+                      description: |
+                        Containerd runtime parameters.
+
+                        If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    containerdV2:
+                      type: object
+                      description: |
+                        ContainerdV2 runtime parameters.
+
+                        If used, `cri.type` must be set to `ContainerdV2`.
+
+                        When using `ContainerdV2`, `CgroupsV2` will be used (providing improved security and resource management).
+
+                        To use `ContainerdV2` as a container runtime, the nodes in the group must meet the following requirements:
+
+                        - Support for `CgroupsV2`.
+                        - Linux kernel version `5.8` or newer.
+                        - Systemd version `244` or newer.
+                        - Support for `erofs` kernel module.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    docker:
+                      type: object
+                      x-doc-deprecated: true
+                      description: |
+                        Docker settings for nodes.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                        manage:
+                          type: boolean
+                          x-doc-default: true
+                          description: |
+                            Enable Docker maintenance from bashible.
+                    notManaged:
+                      type: object
+                      description: |
+                        Settings for not managed CRI for nodes.
+                      properties:
+                        criSocketPath:
+                          type: string
+                          description: |
+                            Path to CRI socket.
+                  oneOf:
+                    - properties:
+                        type:
+                          enum: [Docker]
+                        docker: {}
+                    - properties:
+                        type:
+                          enum: [Containerd]
+                        containerd: {}
+                    - properties:
+                        type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
+                    - properties:
+                        type:
+                          enum: [NotManaged]
+                staticInstances:
+                  description: |
+                    Parameter for provisioning static machines to the cluster.
+                  type: object
+                  x-kubernetes-validations:
+                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                      rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
+                  properties:
+                    labelSelector:
+                      description: A label selector is a label query over a set
+                        of `staticInstances` resources. The result of matchLabels and matchExpressions
+                        are ANDed. An empty label selector matches all objects.
+                        A null label selector matches no objects.
+                      properties:
+                        matchExpressions:
+                          type: array
+                          description: A list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: A label selector requirement is a selector
+                              that contains values, a key, and an operator that
+                              relates the key and values.
+                            oneOf:
+                              - properties:
+                                  operator:
+                                    enum: [Exists, DoesNotExist]
+                                required: [key, operator]
+                                not:
+                                  required: [values]
+                              - properties:
+                                  operator:
+                                    enum: [In, NotIn]
+                                required: [key, operator, values]
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: operator represents a key's relationship
+                                  to a set of values. Valid operators are In, NotIn,
+                                  Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: values is an array of string values.
+                                  If the operator is In or NotIn, the values array
+                                  must be non-empty. If the operator is Exists or
+                                  DoesNotExist, the values array must be empty.
+                                  This array is replaced during a strategic merge
+                                  patch.
+                                type: array
+                                items:
+                                  type: string
+                                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                                  minLength: 1
+                                  maxLength: 63
+                            type: object
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: matchLabels is a map of {key,value} pairs.
+                            A single {key,value} in the matchLabels map is equivalent
+                            to an element of matchExpressions, whose key field is
+                            "key", the operator is "In", and the values array contains
+                            only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    count:
+                      description: |
+                          The number of existing `staticInstances` to bootstrap and add to the cluster. In a NodeGroup of type Static or CloudStatic, you can explicitly specify the number of nodes using this parameter. This sets the expected number of nodes — DKP uses this value for state control and automation purposes.
+                      type: integer
+                      minimum: 0
+                      default: 0
+                cloudInstances:
+                  description: |
+                    Parameter for provisioning the cloud-based VMs.
+
+                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                  type: object
+                  required:
+                    - classReference
+                    - minPerZone
+                    - maxPerZone
+                  properties:
+                    quickShutdown:
+                      type: boolean
+                      x-doc-deprecated: true
+                      description: |
+                        Lowers CloudEphemeral machine drain timeout to 5 minutes.
+                    zones:
+                      description: |
+                        List of availability zones to create instances in.
+
+                        The default value depends on the cloud provider selected and usually corresponds to all zones of the region being used.
+                      x-doc-examples: [[Helsinki, Espoo, Tampere]]
+                      type: array
+                      items:
+                        type: string
+                    minPerZone:
+                      description: |
+                        The minimum number of instances for the group in each zone.
+
+                        This value is used in the `MachineDeployment` object and as a lower bound in cluster-autoscaler.
+                      type: integer
+                      minimum: 0
+                    maxPerZone:
+                      description: |
+                        The maximum number of instances for the group in each zone.
+
+                        This value is used as the upper bound in cluster-autoscaler.
+                      type: integer
+                      minimum: 0
+                    priority:
+                      type: integer
+                      description: |
+                        Priority of the node group.
+
+                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them.
+
+                        Using priorities can be convenient to prefer ordering cheaper nodes (for example, spot instances) over more expensive ones.
+                    maxUnavailablePerZone:
+                      description: |
+                        The maximum number of unavailable instances (during rollout) in the group in each zone.
+                      type: integer
+                      x-doc-default: 0
+                      minimum: 0
+                    maxSurgePerZone:
+                      description: |
+                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                      type: integer
+                      x-doc-default: 1
+                      minimum: 0
+                    standby:
+                      description: |
+                        The summary number of overprovisioned nodes for this `NodeGroup` in all [zones](#nodegroup-v1-spec-cloudinstances-zones).
+
+                        An overprovisioned node is a cluster node on which resources are reserved that are available at any time for scaling. The presence of such a node allows the cluster autoscaler not to wait for node initialization (which may take several minutes), but to immediately place a load on it.
+
+                        The value can be an absolute number (for example, 2) or a percentage of desired nodes (for example, 10%). If a percentage is specified, the absolute number is calculated based on the percentage of the maximum number of nodes (the [maxPerZone](#nodegroup-v1-spec-cloudinstances-maxperzone) parameter) rounded down, but not less than one.
+                      pattern: "^[0-9]+%?$"
+                      x-kubernetes-int-or-string: true
+                    standbyHolder:
+                      description: |
+                        Amount of reserved resources.
+
+                        Used to determine whether to order [overprovisioned nodes](#nodegroup-v1-spec-cloudinstances-standby).
+                      type: object
+                      properties:
+                        overprovisioningRate:
+                          type: integer
+                          minimum: 1
+                          maximum: 80
+                          x-doc-default: 50
+                          description: |
+                            Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
+                        notHeldResources:
+                          x-doc-deprecated: true
+                          description: |
+                            Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
+
+                            Describes the resources that will not be held (consumed) by the standby holder.
+                          type: object
+                          properties:
+                            cpu:
+                              description: |
+                                Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of cpus (for example, 2) as well as a milli representation (for example, 1500m).
+                              pattern: "^[0-9]+m?$"
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              description: |
+                                Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
+
+                                The value can be an absolute number of bytes (for example, 128974848) as well as a fixed-point number using one of memory suffixes: G, Gi, M, Mi.
+                              pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                              x-kubernetes-int-or-string: true
+                    classReference:
+                      description: |
+                        The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                      type: object
+                      properties:
+                        kind:
+                          description: |
+                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                          type: string
+                          enum:
+                            - OpenStackInstanceClass
+                            - GCPInstanceClass
+                            - VsphereInstanceClass
+                            - AWSInstanceClass
+                            - YandexInstanceClass
+                            - AzureInstanceClass
+                            - VCDInstanceClass
+                            - ZvirtInstanceClass
+                            - DynamixInstanceClass
+                            - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
+                        name:
+                          description: |
+                            The name of the required `InstanceClass` object (e.g., `finland-medium`).
+                          type: string
+                nodeTemplate:
+                  description: |
+                    Specification of some of the fields that will be maintained in all nodes of the group.
+                  x-doc-examples:
+                  - labels:
+                      environment: production
+                      app: warp-drive-ai
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                  type: object
+                  properties:
+                    labels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.labels` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                      - environment: production
+                        app: warp-drive-ai
+                    annotations:
+                      type: object
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        Similar to the standard `metadata.annotations` [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                      x-doc-examples:
+                      - ai.fleet.com/discombobulate: "true"
+                    taints:
+                      type: array
+                      description: |
+                        Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
+
+                        > Available fields: `effect`, `key`, and `values`.
+                      x-doc-examples:
+                      - - effect: NoExecute
+                          key: ship-class
+                          value: frigate
+                      items:
+                        type: object
+                        properties:
+                          effect:
+                            type: string
+                            enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                          key:
+                            type: string
+                          value:
+                            type: string
+                chaos:
+                  description: |
+                    Chaos monkey settings.
+                  x-doc-examples:
+                  - mode: DrainAndDelete
+                    period: 24h
+                  type: object
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        The chaos monkey mode:
+                        - `DrainAndDelete` — drains and deletes a node when triggered;
+                        - `Disabled` — leaves this NodeGroup intact.
+                      x-doc-default: Disabled
+                      enum:
+                        - Disabled
+                        - DrainAndDelete
+                    period:
+                      type: string
+                      description: |
+                        The time interval to use for the chaos monkey.
+
+                        It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+                      pattern: "^([0-9]+h([0-9]+m)?|[0-9]+m)$"
+                      x-doc-default: 6h
+                operatingSystem:
+                  type: object
+                  description: |
+                    Operating System settings for nodes.
+                  properties:
+                    manageKernel:
+                      type: boolean
+                      description: |
+                        This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
+                      x-doc-default: true
+                      x-doc-deprecated: true
+                disruptions:
+                  type: object
+                  description: |
+                    Disruptions settings for nodes.
+                  x-doc-examples:
+                    - approvalMode: Automatic
+                      automatic:
+                        drainBeforeApproval: false
+                        windows:
+                          - from: "06:00"
+                            to: "08:00"
+                            days:
+                              - Tue
+                              - Sun
+                  properties:
+                    approvalMode:
+                      type: string
+                      description: |
+                        The approval mode for disruptive updates:
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Automatic` —  automatically approve disruption-involving updates. Nodes could be drained automatically before reboot, as configured by the [drainBeforeApproval](#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) option.
+                        - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
+
+                        If the `RollingUpdate` mode is not used, when updating, the node is first drained and then updated (rebooted) and put back into operation (uncordoned). Note that in this case, the cluster must have sufficient resources to accommodate the load while the node being updated is unavailable. In the `RollingUpdate` mode, the node is **replaced** by the updated node, i.e., an extra node appears in the cluster for the duration of the update. In cloud infrastructures, the `RollingUpdate` mode is convenient, for example, if there are no resources in the cluster to temporarily host the load from the node being updated.
+                      x-doc-default: Automatic
+                      enum:
+                        - Manual
+                        - Automatic
+                        - RollingUpdate
+                    automatic:
+                      type: object
+                      description: |
+                        Additional parameters for the `Automatic` mode.
+                      properties:
+                        drainBeforeApproval:
+                          type: boolean
+                          x-doc-default: true
+                          description: |
+                            Drain Pods from the nodes before approving disruption.
+
+                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            - for the nodeGroup `master` with a single node;
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                    rollingUpdate:
+                      type: object
+                      description: |
+                        Additional parameters for the `RollingUpdate` mode.
+                      properties:
+                        windows:
+                          type: array
+                          description: |
+                            Time windows for node disruptive updates.
+                          items:
+                            type: object
+                            required:
+                              - from
+                              - to
+                            properties:
+                              from:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["13:00"]
+                                description: |
+                                  Start time of disruptive update window (UTC timezone).
+                              to:
+                                type: string
+                                pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                                x-doc-examples: ["18:30"]
+                                description: |
+                                  End time of disruptive update window (UTC timezone).
+                              days:
+                                type: array
+                                description: |
+                                  Days of the week when node could be updated.
+                                x-doc-examples: [Mon, Wed]
+                                items:
+                                  type: string
+                                  description: Day of the week.
+                                  enum:
+                                    - Mon
+                                    - Tue
+                                    - Wed
+                                    - Thu
+                                    - Fri
+                                    - Sat
+                                    - Sun
+                  oneOf:
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Automatic]
+                        automatic: {}
+                      not:
+                        required: [rollingUpdate]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [RollingUpdate]
+                        rollingUpdate: {}
+                      not:
+                        required: [automatic]
+                    - required: [approvalMode]
+                      properties:
+                        approvalMode:
+                          enum: [Manual]
+                      not:
+                        anyOf:
+                          - required: [rollingUpdate]
+                          - required: [automatic]
+                kubelet:
+                  type: object
+                  default: {}
+                  description: |
+                    Kubelet settings for nodes.
+                  properties:
+                    maxPods:
+                      type: integer
+                      description: |
+                        Set the max count of pods per node.
+                      x-doc-default: 110
+                    rootDir:
+                      type: string
+                      x-doc-default: /var/lib/kubelet
+                      description: |
+                        Directory path for managing kubelet files (volume mounts,etc).
+                    containerLogMaxSize:
+                      type: string
+                      default: 50Mi
+                      pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                      description: |
+                        Maximum log file size before it is rotated.
+                    containerLogMaxFiles:
+                      type: integer
+                      minimum: 1
+                      maximum: 20
+                      default: 4
+                      description: |
+                        How many rotated log files to store before deleting them.
+                    resourceReservation:
+                      default: {}
+                      type: object
+                      oneOf:
+                      - properties:
+                          mode:
+                            enum: ["Static"]
+                        required:
+                          - static
+                      - properties:
+                          mode:
+                            enum: ["Off", "Auto"]
+                      description: |
+                        Management of resource reservation for system daemons on a node.
+
+                        More info in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#system-reserved).
+                      properties:
+                        mode:
+                          type: string
+                          default: "Auto"
+                          description: |
+                            Defines the system resource reservation mode:
+
+                            * `Off` — disables resource reservation.
+                            * `Auto` — reserves resources based on the Node capacity.
+                            * `Static` — reserves resources based on the values provided by the user via the `static` parameter.
+
+                            Note that currently we do not use a dedicated group `cgroup` for resource reservation (`-system-reserved-cgroup` is not used).
+                        static:
+                          type: object
+                          anyOf:
+                          - required: ["cpu"]
+                          - required: ["memory"]
+                          - required: ["ephemeralStorage"]
+                          description: |
+                            Resource reservation parameters for the 'Static' mode.
+                          properties:
+                            cpu:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[m]'
+                            memory:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                            ephemeralStorage:
+                              x-kubernetes-int-or-string: true
+                              anyOf:
+                                - type: integer
+                                - type: string
+                              pattern: '\d+[Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k|m]'
+                    topologyManager:
+                      type: object
+                      description: |
+                        Controls a topology manager.
+
+                        The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
+
+                        In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
+
+                        For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: |
+                            Enables Topology Management on a node.
+                        scope:
+                          type: string
+                          default: Container
+                          description: |
+                            Defines granularity with which resources are aligned:
+                            - `Container`. The preferred resources are computed for a container. The computation does not take into account that multiple containers may belong to the same pod.
+                            - `Pod`. The preferred resources are computed for the pod. All containers in the pod are treated as a whole in the computation.
+                          enum:
+                            - Container
+                            - Pod
+                        policy:
+                          type: string
+                          default: None
+                          description: |
+                            Resource/topology alignment policy to use when scheduling a pod.
+
+                            There are four supported policies:
+                            - `None` — no resource alignment (default).
+                            - `BestEffort` — a preferred NUMA node is defined for each container. If there are no preferred nodes for the pod available, it will be scheduled to a node without taking topology manager data into account, while the already running pod will keep running.
+                            - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
+                            - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
+
+                            More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                          enum:
+                            - None
+                            - BestEffort
+                            - Restricted
+                            - SingleNumaNode
+                update:
+                  type: object
+                  properties:
+                    maxConcurrent:
+                      x-kubernetes-int-or-string: true
+                      anyOf:
+                        - type: integer
+                        - type: string
+                      default: 1
+                      pattern: "^[1-9][0-9]*%?$"
+                      description: |
+                        Maximum number of concurrently updating nodes.
+
+                        Can be set as absolute count or as a percent of total nodes.
+                fencing:
+                  type: object
+                  description: |
+                    Enable fencing controller for this group.
+                  required: [mode]
+                  properties:
+                    mode:
+                      type: string
+                      enum:
+                        - "Watchdog"
+                      description: |
+                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
+
+                        The Watchdog implementation includes the following components:
+
+                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
+
+                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
+
+                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
+
+                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
+
+
+              oneOf:
+                - properties:
+                    nodeType:
+                      enum:
+                        - CloudEphemeral
+                    staticInstances:
+                      not: {}
+                  required:
+                    - cloudInstances
+                - properties:
+                    nodeType:
+                      enum:
+                        - Static
+                        - CloudStatic
+                    cloudInstances:
+                      not: {}
+                - properties:
+                    nodeType:
+                      enum:
+                        - CloudPermanent
+                    staticInstances:
+                      not: {}

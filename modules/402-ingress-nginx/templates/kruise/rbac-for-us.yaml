@@ -1,0 +1,621 @@
+---
+# Source: kruise/templates/manager.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kruise
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:ingress-nginx:kruise-role
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - patch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets/status
+    verbs:
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - daemonsets/scale
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "batch"
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - controllerrevisions
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - advancedcronjobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - advancedcronjobs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - broadcastjobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - broadcastjobs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - clonesets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - clonesets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - containerrecreaterequests
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - containerrecreaterequests/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - daemonsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - daemonsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - ephemeraljobs
+    verbs:
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - ephemeraljobs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - imagepulljobs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - imagepulljobs/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - nodeimages
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - nodeimages/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - nodepodprobes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - nodepodprobes/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - persistentpodstates
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - persistentpodstates/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - podprobemarkers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - podprobemarkers/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - resourcedistributions
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - resourcedistributions/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - sidecarsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - sidecarsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - uniteddeployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - uniteddeployments/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - workloadspreads
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - workloadspreads/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/ephemeralcontainers
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - policy.kruise.io
+    resources:
+      - podunavailablebudgets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - policy.kruise.io
+    resources:
+      - podunavailablebudgets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups: 
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+# Source: kruise/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:ingress-nginx:kruise-rolebinding
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:ingress-nginx:kruise-role
+subjects:
+  - kind: ServiceAccount
+    name: kruise
+    namespace: d8-ingress-nginx
+---
+# Source: kruise/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kruise-leader-election-role
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+---
+# Source: kruise/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kruise-leader-election-rolebinding
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kruise-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: kruise
+    namespace: d8-ingress-nginx
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kruise-state-metrics
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: ["apps"]
+  resources:
+  - "deployments/kruise-state-metrics"
+  resourceNames: ["kruise"]
+  verbs: ["get"]
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kruise-state-metrics
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kruise-state-metrics
+subjects:
+- kind: User
+  name: d8-monitoring:scraper
+- kind: ServiceAccount
+  name: prometheus
+  namespace: d8-monitoring
+{{- end }}

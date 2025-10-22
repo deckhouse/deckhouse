@@ -1,0 +1,134 @@
+kind: OpenStackCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, layout, internalNetworkNames, podNetworkMode, instances, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [OpenStackCloudDiscoveryData]
+      layout:
+        type: string
+        enum: [Standard, StandardWithNoRouter, Simple, SimpleWithInternalNetwork]
+      internalNetworkNames:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      externalNetworkNames:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        uniqueItems: true
+      podNetworkMode:
+        type: string
+        enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      instances:
+        type: object
+        additionalProperties: false
+        properties:
+          sshKeyPairName: &instancesSshKeyPairName
+            type: string
+            minLength: 1
+          imageName: &instancesImageName
+            type: string
+            minLength: 1
+          mainNetwork: &instancesMainNetwork
+            type: string
+            minLength: 1
+          additionalNetworks: &instancesAdditionalNetworks
+            type: array
+            items:
+              type: string
+              minLength: 1
+            minItems: 1
+            uniqueItems: true
+          securityGroups: &instancesSecurityGroups
+            type: array
+            items:
+              type: string
+      loadBalancer:
+        type: object
+        additionalProperties: false
+        properties:
+          subnetID:
+            type: string
+            minLength: 1
+          floatingNetworkID:
+            type: string
+            minLength: 1
+    oneOf:
+    - required: [externalNetworkNames, loadBalancer]
+      properties:
+        layout:
+          enum: [Standard]
+          type: string
+        externalNetworkNames:
+          minItems: 1
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork, securityGroups]
+          additionalProperties: false
+          properties:
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
+            securityGroups: *instancesSecurityGroups
+        loadBalancer:
+          required: [subnetID, floatingNetworkID]
+    - required: [externalNetworkNames]
+      properties:
+        layout:
+          enum: [StandardWithNoRouter]
+          type: string
+        externalNetworkNames:
+          minItems: 1
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork, additionalNetworks, securityGroups]
+          additionalProperties: false
+          properties:
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
+            additionalNetworks: *instancesAdditionalNetworks
+            securityGroups: *instancesSecurityGroups
+    - properties:
+        layout:
+          enum: [Simple]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork]
+          additionalProperties: false
+          properties:
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork
+    - properties:
+        layout:
+          enum: [SimpleWithInternalNetwork]
+          type: string
+        instances:
+          type: object
+          required: [sshKeyPairName, imageName, mainNetwork]
+          additionalProperties: false
+          properties:
+            sshKeyPairName: *instancesSshKeyPairName
+            imageName: *instancesImageName
+            mainNetwork: *instancesMainNetwork

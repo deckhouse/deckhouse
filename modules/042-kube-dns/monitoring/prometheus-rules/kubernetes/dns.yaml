@@ -1,0 +1,22 @@
+- name: d8-kube-dns.coredns
+  rules:
+  - alert: KubernetesCoreDNSHasCriticalErrors
+    expr: sum by (pod) (coredns_panics_total{job="kube-dns"}) > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: kube-dns
+      d8_component: kube-dns
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Critical errors found in CoreDNS.
+      description: |-
+        Deckhouse has detected at least one critical error in the CoreDNS pod {{$labels.pod}}.
+
+        To resolve the issue, review the container logs:
+        
+        ```bash
+        d8 k -n kube-system logs {{$labels.pod}}
+        ```

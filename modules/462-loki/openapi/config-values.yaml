@@ -1,0 +1,317 @@
+type: object
+properties:
+  storageClass:
+    oneOf:
+      - type: string
+      - type: boolean
+        enum:
+          - false
+    x-examples:
+      - false
+      - default
+    description: |
+      The name of StorageClass that will be used in the cluster by default.
+
+      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
+
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+  diskSizeGigabytes:
+    type: integer
+    description: >
+      Initial disk size for log storage or PVC size when specifying the
+      [storageClass](#parameters-storageclass) parameters.
+
+      You should manually specify the required disk size for storing logs for
+      the period defined by the `retentionPeriodHours` parameter.
+
+      The
+      [extended-monitoring](../extended-monitoring/configuration.html#namespaced-kubernetes-objects)
+      module automatically monitors the percentage of used disk space.
+    x-doc-default: 2
+    default: 2
+  retentionPeriodHours:
+    type: integer
+    description: |
+      The desired minimum log retention period in hours.
+
+      This parameter does not affect the log retention depth, since Loki only deletes old data when the disk is full.
+
+      If Loki deletes data that has not yet reached the specified retention period, you will receive a `LokiInsufficientDiskForRetention` alert. In this case, you should either increase the disk size or decrease the value of this parameter.
+    x-doc-default: 168
+    default: 168
+  storeSystemLogs:
+    type: boolean
+    default: true
+    x-doc-default: 'true'
+    description: |
+      Save logs from the `d8-*` namespaces to loki.
+
+      The [log-shipper](../log-shipper/) module must be enabled.
+  lokiConfig:
+    type: object
+    default: {}
+    description: |
+      Loki configuration options available for tuning.
+
+      See [Loki documentation](https://grafana.com/docs/loki/v2.9.x/configure/) for more information.
+
+      > Caution! Incorrect settings may lead to the malfunction of Loki.
+    properties:
+      ingestionRateMB:
+        type: number
+        description: |
+          Overall ingestion rate limit in megabytes per second.
+        default: 4
+      ingestionBurstSizeMB:
+        type: number
+        description: |
+          Overall ingestion burst size in megabytes. E.g., maximum push request size.
+        default: 6
+      maxStreamsPerUser:
+        type: integer
+        description: |
+          The maximum total number of streams for the Loki instance.
+
+          Each stream has unique labels. The number of streams is the number of unique label sets. E. g. `{job="my-app", instance="kube-node-1", namespace="production", pod_name="backend-79dbf6fcb7-v5gs7", app="backend"}`.
+
+          0 means unlimited.
+        default: 0
+      maxLabelNamesPerSeries:
+        type: integer
+        description: |
+          The maximum number of unique label names per series (log stream).
+        default: 32
+      maxEntriesLimitPerQuery:
+        type: integer
+        description: |
+          The maximum number of entries returned for the query.
+        default: 5000
+      maxChunksPerQuery:
+        type: integer
+        description: |
+          The maximum number of chunks that can be fetched per query.
+        default: 2000000
+      perStreamRateLimit:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(KB|MB|GB)?$'
+          - type: number
+        description: |
+          Maximum byte rate per second per stream. Can be either a number or a string with a unit (KB, MB, GB).
+        default: "3MB"
+      perStreamRateLimitBurst:
+        oneOf:
+          - type: string
+            pattern: '^[0-9]+(KB|MB|GB)?$'
+          - type: number
+        description: |
+          Maximum burst size per stream. Can be either a number or a string with a unit (KB, MB, GB).
+        default: "15MB"
+      grpcServerMaxSendMsgSize:
+        type: integer
+        description: |
+          Limit on the size of a gRPC message this server can send in bytes.
+        default: 4194304
+      grpcServerMaxRecvMsgSize:
+        type: integer
+        description: |
+          Limit on the size of a gRPC message this server can receive in bytes.
+        default: 104857600
+      grpcServerMaxConcurrentStreams:
+        type: integer
+        description: |
+          Limit on the number of concurrent streams for gRPC calls.
+        default: 100
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: >
+      The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, `nodeSelector` will be determined
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: >
+      The same as the Pods' `spec.tolerations` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, `tolerations` will be determined
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string
+  resourcesManagement:
+    description: |
+      Settings for CPU and memory requests and limits by Loki pods.
+    default: {}
+    x-examples:
+      - mode: VPA
+        vpa:
+          mode: Auto
+          cpu:
+            min: 50m
+            max: 2
+            limitRatio: 1.5
+          memory:
+            min: 256Mi
+            max: 2Gi
+            limitRatio: 1.5
+      - mode: Static
+        static:
+          requests:
+            cpu: 55m
+            memory: 256Mi
+          limits:
+            cpu: 2
+            memory: 2Gi
+    properties:
+      mode:
+        type: string
+        description: |
+          Resource management mode:
+          - `Static` is a classic one. In it, you specify requests/limits. The parameters of this mode are defined in the [static](#parameters-resourcesmanagement-static) parameter section;
+          - `VPA` mode uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-resourcesmanagement-vpa) parameter section.
+        enum:
+          - VPA
+          - Static
+        default: VPA
+      vpa:
+        type: object
+        default: {}
+        description: |
+          Resource management options for the `VPA` mode.
+        properties:
+          mode:
+            type: string
+            description: |
+              VPA operating mode.
+            enum:
+              - Initial
+              - Auto
+            default: Auto
+          cpu:
+            type: object
+            default: {}
+            description: |
+              CPU-related VPA settings.
+            properties:
+              max:
+                description: |
+                  The maximum value that the VPA can set for the CPU requests.
+                default: 2
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+              min:
+                description: |
+                  The minimum value that the VPA can set for the CPU requests.
+                default: 50m
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+              limitRatio:
+                type: number
+                examples:
+                  - 1.5
+                description: |
+                  The CPU limits/requests ratio.
+
+                  This ratio is used for calculating the initial CPU limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+          memory:
+            type: object
+            default: {}
+            description: |
+              Memory-related VPA settings.
+            properties:
+              max:
+                description: |
+                  The maximum memory requests the VPA can set.
+                default: 2Gi
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+              min:
+                description: |
+                  The minimum memory requests the VPA can set.
+                default: 256Mi
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+              limitRatio:
+                type: number
+                examples:
+                  - 1.5
+                description: |
+                  The memory limits/requests ratio.
+
+                  This ratio is used for calculating the initial memory limits for a pod.
+
+                  If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+      static:
+        type: object
+        description: |
+          Resource management options for the `Static` mode.
+        properties:
+          requests:
+            type: object
+            description: |
+              Resource requests settings for pods.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+                description: |
+                  Configuring CPU requests.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Configuring memory requests.
+          limits:
+            type: object
+            description: |
+              Configuring CPU and memory limits.
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+m?$'
+                  - type: number
+                description: |
+                  Configuring CPU limits.
+              memory:
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                description: |
+                  Configuring memory limits.
+  allowDeleteLogs:
+    type: boolean
+    default: false
+    description: |
+      Allow logs deletion using /loki/api/v1/delete endpoints.

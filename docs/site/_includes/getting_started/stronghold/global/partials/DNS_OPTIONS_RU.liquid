@@ -1,0 +1,75 @@
+<ul>
+  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
+    <ul>
+      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+        DNS-шаблоном</a> (например, <code>%s.kube.company.my</code>), то добавьте
+        {%- if page.platform_code == 'aws' %} соответствующую wildcard CNAME-запись со значением адреса балансировщика. Получить адрес балансировщика:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+        {%- elsif page.platform_code == 'vsphere' %} соответствующую wildcard A-запись со значением IP-адреса master-узла.
+        {%- else %} соответствующую wildcard A-запись со значением IP-адреса балансировщика.{% if page.platform_code != 'existing' %} Получить IP-адрес балансировщика:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}{% endif %}
+        {%- endif -%}
+      </li>
+      <li>
+        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>), то добавьте
+         {%- if page.platform_code == 'aws' %} CNAME-записи
+         {%- else %} А или CNAME-записи
+         {%- endif -%} с адресом {% if page.platform_code == 'vsphere' %}master-узла{% else %}балансировщика{% endif %}, для следующих DNS-имен сервисов согласно шаблону DNS-имен:
+        <ul>
+          <li><b title="Например, <em>&quot;api-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
+          <li><b title="Например, <em>&quot;argocd-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">argocd</b></li>
+          <li><b title="Например,  <em>&quot;dashboard-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dashboard</b></li>
+          <li><b title="Например, <em>&quot;documentation-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">documentation</b></li>
+          <li><b title="Например,  <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
+          <li><b title="Например, <em>&quot;grafana-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">grafana</b></li>
+          <li><b title="Например, <em>&quot;hubble-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">hubble</b></li>
+          <li><b title="Например, <em>&quot;istio-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">istio</b></li>
+          <li><b title="Например, <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">istio-api-proxy</b></li>
+          <li><b title="Например,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
+          <li><b title="Например,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">openvpn-admin</b></li>
+          <li><b title="Например,  <em>&quot;prometheus-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">prometheus</b></li>
+          <li><b title="Например, <em>&quot;status-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">status</b></li>
+          <li><b title="Например,  <em>&quot;upmeter-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">upmeter</b></li>
+        </ul>
+        {%- if page.platform_code == 'aws' %}<p>Получить адрес балансировщика:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+</p>
+        {%- elsif page.platform_code != 'vsphere' and page.platform_code != 'existing' %}<p>Получить IP-адрес балансировщика:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid %}
+</p>
+        {%- endif -%}
+      </li>
+    </ul>
+  </li>
+  <li><p>Если вы не имеете под управлением DNS-сервер, то на компьютере, с которого необходим доступ к сервисам Deckhouse, добавьте статические записи в файл <code>/etc/hosts</code> (<code>%SystemRoot%\system32\drivers\etc\hosts</code> для Windows).</p>
+  <p>Для добавления записей в файл <code>/etc/hosts</code> на <b>на Linux-компьютере</b> с которого необходим доступ к сервисам Deckhouse (далее — <b>ПК</b>), выполните следующие шаги:</p>
+<ul>
+<li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code> (например, <code>%s.kube.company.my</code>):
+{% snippetcut %}
+```shell
+DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
+```
+{% endsnippetcut %}
+</p></li>
+{% if page.platform_code != 'vsphere' and page.platform_code != 'existing' %}
+<li><p><b>[Выполните на master-узле]</b> Определите IP-адрес балансировщика:
+{% include getting_started/global/partials/GET_BALANCER_ADDR.liquid mode="hosts" %}</p>
+</li>
+{%- endif -%}
+<li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Укажите IP-адрес балансировщика в переменной <code>BALANCER_IP</code>:
+{% snippetcut %}
+```shell
+BALANCER_IP='<BALANCER_IP>'
+```
+{% endsnippetcut %}
+</p>
+</li>
+<li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
+{% snippetcut %}
+```shell
+for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+```
+{% endsnippetcut %}
+</li>
+</ul></li>
+</ul>

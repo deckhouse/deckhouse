@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:manage:permission:subsystem:networking:view_resources
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+rules:
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - prioritylevelconfigurations
+      - flowschemas
+    verbs:
+      - get
+      - list
+      - watch

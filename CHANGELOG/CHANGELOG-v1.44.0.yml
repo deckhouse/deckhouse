@@ -1,0 +1,229 @@
+admission-policy-engine:
+  features:
+    - summary: >-
+        OperationPolicy could be run in the `Dryrun` or `Warn` mode. Fix OperationPolicy label
+        selectors
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3900
+  fixes:
+    - summary: Refactor `admission-policy-engine` monitoring rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3901
+candi:
+  features:
+    - summary: 'Upgraded patch versions of Kubernetes images: `v1.23.16`, `v1.24.10`, and `v1.25.6`.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3606
+      impact: Kubernetes control-plane components will restart, and kubelet will restart.
+  fixes:
+    - summary: Fixes in CentOS and Ubuntu based distros for normal node bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3863
+    - summary: Reorder swap disabling steps.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3772
+    - summary: fix modules_images_tags hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3747
+    - summary: fix flowschema apiversion for k8s < 1.23
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3738
+    - summary: fix registry packages tmpdir cleanup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3709
+    - summary: refactor start_kubelet step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3647
+ci:
+  features:
+    - summary: Add 1.26 kubernetes e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3774
+  fixes:
+    - summary: Fix e2e upgrade test.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3968
+    - summary: Add not commit files
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3800
+    - summary: Fix save test results step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3773
+cloud-provider-gcp:
+  fixes:
+    - summary: >-
+        Update `kube-proxy` configuration to set listen address to `0.0.0.0/0` when using GCP cloud
+        provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3914
+      impact: '`kube-proxy` Pods will be recreated.'
+cloud-provider-openstack:
+  fixes:
+    - summary: Support for offline resize. Fix no effect after enable `ignoreVolumeMicroversion`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3909
+cloud-provider-vsphere:
+  fixes:
+    - summary: Stop depending on CCM to uniquely identify instance ID. Fixes a couple of bugs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3721
+cloud-provider-yandex:
+  fixes:
+    - summary: Forbid zero value for coreFraction field in YandexClusterConfiguration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3947
+cni-cilium:
+  features:
+    - summary: Use predictable MAC-addresses generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3889
+      impact: >-
+        All new veth interfaces for Pods will be created with stable MAC-address, which is not
+        changing during the live-migration.
+deckhouse:
+  features:
+    - summary: Added bash wrapper for handling USR signals.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3660
+    - summary: Added Python environment to support Python hooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3523
+  fixes:
+    - summary: Remove pending releases before the Deckhouse upgrade.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3976
+    - summary: Prevent restart during the ConvergeModule phase
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3945
+    - summary: Revert "temporarily removed requirement for minimal ubuntu node version (#3714)".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3717
+deckhouse-config:
+  features:
+    - summary: Support statuses for external modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3531
+deckhouse-controller:
+  features:
+    - summary: Use the `lib-helm` instead of the `helm_lib` directory.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3665
+extended-monitoring:
+  features:
+    - summary: Added a tip about how to find problem nodes for unscheduled DaemonSet replicas.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3705
+  fixes:
+    - summary: Fixed keychain access panic in image-availability-exporter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3685
+external-module-manager:
+  features:
+    - summary: Add the new module for loading external modules in runtime.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3629
+flow-schema:
+  features:
+    - summary: The new module which adds flow schema to prevent API overloading.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3674
+global-hooks:
+  features:
+    - summary: Modify `modules_images_tags` to support external modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3568
+go_lib:
+  fixes:
+    - summary: Remove the `go_lib/hooks/delete_not_matching_certificate_secret/hook.go` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3777
+ingress-nginx:
+  fixes:
+    - summary: Improve rollout hook to avoid concurrent controller pod deletion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3915
+    - summary: Fix `HostWithFailover` inlet to work with cilium CNI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3834
+      impact: All `proxy-<ingress-name>-failover` daemonsets will be restarted.
+istio:
+  features:
+    - summary: Add istio version `1.16.2`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3595
+      impact: >-
+        In environments where legacy versions of istio are used, the
+        `D8IstioDeprecatedIstioVersionInstalled` alert will be fired.
+  fixes:
+    - summary: Added check of istiod operation before controller starts upgrading required resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3710
+kube-proxy:
+  fixes:
+    - summary: Fix `kube-proxy` DaemonSet rendering for static cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3927
+log-shipper:
+  features:
+    - summary: New examples for log filters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3809
+    - summary: Alert if log-shipper cannot send or collect logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3149
+  fixes:
+    - summary: >-
+        Bump `librdkafka` to `v2.0.2` to make log-shipper read the full CA certificates chain for
+        Kafka.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3693
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix regex in the `node_exporter`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3799
+      impact: All `node_exporter` Pods will be restarted.
+monitoring-kubernetes-control-plane:
+  fixes:
+    - summary: >-
+        Replaced `$__interval` with `$__range` variable so that the table properly displays results
+        over the whole time period
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3687
+node-local-dns:
+  fixes:
+    - summary: Add label for `node-local-dns` daemonset to fix cilium connectivity tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3620
+node-manager:
+  features:
+    - summary: Added lots of debugging messages to vSphere driver
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3720
+  fixes:
+    - summary: >-
+        Stop deleting Yandex Cloud preemptible instances if percent of Ready Machines in a NodeGroup
+        dips below 90%. Algorithm is simplified.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3589
+openvpn:
+  features:
+    - summary: Add high availability configuration for openvpn server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3820
+    - summary: Added `pmacct` JSON-log audit support for OpenVPN.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3686
+  fixes:
+    - summary: Use the same tunnel network for TCP and UDP.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3749
+operator-trivy:
+  features:
+    - summary: The new module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3858
+prometheus:
+  features:
+    - summary: >-
+        Use local links to module documentation in the Grafana `Enabled modules` table, If
+        `deckhouse-web` is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3967
+  fixes:
+    - summary: Change resources determination for Prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3848
+prometheus-metrics-adapter:
+  fixes:
+    - summary: >-
+        Use relative CPU metrics query interval to fix an issue with flaky CPU metrics if a scrape
+        interval is higher than 30s.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3846
+python_lib:
+  fixes:
+    - summary: Fixed the discovery of external module hooks
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3826
+registrypackages:
+  fixes:
+    - summary: Fix install flannel binary in CentOS-based distros.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3939
+runtime-audit-engine:
+  features:
+    - summary: The new module to collect security events about possible threats in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3477
+snapshot-controller:
+  features:
+    - summary: Add support for snapshots using `ceph-csi` driver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/2002
+      impact: >-
+        `ceph-csi` now enables `snapshot-controller` by default and automatically configures
+        `VolumeSnapshotClasses`.
+testing:
+  fixes:
+    - summary: fix matrix vpa tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3919
+user-authn:
+  features:
+    - summary: Add robots.txt for Dex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3926
+virtualization:
+  features:
+    - summary: Enable the `ExpandDisks` feature gate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3966
+  fixes:
+    - summary: 'Set `evictionStrategy: LiveMigrate` by default.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3924
+    - summary: fix `go list` for vmi-router
+      pull_request: https://github.com/deckhouse/deckhouse/pull/3828
+

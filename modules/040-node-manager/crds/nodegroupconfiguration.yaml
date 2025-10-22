@@ -1,0 +1,123 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: nodegroupconfigurations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: nodegroupconfigurations
+    singular: nodegroupconfiguration
+    kind: NodeGroupConfiguration
+    shortNames:
+      - ngc
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          description: |
+            Executes bash scripts on nodes.
+
+            Read more in the [module documentation](./#custom-node-settings).
+          properties:
+            spec:
+              type: object
+              required:
+                - content
+                - nodeGroups
+                - bundles
+              properties:
+                content:
+                  type: string
+                  description: |
+                    A bash script that does the same things you would do in a configuration step.
+
+                    You can use [Go Template](https://pkg.go.dev/text/template) to generate a script.
+
+                    The list of parameters available for use in templates can be retrieved from the `bashible-apiserver-context` Secret as follows:
+
+                    ```shell
+                    d8 k -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    ```
+
+                    For example:
+
+                    ```shell
+                    {{- range .nodeUsers }}
+                    echo 'Tuning environment for user {{ .name }}'
+                    # Some code for tuning user environment
+                    {{- end }}
+                    ```
+
+                    You can also use the pre-defined [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) commands in the script. For example:
+
+                    ```shell
+                    bb-event-on 'bb-package-installed' 'post-install'
+                    post-install() {
+                      bb-log-info "Setting reboot flag due to kernel was updated"
+                      bb-flag-set reboot
+                    }
+                    ```
+
+
+                    Example of using the proxy parameters of ClusterConfiguration resource:
+
+                    ```shell
+                    bb-set-proxy
+                    curl -I https://google.com
+                    bb-unset-proxy
+                    ```
+                    
+                    ```shell
+                    test-function-with-proxy() {
+                      bb-set-proxy
+                      trap bb-unset-proxy RETURN
+                      curl -I https://google.com
+                    }
+                    test-function-with-proxy
+                    ```
+                weight:
+                  type: integer
+                  default: 100
+                  description: Order of the step execution.
+                nodeGroups:
+                  type: array
+                  minItems: 1
+                  description: List of NodeGroups to apply the step for. You can set `'*'` for selecting all NodeGroups.
+                  x-doc-examples:
+                    - ["master", "worker"]
+                    - ["worker"]
+                    - ["*"]
+                  items:
+                    type: string
+                bundles:
+                  type: array
+                  minItems: 1
+                  x-doc-examples:
+                    - ["ubuntu-lts", "centos-7"]
+                    - ["ubuntu-lts"]
+                    - ["*"]
+                  description: |
+                    Bundles for step execution. You can set `'*'` for selecting all bundles.
+                  items:
+                    type: string
+                    enum: [ 'ubuntu-lts', 'centos', 'debian', 'redos', 'rosa', 'astra', 'altlinux', 'opensuse', '*' ]
+      additionalPrinterColumns:
+        - name: Weight
+          jsonPath: .spec.weight
+          type: integer
+        - name: NodeGroups
+          jsonPath: .spec.nodeGroups
+          type: string
+        - name: Bundle
+          jsonPath: .spec.bundles
+          type: string

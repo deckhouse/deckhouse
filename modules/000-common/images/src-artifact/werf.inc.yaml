@@ -1,0 +1,11 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/alt-p11-artifact
+final: false
+shell:
+  beforeInstall:
+  - apt-get install -y git
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - mkdir -p /src
+  # turn the detached message off
+  - git config --global advice.detachedHead false

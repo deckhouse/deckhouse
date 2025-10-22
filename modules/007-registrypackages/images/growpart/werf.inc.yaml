@@ -1,0 +1,83 @@
+{{- $version := "0.33" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b v2.40.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
+  - rm -rf /src/util-linux/.git
+  - git clone -b {{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
+  - rm -rf /src/cloud-utils/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - growpart
+  - install
+  - uninstall
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - fdisk
+  - sfdisk
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
+  setup:
+  - cd /src/util-linux
+  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
+  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+  - ./autogen.sh && ./configure --enable-static --enable-static-programs=fdisk,sfdisk --disable-pylibmount --without-python --disable-liblastlog2
+  - make fdisk.static sfdisk.static && strip ./fdisk.static && strip ./sfdisk.static
+  - mv ./fdisk.static /fdisk && mv ./sfdisk.static /sfdisk
+  - chmod +x /fdisk /sfdisk
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+fromImage: builder/alpine-3.20
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  setup:
+  - mv /src/cloud-utils/bin/growpart /growpart
+  - mv /src/scripts/* /
+  - chmod +x /growpart /install /uninstall

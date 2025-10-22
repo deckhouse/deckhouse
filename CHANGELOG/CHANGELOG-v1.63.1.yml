@@ -1,0 +1,47 @@
+candi:
+  fixes:
+    - summary: Fix for node bootstrap in CE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9323
+cloud-provider-vcd:
+  fixes:
+    - summary: Create virtual machine NIC before the VM starts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9255
+docs:
+  features:
+    - summary: Add docs about recovery of etcd cluster which can't run with force-new-cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9311
+documentation:
+  fixes:
+    - summary: Fixed command for requesting basic-auth password for `documentation` module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9243
+istio:
+  fixes:
+    - summary: Fix istio module operability in managed K8s setups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9275
+log-shipper:
+  features:
+    - summary: Add GELF codec to Socket destination. Now it is possible to send logs to Graylog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9306
+network-policy-engine:
+  fixes:
+    - summary: >-
+        Downgrade iptables version from `1.8.10` to `1.8.9` due to iptables chains overflow. You
+        need to clear unwanted iptables rules manually or reboot the affected nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9315
+node-manager:
+  fixes:
+    - summary: fix typos in the build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9295
+    - summary: Fix role rights for cluster-autoscaler `1.29`, `1.30`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9294
+registrypackages:
+  fixes:
+    - summary: Downgrade iptables version from `1.8.10` to `1.8.9`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9315
+upmeter:
+  fixes:
+    - summary: Fixed status page CSS in air-gapped environments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9287
+    - summary: Fixed flapping status page API.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9287
+

@@ -1,0 +1,7 @@
+name: upmeter
+stage: General Availability
+subsystems:
+  - observability
+namespace: d8-upmeter
+requirements:
+  deckhouse: ">= 1.68"

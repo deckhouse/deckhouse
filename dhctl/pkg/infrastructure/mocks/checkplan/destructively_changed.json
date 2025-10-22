@@ -1,0 +1,232 @@
+{
+  "format_version": "0.1",
+  "terraform_version": "0.14.8",
+  "resource_changes": [
+    {
+      "address": "yandex_compute_disk.kubernetes_data",
+      "mode": "managed",
+      "type": "yandex_compute_disk",
+      "name": "kubernetes_data",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "created_at": "2021-02-26T09:41:40Z",
+          "description": "volume for etcd and kubernetes certs",
+          "folder_id": "test",
+          "id": "test",
+          "image_id": "",
+          "labels": {},
+          "name": "kubernetes-data",
+          "product_ids": [],
+          "size": 10,
+          "snapshot_id": "",
+          "status": "ready",
+          "timeouts": null,
+          "type": "network-ssd",
+          "zone": "ru-central1-c"
+        },
+        "after": {
+          "created_at": "2021-02-26T09:41:40Z",
+          "description": "volume for etcd and kubernetes certs",
+          "folder_id": "test",
+          "id": "test",
+          "image_id": "",
+          "labels": {},
+          "name": "kubernetes-data",
+          "product_ids": [],
+          "size": 10,
+          "snapshot_id": "",
+          "status": "ready",
+          "timeouts": null,
+          "type": "network-ssd",
+          "zone": "ru-central1-c"
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "yandex_compute_instance.master",
+      "mode": "managed",
+      "type": "yandex_compute_instance",
+      "name": "master",
+      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "change": {
+        "actions": [
+          "delete",
+          "create"
+        ],
+        "before": {
+          "allow_stopping_for_update": true,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "device_name": "test",
+              "disk_id": "test",
+              "initialize_params": [
+                {
+                  "description": "",
+                  "image_id": "tests",
+                  "name": "kubernetes-data-root",
+                  "size": 35,
+                  "snapshot_id": "",
+                  "type": "network-ssd"
+                }
+              ],
+              "mode": "READ_WRITE"
+            }
+          ],
+          "created_at": "2021-02-26T09:41:42Z",
+          "description": "",
+          "folder_id": "test",
+          "fqdn": "kube-master",
+          "hostname": "kube-master",
+          "id": "test",
+          "labels": {},
+          "metadata": {
+            "ssh-keys": "",
+            "user-data": ""
+          },
+          "name": "kube-master",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "index": 0,
+              "ip_address": "10.233.2.21",
+              "ipv4": true,
+              "ipv6": false,
+              "ipv6_address": "",
+              "mac_address": "test",
+              "nat": false,
+              "nat_ip_address": "",
+              "nat_ip_version": "",
+              "security_group_ids": [],
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 4,
+              "gpus": 0,
+              "memory": 8
+            }
+          ],
+          "scheduling_policy": [
+            {
+              "preemptible": false
+            }
+          ],
+          "secondary_disk": [
+            {
+              "auto_delete": false,
+              "device_name": "kubernetes-data",
+              "disk_id": "test",
+              "mode": "READ_WRITE"
+            }
+          ],
+          "service_account_id": "",
+          "status": "running",
+          "timeouts": null,
+          "zone": "ru-central1-c"
+        },
+        "after": {
+          "allow_stopping_for_update": true,
+          "boot_disk": [
+            {
+              "auto_delete": true,
+              "initialize_params": [
+                {
+                  "image_id": "test",
+                  "size": 45,
+                  "type": "network-ssd"
+                }
+              ]
+            }
+          ],
+          "description": null,
+          "hostname": "kube-master",
+          "labels": null,
+          "metadata": {
+            "node-network-cidr": "10.233.0.0/22",
+            "ssh-keys": "test",
+            "user-data": ""
+          },
+          "name": "kube-master",
+          "network_acceleration_type": "standard",
+          "network_interface": [
+            {
+              "ipv4": true,
+              "nat": false,
+              "subnet_id": "test"
+            }
+          ],
+          "platform_id": "standard-v2",
+          "resources": [
+            {
+              "core_fraction": 100,
+              "cores": 4,
+              "gpus": null,
+              "memory": 8
+            }
+          ],
+          "secondary_disk": [
+            {
+              "auto_delete": false,
+              "device_name": "kubernetes-data",
+              "disk_id": "test",
+              "mode": "READ_WRITE"
+            }
+          ],
+          "timeouts": null,
+          "zone": "ru-central1-c"
+        },
+        "after_unknown": {
+          "boot_disk": [
+            {
+              "device_name": true,
+              "disk_id": true,
+              "initialize_params": [
+                {
+                  "description": true,
+                  "name": true,
+                  "snapshot_id": true
+                }
+              ],
+              "mode": true
+            }
+          ],
+          "created_at": true,
+          "folder_id": true,
+          "fqdn": true,
+          "id": true,
+          "metadata": {},
+          "network_interface": [
+            {
+              "index": true,
+              "ip_address": true,
+              "ipv6": true,
+              "ipv6_address": true,
+              "mac_address": true,
+              "nat_ip_address": true,
+              "nat_ip_version": true,
+              "security_group_ids": true
+            }
+          ],
+          "resources": [
+            {}
+          ],
+          "scheduling_policy": true,
+          "secondary_disk": [
+            {}
+          ],
+          "service_account_id": true,
+          "status": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: modulesources.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: external-module-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: modulesources
+    singular: modulesource
+    kind: ModuleSource
+    shortNames:
+      - ms
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the configuration.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - registry
+              properties:
+                releaseChannel:
+                  type: string
+                  description: Desirable default release channel for modules in the current source.
+                  default: "alpha"
+                registry:
+                  type: object
+                  required:
+                    - repo
+                  properties:
+                    repo:
+                      type: string
+                      description: URL of the container registry.
+                      example: 'registry.example.io/deckhouse/modules'
+                    dockerCfg:
+                      type: string
+                      description: Container registry access token in Base64.
+                    ca:
+                      type: string
+                      description: |
+                        Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+            status:
+              type: object
+              properties:
+                syncTime:
+                  type: string
+                  description: 'When the repository was synchronized.'
+                modulesCount:
+                  type: integer
+                  description: "Number of modules available."
+                availableModules:
+                  type: array
+                  items:
+                    type: string
+                message:
+                  type: string
+                moduleErrors:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      error:
+                        type: string
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: "release channel"
+          type: string
+          jsonPath: .spec.releaseChannel
+          description: "Default release channel for modules inside this source."
+        - name: count
+          type: integer
+          jsonPath: .status.modulesCount
+          description: "Number of modules available."
+        - name: sync
+          type: date
+          jsonPath: .status.syncTime
+          format: date-time
+          description: 'When the repository was synchronized.'
+        - name: msg
+          type: string
+          jsonPath: .status.message
+          description: 'Error message if exists.'

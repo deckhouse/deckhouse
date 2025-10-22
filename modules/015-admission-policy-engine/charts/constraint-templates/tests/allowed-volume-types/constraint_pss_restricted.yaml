@@ -1,0 +1,27 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedVolumeTypes
+metadata:
+  name: pod-security-standards
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaceSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/pod-policy
+          operator: In
+          values: 
+          - baseline
+          - restricted
+  parameters:
+    volumes:
+      - configMap
+      - csi
+      - downwardAPI
+      - emptyDir
+      - ephemeral
+      - persistentVolumeClaim
+      - projected
+      - secret

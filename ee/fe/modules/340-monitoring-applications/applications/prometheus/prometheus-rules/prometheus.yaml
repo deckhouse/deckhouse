@@ -1,0 +1,149 @@
+- name: applications.prometheus
+  rules:
+  - alert: PrometheusTargetDown
+    expr: up{job="prometheus"} == 0
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      description: |-
+        Prometheus is unable to scrape metrics of the Prometheus {{ $labels.namespace }}/{{ $labels.pod }} Pod
+
+        The recommended course of action is to retrieve details of the Pod: `d8 k -n {{ $labels.namespace }} describe pod {{ $labels.pod }}`.
+      summary: >
+        Prometheus is unable to scrape metrics of another Prometheus instance.
+
+  - alert: PrometheusConfigReloadFailing
+    expr: prometheus_config_last_reload_successful == 0
+    for: 10m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: Reloading Prometheus' configuration has failed for {{ $labels.namespace }}/{{ $labels.pod }}.
+      summary: Reloading Prometheus' configuration failed.
+
+  - alert: PrometheusNotificationQueueRunningFull
+    expr: prometheus_notifications_queue_length / prometheus_notifications_queue_capacity > 0.2
+    labels:
+      severity_level: "{{ if lt $value 0.5 }}9{{ else if lt $value 0.7 }}8{{ else }}7{{ end }}"
+    annotations:
+      plk_enable_event_severity_change: "true"
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: |
+        Prometheus' alert notification queue is running full for Prometheus {{ $labels.namespace }}/{{ $labels.pod}}.
+
+        Currently, queue is filled by {{ $value | humanizePercentage }}.
+      summary: Prometheus' alert notification queue is running full.
+
+  - alert: PrometheusNotificationsDropping
+    expr: increase(prometheus_notifications_dropped_total[__SCRAPE_INTERVAL_X_4__]) > 2
+    for: 10m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: |
+        There's no properly functioning allertmanager in the cluster and the alerts are dropped.
+      summary: There's no properly functioning allertmanager in the cluster and the alert notifications are dropping.
+
+  - alert: PrometheusTSDBReloadsFailing
+    expr: increase(prometheus_tsdb_reloads_failures_total[__SCRAPE_INTERVAL_X_4__]) > 0
+    for: 10m
+    labels:
+      severity_level: "7"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: |-
+        Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
+        reload failures over the last two hours.
+
+        If the Prometheus database becomes corrupted, you might lose monitoring data.
+
+        Consider the following:
+        1. Show prometheus logs: `d8 k -n {{ $labels.namespace}} logs {{ $labels.pod }} -c prometheus`
+        2. If you see any errors regarding data chunks (/prometheus/* sub-directories) try to restore the old files to these sub-directories from backup (if available). If there are no backup files try to move the coruppted data to a temporary place and recreate the prometheus_server pod.
+      summary: Prometheus has issues reloading data blocks from disk.
+
+  - alert: PrometheusTSDBCompactionsFailing
+    expr: increase(prometheus_tsdb_compactions_failed_total[__SCRAPE_INTERVAL_X_4__]) > 0
+    for: 10m
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: |-
+        Prometheus {{ $labels.namespace }}/{{ $labels.pod}} had {{$value | humanize}}
+        compaction failures over the last two hours.
+
+        If the Prometheus database becomes corrupted, you might lose monitoring data.
+
+        Consider the following:
+        1. Show prometheus logs: `d8 k -n {{ $labels.namespace}} logs {{ $labels.pod }} -c prometheus`
+        2. If you see any errors regarding data chunks (/prometheus/* sub-directories) try to restore the old files to these sub-directories from backup (if available). If there are no backup files try to move the coruppted data to a temporary place and recreate the prometheus_server pod.
+      summary: Prometheus has issues compacting sample blocks.
+
+  - alert: PrometheusRuleEvaluationFailing
+    expr: increase(prometheus_rule_evaluation_failures_total[__SCRAPE_INTERVAL_X_4__]) > 0
+
+    # Prometheus restart sometimes triggers this alert. Because of the asynchronous nature
+    # of metrics in prometheus some of the metrics from extended monitoring are not present
+    # at start time so rules can't be evaluated.
+    for: 15m
+
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: |
+        Pod {{$labels.pod}} in namespace {{$labels.namespace}} has failing rule evaluations.
+
+        Please execute `d8 k -n {{$labels.namespace}} logs pod/{{$labels.pod}}` for more info.
+      summary: Prometheus has failing rule evaluations.
+
+  - alert: PrometheusNotConnectedToAlertmanager
+    expr: prometheus_notifications_alertmanagers_discovered{service="prometheus"} < 1
+    for: 10m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_labels_as_annotations: "instance"
+      plk_ignore_labels: "job"
+      plk_create_group_if_not_exists__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      plk_grouped_by__prometheus_malfunctioning: "PrometheusMalfunctioning,prometheus=deckhouse,namespace={{ $labels.namespace }},service={{ $labels.service }},kubernetes=~kubernetes"
+      description: Prometheus {{ $labels.namespace }}/{{ $labels.pod }} is not connected to Alertmanager.
+      summary: Prometheus is not connected to Alertmanager.

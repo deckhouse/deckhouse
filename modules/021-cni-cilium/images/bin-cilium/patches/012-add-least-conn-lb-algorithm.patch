@@ -1,0 +1,1098 @@
+From 1fd75983a24118d20e82ec77fd3db0272c63efa8 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Tue, 13 May 2025 13:21:15 +0300
+Subject: [PATCH] add least-conn lb algorithm
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ bpf/bpf_lxc.c                           |   2 +
+ bpf/include/bpf/helpers.h               |   5 +
+ bpf/lib/lb.h                            | 288 +++++++++++++++++++++++-
+ daemon/cmd/daemon_main.go               |   4 +-
+ daemon/cmd/datapath.go                  |   7 +
+ daemon/cmd/kube_proxy_replacement.go    |   3 +-
+ pkg/annotation/k8s.go                   |   1 +
+ pkg/datapath/linux/config/config.go     |  11 +
+ pkg/datapath/maps/map.go                |   8 +
+ pkg/loadbalancer/loadbalancer.go        |  10 +-
+ pkg/maps/ctmap/ctmap.go                 |  26 +++
+ pkg/maps/ctmap/gc/gc.go                 |   7 +
+ pkg/maps/ctmap/types.go                 |   4 +
+ pkg/maps/lbmap/lbmap.go                 |  13 ++
+ pkg/maps/lbmap/leastconn.go             | 165 ++++++++++++++
+ pkg/maps/lbmap/leastconn_backend_map.go |  42 ++++
+ pkg/maps/lbmap/leastconn_service_map.go |  48 ++++
+ pkg/metrics/features/metrics.go         |   1 +
+ pkg/option/config.go                    |   3 +
+ pkg/service/service.go                  |  11 +
+ 20 files changed, 651 insertions(+), 8 deletions(-)
+ create mode 100644 pkg/maps/lbmap/leastconn.go
+ create mode 100644 pkg/maps/lbmap/leastconn_backend_map.go
+ create mode 100644 pkg/maps/lbmap/leastconn_service_map.go
+
+diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
+index 878185780a..0a1dc5dca6 100644
+--- a/bpf/bpf_lxc.c
++++ b/bpf/bpf_lxc.c
+@@ -37,8 +37,10 @@
+  * algorithm for in-cluster traffic. Otherwise, it will fail with the Maglev hash algorithm because Cilium doesn't provision
+  * the Maglev table for ClusterIP unless bpf.lbExternalClusterIP is set to true.
+  */
++#if LB_SELECTION == LB_SELECTION_MAGLE
+ #undef LB_SELECTION
+ #define LB_SELECTION LB_SELECTION_RANDOM
++#endif
+ 
+ #include "lib/lb.h"
+ #include "lib/drop.h"
+diff --git a/bpf/include/bpf/helpers.h b/bpf/include/bpf/helpers.h
+index 65ba8cf604..5892d1c4f1 100644
+--- a/bpf/include/bpf/helpers.h
++++ b/bpf/include/bpf/helpers.h
+@@ -29,6 +29,11 @@
+ # include "helpers_xdp.h"
+ #endif
+ 
++/* timer API */
++static long BPF_FUNC(timer_init, struct bpf_timer *timer, void *map, __u64 flags);
++static long BPF_FUNC(timer_set_callback, struct bpf_timer *timer, void *callback_fn);
++static long BPF_FUNC(timer_start, struct bpf_timer *timer, __u64 nsecs, __u64 flags);
++
+ /* Map access/manipulation */
+ static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
+ static int BPF_FUNC(map_update_elem, const void *map, const void *key,
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 9a6fee3035..8769cce01a 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -3,6 +3,8 @@
+ 
+ #pragma once
+ 
++#include "common.h"
++
+ #include "bpf/compiler.h"
+ #include "csum.h"
+ #include "conntrack.h"
+@@ -11,6 +13,7 @@
+ #include "ids.h"
+ #include "nat_46x64.h"
+ #include "ratelimit.h"
++#include "dbg.h"
+ 
+ #ifndef SKIP_CALLS_MAP
+ #include "drop.h"
+@@ -188,6 +191,59 @@ struct {
+ 	});
+ } LB4_MAGLEV_MAP_OUTER __section_maps_btf;
+ #endif /* LB_SELECTION == LB_SELECTION_MAGLEV */
++
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
++
++#ifndef LEAST_CONN_TIMEOUT
++#define LEAST_CONN_TIMEOUT 10000000ULL
++#endif
++
++#define LEAST_CONN_NEXT_ITER_TIMEOUT 1000000ULL
++
++#define UINT32_MAX 0xffffffff
++#define CLOCK_MONOTONIC 1
++
++struct lb4_lct_key {
++	__u32 backend_id;
++};
++
++struct lb4_lct_backend {
++	__u32 count;
++};
++
++struct lb4_lct_service {
++	__u32 is_tmr_active;
++	__u32 backend_id;
++	__u16 last_slot;
++	__u16 rest_count;
++	__u8 pad[4];
++	struct bpf_timer tmr;
++};
++
++#define LEAST_CONN_MAX_ENTRIES 65536
++/* the limit was selected due to verifier restriction on executing instructions */
++#define LEAST_CONN_FOREACH_MAX_ENTRIES 100
++#define LEAST_CONN_THRESHOLD 5
++
++struct {
++	__uint(type, BPF_MAP_TYPE_HASH);
++	__type(key, struct lb4_lct_key);
++	__type(value, struct lb4_lct_backend);
++	__uint(pinning, LIBBPF_PIN_BY_NAME);
++	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
++	__uint(map_flags, BPF_F_NO_PREALLOC);
++} LB4_LCT_BACKEND __section_maps_btf;
++
++struct {
++	__uint(type, BPF_MAP_TYPE_HASH);
++	__type(key, struct lb4_key);
++	__type(value, struct lb4_lct_service);
++	__uint(pinning, LIBBPF_PIN_BY_NAME);
++	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
++	__uint(map_flags, BPF_F_NO_PREALLOC);
++} LB4_LCT_SERVICE __section_maps_btf;
++#endif /* LB_SELECTION == LB_SELECTION_LEAST_CONN */
++
+ #endif /* ENABLE_IPV4 */
+ 
+ #ifdef ENABLE_SESSION_AFFINITY
+@@ -758,8 +814,7 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
+ #endif /* LB_SELECTION */
+ 	}
+ }
+-
+-#elif LB_SELECTION == LB_SELECTION_RANDOM
++#elif LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN
+ # define lb6_select_backend_id	lb6_select_backend_id_random
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ # define lb6_select_backend_id	lb6_select_backend_id_maglev
+@@ -1464,6 +1519,215 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+ }
+ #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
+ 
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
++
++static __always_inline int
++is_backend_active(__u32 backend_id)
++{
++	struct lb4_backend *bck = __lb4_lookup_backend(backend_id);
++	return bck != NULL && bck->flags == BE_STATE_ACTIVE;
++}
++
++static __always_inline __u16
++lb4_least_conn_get_slot(struct lb4_lct_service *svc, __u16 count)
++{
++	return (svc->last_slot >= 1 && svc->last_slot <= count) ? svc->last_slot : 1;
++}
++
++static int
++lb4_select_least_conn_backend_cb(void *map __maybe_unused, struct lb4_key *k, struct lb4_lct_service *svc)
++{
++	__u16 slot, max, i;
++	struct lb4_service *lb4_svc;
++	struct lb4_lct_backend *bck;
++
++	struct lb4_key key = *k;
++	__u32 max_count = UINT32_MAX;
++	struct lb4_lct_key bck_key = {
++		.backend_id = svc->backend_id,
++	};
++
++	lb4_svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, k);
++	if (lb4_svc == NULL) {
++		printk("FAILED lookup svc from callback\n");
++		svc->is_tmr_active = 0;
++		return 0;
++	}
++
++	bck = map_lookup_elem(&LB4_LCT_BACKEND, &bck_key);
++	if (bck != NULL && is_backend_active(svc->backend_id)) {
++		max_count = bck->count;
++	}
++
++	/* always start searching from next slot */
++	svc->last_slot++;
++	slot = lb4_least_conn_get_slot(svc, lb4_svc->count);
++	max = svc->rest_count <= LEAST_CONN_FOREACH_MAX_ENTRIES ?
++		svc->rest_count : LEAST_CONN_FOREACH_MAX_ENTRIES;
++	for (i = 0; i < max; i++) {
++		struct lb4_service *lb4_bck;
++		__u32 conn_count = 0;
++		
++		svc->rest_count--;
++		slot = ((slot + i - 1) % lb4_svc->count) + 1;
++		key.backend_slot = slot;
++		lb4_bck = __lb4_lookup_backend_slot(&key);
++		if (lb4_bck == NULL || !is_backend_active(lb4_bck->backend_id))
++			continue;
++
++		bck_key.backend_id = lb4_bck->backend_id;
++		bck = map_lookup_elem(&LB4_LCT_BACKEND, &bck_key);
++		if (bck != NULL) {
++			conn_count = bck->count;
++		}
++
++		if (conn_count <= max_count) {
++			max_count = conn_count;
++			svc->backend_id = lb4_bck->backend_id;
++			if (max_count <= LEAST_CONN_THRESHOLD) {
++				svc->rest_count = 0;
++				break;
++			}
++		}
++	}
++	if (svc->rest_count == 0) {
++		svc->is_tmr_active = 0;
++	} else {
++		/* too big backend list - continue searching backend in next iteration */
++		if (timer_start(&svc->tmr, LEAST_CONN_NEXT_ITER_TIMEOUT, 0)) {
++			printk("FAILED start timer\n");
++			svc->rest_count = 0;
++			svc->is_tmr_active = 0;
++		}
++	}
++	svc->last_slot = slot;
++	return 0;
++}
++
++static __always_inline void
++start_timer(struct lb4_lct_service *svc, __u64 timeout, __u16 svc_count)
++{
++	if (svc->is_tmr_active)
++		return;
++
++	/* after cilium bpf prog update we must always replace callback on new version */
++	/* otherwise old bpf prog will not deleted from system memory and its callback will be executed */
++	if (timer_set_callback(&svc->tmr, lb4_select_least_conn_backend_cb)) {
++		printk("FAILED set timer cb\n");
++		return;
++	}
++
++	if (timer_start(&svc->tmr, timeout, 0)) {
++		printk("FAILED start timer\n");
++		return;
++	}
++
++	svc->rest_count = svc_count;
++	svc->is_tmr_active = 1;
++}
++
++static __always_inline __u32
++lb4_least_conn_select_backend_id_random(struct __ctx_buff *ctx,
++			     struct lb4_key *key,
++			     const struct lb4_service *svc,
++				 __u16 *last_slot)
++{
++	/* Backend slot 0 is always reserved for the service frontend. */
++	__u16 slot = (get_prandom_u32() % svc->count) + 1;
++	struct lb4_service *be = lb4_lookup_backend_slot(ctx, key, slot);
++	if (be == NULL)
++		return 0;
++
++	*last_slot = slot;
++	return be->backend_id;
++}
++
++static __always_inline __u32
++lb4_select_backend_id_least_conn(struct __ctx_buff *ctx __maybe_unused,
++			     struct lb4_key *key __maybe_unused,
++			     const struct ipv4_ct_tuple *tuple __maybe_unused,
++			     const struct lb4_service *svc __maybe_unused)
++{
++	struct lb4_lct_service *val = map_lookup_elem(&LB4_LCT_SERVICE, key);
++	if (val == NULL) {
++		struct lb4_lct_service new_val = {
++			.is_tmr_active = 0,
++			.last_slot = 1,
++			.rest_count = 0,
++		};
++
++		new_val.backend_id = lb4_least_conn_select_backend_id_random(ctx, key, svc, &new_val.last_slot);
++		key->backend_slot = 0;
++
++		if (map_update_elem(&LB4_LCT_SERVICE, key, &new_val, BPF_ANY)) {
++			printk("FAILED insert new val\n");
++			return new_val.backend_id;
++		}
++
++		val = map_lookup_elem(&LB4_LCT_SERVICE, key);
++		if (val == NULL) {
++			printk("FAILED LOOKUP SERVICE MAP\n");
++			return new_val.backend_id;
++		}
++
++		if (timer_init(&val->tmr, &LB4_LCT_SERVICE, CLOCK_MONOTONIC)) {
++			printk("FAILED init timer\n");
++			return new_val.backend_id;
++		}
++
++		if (timer_set_callback(&val->tmr, lb4_select_least_conn_backend_cb)) {
++			printk("FAILED set timer cb\n");
++			return new_val.backend_id;
++		}
++
++		start_timer(val, is_backend_active(new_val.backend_id) ? LEAST_CONN_TIMEOUT : 1000, svc->count);
++		return new_val.backend_id;
++	}
++
++	if (!is_backend_active(val->backend_id)) {
++		val->backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
++	}
++
++	start_timer(val, LEAST_CONN_TIMEOUT, svc->count);
++	return val->backend_id;
++}
++
++static __always_inline void
++_lb_lct_conn_closed(__u32 backend_id)
++{
++	struct lb4_lct_backend *val;
++	struct lb4_lct_key key = {
++		.backend_id = backend_id,
++	};
++
++	val = map_lookup_elem(&LB4_LCT_BACKEND, &key);
++	if (val == NULL || val->count == 0)
++		return;
++
++	__sync_fetch_and_sub(&val->count, 1);
++}
++
++static __always_inline void
++_lb_lct_conn_open(__u32 backend_id)
++{
++	struct lb4_lct_backend *val;
++	struct lb4_lct_key key = {
++		.backend_id = backend_id,
++	};
++
++	val = map_lookup_elem(&LB4_LCT_BACKEND, &key);
++	if (val == NULL) {
++		struct lb4_lct_backend new_val = {
++			.count = 1,
++		};
++		map_update_elem(&LB4_LCT_BACKEND, &key, &new_val, BPF_ANY);
++		return;
++	}
++
++	__sync_fetch_and_add(&val->count, 1);
++}
++#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_LEAST_CONN */
++
+ #ifdef LB_SELECTION_PER_SERVICE
+ static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
+ {
+@@ -1480,11 +1744,15 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+ 		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
+ 	case LB_SELECTION_RANDOM:
+ 		return lb4_select_backend_id_random(ctx, key, tuple, svc);
++	case LB_SELECTION_LEAST_CONN:
++		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
+ 	default:
+ #if LB_SELECTION == LB_SELECTION_RANDOM
+ 		return lb4_select_backend_id_random(ctx, key, tuple, svc);
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ 		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
++#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
++		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
+ #else
+ # error "Invalid load balancer backend selection algorithm!"
+ #endif /* LB_SELECTION */
+@@ -1494,6 +1762,8 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+ # define lb4_select_backend_id	lb4_select_backend_id_random
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ # define lb4_select_backend_id	lb4_select_backend_id_maglev
++#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
++# define lb4_select_backend_id	lb4_select_backend_id_least_conn
+ #elif LB_SELECTION == LB_SELECTION_FIRST
+ /* Backend selection for tests that always chooses first slot. */
+ static __always_inline __u32
+@@ -1780,6 +2050,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ 		if (IS_ERR(ret))
+ 			goto drop_err;
+ 
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
++		_lb_lct_conn_open(backend_id);
++#endif
++
+ #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
+ 		_lb_act_conn_open(state->rev_nat_index, backend->zone);
+ #endif
+@@ -1793,6 +2067,16 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ 		 * session we are likely to get a TCP RST.
+ 		 */
+ 		backend = lb4_lookup_backend(ctx, backend_id);
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
++		if (backend) {
++			if (state->syn) { /* Reopened connections */
++				_lb_lct_conn_open(backend_id);
++			} else if (state->closing) {
++				_lb_lct_conn_closed(backend_id);
++			}
++		}
++#endif
++
+ #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
+ 		if (backend) {
+ 			if (state->syn) /* Reopened connections */
+diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
+index 96e484911f..98e23b7dbc 100644
+--- a/daemon/cmd/daemon_main.go
++++ b/daemon/cmd/daemon_main.go
+@@ -577,7 +577,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.MarkHidden(option.NodePortMode)
+ 	option.BindEnv(vp, option.NodePortMode)
+ 
+-	flags.String(option.NodePortAlg, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\")")
++	flags.String(option.NodePortAlg, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\", \"least-conn\")")
+ 	flags.MarkHidden(option.NodePortAlg)
+ 	option.BindEnv(vp, option.NodePortAlg)
+ 
+@@ -596,7 +596,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.Bool(option.LoadBalancerAlgorithmAnnotation, false, "Enable service-level annotation for configuring BPF load balancing algorithm")
+ 	option.BindEnv(vp, option.LoadBalancerAlgorithmAnnotation)
+ 
+-	flags.String(option.LoadBalancerAlgorithm, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\")")
++	flags.String(option.LoadBalancerAlgorithm, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\", \"least-conn\")")
+ 	option.BindEnv(vp, option.LoadBalancerAlgorithm)
+ 
+ 	flags.String(option.LoadBalancerDSRDispatch, option.DSRDispatchOption, "BPF load balancing DSR dispatch method (\"opt\", \"ipip\", \"geneve\")")
+diff --git a/daemon/cmd/datapath.go b/daemon/cmd/datapath.go
+index a8680acbac..5db7e81fb7 100644
+--- a/daemon/cmd/datapath.go
++++ b/daemon/cmd/datapath.go
+@@ -302,6 +302,13 @@ func (d *Daemon) initMaps() error {
+ 		}
+ 	}
+ 
++	if option.Config.NodePortAlg == option.NodePortAlgLeastConn ||
++		option.Config.LoadBalancerAlgorithmAnnotation {
++		if err := lbmap.InitLeastConnMaps(); err != nil {
++			return fmt.Errorf("initializing least-conn maps: %w", err)
++		}
++	}
++
+ 	_, err := lbmap.NewSkipLBMap()
+ 	if err != nil {
+ 		return fmt.Errorf("initializing local redirect policy maps: %w", err)
+diff --git a/daemon/cmd/kube_proxy_replacement.go b/daemon/cmd/kube_proxy_replacement.go
+index d4d59f172a..6b2667a349 100644
+--- a/daemon/cmd/kube_proxy_replacement.go
++++ b/daemon/cmd/kube_proxy_replacement.go
+@@ -130,7 +130,8 @@ func initKubeProxyReplacementOptions(sysctl sysctl.Sysctl, tunnelConfig tunnel.C
+ 		}
+ 
+ 		if option.Config.NodePortAlg != option.NodePortAlgRandom &&
+-			option.Config.NodePortAlg != option.NodePortAlgMaglev {
++			option.Config.NodePortAlg != option.NodePortAlgMaglev &&
++			option.Config.NodePortAlg != option.NodePortAlgLeastConn {
+ 			return fmt.Errorf("Invalid value for --%s: %s", option.NodePortAlg, option.Config.NodePortAlg)
+ 		}
+ 
+diff --git a/pkg/annotation/k8s.go b/pkg/annotation/k8s.go
+index 2cc4f63081..d6e0804074 100644
+--- a/pkg/annotation/k8s.go
++++ b/pkg/annotation/k8s.go
+@@ -123,6 +123,7 @@ const (
+ 	// Allowed values:
+ 	// - random
+ 	// - maglev
++	// - least-conn
+ 	ServiceLoadBalancingAlgorithm = ServicePrefix + "/lb-algorithm"
+ 
+ 	// ServiceNodeExposure is the label name used to mark a service to only a
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index a3243d93e3..5e368514ed 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -545,9 +545,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 	const (
+ 		selectionRandom = iota + 1
+ 		selectionMaglev
++		selectionLeastConn
+ 	)
+ 	cDefinesMap["LB_SELECTION_RANDOM"] = fmt.Sprintf("%d", selectionRandom)
+ 	cDefinesMap["LB_SELECTION_MAGLEV"] = fmt.Sprintf("%d", selectionMaglev)
++	cDefinesMap["LB_SELECTION_LEAST_CONN"] = fmt.Sprintf("%d", selectionLeastConn)
+ 	if option.Config.LoadBalancerAlgorithmAnnotation {
+ 		cDefinesMap["LB_SELECTION_PER_SERVICE"] = "1"
+ 	}
+@@ -555,6 +557,8 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionRandom)
+ 	} else if option.Config.NodePortAlg == option.NodePortAlgMaglev {
+ 		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionMaglev)
++	} else if option.Config.NodePortAlg == option.NodePortAlgLeastConn {
++		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionLeastConn)
+ 	}
+ 
+ 	// define maglev tables when loadbalancer algorith is maglev or config can
+@@ -569,6 +573,13 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			cDefinesMap["LB4_MAGLEV_MAP_OUTER"] = lbmap.MaglevOuter4MapName
+ 		}
+ 	}
++
++	if option.Config.LoadBalancerAlgorithmAnnotation ||
++		option.Config.NodePortAlg == option.NodePortAlgLeastConn {
++		cDefinesMap["LB4_LCT_BACKEND"] = lbmap.LeastConnBackend4MapName
++		cDefinesMap["LB4_LCT_SERVICE"] = lbmap.LeastConnService4MapName
++	}
++
+ 	cDefinesMap["HASH_INIT4_SEED"] = fmt.Sprintf("%d", h.maglev.SeedJhash0)
+ 	cDefinesMap["HASH_INIT6_SEED"] = fmt.Sprintf("%d", h.maglev.SeedJhash1)
+ 
+diff --git a/pkg/datapath/maps/map.go b/pkg/datapath/maps/map.go
+index dd14245598..2f99873283 100644
+--- a/pkg/datapath/maps/map.go
++++ b/pkg/datapath/maps/map.go
+@@ -126,6 +126,7 @@ func (ms *MapSweeper) CollectStaleMapGarbage() {
+ func (ms *MapSweeper) RemoveDisabledMaps() {
+ 	maps := []string{}
+ 
++	// TODO LeastConn maps
+ 	if !option.Config.EnableIPv6 {
+ 		maps = append(maps, []string{
+ 			"cilium_ct6_global",
+@@ -165,6 +166,8 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
+ 			"cilium_proxy4",
+ 			recorder.MapNameWcard4,
+ 			lbmap.MaglevOuter4MapName,
++			lbmap.LeastConnService4MapName,
++			lbmap.LeastConnBackend4MapName,
+ 			lbmap.Affinity4MapName,
+ 			lbmap.SourceRange4MapName,
+ 			lbmap.HealthProbe4MapName,
+@@ -200,6 +203,11 @@ func (ms *MapSweeper) RemoveDisabledMaps() {
+ 		maps = append(maps, lbmap.MaglevOuter6MapName, lbmap.MaglevOuter4MapName)
+ 	}
+ 
++	if option.Config.NodePortAlg != option.NodePortAlgLeastConn &&
++		!option.Config.LoadBalancerAlgorithmAnnotation {
++		maps = append(maps, lbmap.LeastConnService4MapName, lbmap.LeastConnBackend4MapName)
++	}
++
+ 	if !option.Config.EnableSessionAffinity {
+ 		maps = append(maps, lbmap.Affinity6MapName, lbmap.Affinity4MapName, lbmap.AffinityMatchMapName)
+ 	}
+diff --git a/pkg/loadbalancer/loadbalancer.go b/pkg/loadbalancer/loadbalancer.go
+index d6f2588624..c6862b3cdc 100644
+--- a/pkg/loadbalancer/loadbalancer.go
++++ b/pkg/loadbalancer/loadbalancer.go
+@@ -74,9 +74,10 @@ func ToSVCForwardingMode(s string) SVCForwardingMode {
+ type SVCLoadBalancingAlgorithm uint8
+ 
+ const (
+-	SVCLoadBalancingAlgorithmUndef  = 0
+-	SVCLoadBalancingAlgorithmRandom = 1
+-	SVCLoadBalancingAlgorithmMaglev = 2
++	SVCLoadBalancingAlgorithmUndef     = 0
++	SVCLoadBalancingAlgorithmRandom    = 1
++	SVCLoadBalancingAlgorithmMaglev    = 2
++	SVCLoadBalancingAlgorithmLeastConn = 3
+ )
+ 
+ func ToSVCLoadBalancingAlgorithm(s string) SVCLoadBalancingAlgorithm {
+@@ -86,6 +87,9 @@ func ToSVCLoadBalancingAlgorithm(s string) SVCLoadBalancingAlgorithm {
+ 	if s == option.NodePortAlgRandom {
+ 		return SVCLoadBalancingAlgorithmRandom
+ 	}
++	if s == option.NodePortAlgLeastConn {
++		return SVCLoadBalancingAlgorithmLeastConn
++	}
+ 	return SVCLoadBalancingAlgorithmUndef
+ }
+ 
+diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
+index ad69a5379d..cfac34212d 100644
+--- a/pkg/maps/ctmap/ctmap.go
++++ b/pkg/maps/ctmap/ctmap.go
+@@ -14,6 +14,7 @@ import (
+ 	"reflect"
+ 	"strings"
+ 
++	lb "github.com/cilium/cilium/pkg/loadbalancer"
+ 	"github.com/cilium/ebpf"
+ 	"github.com/sirupsen/logrus"
+ 
+@@ -24,6 +25,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/maps/lbmap"
+ 	"github.com/cilium/cilium/pkg/maps/nat"
+ 	"github.com/cilium/cilium/pkg/maps/timestamp"
+ 	"github.com/cilium/cilium/pkg/metrics"
+@@ -562,6 +564,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 
+ 			switch action {
+ 			case deleteEntry:
++				ctFlags := currentKey4Global.GetFlags()
++				isSVC := (ctFlags & TUPLE_F_SERVICE) != 0
++				if isSVC && (currentKey4Global.NextHeader != u8proto.TCP || !entry.IsClosed()) {
++					// decrement tcp session only by timeout, other cases handled in ebpf progs
++					lbmap.DecrementCounterLeastConnBackendByID(lb.BackendID(entry.BackendID))
++				}
++
+ 				err := purgeCtEntry4(m, currentKey4Global, entry, natMap, next)
+ 				if err != nil {
+ 					log.WithError(err).WithField(logfields.Key, currentKey4Global.String()).Error("Unable to delete CT entry")
+@@ -570,6 +579,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 				}
+ 			default:
+ 				stats.aliveEntries++
++				ctFlags := currentKey4Global.GetFlags()
++				isSVC := (ctFlags & TUPLE_F_SERVICE) != 0
++				if isSVC {
++					lbmap.IncrementCachedCounterLeastConnBackendByID(lb.BackendID(entry.BackendID))
++				}
+ 			}
+ 		case *CtKey4:
+ 			currentKey4 := obj
+@@ -582,6 +596,13 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 
+ 			switch action {
+ 			case deleteEntry:
++				ctFlags := currentKey4.GetFlags()
++				isSVC := (ctFlags & TUPLE_F_SERVICE) != 0
++				if isSVC && (currentKey4.NextHeader != u8proto.TCP || !entry.IsClosed()) {
++					// decrement tcp session only by timeout, other cases handled in ebpf progs
++					lbmap.DecrementCounterLeastConnBackendByID(lb.BackendID(entry.BackendID))
++				}
++
+ 				err := purgeCtEntry4(m, currentKey4, entry, natMap, next)
+ 				if err != nil {
+ 					log.WithError(err).WithField(logfields.Key, currentKey4.String()).Error("Unable to delete CT entry")
+@@ -590,6 +611,11 @@ func doGC4(m *Map, filter GCFilter, next func(GCEvent)) gcStats {
+ 				}
+ 			default:
+ 				stats.aliveEntries++
++				ctFlags := currentKey4.GetFlags()
++				isSVC := (ctFlags & TUPLE_F_SERVICE) != 0
++				if isSVC {
++					lbmap.IncrementCachedCounterLeastConnBackendByID(lb.BackendID(entry.BackendID))
++				}
+ 			}
+ 		default:
+ 			log.Warningf("Encountered unknown type while scanning conntrack table: %v", reflect.TypeOf(key))
+diff --git a/pkg/maps/ctmap/gc/gc.go b/pkg/maps/ctmap/gc/gc.go
+index 68cdfd1567..4bef1c73f8 100644
+--- a/pkg/maps/ctmap/gc/gc.go
++++ b/pkg/maps/ctmap/gc/gc.go
+@@ -20,6 +20,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/endpoint"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
++	"github.com/cilium/cilium/pkg/maps/lbmap"
+ 	"github.com/cilium/cilium/pkg/option"
+ 	"github.com/cilium/cilium/pkg/time"
+ )
+@@ -174,6 +175,10 @@ func (gc *GC) Enable() {
+ 
+ 			if len(eps) > 0 || initialScan {
+ 				gc.logger.Info("Starting initial GC of connection tracking")
++				if initialScan && (option.Config.NodePortAlg == option.NodePortAlgLeastConn ||
++					option.Config.LoadBalancerAlgorithmAnnotation) {
++					lbmap.InitBackendCachedMap()
++				}
+ 				maxDeleteRatio, success = gc.runGC(nil, ipv4, ipv6, triggeredBySignal, gcFilter)
+ 			}
+ 			for _, e := range eps {
+@@ -329,6 +334,8 @@ func (gc *GC) runGC(e *endpoint.Endpoint, ipv4, ipv6, triggeredBySignal bool, fi
+ 		}
+ 	}
+ 
++	lbmap.FlushCachedCounterLeastConnBackends()
++
+ 	if e == nil && triggeredBySignal {
+ 		vsns := []ctmap.CTMapIPVersion{}
+ 		if ipv4 {
+diff --git a/pkg/maps/ctmap/types.go b/pkg/maps/ctmap/types.go
+index 75761e70c1..93ce1550fb 100644
+--- a/pkg/maps/ctmap/types.go
++++ b/pkg/maps/ctmap/types.go
+@@ -577,6 +577,10 @@ func (c *CtEntry) isDsrInternalEntry() bool {
+ 	return c.Flags&DSRInternal != 0
+ }
+ 
++func (c *CtEntry) IsClosed() bool {
++	return (c.Flags&RxClosing) != 0 || (c.Flags&TxClosing) != 0
++}
++
+ func (c *CtEntry) flagsString() string {
+ 	var sb strings.Builder
+ 
+diff --git a/pkg/maps/lbmap/lbmap.go b/pkg/maps/lbmap/lbmap.go
+index 12686cec41..70d220b69c 100644
+--- a/pkg/maps/lbmap/lbmap.go
++++ b/pkg/maps/lbmap/lbmap.go
+@@ -37,6 +37,7 @@ var (
+ 	AffinityMapMaxEntries       = DefaultMaxEntries
+ 	SourceRangeMapMaxEntries    = DefaultMaxEntries
+ 	MaglevMapMaxEntries         = DefaultMaxEntries
++	LeastConnMapMaxEntries      = DefaultMaxEntries
+ )
+ 
+ // LBBPFMap is an implementation of the LBMap interface.
+@@ -221,6 +222,14 @@ func deleteServiceProto(svc loadbalancer.L3n4AddrID, backendCount int, useMaglev
+ 				logfields.BackendSlot: svcKey.GetBackendSlot(),
+ 			}).WithError(err).Warn("Unable to delete service entry from BPF map")
+ 		}
++
++		if ipv6 {
++			continue
++		}
++
++		if IsLeastConnEnabled() && slot == 0 {
++			deleteLeastConnServiceMap(svcKey)
++		}
+ 	}
+ 
+ 	if useMaglev {
+@@ -639,6 +648,10 @@ func updateMasterService(fe ServiceKey, v ServiceValue, activeBackends, quaranti
+ 		v.SetL7LBProxyPort(l7lbProxyPort)
+ 	}
+ 
++	if IsLeastConnEnabled() && loadBalancingAlgorithm != loadbalancer.SVCLoadBalancingAlgorithmLeastConn {
++		deleteLeastConnServiceMap(fe)
++	}
++
+ 	return updateServiceEndpoint(fe, v)
+ }
+ 
+diff --git a/pkg/maps/lbmap/leastconn.go b/pkg/maps/lbmap/leastconn.go
+new file mode 100644
+index 0000000000..4532ca86f0
+--- /dev/null
++++ b/pkg/maps/lbmap/leastconn.go
+@@ -0,0 +1,165 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package lbmap
++
++import (
++	"github.com/cilium/cilium/pkg/bpf"
++	"github.com/cilium/cilium/pkg/ebpf"
++	lb "github.com/cilium/cilium/pkg/loadbalancer"
++	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/option"
++	vbpf "github.com/cilium/ebpf"
++	"github.com/sirupsen/logrus"
++)
++
++const (
++	LeastConnService4MapName = "cilium_lb4_leastconn_service"
++	LeastConnBackend4MapName = "cilium_lb4_leastconn_backend"
++)
++
++var (
++	leastConnBackend4Map *LeastConnBackendMap
++	backendCachedMap     map[LeastConnBackendKey]LeastConnBackendVal
++)
++
++func IsLeastConnEnabled() bool {
++	return option.Config.LoadBalancerAlgorithmAnnotation ||
++		option.Config.NodePortAlg == option.NodePortAlgLeastConn
++}
++
++func InitLeastConnMaps() error {
++	bckMap, err := NewLeastConnBackendMap(LeastConnBackend4MapName, LeastConnMapMaxEntries)
++	if err != nil {
++		return err
++	}
++
++	leastConnBackend4Map = bckMap
++	return nil
++}
++
++func deleteLeastConnServiceMap(svcKey ServiceKey) {
++	svcKeyNetOrder := svcKey.ToNetwork()
++	key, ok := svcKeyNetOrder.(*Service4Key)
++	if !ok {
++		log.WithFields(logrus.Fields{
++			logfields.ServiceKey: svcKey,
++		}).Warn("Unable to convert service key")
++		return
++	}
++
++	if key == nil {
++		log.Error("Nil key provided to delete least-conn service")
++		return
++	}
++
++	mapPath := bpf.MapPath(LeastConnService4MapName)
++	svcMap, err := ebpf.LoadPinnedMap(mapPath)
++	if err != nil {
++		log.WithError(err).Warn("Unable to load pinned least-conn service BPF map", key)
++		return
++	}
++
++	defer svcMap.Close()
++	if err = svcMap.Delete(key); err != nil {
++		log.WithError(err).Debug("Unable to delete least-conn service entry from BPF map", key)
++		return
++	}
++
++	log.Debug("Deleted least-conn service entry from BPF map", key)
++}
++
++func DeleteLeastConnBackendByID(id lb.BackendID) {
++	bckMap := leastConnBackend4Map
++	if bckMap == nil {
++		return
++	}
++
++	key := LeastConnBackendKey{
++		BackendID: uint32(id),
++	}
++	if err := bckMap.Delete(&key); err != nil {
++		log.WithError(err).Debug("Unable to delete least-conn backend entry from BPF map", key)
++		return
++	}
++
++	log.Debug("Deleted least-conn backend entry from BPF map", key)
++}
++
++func DecrementCounterLeastConnBackendByID(id lb.BackendID) {
++	bckMap := leastConnBackend4Map
++	if bckMap == nil {
++		return
++	}
++
++	key := LeastConnBackendKey{
++		BackendID: uint32(id),
++	}
++	val := LeastConnBackendVal{}
++	if err := bckMap.Lookup(key, &val); err != nil {
++		log.WithError(err).Debug("Unable to lookup least-conn backend entry from BPF map")
++		return
++	}
++
++	if val.Count == 0 {
++		log.Debug("Already decremented least-conn backend counter", key)
++		return
++	}
++	// warning - race condition present between bpf and userspace
++	val.Count--
++	if err := bckMap.Update(key, val, vbpf.UpdateExist); err != nil {
++		log.WithError(err).Warn("Unable to update least-conn backend entry from BPF map")
++		return
++	}
++
++	log.Debug("Decremented least-conn backend counter", key)
++}
++
++func InitBackendCachedMap() {
++	backendCachedMap = make(map[LeastConnBackendKey]LeastConnBackendVal)
++	log.Debug("Init cached backend counters map")
++}
++
++func IncrementCachedCounterLeastConnBackendByID(id lb.BackendID) {
++	if backendCachedMap == nil {
++		return
++	}
++
++	key := LeastConnBackendKey{
++		BackendID: uint32(id),
++	}
++
++	if val, ok := backendCachedMap[key]; ok {
++		val.Count++
++		backendCachedMap[key] = val
++	} else {
++		val := LeastConnBackendVal{Count: 1}
++		backendCachedMap[key] = val
++	}
++}
++
++func FlushCachedCounterLeastConnBackends() {
++	if backendCachedMap == nil {
++		return
++	}
++
++	defer func() {
++		backendCachedMap = nil
++	}()
++
++	log.Debug("Flush least-conn backend counters")
++
++	bckMap := leastConnBackend4Map
++	if bckMap == nil {
++		log.Warn("Unable to flush cached backends - bpf map is not opened")
++		return
++	}
++
++	for key, val := range backendCachedMap {
++		if err := bckMap.Update(key, val, vbpf.UpdateAny); err != nil {
++			log.WithError(err).Error("Unable to flush least-conn backend entry")
++			continue
++		}
++		log.Debug("Flushed least-conn backend entry", key, val.Count)
++	}
++}
+diff --git a/pkg/maps/lbmap/leastconn_backend_map.go b/pkg/maps/lbmap/leastconn_backend_map.go
+new file mode 100644
+index 0000000000..02f8817d5e
+--- /dev/null
++++ b/pkg/maps/lbmap/leastconn_backend_map.go
+@@ -0,0 +1,42 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package lbmap
++
++import (
++	"unsafe"
++
++	"github.com/cilium/cilium/pkg/ebpf"
++	"golang.org/x/sys/unix"
++)
++
++// MaglevOuterMap represents a Maglev outer map.
++type LeastConnBackendMap struct {
++	*ebpf.Map
++}
++
++type LeastConnBackendKey struct {
++	BackendID uint32 `align:"backend_id"`
++}
++
++type LeastConnBackendVal struct {
++	Count uint32 `align:"count"`
++}
++
++func NewLeastConnBackendMap(name string, maxEntries int) (*LeastConnBackendMap, error) {
++	m := ebpf.NewMap(&ebpf.MapSpec{
++		Name:       name,
++		Type:       ebpf.Hash,
++		KeySize:    uint32(unsafe.Sizeof(LeastConnBackendKey{})),
++		ValueSize:  uint32(unsafe.Sizeof(LeastConnBackendVal{})),
++		MaxEntries: uint32(maxEntries),
++		Pinning:    ebpf.PinByName,
++		Flags:      unix.BPF_F_NO_PREALLOC,
++	})
++
++	if err := m.OpenOrCreate(); err != nil {
++		return nil, err
++	}
++
++	return &LeastConnBackendMap{m}, nil
++}
+diff --git a/pkg/maps/lbmap/leastconn_service_map.go b/pkg/maps/lbmap/leastconn_service_map.go
+new file mode 100644
+index 0000000000..cf93bc3e07
+--- /dev/null
++++ b/pkg/maps/lbmap/leastconn_service_map.go
+@@ -0,0 +1,48 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package lbmap
++
++import (
++	"unsafe"
++
++	"github.com/cilium/cilium/pkg/ebpf"
++	"golang.org/x/sys/unix"
++)
++
++type LeastConnServiceMap struct {
++	*ebpf.Map
++}
++
++type BPFTimer struct {
++	_ [16]byte `align:"bpf_timer"`
++}
++
++type pad4uint8 [4]uint8
++
++type LeastConnServiceVal struct {
++	IsTmrActive uint32    `align:"is_tmr_active"`
++	BackendID   uint32    `align:"backend_id"`
++	LastSlot    uint16    `align:"last_slot"`
++	Pad         pad4uint8 `align:"pad"`
++	Tmr         BPFTimer  `align:"tmr"`
++}
++
++// btf-info for map not supported for userspace now
++func NewLeastConnServiceMap(name string, maxEntries int) (*LeastConnServiceMap, error) {
++	m := ebpf.NewMap(&ebpf.MapSpec{
++		Name:       name,
++		Type:       ebpf.Hash,
++		KeySize:    uint32(unsafe.Sizeof(Service4Key{})),
++		ValueSize:  uint32(unsafe.Sizeof(LeastConnServiceVal{})),
++		MaxEntries: uint32(maxEntries),
++		Pinning:    ebpf.PinByName,
++		Flags:      unix.BPF_F_NO_PREALLOC,
++	})
++
++	if err := m.OpenOrCreate(); err != nil {
++		return nil, err
++	}
++
++	return &LeastConnServiceMap{m}, nil
++}
+diff --git a/pkg/metrics/features/metrics.go b/pkg/metrics/features/metrics.go
+index 782495651c..04bb757ea1 100644
+--- a/pkg/metrics/features/metrics.go
++++ b/pkg/metrics/features/metrics.go
+@@ -186,6 +186,7 @@ var (
+ 	defaultNodePortModeAlgorithms = []string{
+ 		option.NodePortAlgMaglev,
+ 		option.NodePortAlgRandom,
++		option.NodePortAlgLeastConn,
+ 	}
+ 
+ 	defaultNodePortModeAccelerations = []string{
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index e4390c0622..a4d5ee97a7 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -1227,6 +1227,9 @@ const (
+ 	// NodePortAlgMaglev is for using maglev consistent hashing for backend selection
+ 	NodePortAlgMaglev = "maglev"
+ 
++	// NodePortAlgLeastConn is for using least connection algorithm backend selection
++	NodePortAlgLeastConn = "least-conn"
++
+ 	// DSR dispatch mode to encode service into IP option or extension header
+ 	DSRDispatchOption = "opt"
+ 
+diff --git a/pkg/service/service.go b/pkg/service/service.go
+index 52b2d9aa2b..fb2494991c 100644
+--- a/pkg/service/service.go
++++ b/pkg/service/service.go
+@@ -1735,6 +1735,9 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
+ 			getScopedLog().WithField(logfields.BackendID, id).
+ 				Debug("Removing obsolete backend")
+ 		}
++		if lbmap.IsLeastConnEnabled() {
++			lbmap.DeleteLeastConnBackendByID(id)
++		}
+ 		s.lbmap.DeleteBackendByID(id)
+ 		s.TerminateUDPConnectionsToBackend(&be.L3n4Addr)
+ 	}
+@@ -1798,6 +1801,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
+ 			// size is limited, which can lead to connectivity disruptions.
+ 			id := b.ID
+ 			DeleteBackendID(id)
++			lbmap.DeleteLeastConnBackendByID(id)
+ 			if err := s.lbmap.DeleteBackendByID(id); err != nil {
+ 				// As the backends map is not expected to be updated during restore,
+ 				// the deletion call shouldn't fail. But log the error, just
+@@ -1848,6 +1852,7 @@ func (s *Service) deleteOrphanBackends() error {
+ 				Debug("Removing orphan backend")
+ 			// The b.ID is unique across IPv4/6, hence attempt
+ 			// to clean it from both maps, and ignore errors.
++			lbmap.DeleteLeastConnBackendByID(b.ID)
+ 			DeleteBackendID(b.ID)
+ 			s.lbmap.DeleteBackendByID(b.ID)
+ 			delete(s.backendByHash, hash)
+@@ -2105,6 +2110,9 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
+ 
+ 			obsoleteSVCBackendIDs = append(obsoleteSVCBackendIDs, backend.ID)
+ 			if s.backendRefCount.Delete(hash) {
++				if lbmap.IsLeastConnEnabled() {
++					lbmap.DeleteLeastConnBackendByID(backend.ID)
++				}
+ 				DeleteBackendID(backend.ID)
+ 				delete(s.backendByHash, hash)
+ 				obsoleteBackends = append(obsoleteBackends, backend)
+@@ -2123,6 +2131,9 @@ func (s *Service) deleteBackendsFromCacheLocked(svc *svcInfo) ([]lb.BackendID, [
+ 
+ 	for hash, backend := range svc.backendByHash {
+ 		if s.backendRefCount.Delete(hash) {
++			if lbmap.IsLeastConnEnabled() {
++				lbmap.DeleteLeastConnBackendByID(backend.ID)
++			}
+ 			DeleteBackendID(backend.ID)
+ 			obsoleteBackendIDs = append(obsoleteBackendIDs, backend.ID)
+ 			obsoleteBackends = append(obsoleteBackends, backend.DeepCopy())
+-- 
+2.34.1
+

@@ -1,0 +1,5 @@
+candi:
+  fixes:
+    - summary: Fix the error in the `detect_bundle.sh` script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/4669
+

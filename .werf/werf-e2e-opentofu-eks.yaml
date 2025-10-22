@@ -1,0 +1,116 @@
+---
+image: e2e-opentofu-eks
+# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
+# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
+fromImage: common/alt-p11-artifact
+import:
+  {{- $k8sVersion := "1.29"}}
+  {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+  - image: common/kubernetes-artifact-{{ $image_version }}
+    add: /src/_output/bin/kubectl
+    to: /usr/local/bin/kubectl
+    before: setup
+  - image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+    add: /opentofu/opentofu
+    to: /image/bin/opentofu
+    before: setup
+    {{- range $_, $edition := $.Editions }}
+      {{- if $edition.terraformProviders }}
+        {{- range $_, $tfProvider := $edition.terraformProviders }}
+          {{- $tf := index $.TF $tfProvider }}
+            {{- if eq $tf.type "vcd" }}
+              {{- range $version := $tf.versions }}
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}-v{{ $version }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
+              {{- end }}
+            {{- else }}
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
+            {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if eq $.Env $edition.name }}
+      {{- break -}}
+    {{- end }}
+  {{- end }}
+  - image: e2e-eks-terraform-plugins
+    add: /terraform-provider-random
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
+    before: setup
+  - image: e2e-eks-terraform-plugins
+    add: /terraform-provider-tls
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
+    before: setup
+  - image: e2e-eks-terraform-plugins
+    add: /terraform-provider-cloudinit
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
+    before: setup
+  - image: e2e-eks-terraform-plugins
+    add: /terraform-provider-kubernetes
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
+    before: setup
+shell:
+  beforeInstall:
+  - apt-get install -y wget unzip git python3 pip jq curl gettext-base
+  - pip3 install awscli
+  - |
+    mkdir /opentofu
+    mkdir -p /usr/local/share/opentofu/plugins
+    cat << EOD > /root/.tofurc
+    provider_installation {
+      filesystem_mirror {
+        path    = "/usr/local/share/opentofu/plugins"
+        include = ["*/*/*"]
+      }
+    }
+    EOD
+    touch /opentofu.log
+    chmod 755 /opentofu.log
+---
+image: e2e-eks-terraform-plugins-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v3.4.3 $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-random.git /src/provider-random && rm -rf /src/provider-random/.git
+  - git clone --depth 1 --branch v4.0.4 $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-tls.git /src/provider-tls && rm -rf /src/provider-tls/.git
+  - git clone --depth 1 --branch v2.2.0 $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-cloudinit.git /src/provider-cloudinit && rm -rf /src/provider-cloudinit/.git
+  - git clone --depth 1 --branch v2.31.0 $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-kubernetes.git /src/provider-kubernetes && rm -rf /src/provider-kubernetes/.git
+---
+image: e2e-eks-terraform-plugins
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: e2e-eks-terraform-plugins-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src/provider-random
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
+  - cd /src/provider-tls
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
+  - cd /src/provider-cloudinit
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
+  - cd /src/provider-kubernetes
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
+  - mv /src/provider-random/terraform-provider-random /terraform-provider-random
+  - mv /src/provider-tls/terraform-provider-tls /terraform-provider-tls
+  - mv /src/provider-cloudinit/terraform-provider-cloudinit /terraform-provider-cloudinit
+  - mv /src/provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
+  - chmod 755 /terraform-provider-*
+  - chown 64535:64535 /terraform-provider-*

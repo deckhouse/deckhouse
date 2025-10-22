@@ -1,0 +1,7 @@
+<div class="modal-window" data-modal-window="{{include.mode}}" style="display: none;">
+  <div class="modal-window__backdrop" data-close-bg></div>
+  <div class="modal-window__wrap">
+    <a href="" class="modal-window__close-btn" data-close-btn>✕</a>
+    {%- include {{include.mode}}_form.html -%}
+  </div>
+</div>

@@ -1,0 +1,73 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["configmaps" ,"endpoints", "nodes", "pods", "secrets"]
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "ingressclasses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses/status"]
+  verbs: ["update"]
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["list", "watch"]
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  verbs: ["list", "watch", "get"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-nginx
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:ingress-nginx
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:ingress-nginx
+subjects:
+- kind: ServiceAccount
+  name: ingress-nginx
+  namespace: d8-ingress-nginx
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:ingress-nginx:d8-rbac-proxy
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+- kind: ServiceAccount
+  name: ingress-nginx
+  namespace: d8-ingress-nginx

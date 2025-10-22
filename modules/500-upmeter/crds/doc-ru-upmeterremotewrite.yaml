@@ -1,0 +1,47 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: Конфигурация отправки результатов проб модуля `upmeter` по протоколу `remote_write`.
+          properties:
+            spec:
+              properties:
+                config:
+                  description: Конфигурация протокола Prometheus `remote_write`.
+                  properties:
+                    url:
+                      description: URL endpoint'а для отправки данных.
+                    basicAuth:
+                      description: Параметры Basic-авторизации для endpoint'а.
+                      properties:
+                        username:
+                          description: Имя для аутентификации.
+                        password:
+                          description: Пароль для аутентификации.
+                    bearerToken:
+                      description: Токен для аутентификации.
+                    tlsConfig:
+                      description: Параметры TLS.
+                      properties:
+                        insecureSkipVerify:
+                          description: Отключить проверку сертификата.
+                        ca:
+                          description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
+                    headers:
+                      description: HTTP-заголовки, необходимые при отправке с каждым запросом.
+                      properties:
+                        X-Scope-OrgID:
+                          description: |
+                            Заголовок `X-Scope-OrgID`, указывающий ID тенанта.
+                        X-Auth-Token:
+                          description: |
+                            Заголовок `X-Auth-Token`, указывающий токен аутентификации.
+                additionalLabels:
+                  description: Дополнительные метки для добавления ко всем метрикам.
+                intervalSeconds:
+                  description: Временной интервал между точками (в секундах).
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema

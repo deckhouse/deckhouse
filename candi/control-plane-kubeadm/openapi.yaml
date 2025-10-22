@@ -1,0 +1,137 @@
+kind: KubeadmConfigTemplateData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, clusterConfiguration, nodeIP, k8s]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [KubeadmConfigTemplateData]
+      nodeIP:
+        type: string
+      extraArgs:
+        type: object
+      registry:
+        type: object
+        properties:
+          host:
+            type: string
+          auth:
+            type: string
+          address:
+            type: string
+          path:
+            type: string
+          scheme:
+            type: string
+          ca:
+            type: string
+      images:
+        type: object
+      clusterConfiguration:
+        type: object
+        properties:
+          serviceSubnetCIDR:
+            type: string
+          podSubnetCIDR:
+            type: string
+          kubernetesVersion:
+            type: string
+          podSubnetNodeCIDRPrefix:
+            type: string
+            default: "24"
+          clusterDomain:
+            type: string
+          clusterType:
+            type: string
+            enum: [Cloud, Static]
+          cloud:
+            type: object
+            properties:
+              prefix:
+                type: string
+              provider:
+                type: string
+      bashible: &bashible
+        type: object
+        patternProperties:
+          "ubuntu|centos":
+            type: object
+            patternProperties:
+              '^[0-9.]+$':
+                type: object
+                properties:
+                  containerd:
+                    type: object
+                    properties:
+                      desiredVersion:
+                        type: string
+                      allowedPattern:
+                        type: string
+                  kernel:
+                    type: object
+                    patternProperties:
+                      "generic|aws|azure|gcp|openstack|vsphere|yandex":
+                        type: object
+                        properties:
+                          desiredVersion:
+                            type: string
+                          allowedPattern:
+                            type: string
+      k8s:
+        type: object
+        patternProperties:
+          '^1.[0-9]+$':
+            type: object
+            properties:
+              patch:
+                type: [string, number]
+              cniVersion:
+                type: string
+              bashible: *bashible
+              ccm:
+                type: object
+                properties:
+                  openstack:
+                    type: string
+                  yandex:
+                    type: string
+                  aws:
+                    type: string
+                  vsphere:
+                    type: string
+                  azure:
+                    type: string
+                  gcp:
+              csi:
+                type: object
+                properties:
+                  openstack:
+                    type: string
+                  provisioner:
+                    type: string
+                  attacher:
+                    type: string
+                  resizer:
+                    type: string
+                  registrar:
+                    type: string
+              controlPlane:
+                type: object
+                properties:
+                  etcd:
+                    type: string
+                  kubeApiServer:
+                    type: string
+                  kubeControllerManager:
+                    type: string
+                  kubeScheduler:
+                    type: string
+                  kubeProxy:
+                    type: string
+

@@ -1,0 +1,17 @@
+{
+  "kubernetes_data_device_path": {
+    "sensitive": false,
+    "type": "string",
+    "value": "/dev/disk/by-id/virtio-kubernetes-data"
+  },
+  "master_ip_address_for_ssh": {
+    "sensitive": false,
+    "type": "string",
+    "value": "10.233.2.21"
+  },
+  "node_internal_ip_address": {
+    "sensitive": false,
+    "type": "string",
+    "value": "10.233.2.21"
+  }
+}

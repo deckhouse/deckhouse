@@ -1,0 +1,11 @@
+{{- $version := "1.17.1" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+  add: /cainjector-linux-amd64
+  to: /bin/cainjector
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/bin/cainjector"]

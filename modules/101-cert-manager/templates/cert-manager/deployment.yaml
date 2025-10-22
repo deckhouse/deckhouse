@@ -1,0 +1,162 @@
+{{- define "cert_manager_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cert-manager
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: cert-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "cert-manager"
+      minAllowed:
+        {{- include "cert_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cert-manager
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: cert-manager
+  template:
+    metadata:
+      labels:
+        app: cert-manager
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cert-manager")) | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: cert-manager
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+        - name: cert-manager
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_image" (list . "certManagerController") }}
+          args:
+          - --v=1
+          - --cluster-resource-namespace=$(POD_NAMESPACE)
+          - --leader-election-namespace=$(POD_NAMESPACE)
+          - --acme-http01-solver-resource-limits-cpu=0
+          - --acme-http01-solver-resource-request-cpu=0
+          - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
+          {{- if $.Values.certManager.maxConcurrentChallenges }}
+          - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}
+          {{- end }}
+          {{- with .Values.certManager.recursiveSettings }}
+            {{- if .nameservers }}
+          - --dns01-recursive-nameservers={{ join "," .nameservers }}
+            {{- end }}
+            {{- if .useOnlyRecursive }}
+          - --dns01-recursive-nameservers-only
+            {{- end }}
+          {{- end }}
+{{- if (hasKey $.Values.global.modules "https") }}
+{{- if eq $.Values.global.modules.https.mode "CertManager" }}
+          - --default-issuer-kind=ClusterIssuer
+          - --default-issuer-name={{ $.Values.global.modules.https.certManager.clusterIssuerName }}
+          {{- if $.Values.certManager.cleanupOrphanSecrets }}
+          - --enable-certificate-owner-ref
+          {{- end }}
+{{- end }}
+{{- end }}
+          ports:
+            - containerPort: 9402
+              name: http-metrics
+              protocol: TCP
+            - containerPort: 9403
+              name: http-healthz
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              port: http-healthz
+              path: /livez
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 30
+            successThreshold: 1
+            failureThreshold: 8
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "cert_manager_resources" . | nindent 14 }}
+{{- end }}
+          env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+          args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9404"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+          env:
+          - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:9402/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cert-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: cert-manager
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 9404
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 9404
+              scheme: HTTPS
+          ports:
+          - containerPort: 9404
+            name: https-metrics
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
+  {{- end }}

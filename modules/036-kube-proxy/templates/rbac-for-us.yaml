@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: d8-kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - kube-proxy
+  resources:
+  - configmaps
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:kube-proxy
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:kube-proxy
+subjects:
+- kind: ServiceAccount
+  name: d8-kube-proxy
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:kube-proxy
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node-proxier
+subjects:
+- kind: ServiceAccount
+  name: d8-kube-proxy
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:kube-proxy-metrics-rbac
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: d8-kube-proxy
+    namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:kube-proxy
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - nodes/status
+    verbs:
+      - get
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:kube-proxy
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:kube-proxy
+subjects:
+- kind: ServiceAccount
+  name: d8-kube-proxy
+  namespace: kube-system
