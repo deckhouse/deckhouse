@@ -207,8 +207,7 @@ properties:
             minItems: 1
             description: Availability zones.
             uniqueItems: true
-    hybridMode:
-      type: boolean
-      default: false
-      description: |
-        Tells whether the OpenStack cloud provider is used in hybrid mode.
+      hybridMode:
+        type: boolean
+        description: |
+          Tells whether the OpenStack cloud provider is used in hybrid mode.

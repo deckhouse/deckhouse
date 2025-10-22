@@ -146,11 +146,11 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 			discoveryData.DefaultImageName = instances.Map()["imageName"].String()
 			discoveryData.MainNetwork = instances.Map()["mainNetwork"].String()
 		}
-	}
 
-	discoveryDataJSON, err = json.Marshal(discoveryData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+		discoveryDataJSON, err = json.Marshal(discoveryData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+		}
 	}
 
 	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/openstack/openapi"})
