@@ -276,7 +276,7 @@ func CreateDeckhouseManifests(
 	if err != nil {
 		return nil, err
 	}
-	registryBashibleConfigSecretData, err := cfg.RegistryConfigBuilder.RegistryBashibleConfigSecret()
+	RegistryBashibleConfigSecretData, err := cfg.RegistryConfigBuilder.RegistryBashibleConfigSecretData()
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +305,10 @@ func CreateDeckhouseManifests(
 		},
 	})
 	tasks = append(tasks, actions.ManifestTask{
-		Name:     `Secret "registry-bashible-config"`,
-		Manifest: func() interface{} { return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData) },
+		Name: `Secret "registry-bashible-config"`,
+		Manifest: func() interface{} {
+			return manifests.RegistryBashibleConfigSecretData(RegistryBashibleConfigSecretData)
+		},
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
