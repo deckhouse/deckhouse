@@ -105,7 +105,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 Режим применения таких обновлений настраивается с помощью параметра `disruptions.approvalMode`:
 
 - `Manual` — режим ручного подтверждения disruptive-обновлений.
-  При появлении доступного disruptive-обновления отображается специальный алерт.
+  При появлении доступного disruptive-обновления отображается [алерт `NodeRequiresDisruptionApprovalForUpdate`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#node-manager-noderequiresdisruptionapprovalforupdate).
   
   Чтобы подтвердить disruptive-обновление,
   установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел в группе, следуя примеру:
