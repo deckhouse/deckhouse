@@ -1228,7 +1228,7 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
-##### Как настроить зеркало для к публичным реестрам образов (актуальный способ)?
+##### Как настроить зеркало для доступа к публичным registries (актуальный способ)?
 
 Пример настройки зеркала к публичным реестрам образов при использовании **актуального** способа конфигурации:
 
