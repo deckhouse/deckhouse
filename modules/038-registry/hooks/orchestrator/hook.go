@@ -272,7 +272,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 
 	inputs.CheckerStatus = checker.GetStatus(ctx, input)
 
-	values.Hash, err = helpers.ComputeHash(inputs)
+	values.Hash, err = registry_pki.ComputeHash(inputs)
 	if err != nil {
 		return fmt.Errorf("cannot compute inputs hash: %w", err)
 	}

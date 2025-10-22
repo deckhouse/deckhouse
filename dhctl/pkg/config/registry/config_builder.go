@@ -25,6 +25,7 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	registry_init "github.com/deckhouse/deckhouse/go_lib/registry/models/init"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type ConfigBuilder struct {
@@ -91,9 +92,9 @@ func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
 			mirrorHost: {Mirrors: mirrors}},
 	}
 
-	version, err := computeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute config version: %w", err)
+		return nil, fmt.Errorf("failed to compute context version: %w", err)
 	}
 	ret.Version = version
 
@@ -189,7 +190,7 @@ func (builder *ConfigBuilder) RegistryBashibleConfigSecret() (map[string][]byte,
 			mirrorHost: {Mirrors: mirrors}},
 	}
 
-	version, err := computeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}

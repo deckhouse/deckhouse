@@ -15,10 +15,6 @@
 package registry
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"strings"
 )
 
@@ -28,26 +24,4 @@ func addressAndPathFromImagesRepo(imgRepo string) (string, string) {
 		return parts[0], ""
 	}
 	return parts[0], "/" + parts[1]
-}
-
-func computeHash(values ...any) (string, error) {
-	if len(values) == 0 {
-		return "", nil
-	}
-
-	hash := sha256.New()
-
-	for _, value := range values {
-		buf, err := json.Marshal(value)
-		if err != nil {
-			return "", fmt.Errorf("marshal error: %w", err)
-		}
-
-		hash.Write(buf)
-	}
-
-	hashBytes := hash.Sum([]byte{})
-	ret := hex.EncodeToString(hashBytes)
-
-	return ret, nil
 }

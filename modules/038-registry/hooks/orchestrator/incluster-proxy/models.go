@@ -153,7 +153,7 @@ func (cfg *StateConfig) process(log go_hook.Logger, params Params) error {
 		return err
 	}
 
-	version, err := helpers.ComputeHash(cfg.Config)
+	version, err := pki.ComputeHash(cfg.Config)
 	if err != nil {
 		return fmt.Errorf("cannot compute config hash: %w", err)
 	}

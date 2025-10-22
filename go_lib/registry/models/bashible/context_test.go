@@ -217,7 +217,6 @@ func TestContextToMap(t *testing.T) {
 			}(),
 			result: result{
 				toMap: func() map[string]interface{} {
-
 					ret := map[string]interface{}{
 						"registryModuleEnable": true,
 						"mode":                 "unmanaged",
@@ -277,7 +276,6 @@ func TestContextToMap(t *testing.T) {
 			}(),
 			result: result{
 				toMap: func() map[string]interface{} {
-
 					ret := map[string]interface{}{
 						"registryModuleEnable": true,
 						"mode":                 "unmanaged",

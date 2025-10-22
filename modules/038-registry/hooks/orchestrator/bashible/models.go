@@ -25,6 +25,7 @@ import (
 	registry_docker "github.com/deckhouse/deckhouse/go_lib/registry/docker"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -252,7 +253,7 @@ func (b *ConfigBuilder) build() (*Config, error) {
 		Hosts:          b.hosts(),
 	}
 
-	version, err := helpers.ComputeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
