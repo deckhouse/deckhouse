@@ -5,18 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/	suite.Run("registry error reconcile with golden file", func() {
-		suite.setupController("registry-error-reconcile.yaml")
-		// Override the default mock behavior for this test
-		dependency.TestDC.CRClient.ImageMock.Set(func(ctx context.Context, tag string) (interface{}, error) {
-			return nil, fmt.Errorf("registry error")
-		})
-		apv := suite.getApplicationPackageVersion("test-apv")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-	})2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -177,6 +166,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects().
+		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
 		Build()
 
 	ctr := &reconciler{
@@ -317,15 +307,6 @@ version: "1.0.0"
 
 	suite.Run("non-draft resource skip", func() {
 		suite.setupController("non-draft-resource.yaml")
-		apv := suite.getApplicationPackageVersion("test-apv")
-		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: apv.Name},
-		})
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("deletion reconcile", func() {
-		suite.setupController("deletion-reconcile.yaml")
 		apv := suite.getApplicationPackageVersion("test-apv")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},

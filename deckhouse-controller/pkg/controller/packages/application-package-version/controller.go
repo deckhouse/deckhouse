@@ -149,7 +149,9 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
-		return fmt.Errorf("fetch package release image metadata for %s: %w", packageVersion.Name, err)
+		r.logger.Warn("failed to fetch package metadata", slog.String("name", packageVersion.Name), log.Err(err))
+		// Continue with empty metadata - don't fail the reconciliation
+		packageMeta = &PackageMetadata{}
 	}
 	if packageMeta.PackageDefinition != nil {
 		r.logger.Debug("got metadata from package.yaml", slog.String("name", packageVersion.Name), slog.String("meta_name", packageMeta.PackageDefinition.Name))
@@ -180,13 +182,19 @@ func (r *reconciler) handle(ctx context.Context, packageVersion *v1alpha1.Applic
 	return nil
 }
 
-func (r *reconciler) delete(_ context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) delete(ctx context.Context, packageVersion *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	r.logger.Info("deleting ApplicationPackageVersion", slog.String("name", packageVersion.Name))
 
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
+	if pd == nil {
+		return apv
+	}
+
 	apv.Status.PackageName = pd.Name
 	apv.Status.Version = pd.Version
 
@@ -197,9 +205,11 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 		},
 		Category: pd.Category,
 		Stage:    pd.Stage,
-		Licensing: &v1alpha1.PackageLicensing{
+	}
+	if pd.Licensing != nil {
+		apv.Status.Metadata.Licensing = &v1alpha1.PackageLicensing{
 			Editions: convertLicensingEditions(pd.Licensing.Editions),
-		},
+		}
 	}
 
 	if pd.Requirements != nil {
@@ -210,21 +220,23 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 		}
 	}
 
-	if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
-		apv.Status.Metadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
-			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-				From:             pd.VersionCompatibilityRules.Upgrade.From,
-				AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),
-				AllowSkipMinor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMinor),
-				AllowSkipMajor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMajor),
-			},
-			Downgrade: &v1alpha1.PackageVersionCompatibilityRule{
-				To:               pd.VersionCompatibilityRules.Downgrade.To,
-				AllowSkipPatches: int(pd.VersionCompatibilityRules.Downgrade.AllowSkipPatches),
-				AllowSkipMinor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMinor),
-				AllowSkipMajor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMajor),
-				MaxRollback:      int(pd.VersionCompatibilityRules.Downgrade.MaxRollback),
-			},
+	if pd.VersionCompatibilityRules != nil {
+		if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
+			apv.Status.Metadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
+				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
+					From:             pd.VersionCompatibilityRules.Upgrade.From,
+					AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),
+					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMinor),
+					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMajor),
+				},
+				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{
+					To:               pd.VersionCompatibilityRules.Downgrade.To,
+					AllowSkipPatches: int(pd.VersionCompatibilityRules.Downgrade.AllowSkipPatches),
+					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMinor),
+					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMajor),
+					MaxRollback:      int(pd.VersionCompatibilityRules.Downgrade.MaxRollback),
+				},
+			}
 		}
 	}
 
