@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bootstrap"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
@@ -47,6 +48,7 @@ const (
 
 	configSnapName           = "config"
 	stateSnapName            = "state"
+	bootstrapSnapName        = "bootstrap"
 	registrySecretSnapName   = "registry-secret"
 	pkiSnapName              = "pki"
 	secretsSnapName          = "secrets"
@@ -132,6 +134,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 		registryservice.KubernetsConfig(registryServiceSnapName),
 		inclusterproxy.KubernetesConfig(inClusterProxySnapName),
 		registryswitcher.KubernetesConfig(registrySwitcherSnapName),
+		bootstrap.KubernetesConfig(bootstrapSnapName),
 	}
 
 	ret = append(ret, bashible.KubernetesConfig(bashibleSnapName)...)
@@ -164,11 +167,14 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			if err = yaml.Unmarshal(stateData, &values.State); err != nil {
 				err = fmt.Errorf("cannot unmarhsal YAML: %w", err)
 			}
+		} else if errors.Is(err, helpers.ErrNoSnapshot) {
+			input.Logger.Info("State secret not exist, try to get bootstrap secret")
+			inputs.Bootstrap, err = bootstrap.InputsFromSnapshot(input, bootstrapSnapName)
 		}
 
 		if err != nil {
 			input.Logger.Warn(
-				"Cannot restore state from secret, will initialize new",
+				"Cannot restore state from secret or get bootstrap secret, will initialize new state",
 				"error", err,
 			)
 		} else {
@@ -263,6 +269,12 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"data": newRegistrySecret.ToBase64SecretData()},
 			"v1", "Secret", "d8-system", "deckhouse-registry")
+	}
+
+	// Remove bootstrap secret if exist
+	if bootstrap.SecretIsExist(input, bootstrapSnapName) {
+		input.PatchCollector.Delete(
+			"v1", "Secret", bootstrap.SecretNamespace, bootstrap.SecretName)
 	}
 	return nil
 }
