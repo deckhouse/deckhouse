@@ -245,7 +245,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 					"package.yaml": `name: test-package
 description:
   en: Test package
-  ru: Тестовый пакет
+  ru: Ru Test package
 category: Test
 stage: Preview
 type: Application

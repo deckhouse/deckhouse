@@ -17,7 +17,7 @@ status:
     category: Test
     description:
       en: Test package
-      ru: Тестовый пакет
+      ru: Ru Test package
     stage: Preview
   packageName: test-package
   version: 1.0.0
