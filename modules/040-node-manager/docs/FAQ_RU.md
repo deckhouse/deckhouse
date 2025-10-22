@@ -598,6 +598,51 @@ spec:
 
 После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
 
+## Почему изменение CRI могло не примениться?
+
+При попытке сменить CRI изменения могут не вступить в силу. Наиболее частая причина — наличие на узлах специальных меток (лейблов) `node.deckhouse.io/containerd-v2-unsupported` и `node.deckhouse.io/containerd-config=custom`.
+
+Метка `node.deckhouse.io/containerd-v2-unsupported` выставляется, если узел не соответствует хотя бы одному из следующих требований:
+
+- Версия ядра — не ниже 5.8;
+- Версия systemd — не ниже 244;
+- Активирован cgroup v2;
+- Доступна файловая система EROFS.
+
+Метка `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `conf.d` или `conf2.d`. В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+
+Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
+
+Если нет возможности удалить ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), вносящий изменения в конфигурацию containerd и несовместимый с версией containerd v2, используйте универсальный шаблон:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Скрипт для изменения конфигурации для ContainerdV2>
+    {{- else }}
+  # <Скрипт для изменения конфигурации для ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Кроме того, для смены CRI может понадобиться снять пользовательскую метку `node.deckhouse.io/containerd-config=custom`. Сделать это можно с помощью команды:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGroup, где меняется CRI>=); do d8 k label $node node.deckhouse.io/containerd-config-; done
+```
+
 ## Как изменить CRI для всего кластера?
 
 {% alert level="warning" %}

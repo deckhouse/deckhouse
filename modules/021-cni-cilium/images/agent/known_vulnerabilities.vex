@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-46521c2aa62c064cd1a854f470eef8288baab5bb530a3fcdce78453624e88f57",
+  "author": "Deckhouse \u003ccontact @deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-12797"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@43.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Библиотека cryptography используется как зависимость в скриптах для сборки и тестирования проекта, а не в самом продукте Envoy. Эти скрипты не задействуют уязвимую функцию, связанную с аутентификацией по 'сырым' публичным ключам (Raw Public Key), поэтому уязвимый код никогда не выполняется.",
+      "timestamp": "2025-10-14T07:34:04.028912Z"
+    }
+  ],
+  "timestamp": "2025-10-14T07:34:04Z"
+}

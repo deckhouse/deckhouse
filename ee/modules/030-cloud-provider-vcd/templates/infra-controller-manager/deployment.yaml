@@ -1,0 +1,147 @@
+{{- $icmImageName := ""}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
+  {{- $icmImageName = "infraControllerManagerLegacy" }}
+{{- else -}}
+  {{- $icmImageName = "infraControllerManager" }}
+{{- end }}
+
+{{- define "infra_controller_manager_resources" }}
+cpu: 25m
+memory: 50Mi
+{{- end }}
+
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: infra-controller-manager
+  namespace:  d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: infra-controller-manager
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "infra-controller-manager"
+      minAllowed:
+        {{- include "infra_controller_manager_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: infra-controller-manager
+  namespace:  d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: infra-controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infra-controller-manager
+  namespace: d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: infra-controller-manager
+  template:
+    metadata:
+      labels:
+        app: infra-controller-manager
+      annotations:
+        kubectl.kubernetes.io/default-exec-container: infra-controller-manager
+        kubectl.kubernetes.io/default-logs-container: infra-controller-manager
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/connection-info.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: deckhouse-registry
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
+      serviceAccountName: infra-controller-manager
+      containers:
+      - name: infra-controller-manager
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . $icmImageName) }}
+        args:
+        - --health-probe-bind-address=:9448
+        - --leader-elect
+        - --leader-election-namespace=d8-cloud-provider-vcd
+        env:
+        - name: VCD_INSECURE
+          valueFrom:
+            secretKeyRef:
+              key: insecure
+              name: vcd-connection-info
+        - name: VCD_HREF
+          valueFrom:
+            secretKeyRef:
+              key: host
+              name: vcd-connection-info
+        - name: VCD_VDC
+          valueFrom:
+            secretKeyRef:
+              key: vdc
+              name: vcd-connection-info
+        - name: VCD_ORG
+          valueFrom:
+            secretKeyRef:
+              key: org
+              name: vcd-connection-info
+        - name: VCD_VAPP
+          valueFrom:
+            secretKeyRef:
+              key: vAppName
+              name: vcd-connection-info        
+        - name: VCD_USER
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: vcd-credentials
+              optional: true
+        - name: VCD_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: vcd-credentials
+              optional: true
+        - name: VCD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: refreshToken
+              name: vcd-credentials
+              optional: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9448
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9448
+            scheme: HTTP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "infra_controller_manager_resources" . | nindent 12 }}
+          {{- end }}

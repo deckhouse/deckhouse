@@ -962,6 +962,10 @@ spec:
 
 ### Placement of VMs by nodes
 
+{% alert level="warning" %}
+Nodes on which virtual machines run should not have any taints.
+{% endalert %}
+
 The following methods can be used to manage the placement of virtual machines (placement parameters) across nodes:
 
 - Simple label selection (`nodeSelector`) — the basic method for selecting nodes with specified labels.
@@ -981,7 +985,7 @@ All of the above parameters (including the `.spec.nodeSelector` parameter from V
 - Use combinations of labels instead of single restrictions. For example, instead of required for a single label (e.g. env=prod), use several preferred conditions.
 - Consider the order in which interdependent VMs are launched. When using Affinity between VMs (for example, the backend depends on the database), launch the VMs referenced by the rules first to avoid lockouts.
 - Plan backup nodes for critical workloads. For VMs with strict requirements (e.g., AntiAffinity), provide backup nodes to avoid downtime in case of failure or maintenance.
-- Consider existing `taints` on nodes.
+- Nodes on which virtual machines run should not have any taints.
 
 {% alert level="info" %}
 When changing placement parameters:
@@ -1819,26 +1823,12 @@ spec:
       name: user-net # Network name
 ```
 
-It is allowed to connect a VM to the same network multiple times. Example:
-
-```yaml
-spec:
-  networks:
-    - type: Main # Must always be specified first
-    - type: Network
-      name: user-net # Network name
-    - type: Network
-      name: user-net # Network name
-```
-
 Example of connecting to the cluster network `corp-net`:
 
 ```yaml
 spec:
   networks:
     - type: Main # Must always be specified first
-    - type: Network
-      name: user-net
     - type: Network
       name: user-net
     - type: ClusterNetwork
@@ -1854,12 +1844,9 @@ status:
     - type: Network
       name: user-net
       macAddress: aa:bb:cc:dd:ee:01
-    - type: Network
-      name: user-net
-      macAddress: aa:bb:cc:dd:ee:02
     - type: ClusterNetwork
       name: corp-net
-      macAddress: aa:bb:cc:dd:ee:03
+      macAddress: aa:bb:cc:dd:ee:02
 ```
 
 For each additional network interface, a unique MAC address is automatically generated and reserved to avoid collisions. The following resources are used for this: `VirtualMachineMACAddress` (`vmmac`) and `VirtualMachineMACAddressLease` (`vmmacl`).

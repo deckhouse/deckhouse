@@ -222,7 +222,7 @@ To install Deckhouse with the `Minimal` module set, enable at least the followin
 ### Accessing documentation for the current version
 
 The documentation for the running version of Deckhouse is available at `documentation.<cluster_domain>`,  
-where `<cluster_domain>` is the DNS name generated according to the template specified in the [`modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter of the global configuration.
+where `<cluster_domain>` is the DNS name generated according to the template specified in the [`modules.publicDomainTemplate`](../../reference/api/global.html#parameters-modules-publicdomaintemplate) parameter of the global configuration.
 
 {% alert level="warning" %}
 Documentation is available only if the [documentation](/modules/documentation/) module is enabled in the cluster.  

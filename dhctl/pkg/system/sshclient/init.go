@@ -49,19 +49,27 @@ func NewInitClientFromFlagsWithHosts(askPassword bool) (node.SSHClient, error) {
 	return NewInitClientFromFlags(askPassword)
 }
 
+type ClienOptions struct {
+	InitializeNewAgent bool
+}
+
 func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) node.SSHClient {
+	return NewClientWithOptions(sess, privateKeys, ClienOptions{})
+}
+
+func NewClientWithOptions(sess *session.Session, privateKeys []session.AgentPrivateKey, clientOptions ClienOptions) node.SSHClient {
 
 	switch {
 	case app.SSHLegacyMode:
 		// if set --ssh-legacy-mode
-		client := clissh.NewClient(sess, privateKeys, false)
+		client := clissh.NewClient(sess, privateKeys, clientOptions.InitializeNewAgent)
 		return client
 	case app.SSHModernMode:
 		// if set --ssh-modern-mode
 		return gossh.NewClient(sess, privateKeys)
 	case len(app.SSHPrivateKeys) > 0:
 		// if flags doesn't set, but we have private keys
-		client := clissh.NewClient(sess, privateKeys, false)
+		client := clissh.NewClient(sess, privateKeys, clientOptions.InitializeNewAgent)
 		return client
 	default:
 		return gossh.NewClient(sess, privateKeys)

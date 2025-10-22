@@ -70,7 +70,7 @@ spec:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
 
-                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
                     image:
                       description: |
                         Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.

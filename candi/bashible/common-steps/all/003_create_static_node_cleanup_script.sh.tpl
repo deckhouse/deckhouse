@@ -77,6 +77,7 @@ rm -rf /etc/cni
 rm -rf /var/lib/cni
 rm -rf /var/lib/etcd
 rm -rf /opt/cni
+rm -rf /opt/containerd
 rm -rf /opt/deckhouse
 rm -rf /var/lib/bashible
 rm -rf /etc/containerd

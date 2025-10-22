@@ -3,7 +3,7 @@ title: "Configuring resources for istio-proxy sidecars"
 permalink: en/user/network/istio-sidecar-resource-management.html
 ---
 
-When using the [`istio`](/modules/istio/) module in a cluster,
+When using the [istio](/modules/istio/) module in a cluster,
 you can manage the resources allocated for istio-proxy sidecars in specific workloads.
 Annotations are used for this purpose.
 

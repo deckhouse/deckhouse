@@ -134,7 +134,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Due to the variety of SSO providers connected to `csi-vsphere`, the steps for creating a user are not covered in this article.
 
 The role to be created below includes all possible privileges for all DKP components.
-For a detailed list of privileges, refer to [the documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges).
+For a detailed list of privileges, refer to [the documentation](/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges).
 {% endalert %}
 
 Create the role with the necessary privileges:
@@ -156,4 +156,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 The module automatically creates a StorageClass for each Datastore and DatastoreCluster from zones.
 
-It also allows you to configure the name of the default StorageClass to be used in the cluster (parameter [default](../../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) and filter out unnecessary StorageClasses (parameter [exclude](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).
+It also allows you to configure the name of the default StorageClass to be used in the cluster (parameter [default](../../../reference/api/global.html#parameters-defaultclusterstorageclass)) and filter out unnecessary StorageClasses (parameter [exclude](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).

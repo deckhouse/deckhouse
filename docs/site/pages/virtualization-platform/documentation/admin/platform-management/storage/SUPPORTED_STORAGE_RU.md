@@ -20,7 +20,7 @@ lang: ru
 
 StorageClass по умолчанию используется в случаях, когда при создании ресурсов PersistentVolumeClaim явно не указан класс хранения. Это упрощает процесс создания и использования хранилищ, избегая необходимости каждый раз указывать класс вручную.
 
-Чтобы задать StorageClass по умолчанию, укажите нужный класс хранения в [глобальной конфигурации](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass). Пример команды:
+Чтобы задать StorageClass по умолчанию, укажите нужный класс хранения в [глобальной конфигурации](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Пример команды:
 
 ```shell
 # Укажите имя своего объекта StorageClass.

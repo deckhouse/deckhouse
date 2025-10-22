@@ -18,15 +18,15 @@ DVP позволяет:
 
 Администраторам DVP доступна настройка сбора и отправки логов с помощью трёх кастомных ресурсов:
 
-- [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
+- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
   включая правила сбора, фильтрации и парсинга;
-- [PodLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
+- [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
   в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
-- [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
+- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
 На основе этих ресурсов формируется *pipeline*, который используется в DVP для чтения логов
 и дальнейшей работы с ними c помощью модуля `log-shipper`.
-Полный перечень настроек модуля `log-shipper` доступен [в отдельном разделе документации](/products/kubernetes-platform/documentation/v1/modules/log-shipper/configuration.html).
+Полный перечень настроек модуля `log-shipper` доступен [в отдельном разделе документации](/modules/log-shipper/configuration.html).
 
 ## Настройка сбора и доставки логов
 
@@ -41,7 +41,7 @@ DVP позволяет:
    d8 platform module enable log-shipper
    ```
 
-1. Создайте ресурс [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
+1. Создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
    Данный ресурс позволяет вам настроить сбор логов с подов в определенном пространстве имён и с определенным лейблом,
    гибко настраивать парсинг многострочных логов и задавать другие правила.
 
@@ -58,7 +58,7 @@ DVP позволяет:
      - es-storage
    ```
 
-1. Создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination),
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination),
    который описывает параметры отправки логов в хранилище.
    Данный ресурс позволяет вам указать одно или несколько хранилищ и описать параметры подключения, буферизации и дополнительные лейблы, которые будут применяться к логам перед отправкой.
 
@@ -84,11 +84,11 @@ DVP позволяет:
 
 Вы можете настроить Deckhouse на работу с внешними системами хранения и анализа логов,
 такими как Elasticsearch, Splunk, Logstash и другими,
-используя [параметр `type`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-type) ресурса ClusterLogDestination.
+используя [параметр `type`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-type) ресурса ClusterLogDestination.
 
 ### Elasticsearch
 
-Чтобы отправлять логи в Elasticsearch, создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination), следуя этому примеру:
+Чтобы отправлять логи в Elasticsearch, создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination), следуя этому примеру:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -125,7 +125,7 @@ spec:
 
 В приведенном примере для каждого пространства имён Kubernetes будет создан свой индекс в Elasticsearch.
 
-Эта функция удобна в комбинации [с параметром `extraLabels`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
+Эта функция удобна в комбинации [с параметром `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -146,7 +146,7 @@ spec:
 
 #### Поддержка Elasticsearch < 6.X
 
-Для работы с версиями Elasticsearch ранее 6.0 включите поддержку [индексов `docType`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-elasticsearch-doctype) с помощью ресурса ClusterLogDestination:
+Для работы с версиями Elasticsearch ранее 6.0 включите поддержку [индексов `docType`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-elasticsearch-doctype) с помощью ресурса ClusterLogDestination:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -175,7 +175,7 @@ spec:
    добавьте новый **HTTP Event Collector** и скопируйте сгенерированный токен.
    - Укажите индекс Splunk для хранения логов, например, `logs`.
 
-1. Настройте Deckhouse, добавив ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination) для отправки логов в Splunk:
+1. Настройте Deckhouse, добавив ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) для отправки логов в Splunk:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -224,7 +224,7 @@ extraLabels:
    }
    ```
 
-1. Добавьте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination):
+1. Добавьте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -242,7 +242,7 @@ extraLabels:
 Чтобы настроить отправку логов в Graylog, выполните следующее:
 
 1. Убедитесь, что в Graylog настроен входящий поток для приема сообщений по протоколу TCP на указанном порте.
-1. Создайте ресурс [ClusterLogDestination](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination), следуя примеру:
+1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination), следуя примеру:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -260,7 +260,7 @@ extraLabels:
 
 ## Формат сообщений
 
-Вы можете выбрать формат отправляемых сообщений, используя [параметр `.encoding.codec`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-codec) ресурса ClusterLogDestination:
+Вы можете выбрать формат отправляемых сообщений, используя [параметр `.encoding.codec`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-codec) ресурса ClusterLogDestination:
 
 - CEF
 - GELF
@@ -334,7 +334,7 @@ extraLabels:
 
 ### Преобразование записи в структурированный объект
 
-Трансформация [`ParseMessage`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage) позволяет преобразовать строку в поле `message` в структурированный JSON-объект
+Трансформация [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage) позволяет преобразовать строку в поле `message` в структурированный JSON-объект
 на основе одного или нескольких заданных форматов (String, Klog, SysLog и другие).
 
 {% alert level="warning" %}
@@ -398,11 +398,11 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 
 ### Замена лейблов
 
-Трансформация [`ReplaceKeys`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-replacekeys) позволяет рекурсивно заменить все совпадения шаблона `source` на значение `target` в указанных ключах лейблов.
+Трансформация [`ReplaceKeys`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-replacekeys) позволяет рекурсивно заменить все совпадения шаблона `source` на значение `target` в указанных ключах лейблов.
 
 {% alert level="warning" %}
 Перед применением трансформации `ReplaceKeys` к полю `message` или его вложенным полям
-преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
+преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
 
 Пример настройки замены точек на нижние подчеркивания в лейблах:
@@ -443,11 +443,11 @@ spec:
 
 ### Удаление лейблов
 
-Трансформация [`DropLabels`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-droplabels) позволяет удалить указанные лейблы из структурированного JSON-сообщения.
+Трансформация [`DropLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-droplabels) позволяет удалить указанные лейблы из структурированного JSON-сообщения.
 
 {% alert level="warning" %}
 Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
-преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
+преобразуйте запись лога в структурированный объект с помощью трансформации [`ParseMessage`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-transformations-parsemessage).
 {%- endalert %}
 
 Пример конфигурации с удалением лейбла и предварительной трансформацией `ParseMessage`:
@@ -488,15 +488,15 @@ spec:
 
 В Deckhouse предусмотрены фильтры, позволяющие исключить лишние сообщения для оптимизации процесса сбора логов:
 
-- [`labelFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter) — применяется к метаданным,
+- [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter) — применяется к метаданным,
   например, к имени контейнера (`container`), пространству имён (`namespace`) или имени пода (`pod_name`);
-- [`logFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter) — применяется к полям сообщения,
+- [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter) — применяется к полям сообщения,
   если оно в JSON-формате.
 
 ### Сборка логов из определенного контейнера
 
 Чтобы настроить фильтрацию с помощью `labelFilter`,
-создайте ресурс [ClusterLoggingConfig](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig),
+создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig),
 используя конфигурацию ниже в качестве примера.
 
 В этом случае фильтр отбирает логи из контейнеров с именем `nginx`,
@@ -594,7 +594,7 @@ spec:
 
 {% alert level="info" %}
 Если вам нужны логи только одного пода или небольшой группы подов,
-используйте [`kubernetesPods`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods), чтобы ограничить область сбора.
+используйте [`kubernetesPods`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods), чтобы ограничить область сбора.
 Фильтры следует применять только для тонкой настройки.
 {%- endalert %}
 
@@ -615,7 +615,7 @@ spec:
   Буферизация помогает оптимизировать производительность системы сбора логов за счёт накопления логов и отправки их группами,
   что снижает количество сетевых запросов и улучшает общую пропускную способность.
 
-За настройку буферизации отвечает [параметр `buffer`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-buffer) ресурса ClusterLogDestination.
+За настройку буферизации отвечает [параметр `buffer`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-buffer) ресурса ClusterLogDestination.
 
 ### Пример включения буферизации в оперативной памяти
 
@@ -674,7 +674,7 @@ spec:
 ### Включение debug-логов агента log-shipper
 
 Чтобы включить debug-логи агента `log-shipper` на узлах с информацией об HTTP-запросах, переиспользовании подключения,
-трассировке и прочими данными, включите [параметр `debug`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/configuration.html#parameters-debug) в конфигурации модуля `log-shipper`.
+трассировке и прочими данными, включите [параметр `debug`](/modules/log-shipper/configuration.html#parameters-debug) в конфигурации модуля `log-shipper`.
 
 Пример конфигурации модуля:
 
@@ -792,7 +792,7 @@ del(.test2)
 ### Сбор логов с продуктовых пространств имён через опцию labelSelector
 
 Если в вашем кластере пространства имён размечены с помощью лейблов (например, `environment=production`),
-вы можете использовать [опцию `labelSelector`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods-labelselector) для сбора логов из продуктивных пространств имён.
+вы можете использовать [опцию `labelSelector`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods-labelselector) для сбора логов из продуктивных пространств имён.
 
 Пример конфигурации:
 

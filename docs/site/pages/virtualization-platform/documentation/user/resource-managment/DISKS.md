@@ -43,7 +43,7 @@ sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/products/virtualization-platform/reference/cr/virtualdisk.html).
+A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/modules/virtualization/cr.html#virtualdisk).
 
 How to find out the available storage options in the DVP web interface:
 

@@ -37,8 +37,6 @@ type GroupedVault struct {
 	registry   *prometheus.Registry
 	registerer prometheus.Registerer
 
-	resolveMetricNameFunc func(name string) string
-
 	logger *log.Logger
 }
 
@@ -60,11 +58,10 @@ type GroupedVault struct {
 //   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
 //   - WithRegistry: Uses a provided Prometheus registry
 //   - WithLogger: Sets a custom logger for the metrics storage
-func NewGroupedVault(resolveMetricNameFunc func(name string) string, opts ...options.VaultOption) *GroupedVault {
+func NewGroupedVault(opts ...options.VaultOption) *GroupedVault {
 	vault := &GroupedVault{
-		collectors:            make(map[string]collectors.ConstCollector),
-		registerer:            prometheus.DefaultRegisterer,
-		resolveMetricNameFunc: resolveMetricNameFunc,
+		collectors: make(map[string]collectors.ConstCollector),
+		registerer: prometheus.DefaultRegisterer,
 
 		logger: log.NewLogger().Named("vault-grouped"),
 	}
@@ -108,9 +105,8 @@ func (v *GroupedVault) ExpireGroupMetrics(group string) {
 
 // ExpireGroupMetricByName gets a collector by its name and clears all metrics inside the collector by the group.
 func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
-	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
-	collector, ok := v.collectors[metricName]
+	collector, ok := v.collectors[name]
 	if ok {
 		collector.ExpireGroupMetrics(group)
 	}
@@ -118,30 +114,29 @@ func (v *GroupedVault) ExpireGroupMetricByName(group, name string) {
 }
 
 func (v *GroupedVault) RegisterCounter(name string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstCounterCollector, error) {
-	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
 	o := options.NewRegisterOptions(opts...)
 
 	if o.Help == "" {
-		o.Help = metricName
+		o.Help = name
 	}
 
-	collector, ok := v.collectors[metricName]
+	collector, ok := v.collectors[name]
 	if !ok {
 		collector = collectors.NewConstCounterCollector(collectors.MetricDescription{
-			Name:        metricName,
+			Name:        name,
 			Help:        o.Help,
 			LabelNames:  labelNames,
 			ConstLabels: o.ConstantLabels,
 		})
 
 		if err := v.registerer.Register(collector); err != nil {
-			return nil, fmt.Errorf("counter '%s' %v registration: %v", metricName, labelNames, err)
+			return nil, fmt.Errorf("counter '%s' %v registration: %v", name, labelNames, err)
 		}
 
-		v.collectors[metricName] = collector
+		v.collectors[name] = collector
 	}
 
 	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
@@ -158,30 +153,29 @@ func (v *GroupedVault) RegisterCounter(name string, labelNames []string, opts ..
 }
 
 func (v *GroupedVault) RegisterGauge(name string, labelNames []string, opts ...options.RegisterOption) (*collectors.ConstGaugeCollector, error) {
-	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
 	options := options.NewRegisterOptions(opts...)
 
 	if options.Help == "" {
-		options.Help = metricName
+		options.Help = name
 	}
 
-	collector, ok := v.collectors[metricName]
+	collector, ok := v.collectors[name]
 	if !ok {
 		collector = collectors.NewConstGaugeCollector(&collectors.MetricDescription{
-			Name:        metricName,
+			Name:        name,
 			Help:        options.Help,
 			LabelNames:  labelNames,
 			ConstLabels: options.ConstantLabels,
 		})
 
 		if err := v.registerer.Register(collector); err != nil {
-			return nil, fmt.Errorf("gauge '%s' %v registration: %v", metricName, labelNames, err)
+			return nil, fmt.Errorf("gauge '%s' %v registration: %v", name, labelNames, err)
 		}
 
-		v.collectors[metricName] = collector
+		v.collectors[name] = collector
 	}
 
 	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {
@@ -198,30 +192,29 @@ func (v *GroupedVault) RegisterGauge(name string, labelNames []string, opts ...o
 }
 
 func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, buckets []float64, opts ...options.RegisterOption) (*collectors.ConstHistogramCollector, error) {
-	metricName := v.resolveMetricNameFunc(name)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
 	o := options.NewRegisterOptions(opts...)
 
 	if o.Help == "" {
-		o.Help = metricName
+		o.Help = name
 	}
 
-	collector, ok := v.collectors[metricName]
+	collector, ok := v.collectors[name]
 	if !ok {
 		collector = collectors.NewConstHistogramCollector(&collectors.MetricDescription{
-			Name:        metricName,
+			Name:        name,
 			Help:        o.Help,
 			LabelNames:  labelNames,
 			ConstLabels: o.ConstantLabels,
 		}, buckets)
 
 		if err := v.registerer.Register(collector); err != nil {
-			return nil, fmt.Errorf("histogram '%s' %v registration: %v", metricName, labelNames, err)
+			return nil, fmt.Errorf("histogram '%s' %v registration: %v", name, labelNames, err)
 		}
 
-		v.collectors[metricName] = collector
+		v.collectors[name] = collector
 	}
 
 	if ok && !labelspkg.IsSubset(collector.LabelNames(), labelNames) {

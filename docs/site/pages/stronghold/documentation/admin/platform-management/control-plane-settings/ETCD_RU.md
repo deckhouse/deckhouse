@@ -111,9 +111,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [`highAvailability`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [`highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
-1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
 1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-с-одним-master-узлом) для кластера с одним master-узлом.
 
@@ -253,36 +253,33 @@ d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Внимание.** Последний параметр в таблице вывода показывает, что узел кластера etcd находится в состоянии [learner](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии leader.
 
 ## Как получить список узлов кластера etcd (вариант 2)
 
-Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane.
+Чтобы получить сведения об узлах кластера etcd в виде таблицы, используйте команду `etcdctl endpoint status`. Для лидера в столбце `IS LEADER` будет указано значение `true` .
 
-Значение `true` в пятом столбце вывода указывает на лидера.
-
-Пример скрипта, который автоматически передает все адреса узлов control-plane:
+Пример:
 
 ```shell
-MASTER_NODE_IPS=($(d8 k get nodes -l \
-node-role.kubernetes.io/control-plane="" \
--o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
---no-headers))
-unset ENDPOINTS_STRING
-for master_node_ip in ${MASTER_NODE_IPS[@]}
-do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table check etcd cluster status
+  if [ $? -eq 0 ]; then
+    break
+  fi
 done
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
--l component=etcd,tier=control-plane -o name | head -n1) \
--- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key \
-$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## Пересборка кластера etcd

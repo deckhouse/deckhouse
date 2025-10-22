@@ -23,6 +23,10 @@
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
+- image: libs/ncurses
+  add: /usr/share/terminfo/
+  to: /usr/share/terminfo/
+  before: install
 - image: ssh-static
   add: /ssh/bin
   to: /bin

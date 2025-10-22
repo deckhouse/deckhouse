@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+type SSHProvider func() (node.SSHClient, error)
 
 type Destroyer interface {
 	DestroyCluster(ctx context.Context, autoApprove bool) error
@@ -96,6 +99,8 @@ type ClusterDestroyer struct {
 	isDebug bool
 }
 
+// NewClusterDestroyer
+// params.SSHClient should not START!
 func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
@@ -122,7 +127,16 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return nil, fmt.Errorf("cluster destruction requires usage of ssh node interface")
 	}
 
-	d8Destroyer := NewDeckhouseDestroyer(wrapper.Client(), state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
+	sshClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+		sshClient := wrapper.Client()
+		if err := sshClient.Start(); err != nil {
+			return nil, err
+		}
+
+		return sshClient, nil
+	})
+
+	d8Destroyer := NewDeckhouseDestroyer(sshClientProvider, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader controller.StateLoader
 
@@ -155,7 +169,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		},
 	)
 
-	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{}, d8Destroyer)
+	staticDestroyer := NewStaticMastersDestroyer(sshClientProvider, []NodeIP{})
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -178,8 +192,39 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}, nil
 }
 
+func (d *ClusterDestroyer) lockConverge(ctx context.Context) error {
+	if d.CommanderMode {
+		d.logger.LogDebugLn("Locking converge skipped for commander")
+		return nil
+	}
+
+	locked, err := d.state.IsConvergeLocked()
+	if err != nil {
+		return err
+	}
+
+	if locked {
+		d.logger.LogDebugLn("Locking converge skipped because locked in previous run")
+		return nil
+	}
+
+	if err := d.d8Destroyer.LockConverge(ctx); err != nil {
+		return err
+	}
+
+	if err := d.state.SetConvergeLocked(); err != nil {
+		// try to unlock because we cannot save in state
+		d.d8Destroyer.UnlockConverge(true)
+		return err
+	}
+
+	d.logger.LogDebugLn("Converge was locked successfully and write to state")
+
+	return nil
+}
+
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	defer d.d8Destroyer.UnlockConverge(true)
+	// we do not need unlock converge because we save lock in state
 
 	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
 		return err
@@ -208,6 +253,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	var infraDestroyer Destroyer
 	switch clusterType {
 	case config.CloudClusterType:
+		if err := d.lockConverge(ctx); err != nil {
+			return err
+		}
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
 		nodeIPs, err := d.GetMasterNodesIPs(ctx)
@@ -270,16 +318,11 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 		return err
 	}
 
-	// why only unwatch lock without request unlock
-	// user may not delete resources and converge still working in cluster
-	// all node groups removing may still in long time run and
-	// we get race (destroyer destroy node group, auto applayer create nodes)
-	d.d8Destroyer.UnlockConverge(false)
+	d.logger.LogDebugF("Resources were destroyed set\n")
+
 	// Stop proxy because we have already got all info from kubernetes-api
-	d.d8Destroyer.StopProxy()
-	if clusterType == config.CloudClusterType {
-		d.d8Destroyer.sshClient.Stop()
-	}
+	// also stop ssh client for cloud clusters
+	d.d8Destroyer.Cleanup(clusterType == config.CloudClusterType)
 
 	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
@@ -295,17 +338,15 @@ type NodeIP struct {
 }
 
 type StaticMastersDestroyer struct {
-	SSHClient       node.SSHClient
-	IPs             []NodeIP
-	d8Destroyer     *DeckhouseDestroyer
-	userCredentials *convergectx.NodeUserCredentials
+	sshClientProvider SSHProvider
+	IPs               []NodeIP
+	userCredentials   *convergectx.NodeUserCredentials
 }
 
-func NewStaticMastersDestroyer(c node.SSHClient, ips []NodeIP, d8destroyer *DeckhouseDestroyer) *StaticMastersDestroyer {
+func NewStaticMastersDestroyer(sshClientProvider SSHProvider, ips []NodeIP) *StaticMastersDestroyer {
 	return &StaticMastersDestroyer{
-		SSHClient:   c,
-		IPs:         ips,
-		d8Destroyer: d8destroyer,
+		sshClientProvider: sshClientProvider,
+		IPs:               ips,
 	}
 }
 
@@ -320,8 +361,13 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 		}
 	}
 
+	sshClient, err := d.sshClientProvider()
+	if err != nil {
+		return err
+	}
+
 	log.DebugLn("Starting static cluster destroy process")
-	masterHosts := d.SSHClient.Session().AvailableHosts()
+	masterHosts := sshClient.Session().AvailableHosts()
 	stdOutErrHandler := func(l string) {
 		log.WarnLn(l)
 	}
@@ -329,7 +375,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 	log.DebugLn("Discovering additional master nodes")
 	hostToExclude := ""
 	if len(d.IPs) > 0 {
-		file := d.SSHClient.File()
+		file := sshClient.File()
 		bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
 
@@ -360,7 +406,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 	if len(additionalMastersHosts) > 0 {
 		log.DebugF("Found %d additional masters, destroying\n", len(additionalMastersHosts))
-		settings := d.SSHClient.Session().Copy()
+		settings := sshClient.Session().Copy()
 		if settings.BastionHost == "" {
 			settings.BastionHost = settings.AvailableHosts()[0].Host
 			settings.BastionPort = settings.Port
@@ -368,12 +414,12 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 		for _, host := range additionalMastersHosts {
 			settings.SetAvailableHosts([]session.Host{host})
-			err := d.switchToNodeuser(settings)
+			sshClient, err = d.switchToNodeUser(sshClient, settings)
 			if err != nil {
 				return err
 			}
 
-			err = d.processStaticHost(ctx, host, stdOutErrHandler, cmd)
+			err = d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 			if err != nil {
 
 				return err
@@ -386,7 +432,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 	for _, host := range masterHosts {
 		if len(additionalMastersHosts) > 0 {
-			settings := d.SSHClient.Session().Copy()
+			settings := sshClient.Session().Copy()
 			if settings.BastionHost == settings.AvailableHosts()[0].Host {
 				settings.BastionHost = ""
 				settings.BastionPort = ""
@@ -394,13 +440,13 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 			settings.SetAvailableHosts([]session.Host{host})
 
-			err := d.switchToNodeuser(settings)
+			sshClient, err = d.switchToNodeUser(sshClient, settings)
 			if err != nil {
 				return err
 			}
 		}
 
-		err := d.processStaticHost(ctx, host, stdOutErrHandler, cmd)
+		err := d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 		if err != nil {
 
 			return err
@@ -410,10 +456,10 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 	return nil
 }
 
-func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, host session.Host, stdOutErrHandler func(l string), cmd string) error {
+func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, sshClient node.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	log.DebugF("Starting cleanup process for host %s\n", host)
 	err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 30*time.Second).Run(func() error {
-		c := d.SSHClient.Command(cmd)
+		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
 		c.WithTimeout(30 * time.Second)
 		c.WithStdoutHandler(stdOutErrHandler)
@@ -479,14 +525,14 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 	return nodeIPs, nil
 }
 
-func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) error {
+func (d *StaticMastersDestroyer) switchToNodeUser(oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
 	log.DebugLn("Starting replacing SSH client")
 
 	tmpDir := filepath.Join(app.CacheDir, "destroy")
 
 	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
-		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
+		return nil, fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
 	}
 
 	log.DebugLn("Tempdir created for SSH client")
@@ -500,15 +546,15 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 
 	err = os.WriteFile(privateKeyPath, []byte(d.userCredentials.PrivateKey), 0o600)
 	if err != nil {
-		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
+		return nil, fmt.Errorf("failed to write private key for NodeUser: %w", err)
 	}
 
 	log.DebugLn("Private key written")
 
 	if sshclient.IsModernMode() {
-		log.DebugF("Old SSH Client: %-v\n", d.SSHClient)
+		log.DebugF("Old SSH Client: %-v\n", oldSSHClient)
 		log.DebugLn("Stopping old SSH client")
-		d.SSHClient.Stop()
+		oldSSHClient.Stop()
 
 		// wait for keep-alive goroutine will exit
 		time.Sleep(15 * time.Second)
@@ -530,32 +576,38 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()
 	if err != nil {
-		return fmt.Errorf("failed to start SSH client: %w", err)
+		return nil, fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
 	// adding keys to agent is actual only in legacy mode
 	if sshclient.IsLegacyMode() {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
-			return fmt.Errorf("failed to add keys to ssh agent: %w", err)
+			return nil, fmt.Errorf("failed to add keys to ssh agent: %w", err)
 		}
 
 		log.DebugLn("private keys added for replacing kube client")
 	}
 
-	d.SSHClient = newSSHClient
-
-	return nil
+	return newSSHClient, nil
 }
+
+var errSSHClientDidNotGet = errors.New("Failed to get ssh client")
 
 func (d *StaticMastersDestroyer) waitNodeUserPresent(name string, ctx context.Context) error {
 	command := "stat /home/deckhouse/" + name + "/.ssh/authorized_keys"
 
-	err := retry.NewLoop("Checking if NodeUser present on node", 20, 5*time.Second).RunContext(ctx, func() error {
-		cmd := d.d8Destroyer.sshClient.Command(command)
-		cmd.Sudo(ctx)
-		return cmd.Run(ctx)
-	})
+	err := retry.NewLoop("Checking if NodeUser present on node", 20, 5*time.Second).
+		BreakIf(retry.IsErr(errSSHClientDidNotGet)).
+		RunContext(ctx, func() error {
+			sshClient, err := d.sshClientProvider()
+			if err != nil {
+				return fmt.Errorf("%w: %w", errSSHClientDidNotGet, err)
+			}
+			cmd := sshClient.Command(command)
+			cmd.Sudo(ctx)
+			return cmd.Run(ctx)
+		})
 
 	return err
 }

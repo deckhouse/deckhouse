@@ -16,7 +16,7 @@ You can enable HA mode globally for DKP in one of the following ways.
 
 ### Using ModuleConfig/global custom resource
 
-1. Set the [`settings.highAvailability`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter to `true` in `ModuleConfig/global`:
+1. Set the [`settings.highAvailability`](../../../reference/api/global.html#parameters-highavailability) parameter to `true` in `ModuleConfig/global`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

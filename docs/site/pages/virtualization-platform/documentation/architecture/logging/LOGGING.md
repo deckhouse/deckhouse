@@ -7,7 +7,7 @@ This section describes the operation of logging system components in Deckhouse V
 
 ## Log collection and delivery mechanism
 
-DVP uses the [`log-shipper` module](/products/kubernetes-platform/documentation/v1/modules/log-shipper/) for log collection and delivery.
+DVP uses the [`log-shipper` module](/modules/log-shipper/) for log collection and delivery.
 A separate `log-shipper` instance runs on each cluster node and is configured based on Deckhouse resources.
 The `log-shipper` module uses [Vector](https://vector.dev/) as a logging agent.
 The combination of settings for log collection and delivery forms a *pipeline*.
@@ -99,11 +99,11 @@ For this, `labelFilter` and `logFilter` filters of the `log-shipper` module are 
 
 Filters run immediately after combining strings using multiline parsing.
 
-- [`labelFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter):
+- [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter):
   - Rules are applied to message metadata.
   - Fields for metadata (or labels) are populated based on the log source, so different sources will have different sets of fields.
   - Rules are used, for example, to exclude messages from a specific container or pod matching a given label.
-- [`logFilter`](/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter):
+- [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter):
   - Rules are applied to the original message.
   - Allows excluding a message based on the value of a JSON field.
   - If the message is not in JSON format, you can use a regular expression to search by string.

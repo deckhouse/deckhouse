@@ -772,7 +772,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    ```
 
 1. Make sure that the modules currently used in the cluster are supported in DKP CSE.  
-   For example, in Deckhouse CSE 1.58 and 1.64, the [`cert-manager`](/modules/cert-manager/) module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) or [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) accordingly.
+   For example, in Deckhouse CSE 1.58 and 1.64, the [`cert-manager`](/modules/cert-manager/) module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [`user-authn`](/modules/user-authn/configuration.html#parameters-https-mode) or [`prometheus`](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](../../../reference/api/global.html#parameters-modules-https-mode) accordingly.
 
    To display the list of modules that are not supported in DKP CSE and will be disabled, run:
 

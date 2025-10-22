@@ -121,7 +121,7 @@ Deckhouse Kubernetes Platform предоставляет гибкие механ
 
 - Использование меток узлов ([`NodeGroup.spec.nodeTemplate.labels`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)). Позволяет явно указать, на каких узлах должны запускаться определенные поды, с помощью `spec.nodeSelector` или `spec.affinity.nodeAffinity`.
 - Настройка taints и tolerations. Позволяет ограничить запуск подов только на определенных узлах, предотвращая их размещение на неподходящих хостах.
-- Использование пользовательских toleration-ключей ([`settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys)). Позволяет управлять запуском критически важных компонентов Deckhouse (например, CNI и CSI) на выделенных узлах.
+- Использование пользовательских toleration-ключей ([`settings.modules.placement.customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys)). Позволяет управлять запуском критически важных компонентов Deckhouse (например, CNI и CSI) на выделенных узлах.
 
 1. Использование nodeSelector — позволяет явно указывать узлы, на которых должны запускаться поды. Это делается путем назначения лейблов узлам и последующего использования `spec.nodeSelector` в манифесте пода. Пример:
 
@@ -156,7 +156,7 @@ Deckhouse Kubernetes Platform предоставляет гибкие механ
 
    Это позволяет защитить узел от случайного запуска на нем других подов, не относящихся к его предназначению.
 
-1. DKP поддерживает [механизм `customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), который позволяет явно определять допустимые toleration-ключи. Это полезно, если требуется разместить системные сервисы (CNI, CSI и другие) на определенных узлах. Пример:
+1. DKP поддерживает [механизм `customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys), который позволяет явно определять допустимые toleration-ключи. Это полезно, если требуется разместить системные сервисы (CNI, CSI и другие) на определенных узлах. Пример:
 
    ```yaml
    customTolerationKeys:

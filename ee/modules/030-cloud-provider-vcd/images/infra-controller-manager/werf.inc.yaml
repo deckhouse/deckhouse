@@ -1,0 +1,65 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /infra-controller-manager
+  to: /infra-controller-manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/infra-controller-manager"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+    to:  /src
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+      - "PROJECT"
+      - "Makefile"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+  - add: /pkg/log
+    to: /src/pkg/log
+    excludePaths:
+      - "**/*.md"
+      - "**/*.yaml"
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+        - "**/*.go"
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+fromImage: builder/golang-alpine
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /infra-controller-manager cmd/main.go
+  - chown 64535:64535 /infra-controller-manager
+  - chmod 0755 /infra-controller-manager

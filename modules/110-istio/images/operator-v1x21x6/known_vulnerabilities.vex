@@ -1,0 +1,79 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-18535f5e647828b3f78dcc88421cf908ef23554ac1c0c524726e13abc99b3c35",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-32386"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm specially crafted chart archive causing out of memory - Функционал скачивания и распаковки helm chart архивов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые чарты предоставляются в готовом виде, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:32:08.129204108Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-32387"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm specially crafted JSON schema causing stack overflow - Функционал обработки JSON схем с произвольной глубиной вложенности в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Величина вложенности схем контролируется на этапе проверки линтером, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:33:13.264855875Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-53547"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm Chart Code Execution - Функционал, связанный с обновлением зависимостей helm chart, в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все необходимые зависимости включаются непосредственно в состав чарта, что исключает возможность эксплуатации уязвимости.",
+      "timestamp": "2025-10-10T15:29:44.644944464Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-55198"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm YAML parsing panic vulnerability - Функционал разбора YAML-файлов в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:34:40.216094508Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-55199"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm Chart JSON Schema denial of service - Функционал обработки JSON схем в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию на отсутствие ссылок , указывающих на /dev/zero, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-10-10T15:35:45.218482198Z"
+    }
+  ],
+  "timestamp": "2025-10-22T11:59:26Z"
+}

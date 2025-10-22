@@ -10,8 +10,8 @@ import:
     add: /src/url-exec-prober
     to: /usr/local/bin/url-exec-prober
     before: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/bin/oauth2_proxy" ]
@@ -41,7 +41,7 @@ shell:
     - rm -rf .git docs
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-src-artifact
@@ -57,7 +57,9 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags '-s -w' -o oauth2-proxy .
+    {{- $_ := set $ "ProjectName" (printf "%s/%s/oauth2-proxy" $.ModuleName $.ImageName ) }}
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o oauth2-proxy .`) | indent 6 }}
     - chown 64535:64535 oauth2-proxy
     - chmod 0700 oauth2-proxy
 ---
@@ -78,7 +80,7 @@ git:
     - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-src-artifact
@@ -94,6 +96,8 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags '-s -w' -o url-exec-prober main.go
+    {{- $_ := set $ "ProjectName" (printf "%s/%s/url-exec-prober" $.ModuleName $.ImageName ) }}
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o url-exec-prober main.go`) | indent 6 }}
     - chown 64535:64535 url-exec-prober
     - chmod 0700 url-exec-prober

@@ -21,7 +21,7 @@ Deckhouse запускает объединённые в DaemonSet агенты 
 На каждом узле кластера запускается под Falco со следующими компонентами:
 
 - `falco` — собирает события, обогащает их метаданными и отправляет в stdout;
-- `rules-loader` — собирает данные с правилами из [кастомных ресурсов FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules)
+- `rules-loader` — собирает данные с правилами из [кастомных ресурсов FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules)
   и сохраняет их в общую директорию;
 - [`falcosidekick`](https://github.com/falcosecurity/falcosidekick) — принимает события от `falco`
   и экспортирует их в виде метрик во внешние системы;
@@ -44,11 +44,11 @@ Deckhouse запускает объединённые в DaemonSet агенты 
   Эти правила расположены в контейнере `falco` по пути `/etc/falco/k8s_audit_rules.yaml`;
 - **нормативные правила**, удовлетворяющие требованиям приказа ФСТЭК России №118 от 4 июля 2022 г.
   «Требования по безопасности информации к средствам контейнеризации».
-  Эти правила `fstec` описаны в формате [кастомного ресурса FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules).
+  Эти правила `fstec` описаны в формате [кастомного ресурса FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
 ### Пользовательские правила
 
-Для добавления пользовательских правил используется [кастомный ресурс FalcoAuditRules](/products/kubernetes-platform/documentation/v1/modules/runtime-audit-engine/cr.html#falcoauditrules).
+Для добавления пользовательских правил используется [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
 У каждого агента Falco есть сайдкар-контейнер с экземпляром сервиса [`shell-operator`](https://github.com/flant/shell-operator).
 Этот экземпляр считывает правила из ресурсов Kubernetes, конвертирует их в правила Falco

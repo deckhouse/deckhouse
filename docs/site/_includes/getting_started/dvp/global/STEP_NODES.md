@@ -10,7 +10,6 @@ Add a new node to the cluster (for more information about adding a static node t
 
 - Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) `worker`. To do this, run the following command on the **master node**:
 
-
   ```shell
   sudo d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1
@@ -24,12 +23,12 @@ Add a new node to the cluster (for more information about adding a static node t
       labelSelector:
         matchLabels:
           role: worker
-EOF
+  EOF
   ```
-  
+
 - Generate an SSH key with an empty passphrase. To do this, run the following command on the **master node**:
 
-  ```
+  ```shell
   ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
   ```
 
@@ -47,27 +46,7 @@ EOF
   EOF
   ```
 
-- Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the **master node**:
-
-  ```
-  cat /dev/shm/caps-id.pub
-  ```
-
-- Create the `caps` user on the **virtual machine you have started**. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:
-
-  ```shell
-  export KEY='<SSH-PUBLIC-KEY>' # Specify the public part of the user's SSH key.
-  useradd -m -s /bin/bash caps
-  usermod -aG sudo caps
-  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-  mkdir /home/caps/.ssh
-  echo $KEY >> /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps
-  chmod 700 /home/caps/.ssh
-  chmod 600 /home/caps/.ssh/authorized_keys
-  ```
-
-- Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) for the node to be added. To do so, run the following command on the **master node** (specify IP address of the node):
+- Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):
 
   ```shell
   export NODE=<NODE-IP-ADDRESS> # Specify the IP address of the node you want to connect to the cluster.
@@ -84,6 +63,26 @@ EOF
       kind: SSHCredentials
       name: caps
   EOF
+  ```
+
+- Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the **master node**:
+
+  ```shell
+  cat /dev/shm/caps-id.pub
+  ```
+
+- On the prepared worker node, create the user `caps`. To do this, run the following command, specifying the public part of the SSH key obtained in the previous step (if you lack privileges, add `sudo` to the commands):
+
+  ```shell
+  export KEY='<SSH-PUBLIC-KEY>' # Specify the public part of the user's SSH key.
+  useradd -m -s /bin/bash caps
+  usermod -aG sudo caps
+  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+  mkdir /home/caps/.ssh
+  echo $KEY | tee -a /home/caps/.ssh/authorized_keys
+  chown -R caps:caps /home/caps
+  chmod 700 /home/caps/.ssh
+  chmod 600 /home/caps/.ssh/authorized_keys
   ```
 
 - Ensure that all nodes in the cluster are `Ready`.

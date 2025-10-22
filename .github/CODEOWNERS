@@ -14,7 +14,7 @@
 038-registry/                   @RaveNoX
 039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
 040-control-plane-manager/      @name212 @sprait
-040-node-manager/               @name212 @sprait
+040-node-manager/               @name212
 040-terraform-manager/          @name212 @sprait @aleksey-su
 042-kube-dns/                   @apolovov
 050-network-policy-engine/      @apolovov
@@ -53,11 +53,11 @@
 800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
 810-documentation/              @z9r5
 bashible-apiserver/             @name212 @sprait
-candi/                          @name212 @sprait
+candi/                          @name212
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin @duckhawk
 deckhouse-controller/           @yalosev @ldmonster
-dhctl/                          @name212 @sprait
+dhctl/                          @name212
 docs/                           @z9r5
 helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @z9r5

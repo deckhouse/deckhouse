@@ -38,6 +38,12 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	TRDL_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), aarch64)
+	YQ_ARCH = amd64
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
@@ -211,7 +217,7 @@ generate: generate-kubernetes generate-tools
 
 .PHONY: generate-tools
 generate-tools:
-	cd tools; go generate -v; cd ..
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh

@@ -98,6 +98,11 @@ echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
 echo 0 | tee /proc/sys/net/ipv4/conf/*/rp_filter >/dev/null # disable reverse-path filtering on all interfaces
+
+# auditd: increase kernel backlog
+if command -v auditctl &>/dev/null; then
+  auditctl -b 65536 || echo "auditctl backlog configuration failed, continuing without it"
+fi
 EOF
 chmod +x /opt/deckhouse/bin/sysctl-tuner
 

@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/admin/update/update.html
 lang: ru
 ---
 
-Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html).
+Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html).
 
 Посмотреть текущую конфигурацию настроек обновления можно с помощью команды:
 

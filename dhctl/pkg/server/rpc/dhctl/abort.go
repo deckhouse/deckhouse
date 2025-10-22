@@ -22,7 +22,6 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
@@ -185,8 +184,8 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var (
 		configPaths []string
@@ -253,12 +252,6 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
-		}
 		return nil
 	})
 	if err != nil {

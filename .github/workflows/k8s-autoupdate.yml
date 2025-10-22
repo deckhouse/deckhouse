@@ -24,7 +24,7 @@ on:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -41,6 +41,13 @@ jobs:
       uses: actions/checkout@v3.5.2
 
     # </template: checkout_step>
+
+    # <template: werf_install_step>
+    - name: Install werf CLI
+      uses: werf/actions/install@v2
+      with:
+        version: ${{env.WERF_VERSION}}
+    # </template: werf_install_step>
     - uses: actions/setup-go@v5.4.0
       with:
         go-version: '1.23.7'

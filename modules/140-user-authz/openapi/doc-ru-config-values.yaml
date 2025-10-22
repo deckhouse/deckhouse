@@ -3,13 +3,13 @@ properties:
     description: |
       Включить авторизацию по namespace (режим multi-tenancy).
 
-      Все настройки `kube-apiserver`, необходимые для работы авторизации по namespace, выполняются автоматически модулем [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) ([подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/usage.html#настройка-kube-apiserver-для-работы-в-режиме-multi-tenancy)).
+      Все настройки `kube-apiserver`, необходимые для работы авторизации по namespace, выполняются автоматически модулем [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/) ([подробнее](https://deckhouse.ru/modules/user-authz/usage.html#настройка-kube-apiserver-для-работы-в-режиме-multi-tenancy)).
   controlPlaneConfigurator:
     description: |
-      Настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/).
+      Настройки параметров для модуля автоматической настройки kube-apiserver [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/).
     properties:
       enabled:
         description: |
-          Передавать ли в [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) параметры для настройки authz-webhook (см. [параметры control-plane-manager'а](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#параметры)).
+          Передавать ли в [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/) параметры для настройки authz-webhook (см. [параметры control-plane-manager'а](https://deckhouse.ru/modules/control-plane-manager/configuration.html#параметры)).
 
           При выключении этого параметра модуль `control-plane-manager` будет считать, что по умолчанию webhook-авторизация выключена, и, соответственно, если не будет дополнительных настроек, `control-plane-manager` будет стремиться вычеркнуть упоминания webhook-плагина из манифеста. Даже если вы настроите манифест вручную.

@@ -36,11 +36,11 @@ spec:
   hostNetwork: true
   securityContext:
     fsGroup: 64535
+  shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
     securityContext:
       allowPrivilegeEscalation: false
-      shareProcessNamespace: true
       capabilities:
         drop:
         - ALL
@@ -72,7 +72,6 @@ spec:
     command: ["/kubernetes-api-proxy-reloader"]
     securityContext:
       allowPrivilegeEscalation: false
-      shareProcessNamespace: true
       capabilities:
         drop:
         - ALL

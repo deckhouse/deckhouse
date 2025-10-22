@@ -20,7 +20,7 @@ Deckhouse Virtualization Platform (DVP) creates a default set of audit policies 
 - Access to resources in the `kube-system` and `d8-*` system namespaces.
 
 These policies are enabled by default.
-To disable them, set the [`basicAuditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) parameter to `false`.
+To disable them, set the [`basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) parameter to `false`.
 
 Example:
 
@@ -41,7 +41,7 @@ spec:
 
 To create an advanced Kubernetes API audit policy, follow these steps:
 
-1. Enable the [`auditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) parameter
+1. Enable the [`auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) parameter
    in the `control-plane-manager` module configuration:
 
    ```yaml
@@ -124,7 +124,7 @@ If the API server fails to start, take the following steps:
 
 By default, the audit log is saved to the `/var/log/kube-audit/audit.log` file on master nodes.
 If necessary, you can redirect its output to the `kube-apiserver` process stdout instead of a file
-by setting the [`apiserver.auditLog.output`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the `control-plane-manager` module to `Stdout`:
+by setting the [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the `control-plane-manager` module to `Stdout`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

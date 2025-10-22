@@ -55,19 +55,3 @@ spec:
 ```
 
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
-
-## Как настраивается Prometheus?
-
-* У сервера Prometheus есть *config* и есть *rule files* (файлы с правилами)
-* В `config` имеются следующие секции:
-  * `scrape_configs` — настройки поиска *target'ов* (целей для мониторинга, см. подробней следующий раздел).
-  * `rule_files` — список директорий, в которых лежат *rule'ы*, которые необходимо загружать:
-
-    ```yaml
-    rule_files:
-    - /etc/prometheus/rules/rules-0/*
-    - /etc/prometheus/rules/rules-1/*
-    ```
-
-  * `alerting` — настройки поиска *Alert Manager'ов*, в которые слать алерты. Секция очень похожа на `scrape_configs`, только результатом ее работы является список *endpoint'ов*, в которые Prometheus будет слать алерты.
-

@@ -13,7 +13,7 @@ lang: ru
 
 ## Режимы работы внутренней сети
 
-Режим работы определяется параметром `tunnelMode` в настройках модуля [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html).
+Режим работы определяется параметром `tunnelMode` в настройках модуля [`cni-cilium`](/modules/cni-cilium/configuration.html).
 Поддерживается два режима:
 
 - классический,
@@ -52,7 +52,7 @@ spec:
     tunnelMode: VXLAN
 ```
 
-Подробнее о настройках модуля `cni-cilium` – [в документации](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html).
+Подробнее о настройках модуля `cni-cilium` – [в документации](/modules/cni-cilium/configuration.html).
 
 {% alert level="warning" %}
 После смены режима работы перезагрузите все узлы, иначе возможны проблемы с доступностью подов.
@@ -75,7 +75,7 @@ spec:
   В этом типе сервиса можно отказаться от назначения IP-адреса. Тогда адрес из сети сервисов не будет назначаться, а сам сервис при обращении будет разрешаться в IP-адреса подов. Балансировка будет работать на уровне DNS (round-robin).
 * **NodePort** — открывает указанный порт на каждом узле кластера и перенаправляет входящий трафик на поды.
   Из соображений безопасности в DVP порт слушается только на внутреннем IP узлов. Это поведение можно изменить, если добавить аннотацию `node.deckhouse.io/nodeport-bind-internal-ip: "false"` на группу узлов.
-* **LoadBalancer** — создаётся в облачном провайдере, на котором установлена DVP, и принимает внешний трафик. В bare-metal-кластерах аналогичный функционал реализуется с помощью модуля [`metalLb`](/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html).
+* **LoadBalancer** — создаётся в облачном провайдере, на котором установлена DVP, и принимает внешний трафик. В bare-metal-кластерах аналогичный функционал реализуется с помощью модуля [`metalLb`](/modules/metallb/configuration.html).
 * **ExternalName** — DNS-запись для обращения к сервису (по сути, CNAME).
 
 ### Настройка сети сервисов через kube-proxy
@@ -103,5 +103,5 @@ spec:
 {% alert level="warning" %}
 После добавления, удаления или изменения значения аннотации необходимо вручную перезапустить поды kube-proxy.
 
-При включении модуля [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) модуль `kube-proxy` отключается автоматически.
+При включении модуля [`cni-cilium`](/modules/cni-cilium/) модуль `kube-proxy` отключается автоматически.
 {% endalert %}

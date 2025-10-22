@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 3210a87..3d2b574 100644
+index 3210a87e4..16d09f75d 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,42 +1,44 @@
@@ -90,15 +90,17 @@ index 3210a87..3d2b574 100644
  	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
  	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
  	github.com/aws/aws-sdk-go v1.47.9 // indirect
-@@ -85,7 +86,7 @@ require (
+@@ -85,8 +86,8 @@ require (
  	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
  	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
  	github.com/felixge/httpsnoop v1.0.4 // indirect
 -	github.com/fsnotify/fsnotify v1.7.0 // indirect
+-	github.com/go-chi/chi/v5 v5.0.8 // indirect
 +	github.com/fsnotify/fsnotify v1.8.0 // indirect
- 	github.com/go-chi/chi/v5 v5.0.8 // indirect
++	github.com/go-chi/chi/v5 v5.2.2 // indirect
  	github.com/go-ini/ini v1.67.0 // indirect
  	github.com/go-logr/stdr v1.2.2 // indirect
+ 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 @@ -99,56 +100,56 @@ require (
  	github.com/google/cel-go v0.17.8 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
@@ -181,7 +183,7 @@ index 3210a87..3d2b574 100644
  	k8s.io/component-base v0.30.6 // indirect
  	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
 diff --git a/go.sum b/go.sum
-index e80da40..dd51b86 100644
+index e80da40a9..7e2e62a8b 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,40 +1,36 @@
@@ -302,17 +304,21 @@ index e80da40..dd51b86 100644
  github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH5pOlLGNtQ5lPWQu84=
  github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
  github.com/evanphx/json-patch/v5 v5.9.0 h1:kcBlZQbplgElYIlo/n1hJbls2z/1awpXxpRi0/FOJfg=
-@@ -141,8 +128,8 @@ github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8
+@@ -141,10 +128,10 @@ github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8
  github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
  github.com/foxcpp/go-mockdns v1.1.0 h1:jI0rD8M0wuYAxL7r/ynTrCQQq0BVqfB99Vgk7DlmewI=
  github.com/foxcpp/go-mockdns v1.1.0/go.mod h1:IhLeSFGed3mJIAXPH2aiRQB+kqz7oqu8ld2qVbOu7Wk=
 -github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 -github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
+-github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
+-github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 +github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
 +github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
- github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
- github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
++github.com/go-chi/chi/v5 v5.2.2 h1:CMwsvRVTbXVytCk1Wd72Zy1LAsAh9GxMmSNWLHCG618=
++github.com/go-chi/chi/v5 v5.2.2/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
  github.com/go-ini/ini v1.67.0 h1:z6ZrTEZqSWOTyH2FlglNbNgARyHG8oLW9gMELqKr06A=
+ github.com/go-ini/ini v1.67.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
+ github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 @@ -172,68 +159,50 @@ github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJA
  github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
  github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
@@ -698,4 +704,3 @@ index e80da40..dd51b86 100644
  k8s.io/api v0.30.6 h1:uqRDLnFkmPLorI9D0x1dGXdYeRQMhQHlrHDgZ3/45RE=
  k8s.io/api v0.30.6/go.mod h1:6x759Hj7155pXRKStxzM7TMN9hW0x7WrBr51kuDMSHo=
  k8s.io/apiextensions-apiserver v0.30.6 h1:eXmd0cki9xjpUguN7zaWI8I6wo1utHQj6RWqeBaVmew=
-

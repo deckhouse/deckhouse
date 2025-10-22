@@ -1,5 +1,5 @@
 diff --git a/cluster-autoscaler/apis/go.mod b/cluster-autoscaler/apis/go.mod
-index 3ac7f4768..58960c570 100644
+index 3ac7f4768..cc9a967bd 100644
 --- a/cluster-autoscaler/apis/go.mod
 +++ b/cluster-autoscaler/apis/go.mod
 @@ -7,7 +7,6 @@ toolchain go1.23.2
@@ -15,12 +15,13 @@ index 3ac7f4768..58960c570 100644
  	github.com/x448/float16 v0.8.4 // indirect
  	golang.org/x/mod v0.21.0 // indirect
 -	golang.org/x/net v0.30.0 // indirect
-+	golang.org/x/net v0.38.0 // indirect
- 	golang.org/x/oauth2 v0.23.0 // indirect
+-	golang.org/x/oauth2 v0.23.0 // indirect
 -	golang.org/x/sync v0.8.0 // indirect
 -	golang.org/x/sys v0.26.0 // indirect
 -	golang.org/x/term v0.25.0 // indirect
 -	golang.org/x/text v0.19.0 // indirect
++	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/oauth2 v0.27.0 // indirect
 +	golang.org/x/sync v0.12.0 // indirect
 +	golang.org/x/sys v0.31.0 // indirect
 +	golang.org/x/term v0.30.0 // indirect
@@ -36,10 +37,10 @@ index 3ac7f4768..58960c570 100644
  	k8s.io/klog/v2 v2.130.1 // indirect
  	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 diff --git a/cluster-autoscaler/apis/go.sum b/cluster-autoscaler/apis/go.sum
-index 701a0e94c..05afd2bdb 100644
+index 701a0e94c..94a99393b 100644
 --- a/cluster-autoscaler/apis/go.sum
 +++ b/cluster-autoscaler/apis/go.sum
-@@ -94,26 +94,26 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
+@@ -94,26 +94,28 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
@@ -49,6 +50,8 @@ index 701a0e94c..05afd2bdb 100644
 +golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
  golang.org/x/oauth2 v0.23.0 h1:PbgcYx2W7i4LvjJWEbf0ngHV6qJYr86PkAV3bXdLEbs=
  golang.org/x/oauth2 v0.23.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
++golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -77,7 +80,7 @@ index 701a0e94c..05afd2bdb 100644
  golang.org/x/time v0.7.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 diff --git a/cluster-autoscaler/go.mod b/cluster-autoscaler/go.mod
-index ff6fe436a..3a5dc9f84 100644
+index ff6fe436a..1d829698e 100644
 --- a/cluster-autoscaler/go.mod
 +++ b/cluster-autoscaler/go.mod
 @@ -9,7 +9,7 @@ require (
@@ -94,9 +97,10 @@ index ff6fe436a..3a5dc9f84 100644
  	github.com/vburenin/ifacemaker v1.2.1
  	go.uber.org/mock v0.4.0
 -	golang.org/x/net v0.30.0
-+	golang.org/x/net v0.38.0
- 	golang.org/x/oauth2 v0.23.0
+-	golang.org/x/oauth2 v0.23.0
 -	golang.org/x/sys v0.26.0
++	golang.org/x/net v0.38.0
++	golang.org/x/oauth2 v0.27.0
 +	golang.org/x/sys v0.31.0
  	google.golang.org/api v0.151.0
  	google.golang.org/grpc v1.65.0
@@ -123,7 +127,7 @@ index ff6fe436a..3a5dc9f84 100644
 -	k8s.io/kubelet v0.32.0
 -	k8s.io/kubernetes v1.32.0
 +	k8s.io/kubelet v0.32.2
-+	k8s.io/kubernetes v1.32.2
++	k8s.io/kubernetes v1.32.6
  	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
  	sigs.k8s.io/cloud-provider-azure v1.29.4
  	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.13
@@ -136,6 +140,15 @@ index ff6fe436a..3a5dc9f84 100644
  	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0 // indirect
  	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 // indirect
  	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.6.0 // indirect
+@@ -90,7 +90,7 @@ require (
+ 	github.com/GoogleCloudPlatform/k8s-cloud-provider v1.25.0 // indirect
+ 	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
+ 	github.com/Microsoft/go-winio v0.6.2 // indirect
+-	github.com/Microsoft/hnslib v0.0.8 // indirect
++	github.com/Microsoft/hnslib v0.1.1 // indirect
+ 	github.com/NYTimes/gziphandler v1.1.1 // indirect
+ 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+ 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 @@ -125,8 +125,8 @@ require (
  	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
  	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -286,7 +299,7 @@ index ff6fe436a..3a5dc9f84 100644
  
  replace k8s.io/externaljwt => k8s.io/externaljwt v0.32.3
 diff --git a/cluster-autoscaler/go.sum b/cluster-autoscaler/go.sum
-index fb29a94f3..c4196b4ce 100644
+index fb29a94f3..d42c63d15 100644
 --- a/cluster-autoscaler/go.sum
 +++ b/cluster-autoscaler/go.sum
 @@ -11,10 +11,10 @@ github.com/Azure/azure-sdk-for-go-extensions v0.1.6 h1:EXGvDcj54u98XfaI/Cy65Ds6v
@@ -304,6 +317,17 @@ index fb29a94f3..c4196b4ce 100644
  github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0 h1:xnO4sFyG8UH2fElBkcqLTOZsAajvKfnSlgBBW8dXYjw=
  github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0/go.mod h1:XD3DIOOVgBCO03OleB1fHjgktVRFxlT++KwKgIOewdM=
  github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 h1:FbH3BbSb4bvGluTesZZ+ttN/MDsnMmQP36OSnDuSXqw=
+@@ -86,8 +86,8 @@ github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab h1:UKkYhof1njT1
+ github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab/go.mod h1:3VYc5hodBMJ5+l/7J4xAyMeuM2PNuepvHlGs8yilUCA=
+ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
+ github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
+-github.com/Microsoft/hnslib v0.0.8 h1:EBrIiRB7i/UYIXEC2yw22dn+RLzOmsc5S0bw2xf0Qus=
+-github.com/Microsoft/hnslib v0.0.8/go.mod h1:EYveQJlhKh2obmEIRB3uKN6dBd9pj1frPsrTGFppKuk=
++github.com/Microsoft/hnslib v0.1.1 h1:JsZy681SnvSOUAfCZVAxkX4LgQGp+CZZwPbLV0/pdF8=
++github.com/Microsoft/hnslib v0.1.1/go.mod h1:DRQR4IjLae6WHYVhW7uqe44hmFUiNhmaWA+jwMbz5tM=
+ github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
+ github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
+ github.com/antlr4-go/antlr/v4 v4.13.0 h1:lxCg3LAv+EUK6t1i0y1V6/SLeUi0eKEKdhQAlS8TVTI=
 @@ -200,10 +200,11 @@ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
  github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
  github.com/golang-jwt/jwt/v4 v4.0.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
@@ -349,7 +373,7 @@ index fb29a94f3..c4196b4ce 100644
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 h1:2dVuKD2vS7b0QIHQbpyTISPd0LeHDbnYEryqj5Q1ug8=
  golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56/go.mod h1:M4RDyNAINzryxdtnbRXRL/OHtkFuWGRjvuhBJpk2IlY=
-@@ -479,8 +480,8 @@ golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2/go.mod h1:9nx3DQGgdP8bBQD5qx
+@@ -479,12 +480,12 @@ golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2/go.mod h1:9nx3DQGgdP8bBQD5qx
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
  golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
  golang.org/x/net v0.10.0/go.mod h1:0qNGK6F8kojg2nk9dLZ2mShWaEBan6FAoqfSigmmuDg=
@@ -359,7 +383,13 @@ index fb29a94f3..c4196b4ce 100644
 +golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
  golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
  golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
- golang.org/x/oauth2 v0.23.0 h1:PbgcYx2W7i4LvjJWEbf0ngHV6qJYr86PkAV3bXdLEbs=
+-golang.org/x/oauth2 v0.23.0 h1:PbgcYx2W7i4LvjJWEbf0ngHV6qJYr86PkAV3bXdLEbs=
+-golang.org/x/oauth2 v0.23.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
++golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
+ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 @@ -494,8 +495,8 @@ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJ
  golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -486,8 +516,8 @@ index fb29a94f3..c4196b4ce 100644
 +k8s.io/kubectl v0.32.2/go.mod h1:+h/NQFSPxiDZYX/WZaWw9fwYezGLISP0ud8nQKg+3g8=
 +k8s.io/kubelet v0.32.2 h1:WFTSYdt3BB1aTApDuKNI16x/4MYqqX8WBBBBh3KupDg=
 +k8s.io/kubelet v0.32.2/go.mod h1:cC1ms5RS+lu0ckVr6AviCQXHLSPKEBC3D5oaCBdTGkI=
-+k8s.io/kubernetes v1.32.2 h1:mShetlA102UpjRVSGzB+5vjJwy8oPy8FMWrkTH5f37o=
-+k8s.io/kubernetes v1.32.2/go.mod h1:tiIKO63GcdPRBHW2WiUFm3C0eoLczl3f7qi56Dm1W8I=
++k8s.io/kubernetes v1.32.6 h1:tp1gRjOqZjaoFBek5PN6eSmODdS1QRrH5UKiFP8ZByg=
++k8s.io/kubernetes v1.32.6/go.mod h1:REY0Gok66BTTrbGyZaFMNKO9JhxvgBDW9B7aksWRFoY=
  k8s.io/mount-utils v0.32.3 h1:ZPXXHblfBhYP89OnaozpFg9Ojl6HhDfxBLcdWNkaxW8=
  k8s.io/mount-utils v0.32.3/go.mod h1:Kun5c2svjAPx0nnvJKYQWhfeNW+O0EpzHgRhDcYoSY0=
  k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6JSWYFzOFnYeS6Ro=

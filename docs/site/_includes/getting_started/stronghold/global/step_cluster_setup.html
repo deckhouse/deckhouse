@@ -18,7 +18,7 @@
       This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.domain.my</code> will be available as <code>grafana.domain.my</code>.<br />
       This tutorial assumes the use of a public domain pointing to a public cluster address.
       It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
-      If the existing certificates (including Self-Signed ones) are used, you need to change the <a href="/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters">global settings</a> in the <code>modules.https</code> section.<br />
+      If the existing certificates (including self-signed ones) are used, you need to adjust the <a href="/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https"><code>modules.https</code></a> section in the global settings.<br />
       We recommend using the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
     </span>
   </div>
@@ -94,7 +94,7 @@
 <div markdown="1">
 ### Parameters for accessing the container image registry (or proxy registry)
 
-> Read more about [configuring a container image storage](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry), if necessary.
+> Read more about [configuring an external container registry](/products/kubernetes-platform/documentation/v1/installing/#installing-deckhouse-kubernetes-platform-from-an-external-registry), if necessary.
 </div>
 
   <div class="form__row">
@@ -121,7 +121,7 @@
       name="registryDockerCfg" placeholder=""
       autocomplete="off" />
     <span class="info">
-      It is a string from the Docker client configuration file (in Linux it is usually <code>$HOME/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter <a href="/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg">in the documentation</a>.
+      It is a string from the Docker client configuration file (in Linux it is usually <code>$HOME/.docker/config.json</code>), Base64-encoded.<br />Read more about the parameter in the <a href="/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg">InitConfiguration documentation</a>.
     </span>
     <span class="info">
       If using anonymous access to the container registry, do not fill in this field.

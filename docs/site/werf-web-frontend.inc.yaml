@@ -79,10 +79,12 @@ git:
   - _assets/js/search.js
   - _data/rbac/
   - _includes/rbac/
+  - _includes/related_links.liquid
   - _plugins/jekyll_asset_pipeline.rb
   - _plugins/custom_filters.rb
   - _plugins/breadcrumbs_generator.rb
   - _plugins/custom_sidebar.rb
+  - _plugins/related_links.rb
   - _plugins/sidebar_custom.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb

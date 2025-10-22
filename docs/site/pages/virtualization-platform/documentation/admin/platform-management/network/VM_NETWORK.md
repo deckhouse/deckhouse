@@ -3,7 +3,7 @@ title: "VM Network"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/vm-network.html
 ---
 
-Each virtual machine is assigned an address from the ranges specified in the `.spec.settings.virtualMachineCIDRs` section of the ModuleConfig [virtualization parameters](/products/virtualization-platform/reference/mc.html#virtualization).
+Each virtual machine is assigned an address from the ranges specified in the `.spec.settings.virtualMachineCIDRs` section of the ModuleConfig [virtualization parameters](/modules/virtualization/configuration.html).
 
 To view the current configuration, run the following command:
 

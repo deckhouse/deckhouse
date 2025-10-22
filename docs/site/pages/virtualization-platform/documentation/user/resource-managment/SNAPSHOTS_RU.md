@@ -66,7 +66,7 @@ linux-vm-root-snapshot Ready     true         3m2s
 
 Диагностика проблем с ресурсом осуществляется путем анализа информации в блоке `.status.conditions`.
 
-С полным описанием параметров конфигурации ресурса `VirtualDiskSnapshot` машин можно ознакомиться [в документации ресурса](/products/virtualization-platform/reference/cr/virtualdisksnapshot.html).
+С полным описанием параметров конфигурации ресурса `VirtualDiskSnapshot` машин можно ознакомиться [в документации ресурса](/modules/virtualization/cr.html#virtualdisksnapshot).
 
 Как создать снимок диска в веб-интерфейсе:
 

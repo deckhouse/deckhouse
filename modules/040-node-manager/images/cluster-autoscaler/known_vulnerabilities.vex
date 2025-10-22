@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере.",
+      "timestamp": "2025-10-16T07:13:22.026446Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5187"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "cluster-autoscaler не запускает kube-apiserver и не экспонирует API, позволяющие нодам удалять сами себя, k8s.io/kubernetes используется только как библиотечная зависимость для клиентских операций, уязвимый код не исполняется.",
+      "timestamp": "2025-10-16T07:20:22.663692Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-45142"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2023-45142 - уязвимость серверного otelhttp, которая осуществляется через отправклу запросов с высококардинальными HTTP-метаданными. Функциональность OpenTelemetry в cluster-autoscaler отсутствует, в коде отсутствуют вызовы otelhttp",
+      "timestamp": "2025-10-10T11:41:31.811482Z"
+    }
+  ],
+  "timestamp": "2025-10-10T11:41:47Z"
+}

@@ -49,7 +49,7 @@ spec:
       value: monitoring
 ```
 
-Полное описание всех настроек доступно [в документации модуля `prometheus`](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html).
+Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
 
 ## Как настраивается Prometheus?
 

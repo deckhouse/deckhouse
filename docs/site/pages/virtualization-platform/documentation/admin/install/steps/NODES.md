@@ -8,7 +8,7 @@ After the initial installation, the cluster consists of only one node — the ma
 Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html).
 
 {% alert level=“info” %}
-To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.
 Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
 {% endalert %}
 
@@ -34,7 +34,7 @@ Alternatively, you can connect to the master node via SSH and run the command as
 
 ## Adding prepared nodes
 
-Create the [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) resource `worker`. To do this, run the following command:
+Create the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource `worker`. To do this, run the following command:
 
 ```yaml
 d8 k create -f - << EOF
@@ -58,7 +58,7 @@ Generate an SSH key with an empty passphrase. To do this, execute the following 
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Create an [SSHCredentials](/products/virtualization-platform/reference/cr/sshcredentials.html) resource in the cluster. To do this, execute the following command on the **master node**:
+Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, execute the following command on the **master node**:
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
@@ -98,7 +98,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 sudo -i pdpl-user -i 63 caps
 ```
 
-Create the [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html) resources. Run the following commands on the **master node**, specifying the IP address and unique name of each node:
+Create the [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources. Run the following commands on the **master node**, specifying the IP address and unique name of each node:
 
 ```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Specify the IP address of the node to be added to the cluster.

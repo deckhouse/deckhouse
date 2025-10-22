@@ -71,7 +71,7 @@ jobs:
   # <template: pull_request_info>
   pull_request_info:
     name: Get pull request reference
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ref: ${{ steps.pr_props.outputs.ref }}
       ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
@@ -87,10 +87,6 @@ jobs:
       build_se: ${{ steps.pr_props.outputs.build_se }}
       build_se-plus: ${{ steps.pr_props.outputs.build_se-plus }}
       build_ee: ${{ steps.pr_props.outputs.build_ee }}
-
-    permissions:
-        contents: read
-        pull-requests: read
 
     # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
     if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
@@ -693,7 +689,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - discover
       - pull_request_info
@@ -745,6 +741,21 @@ jobs:
               `);
               throw(error);
             }
+
+  gitleaks_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: "diff"
+          checkout_repo: ${{ github.event.pull_request.head.repo.full_name }}
+          checkout_ref: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
 
 
 

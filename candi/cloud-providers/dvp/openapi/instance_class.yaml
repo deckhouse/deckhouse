@@ -99,7 +99,7 @@ spec:
                       description: |
                         The name of the existing StorageClass will be used to create the virtual machine's root disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
                       description: |

@@ -22,7 +22,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -38,10 +37,9 @@ func TestNewMetricStorage(t *testing.T) {
 	}{
 		{
 			name: "default configuration",
-			opts: []metricsstorage.Option{metricsstorage.WithPrefix("test")},
+			opts: []metricsstorage.Option{},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
-				assert.Equal(t, "test", storage.Prefix)
 				assert.NotNil(t, storage.Handler())
 				assert.NotNil(t, storage.Collector())
 			},
@@ -49,62 +47,38 @@ func TestNewMetricStorage(t *testing.T) {
 		{
 			name: "with new registry",
 			opts: []metricsstorage.Option{
-				metricsstorage.WithPrefix("custom"),
 				metricsstorage.WithNewRegistry(),
 			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
-				assert.Equal(t, "custom", storage.Prefix)
 			},
 		},
 		{
 			name: "with custom registry",
 			opts: []metricsstorage.Option{
-				metricsstorage.WithPrefix("registry"),
 				metricsstorage.WithRegistry(prometheus.NewRegistry()),
 			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
-				assert.Equal(t, "registry", storage.Prefix)
 			},
 		},
 		{
 			name: "with logger",
 			opts: []metricsstorage.Option{
-				metricsstorage.WithPrefix("logger"),
 				metricsstorage.WithLogger(log.NewNop()),
 			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
-				assert.Equal(t, "logger", storage.Prefix)
-			},
-		},
-		{
-			name: "empty prefix",
-			opts: []metricsstorage.Option{metricsstorage.WithPrefix("")},
-			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
-				assert.NotNil(t, storage)
-				assert.Equal(t, "", storage.Prefix)
 			},
 		},
 		{
 			name: "multiple options",
 			opts: []metricsstorage.Option{
-				metricsstorage.WithPrefix("multi"),
 				metricsstorage.WithNewRegistry(),
 				metricsstorage.WithLogger(log.NewNop()),
 			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
-				assert.Equal(t, "multi", storage.Prefix)
-			},
-		},
-		{
-			name: "no prefix option",
-			opts: []metricsstorage.Option{metricsstorage.WithNewRegistry()},
-			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
-				assert.NotNil(t, storage)
-				assert.Equal(t, "", storage.Prefix)
 			},
 		},
 	}
@@ -138,12 +112,6 @@ func TestMetricStorage_RegisterCounter(t *testing.T) {
 			wantError:  false,
 		},
 		{
-			name:       "counter with prefix template",
-			metric:     "{PREFIX}_counter",
-			labelNames: []string{"env"},
-			wantError:  false,
-		},
-		{
 			name:        "invalid metric name",
 			metric:      "",
 			labelNames:  []string{"label1"},
@@ -155,7 +123,6 @@ func TestMetricStorage_RegisterCounter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -194,18 +161,11 @@ func TestMetricStorage_RegisterGauge(t *testing.T) {
 			labelNames: nil,
 			wantError:  false,
 		},
-		{
-			name:       "gauge with prefix template",
-			metric:     "{PREFIX}_gauge",
-			labelNames: []string{"env"},
-			wantError:  false,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -254,19 +214,11 @@ func TestMetricStorage_RegisterHistogram(t *testing.T) {
 			buckets:    nil,
 			wantError:  false,
 		},
-		{
-			name:       "histogram with prefix template",
-			metric:     "{PREFIX}_histogram",
-			labelNames: []string{"env"},
-			buckets:    []float64{0.1, 0.5, 1.0},
-			wantError:  false,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -321,7 +273,6 @@ func TestMetricStorage_CounterAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -363,7 +314,6 @@ func TestMetricStorage_GaugeSet(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -399,7 +349,7 @@ func TestMetricStorage_GaugeAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
+
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -445,7 +395,7 @@ func TestMetricStorage_HistogramObserve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
+
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -459,7 +409,7 @@ func TestMetricStorage_HistogramObserve(t *testing.T) {
 
 func TestMetricStorage_Counter(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -473,7 +423,7 @@ func TestMetricStorage_Counter(t *testing.T) {
 
 func TestMetricStorage_Gauge(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -487,7 +437,7 @@ func TestMetricStorage_Gauge(t *testing.T) {
 
 func TestMetricStorage_Histogram(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -609,7 +559,7 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
+
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -736,7 +686,7 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix("test"),
+
 				metricsstorage.WithNewRegistry(),
 			)
 
@@ -846,7 +796,7 @@ func TestMetricStorage_Collector(t *testing.T) {
 
 func TestMetricStorage_Grouped(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 	grouped := storage.Grouped()
@@ -890,61 +840,9 @@ func TestMetricStorage_NilReceiver(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMetricStorage_PrefixReplacement(t *testing.T) {
-	tests := []struct {
-		name           string
-		prefix         string
-		metricName     string
-		expectedResult string
-	}{
-		{
-			name:           "prefix template replacement",
-			prefix:         "myapp",
-			metricName:     "{PREFIX}_requests_total",
-			expectedResult: "myapp_requests_total",
-		},
-		{
-			name:           "no prefix template",
-			prefix:         "myapp",
-			metricName:     "requests_total",
-			expectedResult: "requests_total",
-		},
-		{
-			name:           "empty prefix",
-			prefix:         "",
-			metricName:     "{PREFIX}_requests_total",
-			expectedResult: "_requests_total",
-		},
-		{
-			name:           "multiple prefix templates (only first replaced)",
-			prefix:         "app",
-			metricName:     "{PREFIX}_requests_{PREFIX}_total",
-			expectedResult: "app_requests_{PREFIX}_total",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage(
-				metricsstorage.WithPrefix(tt.prefix),
-				metricsstorage.WithNewRegistry(),
-			)
-
-			// Register a counter to test prefix replacement
-			counter, err := storage.RegisterCounter(tt.metricName, []string{"status"})
-			require.NoError(t, err)
-			require.NotNil(t, counter)
-
-			// We can't directly access the resolved name, but we can verify the metric was registered
-			// by checking that we can add values without error
-			storage.CounterAdd(tt.metricName, 1.0, map[string]string{"status": "200"})
-		})
-	}
-}
-
 func TestMetricStorage_LabelMerging(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -974,7 +872,7 @@ func TestMetricStorage_LabelMerging(t *testing.T) {
 
 func TestMetricStorage_ConcurrentAccess(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -1006,7 +904,7 @@ func TestMetricStorage_ConcurrentAccess(_ *testing.T) {
 
 func TestMetricStorage_InvalidMetricNames(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -1032,7 +930,7 @@ func TestMetricStorage_InvalidMetricNames(t *testing.T) {
 
 func TestMetricStorage_ExtremeValues(t *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -1061,7 +959,7 @@ func TestMetricStorage_ExtremeValues(t *testing.T) {
 
 func TestMetricStorage_ManyLabels(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -1078,7 +976,7 @@ func TestMetricStorage_ManyLabels(_ *testing.T) {
 
 func TestMetricStorage_EmptyAndNilMaps(_ *testing.T) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("test"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 
@@ -1104,7 +1002,7 @@ func floatPtr(f float64) *float64 {
 
 func BenchmarkMetricStorage_CounterAdd(b *testing.B) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("bench"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 	labels := map[string]string{"env": "test", "service": "api"}
@@ -1117,7 +1015,7 @@ func BenchmarkMetricStorage_CounterAdd(b *testing.B) {
 
 func BenchmarkMetricStorage_GaugeSet(b *testing.B) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("bench"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 	labels := map[string]string{"env": "test", "service": "api"}
@@ -1130,7 +1028,7 @@ func BenchmarkMetricStorage_GaugeSet(b *testing.B) {
 
 func BenchmarkMetricStorage_HistogramObserve(b *testing.B) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("bench"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 	labels := map[string]string{"env": "test", "service": "api"}
@@ -1144,7 +1042,7 @@ func BenchmarkMetricStorage_HistogramObserve(b *testing.B) {
 
 func BenchmarkMetricStorage_ApplyBatchOperations(b *testing.B) {
 	storage := metricsstorage.NewMetricStorage(
-		metricsstorage.WithPrefix("bench"),
+
 		metricsstorage.WithNewRegistry(),
 	)
 

@@ -3,7 +3,7 @@ title: "Enabling Istio for applications"
 permalink: en/user/network/app_istio_activation.html
 ---
 
-Enabling Istio for applications is possible if the [`istio`](/modules/istio/configuration.html) module
+Enabling Istio for applications is possible if the [istio](/modules/istio/) module
 is enabled and configured in the cluster.
 This is handled by the cluster administrator.
 

@@ -16,7 +16,10 @@ package destroy
 
 import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 
-const resourcesDestroyedKey = "resources-were-deleted"
+const (
+	resourcesDestroyedKey = "resources-were-deleted"
+	convergeLocked        = "converge-locked"
+)
 
 type State struct {
 	cache state.Cache
@@ -34,6 +37,14 @@ func (s *State) IsResourcesDestroyed() (bool, error) {
 
 func (s *State) SetResourcesDestroyed() error {
 	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
+}
+
+func (s *State) IsConvergeLocked() (bool, error) {
+	return s.cache.InCache(convergeLocked)
+}
+
+func (s *State) SetConvergeLocked() error {
+	return s.cache.Save(convergeLocked, []byte("yes"))
 }
 
 func (s *State) Clean() {

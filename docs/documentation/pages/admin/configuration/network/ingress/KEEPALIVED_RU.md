@@ -79,7 +79,7 @@ spec:
 
 ## Ручное переключение keepalived
 
-<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
+<!-- перенесено из https://deckhouse.ru/modules/keepalived/ -->
 
 1. Зайдите в нужный под:
 

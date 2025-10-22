@@ -106,7 +106,7 @@ Specify the `clientID` and `clientSecret` obtained during setup in the [DexProvi
 
 {% alert level="info" %}
 When registering an application with any OIDC provider, you must specify a redirect URI.  
-For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
+For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
 {% endalert %}
 
 {% alert level="info" %}
@@ -125,7 +125,7 @@ During Keycloak configuration, select the appropriate `realm`, add a user in the
 
 1. In the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section, create a `scope` named `groups` and assign it a mapper `Group Membership` ("Client scopes" → "Client scope details" → "Mappers" → "Configure a new mapper"). Set values of "Name" and "Token Claim Name" as `groups` and turn off "Full group path".
 1. In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
-1. In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields in the [client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is the [cluster DNS name template](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) defined in the `global` module.
+1. In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields in the [client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is the [cluster DNS name template](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) defined in the `global` module.
 
 Example provider configuration for Keycloak integration:
 

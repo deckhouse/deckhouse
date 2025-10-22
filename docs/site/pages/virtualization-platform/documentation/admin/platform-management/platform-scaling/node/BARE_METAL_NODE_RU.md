@@ -8,9 +8,9 @@ lang: ru
 
 ### Ручной способ
 
-1. Включите модуль [`node-manager`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html).
+1. Включите модуль [`node-manager`](/modules/node-manager/cr.html).
 
-1. Создайте объект [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) с типом `Static`:
+1. Создайте объект [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `Static`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -43,7 +43,7 @@ lang: ru
    - создать системного пользователя (например, `ubuntu`), от имени которого будет выполняться подключение по SSH;
    - убедиться, что пользователь может выполнять команды через `sudo`.
 
-1. Создать объект [SSHCredentials](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials) с доступом к серверу. DVP использует объект SSHCredentials для подключения к серверам по SSH. В нём указывается:
+1. Создать объект [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) с доступом к серверу. DVP использует объект SSHCredentials для подключения к серверам по SSH. В нём указывается:
    - приватный ключ;
    - пользователь ОС;
    - порт SSH;
@@ -68,7 +68,7 @@ lang: ru
 
      > **Важно**. Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
 
-1. Создать объект [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) для каждого сервера:
+1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -85,7 +85,7 @@ lang: ru
        name: static-nodes
    ```
 
-   Под каждый сервер необходимо создавать отдельный ресурс [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance), но можно использовать одни и те же SSHCredentials для доступа на разные серверы.
+   Под каждый сервер необходимо создавать отдельный ресурс [StaticInstance](/modules/node-manager/cr.html#staticinstance), но можно использовать одни и те же SSHCredentials для доступа на разные серверы.
 
    Возможные состояния ресурсов StaticInstance:
 
@@ -96,7 +96,7 @@ lang: ru
 
    Эти состояния отображают текущий этап управления узлом. CAPS автоматически переводит StaticInstance между этими состояниями в зависимости от необходимости добавить или удалить узел из группы.
 
-1. Создать [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) с описанием, как DVP будет использовать эти серверы:
+1. Создать [NodeGroup](/modules/node-manager/cr.html#nodegroup) с описанием, как DVP будет использовать эти серверы:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -142,7 +142,7 @@ d8 platform edit static-cluster-configuration
 ## Перемещение статического узла между NodeGroup
 
 {% alert level="warning" %}
-В процессе переноса статических узлов между [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) выполняется очистка и повторный bootstrap узла, объект `Node` пересоздаётся.
+В процессе переноса статических узлов между [NodeGroup](/modules/node-manager/cr.html#nodegroup) выполняется очистка и повторный bootstrap узла, объект `Node` пересоздаётся.
 {% endalert %}
 
 1. Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`:
@@ -162,7 +162,7 @@ d8 platform edit static-cluster-configuration
            role: front
    ```
 
-1. Измените лейбл `role` у существующего [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
+1. Измените лейбл `role` у существующего [StaticInstance](/modules/node-manager/cr.html#staticinstance) с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом:
 
    ```shell
    d8 k label staticinstance static-worker-1 role=front --overwrite
@@ -192,7 +192,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Пример описания NodeGroup для статических узлов
 
-Для виртуальных машин на гипервизорах или физических серверов используйте статические узлы, указав `nodeType: Static` в [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup).
+Для виртуальных машин на гипервизорах или физических серверов используйте статические узлы, указав `nodeType: Static` в [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Пример:
 
@@ -215,7 +215,7 @@ CRI (Container Runtime Interface) — стандартный интерфейс 
 Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр `cri.type`).
 {% endalert %}
 
-Для изменения CRI для [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), установите параметр `cri.type` в `Containerd` или в `NotManaged`.
+Для изменения CRI для [NodeGroup](/modules/node-manager/cr.html#nodegroup), установите параметр `cri.type` в `Containerd` или в `NotManaged`.
 
 Пример YAML-манифеста NodeGroup:
 
@@ -254,7 +254,7 @@ spec:
 
 Если узел находится под управлением [CAPS](#автоматический-способ), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#удаление-staticinstance) и создать новый.
 
-Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
+Чтобы перенести существующий статический узел созданный [вручную](#ручной-способ) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
@@ -265,11 +265,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Изменение IP-адреса в StaticInstance
 
-Изменить IP-адрес в ресурсе [StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance) нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#удаление-staticinstance) и создать новый.
+Изменить IP-адрес в ресурсе [StaticInstance](/modules/node-manager/cr.html#staticinstance) нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#удаление-staticinstance) и создать новый.
 
 ## Удаление StaticInstance
 
-[StaticInstance](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance), находящийся в состоянии `Pending` можно удалять без ограничений.
+[StaticInstance](/modules/node-manager/cr.html#staticinstance), находящийся в состоянии `Pending` можно удалять без ограничений.
 
 Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 

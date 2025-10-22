@@ -68,7 +68,7 @@ properties:
       complexityLevel:
         description: |
           Уровень сложности пароля.
-          
+
           В зависимости от уровня сложности к паролю предъявляются следующие минимальные требования:
 
           - `None` — 1 символ.
@@ -117,7 +117,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
@@ -146,7 +146,7 @@ properties:
           - `CertManager` — Dex/kubeconfig-generator будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           - `CustomCertificate` — Dex/kubeconfig-generator будет работать по HTTPS, используя сертификат из namespace `d8-system`;
           - `Disabled` — Dex/kubeconfig-generator будет работать только по HTTP;
-          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Dex/kubeconfig-generator будет работать по HTTP (подразумевая, что перед ним стоит внешний балансировщик, который терминирует HTTPS-трафик) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -162,7 +162,7 @@ properties:
 
               Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   controlPlaneConfigurator:
-    description: 'Настройки параметров для модуля автоматической настройки `kube-apiserver` [control-plane-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/).'
+    description: 'Настройки параметров для модуля автоматической настройки `kube-apiserver` [control-plane-manager](https://deckhouse.ru/modules/control-plane-manager/).'
     properties:
       enabled:
         description: 'Использовать ли `control-plane-manager` для настройки OIDC в `kube-apiserver`.'

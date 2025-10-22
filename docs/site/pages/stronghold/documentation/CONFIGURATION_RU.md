@@ -33,9 +33,9 @@ d8 p module disable stronghold
 
 ## Получение доступа к сервису
 
-Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`
-Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`.
 
+Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
 Например, если `publicDomainTemplate` установлен как `%s-kube.mycompany.tld`, веб-интерфейс Stronghold будет доступен по адресу `stronghold-kube.cmycompany.tld`.
 
 ## Использование хранилища данных. Режимы работы
@@ -49,10 +49,10 @@ d8 p module disable stronghold
 
 ## Управление доступами
 
-В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/modules/user-authn/).
 Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [`secrets-store-integration`](/modules/secrets-store-integration/stable/).
 
-Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
+Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -100,7 +100,7 @@ spec:
 
 > Так же нужен опыт работы с утилитой `kubectl`
 
-Ниже приведены варианты организации доступа к модулю через [инлет Ingress](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
+Ниже приведены варианты организации доступа к модулю через [инлет Ingress](/modules/ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
 
 ### Способы организации доступа через инлет Ingress
 
@@ -344,7 +344,7 @@ spec:
 ### Не резолвится доменное имя dex.mycompany.tld
 
 Если ваш домен не резолвится через DNS, и вы планируете использовать файл `hosts`, то для работы Dex нужно добавить
-адрес балансировщика или IP frontend-узла в кластерный DNS. В его роли можно использовать [модуль `kube-dns`](/products/kubernetes-platform/documentation/v1/modules/kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
+адрес балансировщика или IP frontend-узла в кластерный DNS. В его роли можно использовать [модуль `kube-dns`](/modules/kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
 
 Пример получения IP для Ingress `nginx-load-balancer` с типом `LoadBlancer`
 

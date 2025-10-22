@@ -1,4 +1,4 @@
-# https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies
+# https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies
 ---
 apiVersion: v1
 kind: Secret

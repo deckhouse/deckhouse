@@ -25,7 +25,8 @@ The `d8 dk` and `d8 mirror` command groups are not available for Community Editi
   Usage scenarios:
 
   - [Manually uploading images to an air-gapped registry](../../installing/#manual-loading-of-deckhouse-kubernetes-platform-images-vulnerability-scanner-db-and-dkp-modules-into-a-private-registry).
-  - Updating module extra images (such as vulnerability databases): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`
+  - Updating module extra images (such as vulnerability databases): `d8 mirror pull --include-module <module-name> --only-extra-images bundle.tar`.
+  - [Updating the platform, modules, and vulnerability databases in air-gapped environment](/products/kubernetes-platform/guides/airgapped-update.html#example-workflow-for-updating-the-platform-modules-and-vulnerability-databases).
 
 * `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     For example, the `d8 virtualization console` command execs you into the VM console.

@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/pl
 
 ## Main features
 
-Deckhouse Virtualization Platform (DVP) manages control plane components using the [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
+Deckhouse Virtualization Platform (DVP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
 
 The control plane management functionality includes:
 
@@ -25,7 +25,7 @@ The control plane management functionality includes:
 
 ### Enabling / disabling
 
-You can enable or disable the [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module in the following ways:
+You can enable or disable the [`control-plane-manager`](/modules/control-plane-manager/) module in the following ways:
 
 1. Create (or modify) the ModuleConfig/control-plane-manager resource by setting `spec.enabled` to `true` or `false`:
 
@@ -81,7 +81,7 @@ spec:
 
 ### Checking DVP status and queues
 
-How to verify that [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) is running correctly and is not in a pending state, and how to check active DVP tasks (queues):
+How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is running correctly and is not in a pending state, and how to check active DVP tasks (queues):
 
 1. Make sure the module is enabled:
 
@@ -130,7 +130,7 @@ Before performing heavy operations (e.g., transitioning from single-master to mu
 
 ## Certificate management
 
-In DVP, the [`control-plane-manager`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) module is responsible for issuing and renewing all SSL certificates for control plane components. It manages:
+In DVP, the [`control-plane-manager`](/modules/control-plane-manager/) module is responsible for issuing and renewing all SSL certificates for control plane components. It manages:
 
 1. **Server certificates** for kube-apiserver and etcd, stored in the `d8-pki` secret (namespace: `kube-system`):
    - Kubernetes root CA (`ca.crt`, `ca.key`).
@@ -219,7 +219,7 @@ The shorter the timeouts, the more frequently system components check node statu
 
 Internal communication between Deckhouse cluster components is performed via IPv4 protocol. However, at the operating system level of the cluster nodes, IPv6 is usually active by default. This leads to automatic assignment of IPv6 addresses to all network interfaces, including Pod interfaces. This results in unwanted network traffic - for example, redundant DNS queries like `AAAAA` - which can affect performance and make debugging network communications more difficult.
 
-To correctly disable IPv6 at the node level in a Deckhouse-managed cluster, it is sufficient to set the necessary parameters via the [NodeGroupConfiguration](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration) resource:
+To correctly disable IPv6 at the node level in a Deckhouse-managed cluster, it is sufficient to set the necessary parameters via the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

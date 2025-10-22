@@ -41,6 +41,8 @@ jobs:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_cse_registry_step" . | strings.Indent 6 }!}
@@ -71,8 +73,8 @@ jobs:
           GHCR_IO_REGISTRY_PASSWORD: ${{secrets.GHCR_IO_REGISTRY_PASSWORD}}
         run: |
           rm -rf ./trivy-db
-          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{secrets.DECKHOUSE_PRIVATE_REPO}}:deckhouse/trivy-db.git trivy-db-patch
-          git clone --depth 1 --branch ${TRIVY_VERSION} ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git
+          git clone --depth 1 --branch ${TRIVY_VERSION} git@${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}:deckhouse/trivy-db.git trivy-db-patch
+          git clone --depth 1 --branch ${TRIVY_VERSION} ${{ steps.secrets.outputs.SOURCE_REPO_GIT }}/aquasecurity/trivy-db.git
           cd trivy-db
           git apply --verbose --whitespace=fix ../trivy-db-patch/patches/${TRIVY_VERSION}/*.patch
           cp ../.github/scripts/trivy-db-update-vulnerability-references.sh ./update-vulnerability-references.sh

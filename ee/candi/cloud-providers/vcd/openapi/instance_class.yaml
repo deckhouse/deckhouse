@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/) module).
+            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/) module).
           required:
             - spec
           properties:
@@ -76,6 +76,28 @@ spec:
                     The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the VCDProviderClusterConfiguration spec. This field will take precedence over the existing metadata in cases of duplicate keys.
 
                     > **Warning.** Changing the `additionalMetadata` will cause the recreation of CloudEphemeral NodeGroups referring the VCDInstanceClass.
+                affinityRule:
+                  type: object
+                  description: |
+                    Specifies the affinity rule applied only to virtual machines of node groups referencing this instance class within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
+                  properties:
+                    polarity:
+                      type: string
+                      description: |
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
+                      enum: [Affinity, AntiAffinity]
+                    required:
+                      type: boolean
+                      description: |
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                      x-doc-default: false
             status:
               type: object
               properties:

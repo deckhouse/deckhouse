@@ -375,7 +375,7 @@ p-o-test-v0.6.11   Skipped
 p-o-test-v0.7.25   Deployed
 ```
 
-Whether an annotation is required depends on the module’s update policy. More details — [Module update policy](./run/#module-update-policy).
+Whether an annotation is required depends on the module’s update policy. More details — [Module update policy](../run/#module-update-policy).
 
 ### Examples
 

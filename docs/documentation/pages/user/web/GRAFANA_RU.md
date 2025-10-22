@@ -80,15 +80,15 @@ search: grafana, monitoring interface, dashboards, metrics visualization, web in
 
 ### Описание дашбордов
 
-Дашборд «Applications – Log Shipper» — состояние модуля `log-shipper`. Здесь представлено количество агентов модуля на узлах и их нагрузка.
+Дашборд «Applications – Log Shipper» — состояние модуля [log-shipper](/modules/log-shipper/). Здесь представлено количество агентов модуля на узлах и их нагрузка.
 
 ![Log Shipper](../../images/grafana/log_shipper.png)
 
-Дашборд «Applications – Loki» — состояние модуля `loki`.
+Дашборд «Applications – Loki» — состояние модуля [loki](/modules/loki/).
 
 ![Loki](../../images/grafana/loki.png)
 
-Дашборд «Applications – Loki Logs» — логи модуля `loki`.
+Дашборд «Applications – Loki Logs» — логи модуля [loki](/modules/loki/).
 
 ![Loki Logs](../../images/grafana/loki_logs.png)
 
@@ -116,7 +116,7 @@ search: grafana, monitoring interface, dashboards, metrics visualization, web in
 
   ![Aggregating Proxy Cache](../../images/grafana/aggregating-proxy-cache.png)
 
-- Дашборд «Cilium Metrics» — метрики модуля `cni-cilium`.
+- Дашборд «Cilium Metrics» — метрики модуля [cni-cilium](/modules/cni-cilium/).
 
   ![Cilium Metrics](../../images/grafana/cilium-metrics.png)
 
@@ -164,7 +164,7 @@ search: grafana, monitoring interface, dashboards, metrics visualization, web in
 
   ![NTP](../../images/grafana/ntp.png)
 
-- Дашборд «Prometheus Benchmark» — статус модуля `prometheus`.
+- Дашборд «Prometheus Benchmark» — статус модуля [prometheus](/modules/prometheus/).
 
   ![Prometheus Benchmark](../../images/grafana/prometheus-benchmark.png)
 
@@ -207,7 +207,7 @@ search: grafana, monitoring interface, dashboards, metrics visualization, web in
 
   ![Admission policy engine](../../images/grafana/admission-policy-engine.png)
 
-- CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле `operator-trivy`.
+- CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле [operator-trivy](/modules/operator-trivy/).
 
   ![CIS Kubernetes Benchmark](../../images/grafana/cis-kubernetes-benchmark.png)
 

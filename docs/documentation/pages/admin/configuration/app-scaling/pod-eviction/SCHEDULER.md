@@ -126,7 +126,7 @@ Main placement configuration options:
 - Configuring taints and tolerations.  
   Enables limiting pod scheduling to specific nodes, preventing them from being placed on unsuitable hosts.
 
-- Using custom toleration keys ([`settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys)).  
+- Using custom toleration keys ([`settings.modules.placement.customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys)).  
   Allows control over the scheduling of critical Deckhouse components (e.g., CNI and CSI) on dedicated nodes.
 
 1. Using `nodeSelector` — allows you to explicitly specify which nodes pods should be scheduled on. This is done by labeling the desired nodes and referencing those labels in the pod’s `spec.nodeSelector`. Example:
@@ -162,7 +162,7 @@ Main placement configuration options:
 
    This mechanism prevents unintended pods from being scheduled on nodes that are meant for specific purposes.
 
-1. Using [`customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) — Deckhouse supports the `customTolerationKeys` mechanism, which explicitly defines allowed toleration keys. This is useful when you need to run system services (such as CNI, CSI, etc.) on specific nodes. Example:
+1. Using [`customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) — Deckhouse supports the `customTolerationKeys` mechanism, which explicitly defines allowed toleration keys. This is useful when you need to run system services (such as CNI, CSI, etc.) on specific nodes. Example:
 
    ```yaml
    customTolerationKeys:

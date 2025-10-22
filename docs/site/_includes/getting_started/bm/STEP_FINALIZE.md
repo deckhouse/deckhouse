@@ -31,7 +31,7 @@ sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/
 </div>
   </li>
   <li>
-<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+<p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -66,7 +66,7 @@ sudo -i d8 k patch mc global --type merge \
     Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
+  Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -91,7 +91,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
     
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
@@ -170,7 +170,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
@@ -229,7 +229,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 <div markdown="1">
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.

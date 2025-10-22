@@ -10,12 +10,12 @@ You can configure containerd v2 as the primary container runtime either at the c
 
 Migration to containerd v2 is possible under the following conditions:
 
-- Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri).
-- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+- Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 
-If any of the requirements described in the [general cluster parameters](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Virtualization Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config=custom` is added to it.
+If any of the requirements described in the [general cluster parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) are not met, Deckhouse Virtualization Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config=custom` is added to it.
 
-If one of these labels is present, changing the [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
+If one of these labels is present, changing the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
 
 ```shell
 d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
@@ -36,7 +36,7 @@ ls -l /etc/containerd/conf.d
 
 You can enable containerd v2 in two ways:
 
-1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
+1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
 
    Example:
 
@@ -47,7 +47,7 @@ You can enable containerd v2 in two ways:
    defaultCRI: ContainerdV2
    ```
 
-1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) object.
+1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
 
    Example:
 
