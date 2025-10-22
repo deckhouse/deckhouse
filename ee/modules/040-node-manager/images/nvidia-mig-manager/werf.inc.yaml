@@ -1,4 +1,4 @@
-{{- $mig_manager_version := "0.12.1" }}
+{{- $mig_manager_version := "0.12.3" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
   {{- $version := $key | toString }}
@@ -56,12 +56,6 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
@@ -69,7 +63,6 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $mig_manager_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/mig-parted.git /src/mig-parted
   - cd /src/mig-parted
-  - git apply /patches/*.patch --verbose
   - rm -rf .git hack deployments vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact-{{ $image_version }}
