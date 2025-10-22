@@ -223,10 +223,10 @@ metadata:
   name: <vmop-name>
 spec:
   type: Restore
-  virtualMachineName: <название ВМ, которую требуется восстановить>
+  virtualMachineName: <name of the VM to be restored>
   restore:
     mode: DryRun | Strict | BestEffort
-    virtualMachineSnapshotName: <название снимка ВМ из которого требуется восстановить>
+    virtualMachineSnapshotName: <name of the VM snapshot from which to restore>
 ```
 
 Для данной операции возможно использовать один из трех режимов:
@@ -274,7 +274,7 @@ metadata:
   name: <vmop-name>
 spec:
   type: Clone
-  virtualMachineName: <название ВМ, которую требуется клонировать>
+  virtualMachineName: <name of the VM to be cloned>
   clone:
     mode: DryRun | Strict | BestEffort
     nameReplacements: []
@@ -297,16 +297,16 @@ spec:
   clone:
     nameReplacements:
       - from:
-          kind: <тип ресурса>
-          name: <старое имя>
+          kind: <resource type>
+          name: <old name>
       - to:
-          name: <новое имя>
+          name: <new name>
     customization:
-      namePrefix: <префикс>
-      nameSuffix: <суффикс>
+      namePrefix: <prefix>
+      nameSuffix: <suffix>
 ```
 
-В результате будет создана ВМ с именем <префикс><новое имя><суффикс>.
+В результате будет создана ВМ с именем <prefix><new name><suffix>.
 
 Для операции клонирования возможно использовать один из трех режимов:
 

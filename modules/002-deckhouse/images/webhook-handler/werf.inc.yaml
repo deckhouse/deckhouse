@@ -115,3 +115,5 @@ import:
 shell:
   install:
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

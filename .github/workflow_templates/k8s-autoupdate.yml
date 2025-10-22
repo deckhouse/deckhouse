@@ -22,7 +22,7 @@ on:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -34,6 +34,7 @@ jobs:
     - skip_tests_repos
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
     - uses: {!{ index (ds "actions") "actions/setup-go" }!}
       with:
         go-version: '1.23.7'

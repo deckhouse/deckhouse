@@ -48,11 +48,12 @@ type Service struct {
 }
 
 type ServiceParams struct {
-	TmpDir      string
-	CacheDir    string
-	PodName     string
-	SchemaStore *config.SchemaStore
-	IsDebug     bool
+	TmpDir       string
+	CacheDir     string
+	PodName      string
+	PodNamespace string
+	SchemaStore  *config.SchemaStore
+	IsDebug      bool
 }
 
 func New(params ServiceParams) *Service {

@@ -729,8 +729,17 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 }
 
 func GetMasterHostsIPs() ([]session.Host, error) {
+	inCache, err := cache.Global().InCache(MasterHostsCacheKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !inCache {
+		return make([]session.Host, 0), nil
+	}
+
 	var hosts map[string]string
-	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
+	err = cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}

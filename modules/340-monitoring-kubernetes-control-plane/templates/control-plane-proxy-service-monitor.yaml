@@ -22,7 +22,7 @@ spec:
       name: "prometheus-token"
       key: "token"
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: kube-etcd3
@@ -42,7 +42,7 @@ spec:
       name: "prometheus-token"
       key: "token"
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: kube-scheduler
@@ -60,7 +60,7 @@ spec:
       name: "prometheus-token"
       key: "token"
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: kube-controller-manager

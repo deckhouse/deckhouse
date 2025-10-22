@@ -5,15 +5,6 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Reliability mechanisms
 
-### VM Rebalancing
-
-The platform provides the ability to automate the management of already running virtual machines in the cluster. To activate this feature, you need to enable the `descheduler` module.
-
-When you enable the module, it automatically monitors the optimal operation of virtual machines in the cluster. The main features it provides are:
-
-- Load balancing: The system analyses CPU reservation on cluster nodes. When CPU reservations exceed 80% on a node, the system automatically transfers part of the VMs to less loaded nodes. This prevents overload and ensures stable VM operation.
-- Appropriate placement: The system checks whether the current node meets the requirements of each VM and whether the placement rules are followed in relation to the node or other VMs in the cluster. For example, if a VM should not be on the same node as another VM, the module transfers it to a more suitable node.
-
 ### Migration and maintenance mode
 
 Virtual machine migration is an important feature in virtualized infrastructure management. It allows you to move running virtual machines from one physical node to another without shutting them down. Virtual machine migration is required for a number of tasks and scenarios:
@@ -21,6 +12,14 @@ Virtual machine migration is an important feature in virtualized infrastructure 
 - Load balancing: Moving virtual machines between nodes allows you to evenly distribute the load on servers, ensuring that resources are utilized in the best possible way.
 - Node maintenance: Virtual machines can be moved from nodes that need to be taken out of service to perform routine maintenance or software upgrade.
 - Upgrading a virtual machine firmware: The migration allows you to upgrade the firmware of virtual machines without interrupting their operation.
+
+{% alert level="warning" %}
+Live migration has the following limitations:
+
+- Only one virtual machine can migrate from each node simultaneously.
+- The total number of concurrent migrations in the cluster cannot exceed the number of nodes where running virtual machines is permitted.
+- The bandwidth for a single migration is limited to 5 Gbps.
+{% endalert %}
 
 #### Start migration of an arbitrary machine
 
@@ -116,6 +115,17 @@ How to perform the operation in the web interface:
 - Go to the "System" tab, then to the "Nodes" section→ "Nodes of all groups".
 - Select the desired node from the list and click the "Cordon + Drain" button.
 - To remove it from maintenance mode, click the "Uncordon" button.
+
+### VM Rebalancing
+
+The platform allows you to automatically manage the placement of running virtual machines in the cluster. To enable this feature, activate the `descheduler` module.
+
+Live migration of virtual machines between cluster nodes is used for rebalancing.
+
+After the module is enabled, the system automatically monitors the distribution of virtual machines and maintains optimal node utilization. The main features of the module are:
+
+- Load balancing: The system monitors CPU reservation on each node. If more than 80% of CPU resources are reserved on a node, some virtual machines will be automatically migrated to less-loaded nodes. This helps avoid overloads and ensures stable VM operation.
+- Correct placement: The system checks whether the current node meets the mandatory requirements of the virtual machine's requests, as well as rules regarding their relative placement. For example, if rules prohibit placing certain VMs on the same node, the module will automatically move them to a suitable server.
 
 ### ColdStandby
 

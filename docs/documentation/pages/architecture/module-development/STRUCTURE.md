@@ -126,9 +126,17 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Kubernetes Platform is not determined by the module developer.
 {% endalert %}
 
-The `/docs` directory contains the module documentation:
+The `/docs` directory contains the module documentation.
+The following subfolders aren't involved in the documentation building process:
 
-* `README.md` — this file describes what the module is for, what problem it solves and outlines the general architectural principles.
+- `internal`
+- `internals`
+- `development`
+- `dev`
+
+The following files are required for building the documentation:
+
+* `README.md` and `README.ru.md` — this file (and its localized version) describes what the module is for, what problem it solves and outlines the general architectural principles.
 
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` — **(recommended)** The title of the module description page, for example, "Deckhouse web admin console". It is also used in navigation if `linkTitle` parameter is not specified.
@@ -150,7 +158,9 @@ The `/docs` directory contains the module documentation:
   </details>
   </div>
 
-* The `EXAMPLES.md` file contains examples of module configuration with description.
+The following files aren't required but have a [predetermined name](https://github.com/deckhouse/deckhouse/blob/main/docs/site/backends/docs-builder-template/data/helpers.yaml#L1) in the sidebar menu and the page title:
+
+* `EXAMPLES.md` and `EXAMPLES.ru.md` — this file (and its localized version) contains examples of module configuration with description.
   
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page, e.g., `Examples`. It is also used in navigation if there is no `linkTitle`.
@@ -170,7 +180,7 @@ The `/docs` directory contains the module documentation:
   </details>
   </div>
 
-* `FAQ.md` – the file contains frequently asked questions related to module operation, e.g., "What scenario should I choose: A or B?".
+* `FAQ.md` and `FAQ.ru.md` — this file (and its localized version) contains frequently asked questions related to module operation, e.g., "What scenario should I choose: A or B?".
   
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page.
@@ -190,7 +200,7 @@ The `/docs` directory contains the module documentation:
   </details>
   </div>
   
-* `ADVANCED_USAGE.md` — this file contains instructions for debugging the module.
+* `ADVANCED_USAGE.md` and `ADVANCED_USAGE.ru.md` — this file (and its localized version) contains expanded instructions on using and debugging the module.
   
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page.
@@ -210,7 +220,8 @@ The `/docs` directory contains the module documentation:
   </details>
   </div>
   
-* Manually add `CR.md` and `CR.ru.md`, the files for generating resources from the `/crds/` directory.  
+* `CR.md` and `CR.ru.md` — the files for generating resources from the `/crds/` directory.
+  Add these files if such a generation is required.
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>
@@ -224,7 +235,8 @@ The `/docs` directory contains the module documentation:
   </details>
   </div>
 
-* Manually add `CONFIGURATION.md`, the file to create resources from `/openapi/config-values.yaml` and `/openapi/doc-<LANG>-config-values.yaml`.
+* `CONFIGURATION.md` and `CONFIGURATION.ru.md` — this file (and its localized version) is used to generate OpenAPI specifications from `/openapi/config-values.yaml` and `/openapi/doc-<LANG>-config-values.yaml`.
+  Add these files if such a generation is required.
 
   <div markdown="0">
   <details><summary>Metadata example...</summary>

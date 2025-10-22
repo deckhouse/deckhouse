@@ -44,7 +44,7 @@ shell:
   - mkdir ./local && tar zxvf /bundle.tar.gz -C ./local
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -66,3 +66,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /operator-trivy ./cmd/trivy-operator/main.go`) | indent 6 }}
   - chown 64535:64535 /operator-trivy
   - chmod 0700 /operator-trivy
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
