@@ -129,6 +129,13 @@ certManager:
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CustomCertificate" -}}
     {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
+    {{- $customCertificateData := $module_values.internal.customCertificateData -}}
+    {{- if not $customCertificateData -}}
+      {{- fail "internal.customCertificateData is required when https.mode is CustomCertificate" -}}
+    {{- end -}}
+    {{- if not (kindIs "map" $customCertificateData) -}}
+      {{- fail "internal.customCertificateData must be a map when https.mode is CustomCertificate" -}}
+    {{- end -}}
     {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
 ---
 apiVersion: v1
@@ -139,11 +146,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
 data:
-{{- if (hasKey $module_values.internal.customCertificateData "ca.crt") }}
-  ca.crt: {{ index $module_values.internal.customCertificateData "ca.crt" | b64enc }}
+{{- if (hasKey $customCertificateData "ca.crt") }}
+  ca.crt: {{ index $customCertificateData "ca.crt" | b64enc }}
 {{- end }}
-  tls.crt: {{ index $module_values.internal.customCertificateData "tls.crt" | b64enc }}
-  tls.key: {{ index $module_values.internal.customCertificateData "tls.key" | b64enc }}
+  tls.crt: {{ index $customCertificateData "tls.crt" | b64enc }}
+  tls.key: {{ index $customCertificateData "tls.key" | b64enc }}
   {{- end -}}
 {{- end -}}
 
