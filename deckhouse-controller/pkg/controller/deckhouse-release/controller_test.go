@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1079,7 +1080,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Migrated Modules", func() {
 		suite.Run("No migrated modules", func() {
-			suite.setupController("no-migrated-modules.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-no-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1093,7 +1094,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("Empty migrated modules", func() {
-			suite.setupController("empty-migrated-modules.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-empty-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1107,7 +1108,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("Modules available", func() {
-			suite.setupController("modules-available.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-modules-available.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1121,21 +1122,46 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("Module missing", func() {
-			suite.setupController("module-missing.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-module-missing.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 
 		suite.Run("Module pull error", func() {
-			suite.setupController("module-pull-error.yaml", initValues, embeddedMUP)
+			suite.setupController("migrated-modules-module-pull-error.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
+		suite.Run("MC disabled not in source", func() {
+			suite.setupController("migrated-modules-mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			fmt.Print("test", err)
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
-		suite.Run("Multiple sources", func() {
-			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("MC enabled not in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-not-in-source.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			oldRelease := suite.getDeckhouseRelease("v1.49.0")
+			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
+		})
+		suite.Run("MC enabled in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1265,7 +1291,15 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 type stubModulesManager struct{}
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
-	return []string{"cert-manager", "prometheus"}
+	return []string{
+		"cert-manager",
+		"prometheus",
+		"test-module-1",
+		"test-module-2",
+		"test-module-missing",
+		"enabled-module-not-found",
+		"enabled-module",
+	}
 }
 
 func (s stubModulesManager) IsModuleEnabled(_ string) bool {

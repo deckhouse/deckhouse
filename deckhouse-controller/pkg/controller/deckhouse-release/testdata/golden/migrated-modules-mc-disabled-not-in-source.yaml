@@ -26,7 +26,7 @@ metadata:
   resourceVersion: "1001"
 spec:
   requirements:
-    migratedModules: test-module-1
+    migratedModules: disabled-module
   version: v1.50.0
 status:
   approved: false
