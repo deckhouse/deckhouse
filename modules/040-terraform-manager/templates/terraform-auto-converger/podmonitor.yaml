@@ -22,7 +22,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
-    - regex: endpoint|namespace
+    - regex: endpoint
       action: labeldrop
   selector:
     matchLabels:

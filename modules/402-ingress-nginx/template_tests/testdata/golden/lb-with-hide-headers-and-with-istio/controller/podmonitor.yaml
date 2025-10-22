@@ -23,7 +23,7 @@ spec:
     port: https-metrics
     relabelings:
     - action: labeldrop
-      regex: endpoint|namespace|pod|container
+      regex: endpoint|pod|container
     - replacement: nginx-ingress-controller
       targetLabel: job
     - sourceLabels:
@@ -50,7 +50,7 @@ spec:
     port: https-metrics
     relabelings:
     - action: labeldrop
-      regex: endpoint|namespace|pod|container
+      regex: endpoint|pod|container
     - replacement: nginx-ingress-controller
       targetLabel: job
     - sourceLabels:
