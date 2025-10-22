@@ -267,11 +267,16 @@ func CreateDeckhouseManifests(
 		},
 	}
 
+	// Registry secrets
 	deckhouseRegistrySecretData, err := cfg.RegistryConfigBuilder.DeckhouseRegistrySecretData()
 	if err != nil {
 		return nil, err
 	}
 	registryInitSecretData, err := cfg.RegistryConfigBuilder.RegistryInitSecretData()
+	if err != nil {
+		return nil, err
+	}
+	registryBashibleConfigSecretData, err := cfg.RegistryConfigBuilder.RegistryBashibleConfigSecret()
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +295,18 @@ func CreateDeckhouseManifests(
 	tasks = append(tasks, actions.ManifestTask{
 		Name:     `Secret "registry-init"`,
 		Manifest: func() interface{} { return manifests.RegistryInitSecret(registryInitSecretData) },
+		CreateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			return err
+		},
+	})
+	tasks = append(tasks, actions.ManifestTask{
+		Name:     `Secret "registry-bashible-config"`,
+		Manifest: func() interface{} { return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData) },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err

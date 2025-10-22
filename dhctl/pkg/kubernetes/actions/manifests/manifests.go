@@ -34,8 +34,9 @@ import (
 var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
-	deckhouseRegistrySecretName = "deckhouse-registry"
-	registryInitSecretName      = "registry-init"
+	deckhouseRegistrySecretName      = "deckhouse-registry"
+	registryInitSecretName           = "registry-init"
+	registryBashibleConfigSecretName = "registry-bashible-config"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
@@ -557,7 +558,7 @@ func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 
 func RegistryInitSecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
-		Type: apiv1.SecretTypeDockerConfigJson,
+		Type: apiv1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: registryInitSecretName,
 			Labels: map[string]string{
@@ -565,6 +566,27 @@ func RegistryInitSecret(data map[string][]byte) *apiv1.Secret {
 				"app":      "registry",
 			},
 			Annotations: map[string]string{},
+		},
+		Data: data,
+	}
+	return ret
+}
+
+func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
+	ret := &apiv1.Secret{
+		Type: apiv1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deckhouseRegistrySecretName,
+			Labels: map[string]string{
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+				"app":                          "registry",
+			},
+			Annotations: map[string]string{
+				"helm.sh/resource-policy":        "keep",
+				"meta.helm.sh/release-name":      "registry",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
 		},
 		Data: data,
 	}

@@ -75,11 +75,11 @@ func (builder *ConfigBuilder) BashibleTplCtx() (map[string]interface{}, error) {
 	case builder.registry.spec.Unmanaged != nil:
 		unmanaged := builder.registry.spec.Unmanaged
 		imagesBase = unmanaged.ImagesRepo
-		mirrorHost, mirrors = unmanagedHostMirrors(unmanaged)
+		mirrorHost, mirrors, _ = unmanagedHostMirrors(unmanaged)
 	case builder.registry.spec.Direct != nil:
 		direct := builder.registry.spec.Direct
 		imagesBase = registry_const.HostWithPath
-		mirrorHost, mirrors = directHostMirrors(direct)
+		mirrorHost, mirrors, _ = directHostMirrors(direct)
 	default:
 		return nil, ErrorUnknownRegistryMode
 	}
@@ -162,6 +162,53 @@ func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, 
 	return ret, nil
 }
 
+func (builder *ConfigBuilder) RegistryBashibleConfigSecret() (map[string][]byte, error) {
+	var (
+		imagesBase string
+		mirrorHost string
+		mirrors    []bashible.ConfigMirrorHost
+	)
+
+	switch {
+	case builder.registry.spec.Unmanaged != nil:
+		unmanaged := builder.registry.spec.Unmanaged
+		imagesBase = unmanaged.ImagesRepo
+		mirrorHost, _, mirrors = unmanagedHostMirrors(unmanaged)
+	case builder.registry.spec.Direct != nil:
+		direct := builder.registry.spec.Direct
+		imagesBase = registry_const.HostWithPath
+		mirrorHost, _, mirrors = directHostMirrors(direct)
+	default:
+		return nil, ErrorUnknownRegistryMode
+	}
+
+	ret := bashible.Config{
+		Mode:       builder.registry.spec.Mode,
+		ImagesBase: imagesBase,
+		Hosts: map[string]bashible.ConfigHosts{
+			mirrorHost: {Mirrors: mirrors}},
+	}
+
+	version, err := computeHash(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute config version: %w", err)
+	}
+	ret.Version = version
+
+	if err := ret.Validate(); err != nil {
+		return nil, err
+	}
+
+	config, err := yaml.Marshal(ret)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]byte{
+		"config": config,
+	}, nil
+}
+
 func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
 	config, err := yaml.Marshal(
 		registry_init.Config{
@@ -176,38 +223,61 @@ func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error
 		return nil, err
 	}
 
-	ret := map[string][]byte{
+	return map[string][]byte{
 		"config": config,
-	}
-	return ret, nil
+	}, nil
 }
 
-func unmanagedHostMirrors(unmapaged *UnmanagedModeSpec) (string, []bashible.ContextMirrorHost) {
+func unmanagedHostMirrors(unmapaged *UnmanagedModeSpec) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, _ := addressAndPathFromImagesRepo(unmapaged.ImagesRepo)
-	return host, []bashible.ContextMirrorHost{{
-		Host:   host,
-		CA:     unmapaged.CA,
-		Scheme: strings.ToLower(string(unmapaged.Scheme)),
-		Auth: bashible.ContextAuth{
-			Username: unmapaged.Username,
-			Password: unmapaged.Password,
-		},
-	}}
+	return host,
+		[]bashible.ContextMirrorHost{{
+			Host:   host,
+			CA:     unmapaged.CA,
+			Scheme: strings.ToLower(string(unmapaged.Scheme)),
+			Auth: bashible.ContextAuth{
+				Username: unmapaged.Username,
+				Password: unmapaged.Password,
+			},
+		}},
+		[]bashible.ConfigMirrorHost{{
+			Host:   host,
+			CA:     unmapaged.CA,
+			Scheme: strings.ToLower(string(unmapaged.Scheme)),
+			Auth: bashible.ConfigAuth{
+				Username: unmapaged.Username,
+				Password: unmapaged.Password,
+			},
+		}}
 }
 
-func directHostMirrors(direct *DirectModeSpec) (string, []bashible.ContextMirrorHost) {
+func directHostMirrors(direct *DirectModeSpec) (string, []bashible.ContextMirrorHost, []bashible.ConfigMirrorHost) {
 	host, path := addressAndPathFromImagesRepo(direct.ImagesRepo)
-	return registry_const.Host, []bashible.ContextMirrorHost{{
-		Host:   host,
-		CA:     direct.CA,
-		Scheme: strings.ToLower(string(direct.Scheme)),
-		Auth: bashible.ContextAuth{
-			Username: direct.Username,
-			Password: direct.Password,
-		},
-		Rewrites: []bashible.ContextRewrite{{
-			From: registry_const.PathRegexp,
-			To:   strings.TrimLeft(path, "/"),
+	return registry_const.Host,
+		[]bashible.ContextMirrorHost{{
+			Host:   host,
+			CA:     direct.CA,
+			Scheme: strings.ToLower(string(direct.Scheme)),
+			Auth: bashible.ContextAuth{
+				Username: direct.Username,
+				Password: direct.Password,
+			},
+			Rewrites: []bashible.ContextRewrite{{
+				From: registry_const.PathRegexp,
+				To:   strings.TrimLeft(path, "/"),
+			}},
 		}},
-	}}
+		[]bashible.ConfigMirrorHost{{
+			Host:   host,
+			CA:     direct.CA,
+			Scheme: strings.ToLower(string(direct.Scheme)),
+			Auth: bashible.ConfigAuth{
+				Username: direct.Username,
+				Password: direct.Password,
+			},
+			Rewrites: []bashible.ConfigRewrite{{
+				From: registry_const.PathRegexp,
+				To:   strings.TrimLeft(path, "/"),
+			}},
+		}}
 }
