@@ -1,4 +1,3 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: DeckhouseRelease
 metadata:
@@ -79,8 +78,8 @@ spec:
         app: deckhouse
     spec:
       containers:
-      - name: deckhouse
-        image: dev-registry.deckhouse.io/deckhouse/deckhouse:v1.49.0
+        - name: deckhouse
+          image: dev-registry.deckhouse.io/deckhouse/deckhouse:v1.49.0
 status:
   replicas: 1
   readyReplicas: 1

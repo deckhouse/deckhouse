@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1139,7 +1138,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
-			fmt.Print("test", err)
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
 			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
