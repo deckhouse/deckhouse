@@ -271,7 +271,7 @@ func CreateDeckhouseManifests(
 	if err != nil {
 		return nil, err
 	}
-	registryBootstrapSecretData, err := cfg.RegistryConfigBuilder.RegistryBootstrapSecretData()
+	registryInitSecretData, err := cfg.RegistryConfigBuilder.RegistryInitSecretData()
 	if err != nil {
 		return nil, err
 	}
@@ -288,8 +288,8 @@ func CreateDeckhouseManifests(
 		},
 	})
 	tasks = append(tasks, actions.ManifestTask{
-		Name:     `Secret "registry-bootstrap"`,
-		Manifest: func() interface{} { return manifests.RegistryBootstrapSecret(registryBootstrapSecretData) },
+		Name:     `Secret "registry-init"`,
+		Manifest: func() interface{} { return manifests.RegistryInitSecret(registryInitSecretData) },
 		CreateFunc: func(manifest interface{}) error {
 			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err

@@ -162,7 +162,7 @@ func (builder *ConfigBuilder) DeckhouseRegistrySecretData() (map[string][]byte, 
 	return ret, nil
 }
 
-func (builder *ConfigBuilder) RegistryBootstrapSecretData() (map[string][]byte, error) {
+func (builder *ConfigBuilder) RegistryInitSecretData() (map[string][]byte, error) {
 	config, err := yaml.Marshal(
 		registry_init.Config{
 			CA: &registry_init.CertKey{

@@ -35,7 +35,7 @@ var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
-	registryBootstrapSecretName = "registry-bootstrap"
+	registryInitSecretName      = "registry-init"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
@@ -555,11 +555,11 @@ func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 	return ret
 }
 
-func RegistryBootstrapSecret(data map[string][]byte) *apiv1.Secret {
+func RegistryInitSecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: registryBootstrapSecretName,
+			Name: registryInitSecretName,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
 				"app":      "registry",

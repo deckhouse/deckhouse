@@ -116,7 +116,7 @@ func getKubernetesConfigs() []go_hook.KubernetesConfig {
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"registry-bootstrap"},
+				MatchNames: []string{"registry-init"},
 			},
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -306,7 +306,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Remove bootstrap secret if exist
 	if hasInitSecret {
 		input.PatchCollector.Delete(
-			"v1", "Secret", "d8-system", "registry-bootstrap")
+			"v1", "Secret", "d8-system", "registry-init")
 	}
 	return nil
 }
