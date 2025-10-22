@@ -341,7 +341,7 @@ func (c *BashibleContext) update(src string) {
 	defer c.rw.Unlock()
 
 	if c.updateLocked {
-		klog.Infof("Context update is locked", src)
+		klog.Infof("Context update is locked. (Source: '%s')", src)
 		return
 	}
 
@@ -357,7 +357,7 @@ func (c *BashibleContext) update(src string) {
 	// easiest way to make appropriate map[string]interface{} struct
 	rawData, err := yaml.Marshal(data.Map())
 	if err != nil {
-		klog.Errorf("Failed to marshal data", err)
+		klog.Errorf("Failed to marshal data: %v", err)
 		return
 	}
 
@@ -381,7 +381,7 @@ func (c *BashibleContext) update(src string) {
 
 	err = yaml.Unmarshal(rawData, &res)
 	if err != nil {
-		klog.Errorf("Failed to unmarshal data", err)
+		klog.Errorf("Failed to unmarshal data: %v", err)
 		return
 	}
 
